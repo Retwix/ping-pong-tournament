@@ -204,27 +204,33 @@
   .scoreboard { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0; }
 
   .side {
-    border: 1px solid var(--line); border-radius: 20px; background: var(--panel);
+    border: 4px solid var(--line); border-radius: 20px; background: var(--panel);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     cursor: pointer; user-select: none; position: relative; overflow: hidden;
-    transition: background .12s, border-color .2s;
+    transition: background .12s, border-color .2s, box-shadow .2s;
   }
   .side:active { background: var(--panel-2); }
-  .side.serving { border-color: var(--accent); }
-  .side.winner { border-color: var(--accent-2); background: rgba(46,230,166,0.07); }
+  .side.serving {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 5px rgba(255,90,60,0.32), 0 0 34px rgba(255,90,60,0.4);
+  }
+  .side.winner {
+    border-color: var(--accent-2); background: rgba(46,230,166,0.07);
+    box-shadow: 0 0 0 5px rgba(46,230,166,0.28), 0 0 34px rgba(46,230,166,0.32);
+  }
 
   .side-name {
-    font-size: clamp(16px, 4.5vw, 22px); font-weight: 600; margin-top: 22px;
-    display: flex; align-items: center; gap: 8px; text-align: center; padding: 0 8px;
+    font-size: clamp(30px, 6.5vw, 64px); font-weight: 700; margin-top: 28px;
+    display: flex; align-items: center; gap: 16px; text-align: center; padding: 0 12px;
   }
-  .serve-pip { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: none; }
+  .serve-pip { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); display: none; }
   .side.serving .serve-pip { display: inline-block; animation: pulse 1.2s infinite; }
 
   .side-score {
     font-family: 'Fraunces', serif; font-weight: 600;
     font-size: clamp(80px, 26vw, 180px); line-height: 1; margin: auto 0;
   }
-  .tap-hint { color: var(--muted); font-size: 12px; margin-bottom: 20px; letter-spacing: 0.08em; }
+  .tap-hint { color: var(--muted); font-size: clamp(14px, 1.8vw, 20px); margin-bottom: 24px; letter-spacing: 0.08em; }
   .side.winner .tap-hint { color: var(--accent-2); }
 
   .ov-controls { display: flex; gap: 10px; margin-top: 14px; }
@@ -244,7 +250,7 @@
   @media (hover: none) { .kbd-hint { display: none; } }
 
   .matchpoint-flag {
-    position: absolute; top: 14px; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    position: absolute; top: 18px; font-size: clamp(12px, 1.6vw, 16px); letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--gold); font-weight: 700; opacity: 0; transition: opacity .2s;
   }
   .side.mpoint .matchpoint-flag { opacity: 1; }
