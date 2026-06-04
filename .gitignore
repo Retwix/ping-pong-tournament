@@ -1,0 +1,13 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Vercel
+.vercel
+
+# Local project tooling (not part of the app)
+claude-project-context.md
+tournoi-ping-pong-live.html
