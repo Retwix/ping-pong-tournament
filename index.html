@@ -151,6 +151,9 @@
   .match.done .dot { background: var(--accent-2); }
   @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
+  .match-stats { color: var(--muted); font-size: 12.5px; margin-top: 14px; }
+  .match-stats b { color: var(--ink); font-weight: 600; }
+
   /* standings */
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px 18px; }
   table { width: 100%; border-collapse: collapse; }
@@ -196,6 +199,7 @@
     width: 42px; height: 42px; border-radius: 12px; font-size: 20px; cursor: pointer;
   }
   .ov-target { color: var(--muted); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .ov-timer { font-family: 'Fraunces', serif; font-size: 19px; color: var(--accent-2); font-variant-numeric: tabular-nums; }
 
   .scoreboard { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0; }
 
@@ -328,6 +332,7 @@
   <section id="matchesSection" class="hidden">
     <div class="section-title">Les matchs <span class="count" id="matchCount"></span></div>
     <div id="matches"></div>
+    <div class="match-stats" id="matchStats"></div>
   </section>
 
   <!-- ===== STANDINGS ===== -->
@@ -355,6 +360,7 @@
 <div class="overlay" id="overlay">
   <div class="ov-top">
     <button class="ov-close" id="ovClose">✕</button>
+    <span class="ov-timer" id="ovTimer">0:00</span>
     <span class="ov-target" id="ovTarget"></span>
   </div>
   <div class="scoreboard">
@@ -429,6 +435,9 @@
         config = data.config;
         tournament = data.tournament || null;
         celebrated = !!data.celebrated;
+        if (tournament && tournament.state) {
+          Object.values(tournament.state).forEach(m => { if (typeof m.elapsedMs !== "number") m.elapsedMs = 0; });
+        }
         return true;
       }
     } catch (e) { /* corrupt */ }
@@ -471,7 +480,7 @@
       const matchKeys = [];
       rd.pairs.forEach(([a, b]) => {
         const key = "m" + (mIndex++);
-        state[key] = { pa: a, pb: b, a: 0, b: 0, done: false, serveStart: "a", history: [] };
+        state[key] = { pa: a, pb: b, a: 0, b: 0, done: false, serveStart: "a", history: [], elapsedMs: 0 };
         matchKeys.push(key);
       });
       rounds.push({ label: "Tour " + (ri + 1), matches: matchKeys, byes: rd.byes });
@@ -630,11 +639,23 @@
             <span class="mp ${aWin ? 'win' : m.done ? 'lose' : ''}">${escapeHtml(m.pa)}<span class="mp-score">${showScore ? m.a : ''}</span></span>
             <span class="mp ${bWin ? 'win' : m.done ? 'lose' : ''}">${escapeHtml(m.pb)}<span class="mp-score">${showScore ? m.b : ''}</span></span>
           </div>
-          <div class="match-status"><span class="dot"></span>${status}</div>`;
+          <div class="match-status"><span class="dot"></span>${status}${m.done && m.elapsedMs ? ' · ' + formatDuration(m.elapsedMs) : ''}</div>`;
         card.addEventListener("click", () => openLive(key));
         matchesEl.appendChild(card);
       });
     });
+    renderMatchStats();
+  }
+
+  function renderMatchStats() {
+    const el = document.getElementById("matchStats");
+    if (!el) return;
+    const done = allMatchKeys().map(k => tournament.state[k]).filter(m => m.done && m.elapsedMs > 0);
+    if (!done.length) { el.textContent = ""; return; }
+    const longest = done.reduce((x, y) => y.elapsedMs > x.elapsedMs ? y : x);
+    const shortest = done.reduce((x, y) => y.elapsedMs < x.elapsedMs ? y : x);
+    const tag = m => `${m.pa}–${m.pb} (${formatDuration(m.elapsedMs)})`;
+    el.innerHTML = `⏱ Plus long : <b>${escapeHtml(tag(longest))}</b> · Plus court : <b>${escapeHtml(tag(shortest))}</b>`;
   }
 
   function renderStandings() {
@@ -697,12 +718,50 @@
   const sideA = document.getElementById("sideA");
   const sideB = document.getElementById("sideB");
 
+  // ---------- match clock ----------
+  let tickStart = null, tickHandle = null;
+
+  function formatDuration(ms) {
+    const s = Math.floor((ms || 0) / 1000);
+    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+  function updateTimer() {
+    if (liveKey === null) return;
+    const m = tournament.state[liveKey];
+    const ms = (m.elapsedMs || 0) + (tickStart !== null ? Date.now() - tickStart : 0);
+    document.getElementById("ovTimer").textContent = formatDuration(ms);
+  }
+  // start/stop the clock based on current match state (runs only during active, undecided play)
+  function syncTick() {
+    const m = liveKey !== null ? tournament.state[liveKey] : null;
+    const shouldRun = !!m && overlay.classList.contains("open") && !m.done && !isWon(m.a, m.b);
+    if (shouldRun && tickStart === null) {
+      tickStart = Date.now();
+      if (!tickHandle) tickHandle = setInterval(updateTimer, 500);
+    } else if (!shouldRun && tickStart !== null) {
+      if (m) m.elapsedMs = (m.elapsedMs || 0) + (Date.now() - tickStart);
+      tickStart = null;
+      if (tickHandle) { clearInterval(tickHandle); tickHandle = null; }
+    }
+    updateTimer();
+  }
+  function stopTick() {
+    if (tickStart !== null && liveKey !== null) {
+      const m = tournament.state[liveKey];
+      m.elapsedMs = (m.elapsedMs || 0) + (Date.now() - tickStart);
+    }
+    tickStart = null;
+    if (tickHandle) { clearInterval(tickHandle); tickHandle = null; }
+  }
+
   function openLive(key) {
     liveKey = key;
     overlay.classList.add("open");
     renderLive();
+    syncTick();
   }
   function closeLive() {
+    stopTick();
     overlay.classList.remove("open");
     liveKey = null;
     buildList(); renderStandings(); save();
@@ -740,11 +799,11 @@
     if (isWon(m.a, m.b)) return;
     m.history.push([m.a, m.b]);
     if (side === "a") m.a++; else m.b++;
-    renderLive(); save();
+    renderLive(); syncTick(); save();
   }
   function undoPoint() {
     const m = tournament.state[liveKey];
-    if (m.history.length) { [m.a, m.b] = m.history.pop(); renderLive(); save(); }
+    if (m.history.length) { [m.a, m.b] = m.history.pop(); renderLive(); syncTick(); save(); }
   }
   function finishMatch() {
     const m = tournament.state[liveKey];
