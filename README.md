@@ -26,3 +26,8 @@ Open `index.html` in any modern browser. That's it.
 ## Deploy
 
 Static site — deploys to Vercel (or any static host) with zero configuration. Vercel auto-detects `index.html` at the repo root.
+
+
+---
+
+_Deployed on Vercel with automatic deploys from `main`._
