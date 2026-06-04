@@ -35,6 +35,29 @@ export default function Board({ id, onBack, onNew }: Props) {
     )
   }
 
+  // A "game" is a single match: skip standings/champion, go straight to the scorer.
+  if (tournament.kind === 'game') {
+    const match = matches[0]
+    if (!match) {
+      return (
+        <div className="wrap">
+          <p className="empty">Chargement…</p>
+        </div>
+      )
+    }
+    return (
+      <LiveScorer
+        match={match}
+        target={tournament.target}
+        onPatch={(patch) => patchMatch(match.id, patch)}
+        onClose={onBack}
+        onFinish={() => {
+          /* single game: stay on the result; closing returns home */
+        }}
+      />
+    )
+  }
+
   const openMatch = matches.find((m) => m.id === openId) ?? null
   const showChampion = tournament.status === 'done' && !dismissedChampion
 

@@ -5,9 +5,10 @@ import { useTournaments } from '../hooks/useTournaments'
 interface Props {
   onOpen: (id: string) => void
   onNew: () => void
+  onNewGame: () => void
 }
 
-export default function Home({ onOpen, onNew }: Props) {
+export default function Home({ onOpen, onNew, onNewGame }: Props) {
   const { tournaments, loading, error } = useTournaments()
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
@@ -34,11 +35,16 @@ export default function Home({ onOpen, onNew }: Props) {
       <section>
         <div className="home-top">
           <span className="setup-label" style={{ margin: 0 }}>
-            Tes tournois
+            Tes parties &amp; tournois
           </span>
-          <button className="btn-primary" onClick={onNew}>
-            + Nouveau tournoi
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="link-btn" onClick={onNewGame}>
+              + Partie rapide
+            </button>
+            <button className="btn-primary" onClick={onNew}>
+              + Nouveau tournoi
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -51,8 +57,8 @@ export default function Home({ onOpen, onNew }: Props) {
               <div>
                 <div className="t-name">{t.name}</div>
                 <div className="t-meta">
-                  {t.players.length} joueurs · jeu en {t.target} ·{' '}
-                  {new Date(t.created_at).toLocaleDateString('fr-FR')}
+                  {t.kind === 'game' ? 'Partie' : `Tournoi · ${t.players.length} joueurs`} · jeu en{' '}
+                  {t.target} · {new Date(t.created_at).toLocaleDateString('fr-FR')}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

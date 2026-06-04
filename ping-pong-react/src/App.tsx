@@ -4,11 +4,16 @@ import Home from "./components/Home";
 import Setup from "./components/Setup";
 import { hasSupabaseConfig } from "./lib/supabase";
 
-type Route = { name: "home" } | { name: "new" } | { name: "board"; id: string };
+type Route =
+	| { name: "home" }
+	| { name: "new" }
+	| { name: "game" }
+	| { name: "board"; id: string };
 
 function parseRoute(): Route {
 	const h = window.location.hash.replace(/^#/, "");
 	if (h === "/new") return { name: "new" };
+	if (h === "/game") return { name: "game" };
 	const m = h.match(/^\/t\/(.+)$/);
 	if (m) return { name: "board", id: decodeURIComponent(m[1]) };
 	return { name: "home" };
@@ -56,6 +61,14 @@ export default function App() {
 					onCancel={() => navigate("/")}
 				/>
 			);
+		case "game":
+			return (
+				<Setup
+					mode="game"
+					onCreated={(id) => navigate(`/t/${id}`)}
+					onCancel={() => navigate("/")}
+				/>
+			);
 		case "board":
 			return (
 				<Board
@@ -69,6 +82,7 @@ export default function App() {
 				<Home
 					onOpen={(id) => navigate(`/t/${id}`)}
 					onNew={() => navigate("/new")}
+					onNewGame={() => navigate("/game")}
 				/>
 			);
 	}

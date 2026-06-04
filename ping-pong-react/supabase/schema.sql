@@ -13,8 +13,12 @@ create table if not exists public.tournaments (
   target      int  not null default 11,
   players     text[] not null,
   status      text not null default 'active',   -- 'active' | 'done'
+  kind        text not null default 'tournament', -- 'tournament' | 'game'
   champion    text
 );
+
+-- Add `kind` to databases created before this column existed.
+alter table public.tournaments add column if not exists kind text not null default 'tournament';
 
 create table if not exists public.matches (
   id            uuid primary key default gen_random_uuid(),

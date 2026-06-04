@@ -6,13 +6,15 @@ import { usePlayers } from '../hooks/usePlayers'
 import type { Player } from '../types'
 
 interface Props {
+  mode?: 'tournament' | 'game'
   onCreated: (id: string) => void
   onCancel: () => void
 }
 
 const PRESETS = [11, 21, 15]
 
-export default function Setup({ onCreated, onCancel }: Props) {
+export default function Setup({ mode = 'tournament', onCreated, onCancel }: Props) {
+  const isGame = mode === 'game'
   const { players, loading: playersLoading } = usePlayers()
 
   const [name, setName] = useState('')
@@ -27,20 +29,23 @@ export default function Setup({ onCreated, onCancel }: Props) {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const full = isGame && selected.length >= 2
   const available = players.filter((p) => !selected.some((s) => s.id === p.id))
 
-  const valid = selected.length >= 2
-  const hint = valid
-    ? (() => {
-        const n = selected.length
-        const odd = n % 2 !== 0
-        return `${n} joueurs · ${matchCount(n)} matchs · ${roundCount(n)} tours${
-          odd ? ' (avec exempts)' : ''
-        }`
-      })()
-    : 'Sélectionne au moins 2 joueurs.'
+  const valid = isGame ? selected.length === 2 : selected.length >= 2
+  let hint: string
+  if (isGame) {
+    hint = full ? `${selected[0].name} vs ${selected[1].name} · jeu en ${target}` : 'Choisis 2 joueurs.'
+  } else if (valid) {
+    const n = selected.length
+    const odd = n % 2 !== 0
+    hint = `${n} joueurs · ${matchCount(n)} matchs · ${roundCount(n)} tours${odd ? ' (avec exempts)' : ''}`
+  } else {
+    hint = 'Sélectionne au moins 2 joueurs.'
+  }
 
   const addFromSelect = (id: string) => {
+    if (full) return
     const p = players.find((pl) => pl.id === id)
     if (p) setSelected((s) => [...s, p])
   }
@@ -57,7 +62,7 @@ export default function Setup({ onCreated, onCancel }: Props) {
     setError(null)
     try {
       const player = await createPlayer(nm, newTeam)
-      setSelected((s) => [...s, player])
+      if (!full) setSelected((s) => [...s, player])
       setNewName('')
       setNewTeam('guests')
       setShowNew(false)
@@ -73,10 +78,12 @@ export default function Setup({ onCreated, onCancel }: Props) {
     setCreating(true)
     setError(null)
     try {
+      const defaultName = isGame ? `${selected[0].name} vs ${selected[1].name}` : 'Tournoi'
       const id = await createTournament(
-        name.trim() || 'Tournoi',
+        name.trim() || defaultName,
         selected.map((p) => p.name),
-        target || 11
+        target || 11,
+        isGame ? 'game' : 'tournament'
       )
       onCreated(id)
     } catch (e) {
@@ -90,13 +97,14 @@ export default function Setup({ onCreated, onCancel }: Props) {
   return (
     <div className="wrap">
       <header>
-        <div className="kicker">Round-robin · nouveau tournoi</div>
+        <div className="kicker">{isGame ? 'Partie rapide' : 'Round-robin · nouveau tournoi'}</div>
         <h1>
-          Tournoi <span className="em">ping-pong</span>
+          {isGame ? 'Partie' : 'Tournoi'} <span className="em">ping-pong</span>
         </h1>
         <p className="subtitle">
-          Choisis les joueurs, le format, puis génère les matchs. Les joueurs sont enregistrés (nom +
-          équipe) pour les futures stats.
+          {isGame
+            ? 'Choisis 2 joueurs et lance le marqueur. Aucune configuration de tournoi.'
+            : 'Choisis les joueurs, le format, puis génère les matchs. Les joueurs sont enregistrés (nom + équipe) pour les futures stats.'}
         </p>
       </header>
 
@@ -105,18 +113,21 @@ export default function Setup({ onCreated, onCancel }: Props) {
       <section>
         <div className="section-title">Configuration</div>
         <div className="setup">
-          <div className="setup-label">Nom du tournoi</div>
-          <input
-            className="name-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Tournoi du bureau"
-            maxLength={40}
-          />
+          {!isGame && (
+            <>
+              <div className="setup-label">Nom du tournoi</div>
+              <input
+                className="name-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tournoi du bureau"
+                maxLength={40}
+              />
+              <div className="setup-divider" />
+            </>
+          )}
 
-          <div className="setup-divider" />
-
-          <div className="setup-label">Joueurs</div>
+          <div className="setup-label">{isGame ? 'Les 2 joueurs' : 'Joueurs'}</div>
 
           {selected.length > 0 && (
             <div className="players-edit">
@@ -133,69 +144,74 @@ export default function Setup({ onCreated, onCancel }: Props) {
             </div>
           )}
 
-          {/* pick an existing player */}
-          <div className="player-row" style={{ marginTop: selected.length ? 10 : 0 }}>
-            <select
-              className="select-input"
-              value=""
-              disabled={playersLoading || available.length === 0}
-              onChange={(e) => {
-                if (e.target.value) addFromSelect(e.target.value)
-              }}
-            >
-              <option value="">
-                {playersLoading
-                  ? 'Chargement…'
-                  : available.length === 0
-                    ? 'Aucun joueur disponible — ajoute-en un'
-                    : '— Ajouter un joueur —'}
-              </option>
-              {available.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} · {teamLabel(p.team)}
+          {!full && (
+            <div className="player-row" style={{ marginTop: selected.length ? 10 : 0 }}>
+              <select
+                className="select-input"
+                value=""
+                disabled={playersLoading || available.length === 0}
+                onChange={(e) => {
+                  if (e.target.value) addFromSelect(e.target.value)
+                }}
+              >
+                <option value="">
+                  {playersLoading
+                    ? 'Chargement…'
+                    : available.length === 0
+                      ? 'Aucun joueur disponible — ajoute-en un'
+                      : '— Ajouter un joueur —'}
                 </option>
-              ))}
-            </select>
-          </div>
+                {available.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {teamLabel(p.team)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* create a brand-new player */}
-          {showNew ? (
-            <div className="new-player">
-              <div className="np-row">
-                <input
-                  className="name-input"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Nom du joueur"
-                  maxLength={20}
-                  autoFocus
-                />
-              </div>
-              <div className="np-row">
-                <select
-                  className="select-input"
-                  value={newTeam}
-                  onChange={(e) => setNewTeam(e.target.value as TeamKey)}
+          {!full &&
+            (showNew ? (
+              <div className="new-player">
+                <div className="np-row">
+                  <input
+                    className="name-input"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Nom du joueur"
+                    maxLength={20}
+                    autoFocus
+                  />
+                </div>
+                <div className="np-row">
+                  <select
+                    className="select-input"
+                    value={newTeam}
+                    onChange={(e) => setNewTeam(e.target.value as TeamKey)}
+                  >
+                    {TEAMS.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button className="icon-btn" onClick={() => setShowNew(false)} title="Annuler">
+                    ✕
+                  </button>
+                </div>
+                <button
+                  className="add-player"
+                  disabled={!newName.trim() || savingPlayer}
+                  onClick={addNewPlayer}
                 >
-                  {TEAMS.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                <button className="icon-btn" onClick={() => setShowNew(false)} title="Annuler">
-                  ✕
+                  {savingPlayer ? 'Ajout…' : 'Enregistrer et ajouter'}
                 </button>
               </div>
-              <button className="add-player" disabled={!newName.trim() || savingPlayer} onClick={addNewPlayer}>
-                {savingPlayer ? 'Ajout…' : 'Enregistrer et ajouter'}
+            ) : (
+              <button className="add-player" onClick={() => setShowNew(true)}>
+                + Nouveau joueur
               </button>
-            </div>
-          ) : (
-            <button className="add-player" onClick={() => setShowNew(true)}>
-              + Nouveau joueur
-            </button>
-          )}
+            ))}
 
           <div className="setup-divider" />
 
@@ -221,13 +237,15 @@ export default function Setup({ onCreated, onCancel }: Props) {
           </div>
 
           <button className="generate" disabled={!valid || creating} onClick={generate}>
-            {creating ? 'Création…' : 'Générer le tournoi'}
+            {creating ? 'Création…' : isGame ? 'Lancer la partie' : 'Générer le tournoi'}
           </button>
           <p className="setup-hint">{hint}</p>
         </div>
 
         <div className="footer-row">
-          <span className="hint">Départage : victoires, puis différence de points.</span>
+          <span className="hint">
+            {isGame ? 'Premier à atteindre le score, avec 2 points d’écart.' : 'Départage : victoires, puis différence de points.'}
+          </span>
           <button className="link-btn" onClick={onCancel}>
             ← Retour
           </button>
