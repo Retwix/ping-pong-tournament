@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tournoi Ping-Pong · Live</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,600;0,9..144,900&display=swap');
+
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c232d;
+    --line: #2a323d;
+    --ink: #f4f1ea;
+    --muted: #8a94a3;
+    --accent: #ff5a3c;
+    --accent-2: #2ee6a6;
+    --gold: #ffcf4d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: radial-gradient(120% 80% at 80% -10%, #1d2530 0%, var(--bg) 55%) fixed;
+    color: var(--ink);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    min-height: 100vh;
+    padding: 32px 18px 60px;
+    display: flex;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .wrap { width: 100%; max-width: 720px; }
+
+  header { margin-bottom: 28px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--accent-2); font-weight: 600; margin-bottom: 8px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: clamp(32px, 7vw, 52px); line-height: 0.95; letter-spacing: -0.02em;
+  }
+  h1 .em { font-style: italic; color: var(--accent); }
+  .subtitle { color: var(--muted); margin-top: 10px; font-size: 14px; }
+
+  section { margin-top: 34px; }
+  .section-title {
+    font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .section-title .count {
+    font-size: 11px; color: var(--gold); letter-spacing: 0.12em;
+  }
+
+  /* ===== SETUP PANEL ===== */
+  .setup { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .setup-label {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; margin-bottom: 10px;
+  }
+  .players-edit { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+  .player-row { display: flex; gap: 8px; align-items: center; }
+  .player-row .idx {
+    font-family: 'Fraunces', serif; font-size: 14px; color: var(--muted);
+    width: 22px; text-align: center; flex: none;
+  }
+  .player-row input {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    font-family: inherit; font-size: 15px; padding: 11px 13px; border-radius: 10px; min-width: 0;
+  }
+  .player-row input:focus { outline: none; border-color: var(--accent); }
+  .icon-btn {
+    flex: none; width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+    font-size: 18px; transition: all .15s;
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .add-player {
+    margin-top: 4px; width: 100%; padding: 11px; border-radius: 10px; cursor: pointer;
+    background: transparent; border: 1px dashed var(--line); color: var(--muted);
+    font-family: inherit; font-size: 14px; transition: all .15s;
+  }
+  .add-player:hover { border-color: var(--accent-2); color: var(--accent-2); }
+  .add-player:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .setup-divider { height: 1px; background: var(--line); margin: 20px 0; }
+
+  /* point target */
+  .target {
+    display: inline-flex; gap: 4px; flex-wrap: wrap;
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 4px;
+  }
+  .target button {
+    background: transparent; border: none; color: var(--muted);
+    font-family: inherit; font-size: 13px; padding: 8px 15px;
+    border-radius: 7px; cursor: pointer; transition: all .15s;
+  }
+  .target button.active { background: var(--accent); color: #160a07; font-weight: 600; }
+  .target input {
+    width: 64px; background: var(--bg); border: 1px solid var(--line); color: var(--ink);
+    font-family: 'Fraunces', serif; font-size: 15px; text-align: center;
+    padding: 6px 8px; border-radius: 7px;
+  }
+  .target input:focus { outline: none; border-color: var(--accent); }
+
+  .generate {
+    margin-top: 22px; width: 100%; padding: 15px; border-radius: 12px; cursor: pointer;
+    background: var(--accent-2); border: none; color: #04150e; font-weight: 600;
+    font-family: inherit; font-size: 15px; transition: transform .08s, opacity .15s;
+  }
+  .generate:active { transform: scale(0.99); }
+  .generate:disabled { opacity: 0.4; cursor: not-allowed; }
+  .setup-hint { color: var(--muted); font-size: 12.5px; margin-top: 12px; text-align: center; }
+
+  .round-label {
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--gold); font-weight: 600; margin: 18px 0 10px; display: flex; gap: 10px; align-items: baseline;
+  }
+  .round-label:first-child { margin-top: 0; }
+  .round-label .bye { color: var(--muted); font-weight: 500; letter-spacing: 0.04em; text-transform: none; font-size: 11px; }
+
+  /* compact match row */
+  .match {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    cursor: pointer; transition: border-color .2s, transform .08s;
+  }
+  .match:active { transform: scale(0.992); }
+  .match.live { border-color: rgba(255,90,60,0.55); }
+  .match.done { border-color: rgba(46,230,166,0.4); }
+
+  .match-players { display: flex; flex-direction: column; gap: 3px; }
+  .mp { font-size: 15px; font-weight: 600; }
+  .mp.win { color: var(--accent-2); }
+  .mp.lose { color: var(--muted); }
+  .mp-score { font-family: 'Fraunces', serif; font-size: 16px; margin-left: 8px; color: var(--muted); }
+
+  .match-status {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  .match.live .dot { background: var(--accent); animation: pulse 1.2s infinite; }
+  .match.done .dot { background: var(--accent-2); }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  /* standings */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px 18px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    font-weight: 600; text-align: center; padding: 8px 6px; border-bottom: 1px solid var(--line);
+  }
+  thead th.left { text-align: left; }
+  tbody td { padding: 14px 6px; text-align: center; border-bottom: 1px solid var(--line); font-size: 15px; }
+  tbody td.left { text-align: left; font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  .rank {
+    display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center;
+    border-radius: 50%; background: var(--panel-2); font-family: 'Fraunces', serif; font-size: 14px; margin-right: 10px;
+  }
+  tr.r1 .rank { background: var(--gold); color: #1a1205; }
+  tr.r2 .rank { background: #c7ccd4; color: #16181c; }
+  tr.r3 .rank { background: #d08a4a; color: #1a1002; }
+  .wins { font-family: 'Fraunces', serif; font-size: 18px; color: var(--accent-2); }
+  .diff.pos { color: var(--accent-2); }
+  .diff.neg { color: var(--accent); }
+
+  .footer-row { margin-top: 26px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .hint { color: var(--muted); font-size: 13px; }
+  button.reset {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 9px 16px; border-radius: 10px; font-family: inherit; font-size: 13px; cursor: pointer; transition: all .15s;
+  }
+  button.reset:hover { border-color: var(--accent); color: var(--accent); }
+
+  .hidden { display: none !important; }
+
+  /* ===== LIVE OVERLAY ===== */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(8,10,14,0.92);
+    backdrop-filter: blur(6px); z-index: 50;
+    display: none; flex-direction: column; padding: 22px 16px;
+  }
+  .overlay.open { display: flex; }
+  .ov-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .ov-close {
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    width: 42px; height: 42px; border-radius: 12px; font-size: 20px; cursor: pointer;
+  }
+  .ov-target { color: var(--muted); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .scoreboard { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0; }
+
+  .side {
+    border: 1px solid var(--line); border-radius: 20px; background: var(--panel);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none; position: relative; overflow: hidden;
+    transition: background .12s, border-color .2s;
+  }
+  .side:active { background: var(--panel-2); }
+  .side.serving { border-color: var(--accent); }
+  .side.winner { border-color: var(--accent-2); background: rgba(46,230,166,0.07); }
+
+  .side-name {
+    font-size: clamp(16px, 4.5vw, 22px); font-weight: 600; margin-top: 22px;
+    display: flex; align-items: center; gap: 8px; text-align: center; padding: 0 8px;
+  }
+  .serve-pip { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: none; }
+  .side.serving .serve-pip { display: inline-block; animation: pulse 1.2s infinite; }
+
+  .side-score {
+    font-family: 'Fraunces', serif; font-weight: 600;
+    font-size: clamp(80px, 26vw, 180px); line-height: 1; margin: auto 0;
+  }
+  .tap-hint { color: var(--muted); font-size: 12px; margin-bottom: 20px; letter-spacing: 0.08em; }
+  .side.winner .tap-hint { color: var(--accent-2); }
+
+  .ov-controls { display: flex; gap: 10px; margin-top: 14px; }
+  .ov-controls button {
+    flex: 1; padding: 15px; border-radius: 14px; font-family: inherit; font-size: 14px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer;
+    transition: all .15s;
+  }
+  .ov-controls button:active { transform: scale(0.97); }
+  .ov-controls .primary { background: var(--accent-2); color: #04150e; border-color: var(--accent-2); font-weight: 600; }
+  .ov-controls .primary:disabled { opacity: 0.35; cursor: not-allowed; }
+  .kbd-hint { text-align: center; color: var(--muted); font-size: 11.5px; margin-top: 10px; letter-spacing: 0.04em; }
+  .kbd-hint kbd {
+    font-family: inherit; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 5px; padding: 1px 6px; font-size: 11px; color: var(--ink);
+  }
+  @media (hover: none) { .kbd-hint { display: none; } }
+
+  .matchpoint-flag {
+    position: absolute; top: 14px; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--gold); font-weight: 700; opacity: 0; transition: opacity .2s;
+  }
+  .side.mpoint .matchpoint-flag { opacity: 1; }
+
+  /* ===== CHAMPION OVERLAY ===== */
+  .champion {
+    position: fixed; inset: 0; z-index: 70;
+    background: radial-gradient(120% 80% at 50% -10%, #1d2530 0%, var(--bg) 60%);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px 22px; text-align: center; overflow: hidden;
+  }
+  .champion.open { display: flex; }
+  #confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .champ-inner { position: relative; z-index: 2; animation: champ-rise .6s cubic-bezier(.2,.8,.2,1) both; max-width: 480px; }
+  @keyframes champ-rise { from { opacity: 0; transform: translateY(24px) scale(.96); } to { opacity: 1; transform: none; } }
+  .champ-kicker {
+    font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--accent-2); font-weight: 600; margin-bottom: 14px;
+  }
+  .champ-trophy { font-size: 64px; margin-bottom: 6px; filter: drop-shadow(0 6px 18px rgba(255,207,77,0.35)); }
+  .champ-name {
+    font-family: 'Fraunces', serif; font-weight: 900; font-style: italic;
+    font-size: clamp(46px, 13vw, 96px); line-height: 0.92; letter-spacing: -0.02em;
+    color: var(--gold); margin: 4px 0 8px;
+  }
+  .champ-sub { color: var(--ink); font-size: 15px; margin-bottom: 26px; }
+  .champ-sub b { color: var(--accent-2); }
+  .champ-podium {
+    display: flex; flex-direction: column; gap: 8px; margin: 0 auto 28px; max-width: 360px;
+  }
+  .champ-podium .prow {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px;
+  }
+  .champ-podium .prow .who { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+  .champ-podium .prow .medal { font-family: 'Fraunces', serif; font-size: 18px; }
+  .champ-podium .prow.p1 { border-color: rgba(255,207,77,0.5); }
+  .champ-podium .prow.p2 { border-color: rgba(199,204,212,0.4); }
+  .champ-podium .prow.p3 { border-color: rgba(208,138,74,0.45); }
+  .champ-podium .prow .pwins { font-family: 'Fraunces', serif; color: var(--accent-2); font-size: 16px; }
+  .champ-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .champ-actions button {
+    padding: 13px 22px; border-radius: 12px; font-family: inherit; font-size: 14px; cursor: pointer;
+    transition: all .15s;
+  }
+  .champ-actions .ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+  .champ-actions .ghost:hover { border-color: var(--accent-2); color: var(--accent-2); }
+  .champ-actions .solid { background: var(--accent); border: none; color: #160a07; font-weight: 600; }
+
+  @media (max-width: 460px) { .mp { font-size: 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker" id="kicker">Round-robin · configure ton tournoi</div>
+    <h1>Tournoi <span class="em">ping-pong</span></h1>
+    <p class="subtitle">Ajoute tes joueurs, choisis le format, puis génère les matchs. Tape un match pour le marqueur live.</p>
+  </header>
+
+  <!-- ===== SETUP ===== -->
+  <section id="setupSection">
+    <div class="section-title">Configuration</div>
+    <div class="setup">
+      <div class="setup-label">Joueurs</div>
+      <div class="players-edit" id="playersEdit"></div>
+      <button class="add-player" id="addPlayer">+ Ajouter un joueur</button>
+
+      <div class="setup-divider"></div>
+
+      <div class="setup-label">Points par jeu</div>
+      <div class="target" id="target">
+        <button data-t="11" class="active">11</button>
+        <button data-t="21">21</button>
+        <button data-t="15">15</button>
+        <input type="number" id="targetCustom" min="1" max="99" placeholder="autre" inputmode="numeric">
+      </div>
+
+      <button class="generate" id="generate">Générer le tournoi</button>
+      <p class="setup-hint" id="setupHint"></p>
+    </div>
+  </section>
+
+  <!-- ===== MATCHES ===== -->
+  <section id="matchesSection" class="hidden">
+    <div class="section-title">Les matchs <span class="count" id="matchCount"></span></div>
+    <div id="matches"></div>
+  </section>
+
+  <!-- ===== STANDINGS ===== -->
+  <section id="standingsSection" class="hidden">
+    <div class="section-title">Classement</div>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th class="left">Joueur</th>
+            <th>J</th><th>V</th><th>Pts +/−</th><th>Diff</th>
+          </tr>
+        </thead>
+        <tbody id="standings"></tbody>
+      </table>
+    </div>
+    <div class="footer-row">
+      <span class="hint">Départage : victoires, puis différence de points.</span>
+      <button class="reset" id="newTournament">Nouveau tournoi</button>
+    </div>
+  </section>
+</div>
+
+<!-- LIVE OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="ov-top">
+    <button class="ov-close" id="ovClose">✕</button>
+    <span class="ov-target" id="ovTarget"></span>
+  </div>
+  <div class="scoreboard">
+    <div class="side" id="sideA">
+      <span class="matchpoint-flag">Balle de match</span>
+      <span class="side-name"><span class="serve-pip"></span><span class="nm"></span></span>
+      <span class="side-score">0</span>
+      <span class="tap-hint">Tape pour +1</span>
+    </div>
+    <div class="side" id="sideB">
+      <span class="matchpoint-flag">Balle de match</span>
+      <span class="side-name"><span class="serve-pip"></span><span class="nm"></span></span>
+      <span class="side-score">0</span>
+      <span class="tap-hint">Tape pour +1</span>
+    </div>
+  </div>
+  <div class="ov-controls">
+    <button id="undo">↶ Annuler</button>
+    <button id="swapServe">🏓 Service</button>
+    <button class="primary" id="finish" disabled>Valider le match</button>
+  </div>
+  <div class="kbd-hint">
+    <kbd>←</kbd> point gauche · <kbd>→</kbd> point droite · <kbd>Z</kbd> annuler · <kbd>Entrée</kbd> valider · <kbd>Échap</kbd> fermer
+  </div>
+</div>
+
+<!-- CHAMPION OVERLAY -->
+<div class="champion" id="champion">
+  <canvas id="confetti"></canvas>
+  <div class="champ-inner">
+    <div class="champ-kicker">Tournoi terminé</div>
+    <div class="champ-trophy">🏆</div>
+    <div class="champ-name" id="champName">—</div>
+    <div class="champ-sub" id="champSub"></div>
+    <div class="champ-podium" id="champPodium"></div>
+    <div class="champ-actions">
+      <button class="ghost" id="champClose">Revoir les résultats</button>
+      <button class="solid" id="champNew">Nouveau tournoi</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  "use strict";
+
+  const STORAGE_KEY = "pingpong_tournament_v2";
+  let storageOK = true;
+  try { const t = "__t"; localStorage.setItem(t, "1"); localStorage.removeItem(t); }
+  catch (e) { storageOK = false; }
+
+  // ---------- model ----------
+  // config: { players: [names], target: number }
+  // tournament: { rounds: [{label, byes:[names], matches:[key,...]}], state: {key -> match} }
+  let config = { players: ["Celia", "Candice", "Leo", "Thibault"], target: 11 };
+  let tournament = null;   // null until generated
+  let celebrated = false;  // champion screen already shown for this completion
+
+  // ---------- persistence ----------
+  function save() {
+    if (!storageOK) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ config, tournament, celebrated }));
+    } catch (e) { /* quota / disabled */ }
+  }
+  function load() {
+    if (!storageOK) return false;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (data && data.config && Array.isArray(data.config.players)) {
+        config = data.config;
+        tournament = data.tournament || null;
+        celebrated = !!data.celebrated;
+        return true;
+      }
+    } catch (e) { /* corrupt */ }
+    return false;
+  }
+
+  // ---------- round-robin generation (circle method) ----------
+  function generateSchedule(players) {
+    const list = players.slice();
+    const hasBye = list.length % 2 !== 0;
+    if (hasBye) list.push("__BYE__");
+    const n = list.length;
+    const roundsCount = n - 1;
+    const half = n / 2;
+    let arr = list.slice();
+    const rounds = [];
+
+    for (let r = 0; r < roundsCount; r++) {
+      const pairs = [];
+      const byes = [];
+      for (let i = 0; i < half; i++) {
+        const p1 = arr[i], p2 = arr[n - 1 - i];
+        if (p1 === "__BYE__") byes.push(p2);
+        else if (p2 === "__BYE__") byes.push(p1);
+        else pairs.push([p1, p2]);
+      }
+      rounds.push({ pairs, byes });
+      // rotate: keep first fixed, rotate the rest
+      arr = [arr[0], arr[n - 1], ...arr.slice(1, n - 1)];
+    }
+    return rounds;
+  }
+
+  function buildTournament() {
+    const raw = generateSchedule(config.players);
+    const state = {};
+    const rounds = [];
+    let mIndex = 0;
+    raw.forEach((rd, ri) => {
+      const matchKeys = [];
+      rd.pairs.forEach(([a, b]) => {
+        const key = "m" + (mIndex++);
+        state[key] = { pa: a, pb: b, a: 0, b: 0, done: false, serveStart: "a", history: [] };
+        matchKeys.push(key);
+      });
+      rounds.push({ label: "Tour " + (ri + 1), matches: matchKeys, byes: rd.byes });
+    });
+    tournament = { rounds, state };
+    celebrated = false;
+  }
+
+  function allMatchKeys() {
+    if (!tournament) return [];
+    return tournament.rounds.flatMap(r => r.matches);
+  }
+
+  // ====================================================================
+  // SETUP UI
+  // ====================================================================
+  const playersEditEl = document.getElementById("playersEdit");
+  const addPlayerBtn = document.getElementById("addPlayer");
+  const generateBtn = document.getElementById("generate");
+  const setupHint = document.getElementById("setupHint");
+  const targetCustom = document.getElementById("targetCustom");
+  const MAX_PLAYERS = 16;
+
+  function renderSetup() {
+    playersEditEl.innerHTML = "";
+    config.players.forEach((name, i) => {
+      const row = document.createElement("div");
+      row.className = "player-row";
+      row.innerHTML = `
+        <span class="idx">${i + 1}</span>
+        <input type="text" value="${escapeAttr(name)}" placeholder="Joueur ${i + 1}" maxlength="20">
+        <button class="icon-btn rm" title="Retirer" ${config.players.length <= 2 ? "disabled" : ""}>✕</button>`;
+      const input = row.querySelector("input");
+      input.addEventListener("input", () => { config.players[i] = input.value; updateSetupState(); });
+      row.querySelector(".rm").addEventListener("click", () => {
+        if (config.players.length <= 2) return;
+        config.players.splice(i, 1);
+        renderSetup();
+      });
+      playersEditEl.appendChild(row);
+    });
+    addPlayerBtn.disabled = config.players.length >= MAX_PLAYERS;
+
+    // target buttons
+    document.querySelectorAll("#target button").forEach(b => {
+      b.classList.toggle("active", parseInt(b.dataset.t, 10) === config.target);
+    });
+    const isPreset = [11, 21, 15].includes(config.target);
+    targetCustom.value = isPreset ? "" : config.target;
+
+    updateSetupState();
+  }
+
+  function updateSetupState() {
+    const names = config.players.map(p => (p || "").trim());
+    const filled = names.filter(n => n.length > 0);
+    const dupes = new Set();
+    const seen = new Set();
+    filled.forEach(n => { const k = n.toLowerCase(); if (seen.has(k)) dupes.add(k); seen.add(k); });
+
+    let ok = true, msg = "";
+    if (filled.length < 2) { ok = false; msg = "Il faut au moins 2 joueurs nommés."; }
+    else if (filled.length !== names.length) { ok = false; msg = "Certains joueurs n'ont pas de nom."; }
+    else if (dupes.size) { ok = false; msg = "Deux joueurs portent le même nom."; }
+    else {
+      const n = filled.length;
+      const games = (n * (n - 1)) / 2;
+      const odd = n % 2 !== 0;
+      msg = `${n} joueurs · ${games} matchs · ${n - (odd ? 0 : 1)} tours` + (odd ? " (avec exempts)" : "");
+    }
+    generateBtn.disabled = !ok;
+    setupHint.textContent = msg;
+  }
+
+  addPlayerBtn.addEventListener("click", () => {
+    if (config.players.length >= MAX_PLAYERS) return;
+    config.players.push("");
+    renderSetup();
+    const inputs = playersEditEl.querySelectorAll("input");
+    inputs[inputs.length - 1].focus();
+  });
+
+  document.getElementById("target").addEventListener("click", e => {
+    if (e.target.tagName !== "BUTTON") return;
+    config.target = parseInt(e.target.dataset.t, 10);
+    targetCustom.value = "";
+    document.querySelectorAll("#target button").forEach(b => b.classList.remove("active"));
+    e.target.classList.add("active");
+  });
+  targetCustom.addEventListener("input", () => {
+    const v = parseInt(targetCustom.value, 10);
+    if (v >= 1 && v <= 99) {
+      config.target = v;
+      document.querySelectorAll("#target button").forEach(b => b.classList.remove("active"));
+    }
+  });
+
+  generateBtn.addEventListener("click", () => {
+    config.players = config.players.map(p => p.trim()).filter(p => p.length > 0);
+    if (config.players.length < 2) return;
+    if (!config.target || config.target < 1) config.target = 11;
+    buildTournament();
+    save();
+    showTournament();
+  });
+
+  // ====================================================================
+  // TOURNAMENT UI
+  // ====================================================================
+  const setupSection = document.getElementById("setupSection");
+  const matchesSection = document.getElementById("matchesSection");
+  const standingsSection = document.getElementById("standingsSection");
+  const matchesEl = document.getElementById("matches");
+
+  function showSetup() {
+    setupSection.classList.remove("hidden");
+    matchesSection.classList.add("hidden");
+    standingsSection.classList.add("hidden");
+    document.getElementById("kicker").textContent = "Round-robin · configure ton tournoi";
+    renderSetup();
+  }
+
+  function showTournament() {
+    setupSection.classList.add("hidden");
+    matchesSection.classList.remove("hidden");
+    standingsSection.classList.remove("hidden");
+    const n = config.players.length;
+    const games = allMatchKeys().length;
+    document.getElementById("kicker").textContent = `Round-robin · ${n} joueurs · ${games} matchs · jeu en ${config.target}`;
+    buildList();
+    renderStandings();
+  }
+
+  function buildList() {
+    matchesEl.innerHTML = "";
+    const keys = allMatchKeys();
+    const doneCount = keys.filter(k => tournament.state[k].done).length;
+    document.getElementById("matchCount").textContent = `${doneCount}/${keys.length} joués`;
+
+    tournament.rounds.forEach(rd => {
+      const label = document.createElement("div");
+      label.className = "round-label";
+      label.innerHTML = rd.label + (rd.byes && rd.byes.length
+        ? ` <span class="bye">· exempt : ${rd.byes.map(escapeHtml).join(", ")}</span>` : "");
+      matchesEl.appendChild(label);
+
+      rd.matches.forEach(key => {
+        const m = tournament.state[key];
+        const card = document.createElement("div");
+        card.className = "match" + (m.done ? " done" : (m.a || m.b ? " live" : ""));
+        const aWin = m.done && m.a > m.b, bWin = m.done && m.b > m.a;
+        const status = m.done ? "Terminé" : (m.a || m.b ? "En cours" : "À jouer");
+        const showScore = m.done || m.a || m.b;
+        card.innerHTML = `
+          <div class="match-players">
+            <span class="mp ${aWin ? 'win' : m.done ? 'lose' : ''}">${escapeHtml(m.pa)}<span class="mp-score">${showScore ? m.a : ''}</span></span>
+            <span class="mp ${bWin ? 'win' : m.done ? 'lose' : ''}">${escapeHtml(m.pb)}<span class="mp-score">${showScore ? m.b : ''}</span></span>
+          </div>
+          <div class="match-status"><span class="dot"></span>${status}</div>`;
+        card.addEventListener("click", () => openLive(key));
+        matchesEl.appendChild(card);
+      });
+    });
+  }
+
+  function renderStandings() {
+    const stats = {};
+    config.players.forEach(p => stats[p] = { name: p, played: 0, wins: 0, pf: 0, pa: 0 });
+    allMatchKeys().forEach(k => {
+      const m = tournament.state[k];
+      if (m.done && stats[m.pa] && stats[m.pb]) {
+        stats[m.pa].played++; stats[m.pb].played++;
+        stats[m.pa].pf += m.a; stats[m.pa].pa += m.b;
+        stats[m.pb].pf += m.b; stats[m.pb].pa += m.a;
+        if (m.a > m.b) stats[m.pa].wins++; else stats[m.pb].wins++;
+      }
+    });
+    const ranked = rankPlayers(stats);
+    const tb = document.getElementById("standings");
+    tb.innerHTML = "";
+    ranked.forEach((s, i) => {
+      const diff = s.pf - s.pa;
+      const tr = document.createElement("tr");
+      tr.className = "r" + (i + 1);
+      tr.innerHTML = `
+        <td class="left"><span class="rank">${i + 1}</span>${escapeHtml(s.name)}</td>
+        <td>${s.played}</td>
+        <td class="wins">${s.wins}</td>
+        <td>${s.pf}/${s.pa}</td>
+        <td class="diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}">${diff > 0 ? '+' : ''}${diff}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+
+  function rankPlayers(stats) {
+    return Object.values(stats).sort((x, y) =>
+      y.wins !== x.wins ? y.wins - x.wins : (y.pf - y.pa) - (x.pf - x.pa));
+  }
+
+  // ---------- ping-pong logic ----------
+  function isWon(a, b) {
+    const t = config.target;
+    return (a >= t || b >= t) && Math.abs(a - b) >= 2;
+  }
+  function isMatchPoint(forA, a, b) {
+    if (forA) return isWon(a + 1, b) && a >= b;
+    return isWon(a, b + 1) && b >= a;
+  }
+  function serverIsA(m) {
+    const t = config.target;
+    const total = m.a + m.b;
+    const deuce = m.a >= t - 1 && m.b >= t - 1;
+    const block = deuce ? total : Math.floor(total / 2);
+    const startA = m.serveStart === "a";
+    return (block % 2 === 0) ? startA : !startA;
+  }
+
+  // ====================================================================
+  // LIVE OVERLAY
+  // ====================================================================
+  let liveKey = null;
+  const overlay = document.getElementById("overlay");
+  const sideA = document.getElementById("sideA");
+  const sideB = document.getElementById("sideB");
+
+  function openLive(key) {
+    liveKey = key;
+    overlay.classList.add("open");
+    renderLive();
+  }
+  function closeLive() {
+    overlay.classList.remove("open");
+    liveKey = null;
+    buildList(); renderStandings(); save();
+    maybeCelebrate();
+  }
+
+  function renderLive() {
+    const m = tournament.state[liveKey];
+    document.getElementById("ovTarget").textContent = `Jeu en ${config.target} · ${m.pa} vs ${m.pb}`;
+    sideA.querySelector(".nm").textContent = m.pa;
+    sideB.querySelector(".nm").textContent = m.pb;
+    sideA.querySelector(".side-score").textContent = m.a;
+    sideB.querySelector(".side-score").textContent = m.b;
+
+    const won = isWon(m.a, m.b);
+    const aWon = won && m.a > m.b, bWon = won && m.b > m.a;
+
+    sideA.classList.toggle("winner", aWon);
+    sideB.classList.toggle("winner", bWon);
+    sideA.querySelector(".tap-hint").textContent = aWon ? "Vainqueur 🏆" : "Tape pour +1";
+    sideB.querySelector(".tap-hint").textContent = bWon ? "Vainqueur 🏆" : "Tape pour +1";
+
+    const aServe = !won && serverIsA(m);
+    sideA.classList.toggle("serving", aServe);
+    sideB.classList.toggle("serving", !won && !serverIsA(m));
+
+    sideA.classList.toggle("mpoint", !won && isMatchPoint(true, m.a, m.b));
+    sideB.classList.toggle("mpoint", !won && isMatchPoint(false, m.a, m.b));
+
+    document.getElementById("finish").disabled = !won;
+  }
+
+  function addPoint(side) {
+    const m = tournament.state[liveKey];
+    if (isWon(m.a, m.b)) return;
+    m.history.push([m.a, m.b]);
+    if (side === "a") m.a++; else m.b++;
+    renderLive(); save();
+  }
+  function undoPoint() {
+    const m = tournament.state[liveKey];
+    if (m.history.length) { [m.a, m.b] = m.history.pop(); renderLive(); save(); }
+  }
+  function finishMatch() {
+    const m = tournament.state[liveKey];
+    if (!isWon(m.a, m.b)) return;
+    m.done = true;
+    closeLive();
+  }
+
+  sideA.addEventListener("click", () => addPoint("a"));
+  sideB.addEventListener("click", () => addPoint("b"));
+  document.getElementById("undo").addEventListener("click", undoPoint);
+  document.getElementById("swapServe").addEventListener("click", () => {
+    const m = tournament.state[liveKey];
+    if (m.a + m.b === 0) { m.serveStart = m.serveStart === "a" ? "b" : "a"; renderLive(); save(); }
+  });
+  document.getElementById("finish").addEventListener("click", finishMatch);
+  document.getElementById("ovClose").addEventListener("click", closeLive);
+
+  // ---------- keyboard shortcuts ----------
+  document.addEventListener("keydown", e => {
+    if (!overlay.classList.contains("open") || liveKey === null) return;
+    switch (e.key) {
+      case "ArrowLeft":  e.preventDefault(); addPoint("a"); break;
+      case "ArrowRight": e.preventDefault(); addPoint("b"); break;
+      case "z": case "Z": case "Backspace": e.preventDefault(); undoPoint(); break;
+      case "Enter": e.preventDefault(); finishMatch(); break;
+      case "Escape": e.preventDefault(); closeLive(); break;
+    }
+  });
+
+  // ====================================================================
+  // CHAMPION SCREEN + CONFETTI
+  // ====================================================================
+  const championEl = document.getElementById("champion");
+
+  function maybeCelebrate() {
+    const keys = allMatchKeys();
+    if (keys.length && keys.every(k => tournament.state[k].done) && !celebrated) {
+      celebrated = true;
+      save();
+      showChampion();
+    }
+  }
+
+  function showChampion() {
+    const stats = {};
+    config.players.forEach(p => stats[p] = { name: p, played: 0, wins: 0, pf: 0, pa: 0 });
+    allMatchKeys().forEach(k => {
+      const m = tournament.state[k];
+      if (m.done) {
+        stats[m.pa].played++; stats[m.pb].played++;
+        stats[m.pa].pf += m.a; stats[m.pa].pa += m.b;
+        stats[m.pb].pf += m.b; stats[m.pb].pa += m.a;
+        if (m.a > m.b) stats[m.pa].wins++; else stats[m.pb].wins++;
+      }
+    });
+    const ranked = rankPlayers(stats);
+    const champ = ranked[0];
+    document.getElementById("champName").textContent = champ.name;
+    const diff = champ.pf - champ.pa;
+    document.getElementById("champSub").innerHTML =
+      `<b>${champ.wins}</b> victoires · différence <b>${diff >= 0 ? '+' : ''}${diff}</b>`;
+
+    const medals = ["🥇", "🥈", "🥉"];
+    const podiumEl = document.getElementById("champPodium");
+    podiumEl.innerHTML = "";
+    ranked.slice(0, 3).forEach((s, i) => {
+      const row = document.createElement("div");
+      row.className = "prow p" + (i + 1);
+      row.innerHTML = `
+        <span class="who"><span class="medal">${medals[i]}</span>${escapeHtml(s.name)}</span>
+        <span class="pwins">${s.wins} V</span>`;
+      podiumEl.appendChild(row);
+    });
+
+    championEl.classList.add("open");
+    startConfetti();
+  }
+
+  function closeChampion() { championEl.classList.remove("open"); stopConfetti(); }
+  document.getElementById("champClose").addEventListener("click", closeChampion);
+  document.getElementById("champNew").addEventListener("click", () => { closeChampion(); newTournament(); });
+
+  // confetti particle system (vanilla canvas)
+  const canvas = document.getElementById("confetti");
+  const ctx = canvas.getContext("2d");
+  let confettiParticles = [];
+  let confettiRAF = null;
+  let confettiStart = 0;
+  const CONF_COLORS = ["#ff5a3c", "#2ee6a6", "#ffcf4d", "#f4f1ea", "#5aa9ff"];
+
+  function sizeCanvas() {
+    canvas.width = championEl.clientWidth;
+    canvas.height = championEl.clientHeight;
+  }
+  function spawnConfetti(count) {
+    for (let i = 0; i < count; i++) {
+      confettiParticles.push({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * canvas.height * 0.4,
+        w: 6 + Math.random() * 7,
+        h: 8 + Math.random() * 9,
+        color: CONF_COLORS[(Math.random() * CONF_COLORS.length) | 0],
+        vx: (Math.random() - 0.5) * 1.6,
+        vy: 2 + Math.random() * 3.2,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.3,
+        sway: Math.random() * Math.PI * 2
+      });
+    }
+  }
+  function startConfetti() {
+    sizeCanvas();
+    confettiParticles = [];
+    confettiStart = performance.now();
+    spawnConfetti(140);
+    if (!confettiRAF) confettiRAF = requestAnimationFrame(tickConfetti);
+  }
+  function stopConfetti() {
+    if (confettiRAF) cancelAnimationFrame(confettiRAF);
+    confettiRAF = null;
+    confettiParticles = [];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  function tickConfetti(now) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const elapsed = now - confettiStart;
+    // top up a couple of bursts in the first ~2.5s
+    if (elapsed < 2500 && Math.random() < 0.3) spawnConfetti(8);
+
+    confettiParticles.forEach(p => {
+      p.sway += 0.05;
+      p.x += p.vx + Math.sin(p.sway) * 0.6;
+      p.y += p.vy;
+      p.rot += p.vr;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    confettiParticles = confettiParticles.filter(p => p.y < canvas.height + 30);
+
+    if (championEl.classList.contains("open") && (confettiParticles.length || elapsed < 2500)) {
+      confettiRAF = requestAnimationFrame(tickConfetti);
+    } else {
+      confettiRAF = null;
+    }
+  }
+  window.addEventListener("resize", () => { if (championEl.classList.contains("open")) sizeCanvas(); });
+
+  // ====================================================================
+  // NEW TOURNAMENT / RESET
+  // ====================================================================
+  function newTournament() {
+    if (tournament && !confirm("Repartir de zéro ? Les scores actuels seront effacés.")) return;
+    tournament = null;
+    celebrated = false;
+    save();
+    showSetup();
+  }
+  document.getElementById("newTournament").addEventListener("click", newTournament);
+
+  // ---------- helpers ----------
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  // ====================================================================
+  // BOOT
+  // ====================================================================
+  load();
+  if (tournament && allMatchKeys().length) {
+    showTournament();
+    // if it was already complete and celebrated, leave results visible (don't re-pop confetti)
+  } else {
+    tournament = null;
+    showSetup();
+  }
+  if (!storageOK) {
+    setupHint.textContent = "Sauvegarde locale indisponible ici — l'état sera perdu au rafraîchissement.";
+  }
+
+  // expose for headless testing
+  window.__tt = { generateSchedule, isWon, get config(){return config;}, get tournament(){return tournament;}, buildTournament };
+</script>
+</body>
+</html>
