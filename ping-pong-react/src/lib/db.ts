@@ -1,6 +1,27 @@
 import { supabase } from './supabase'
 import { generateSchedule } from './roundRobin'
-import type { Match, Tournament } from '../types'
+import type { Match, Player, Tournament } from '../types'
+
+// ---------- players registry ----------
+
+export async function listPlayers(): Promise<Player[]> {
+  const { data, error } = await supabase
+    .from('players')
+    .select('*')
+    .order('name', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as Player[]
+}
+
+export async function createPlayer(name: string, team: string): Promise<Player> {
+  const { data, error } = await supabase
+    .from('players')
+    .insert({ name, team })
+    .select()
+    .single()
+  if (error) throw error
+  return data as Player
+}
 
 /** Create a tournament + its round-robin matches. Returns the new tournament id. */
 export async function createTournament(

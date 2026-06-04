@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { createTournament } from '../lib/db'
+import { createPlayer, createTournament } from '../lib/db'
 import { matchCount, roundCount } from '../lib/roundRobin'
+import { TEAMS, teamLabel, type TeamKey } from '../lib/teams'
+import { usePlayers } from '../hooks/usePlayers'
+import type { Player } from '../types'
 
 interface Props {
   onCreated: (id: string) => void
@@ -8,49 +11,73 @@ interface Props {
 }
 
 const PRESETS = [11, 21, 15]
-const MAX_PLAYERS = 16
 
 export default function Setup({ onCreated, onCancel }: Props) {
+  const { players, loading: playersLoading } = usePlayers()
+
   const [name, setName] = useState('')
-  const [players, setPlayers] = useState<string[]>(['', '', '', ''])
   const [target, setTarget] = useState(11)
+  const [selected, setSelected] = useState<Player[]>([])
+
+  const [showNew, setShowNew] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newTeam, setNewTeam] = useState<TeamKey>('guests')
+  const [savingPlayer, setSavingPlayer] = useState(false)
+
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const trimmed = players.map((p) => p.trim())
-  const filled = trimmed.filter((p) => p.length > 0)
-  const lower = filled.map((p) => p.toLowerCase())
-  const hasDupes = new Set(lower).size !== lower.length
+  const available = players.filter((p) => !selected.some((s) => s.id === p.id))
 
-  let valid = true
-  let hint = ''
-  if (filled.length < 2) {
-    valid = false
-    hint = 'Il faut au moins 2 joueurs nommés.'
-  } else if (filled.length !== trimmed.length) {
-    valid = false
-    hint = "Certains joueurs n'ont pas de nom."
-  } else if (hasDupes) {
-    valid = false
-    hint = 'Deux joueurs portent le même nom.'
-  } else {
-    const n = filled.length
-    const odd = n % 2 !== 0
-    hint = `${n} joueurs · ${matchCount(n)} matchs · ${roundCount(n)} tours${odd ? ' (avec exempts)' : ''}`
+  const valid = selected.length >= 2
+  const hint = valid
+    ? (() => {
+        const n = selected.length
+        const odd = n % 2 !== 0
+        return `${n} joueurs · ${matchCount(n)} matchs · ${roundCount(n)} tours${
+          odd ? ' (avec exempts)' : ''
+        }`
+      })()
+    : 'Sélectionne au moins 2 joueurs.'
+
+  const addFromSelect = (id: string) => {
+    const p = players.find((pl) => pl.id === id)
+    if (p) setSelected((s) => [...s, p])
   }
+  const removeSelected = (id: string) => setSelected((s) => s.filter((p) => p.id !== id))
 
-  const setPlayer = (i: number, v: string) =>
-    setPlayers((ps) => ps.map((p, idx) => (idx === i ? v : p)))
-  const addPlayer = () => setPlayers((ps) => (ps.length >= MAX_PLAYERS ? ps : [...ps, '']))
-  const removePlayer = (i: number) =>
-    setPlayers((ps) => (ps.length <= 2 ? ps : ps.filter((_, idx) => idx !== i)))
+  const addNewPlayer = async () => {
+    const nm = newName.trim()
+    if (!nm || savingPlayer) return
+    if (players.some((p) => p.name.toLowerCase() === nm.toLowerCase())) {
+      setError('Ce joueur existe déjà — choisis-le dans la liste.')
+      return
+    }
+    setSavingPlayer(true)
+    setError(null)
+    try {
+      const player = await createPlayer(nm, newTeam)
+      setSelected((s) => [...s, player])
+      setNewName('')
+      setNewTeam('guests')
+      setShowNew(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingPlayer(false)
+    }
+  }
 
   const generate = async () => {
     if (!valid || creating) return
     setCreating(true)
     setError(null)
     try {
-      const id = await createTournament(name.trim() || 'Tournoi', filled, target || 11)
+      const id = await createTournament(
+        name.trim() || 'Tournoi',
+        selected.map((p) => p.name),
+        target || 11
+      )
       onCreated(id)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -67,7 +94,10 @@ export default function Setup({ onCreated, onCancel }: Props) {
         <h1>
           Tournoi <span className="em">ping-pong</span>
         </h1>
-        <p className="subtitle">Ajoute tes joueurs, choisis le format, puis génère les matchs.</p>
+        <p className="subtitle">
+          Choisis les joueurs, le format, puis génère les matchs. Les joueurs sont enregistrés (nom +
+          équipe) pour les futures stats.
+        </p>
       </header>
 
       {error && <div className="error-banner">{error}</div>}
@@ -87,31 +117,85 @@ export default function Setup({ onCreated, onCancel }: Props) {
           <div className="setup-divider" />
 
           <div className="setup-label">Joueurs</div>
-          <div className="players-edit">
-            {players.map((p, i) => (
-              <div className="player-row" key={i}>
-                <span className="idx">{i + 1}</span>
+
+          {selected.length > 0 && (
+            <div className="players-edit">
+              {selected.map((p, i) => (
+                <div className="player-row" key={p.id}>
+                  <span className="idx">{i + 1}</span>
+                  <span className="pname">{p.name}</span>
+                  <span className="team-tag">{teamLabel(p.team)}</span>
+                  <button className="icon-btn" onClick={() => removeSelected(p.id)} title="Retirer">
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* pick an existing player */}
+          <div className="player-row" style={{ marginTop: selected.length ? 10 : 0 }}>
+            <select
+              className="select-input"
+              value=""
+              disabled={playersLoading || available.length === 0}
+              onChange={(e) => {
+                if (e.target.value) addFromSelect(e.target.value)
+              }}
+            >
+              <option value="">
+                {playersLoading
+                  ? 'Chargement…'
+                  : available.length === 0
+                    ? 'Aucun joueur disponible — ajoute-en un'
+                    : '— Ajouter un joueur —'}
+              </option>
+              {available.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} · {teamLabel(p.team)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* create a brand-new player */}
+          {showNew ? (
+            <div className="new-player">
+              <div className="np-row">
                 <input
-                  type="text"
-                  value={p}
-                  placeholder={`Joueur ${i + 1}`}
+                  className="name-input"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Nom du joueur"
                   maxLength={20}
-                  onChange={(e) => setPlayer(i, e.target.value)}
+                  autoFocus
                 />
-                <button
-                  className="icon-btn"
-                  disabled={players.length <= 2}
-                  onClick={() => removePlayer(i)}
-                  title="Retirer"
+              </div>
+              <div className="np-row">
+                <select
+                  className="select-input"
+                  value={newTeam}
+                  onChange={(e) => setNewTeam(e.target.value as TeamKey)}
                 >
+                  {TEAMS.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <button className="icon-btn" onClick={() => setShowNew(false)} title="Annuler">
                   ✕
                 </button>
               </div>
-            ))}
-          </div>
-          <button className="add-player" disabled={players.length >= MAX_PLAYERS} onClick={addPlayer}>
-            + Ajouter un joueur
-          </button>
+              <button className="add-player" disabled={!newName.trim() || savingPlayer} onClick={addNewPlayer}>
+                {savingPlayer ? 'Ajout…' : 'Enregistrer et ajouter'}
+              </button>
+            </div>
+          ) : (
+            <button className="add-player" onClick={() => setShowNew(true)}>
+              + Nouveau joueur
+            </button>
+          )}
 
           <div className="setup-divider" />
 

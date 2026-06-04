@@ -33,10 +33,31 @@ create table if not exists public.matches (
 
 create index if not exists matches_tournament_idx on public.matches(tournament_id, idx);
 
+-- Registry of people who play. Tournaments are built by picking from this list,
+-- which makes per-player and per-team stats possible later.
+-- team is one of: 'tech' | 'support' | 'marketing' | 'sales' | 'guests'
+create table if not exists public.players (
+  id          uuid primary key default gen_random_uuid(),
+  created_at  timestamptz not null default now(),
+  name        text not null unique,
+  team        text not null default 'guests'
+);
+
 -- ---------- realtime ----------
 -- Lets clients subscribe to live INSERT/UPDATE/DELETE on these tables.
-alter publication supabase_realtime add table public.tournaments;
-alter publication supabase_realtime add table public.matches;
+-- Guarded so re-running this file does not error if already added.
+do $$
+declare t text;
+begin
+  foreach t in array array['tournaments', 'matches', 'players'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
 
 -- ---------- row level security ----------
 -- Open policies: anyone with the anon key can read/write. Fine for a casual,
@@ -44,6 +65,7 @@ alter publication supabase_realtime add table public.matches;
 -- if the app ever needs to be private.
 alter table public.tournaments enable row level security;
 alter table public.matches     enable row level security;
+alter table public.players     enable row level security;
 
 drop policy if exists "public access tournaments" on public.tournaments;
 create policy "public access tournaments" on public.tournaments
@@ -51,4 +73,8 @@ create policy "public access tournaments" on public.tournaments
 
 drop policy if exists "public access matches" on public.matches;
 create policy "public access matches" on public.matches
+  for all using (true) with check (true);
+
+drop policy if exists "public access players" on public.players;
+create policy "public access players" on public.players
   for all using (true) with check (true);

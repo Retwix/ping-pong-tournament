@@ -1,6 +1,14 @@
 export type MatchSide = 'a' | 'b'
 export type TournamentStatus = 'active' | 'done'
 
+/** A registered player, used to build tournaments and (later) aggregate stats. */
+export interface Player {
+  id: string
+  created_at: string
+  name: string
+  team: string
+}
+
 export interface Tournament {
   id: string
   created_at: string
