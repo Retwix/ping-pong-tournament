@@ -1,4 +1,5 @@
 import type { MouseEvent } from 'react'
+import { IconTrash } from '@tabler/icons-react'
 import { deleteTournament } from '../lib/db'
 import { useTournaments } from '../hooks/useTournaments'
 
@@ -6,9 +7,10 @@ interface Props {
   onOpen: (id: string) => void
   onNew: () => void
   onNewGame: () => void
+  onPlayers: () => void
 }
 
-export default function Home({ onOpen, onNew, onNewGame }: Props) {
+export default function Home({ onOpen, onNew, onNewGame, onPlayers }: Props) {
   const { tournaments, loading, error } = useTournaments()
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
@@ -38,6 +40,9 @@ export default function Home({ onOpen, onNew, onNewGame }: Props) {
             Tes parties &amp; tournois
           </span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="link-btn" onClick={onPlayers}>
+              Joueurs
+            </button>
             <button className="link-btn" onClick={onNewGame}>
               + Partie rapide
             </button>
@@ -66,7 +71,7 @@ export default function Home({ onOpen, onNew, onNewGame }: Props) {
                   {t.status === 'done' ? 'Terminé' : 'En cours'}
                 </span>
                 <button className="t-del" title="Supprimer" onClick={(e) => onDelete(e, t.id, t.name)}>
-                  🗑
+                  <IconTrash size={18} stroke={1.75} />
                 </button>
               </div>
             </div>

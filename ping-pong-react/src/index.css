@@ -85,7 +85,8 @@ section { margin-top: 34px; }
 .t-badge.done { color: var(--accent-2); border-color: rgba(46,230,166,0.5); }
 .t-card .t-del {
   flex: none; background: transparent; border: none; color: var(--muted);
-  font-size: 16px; cursor: pointer; padding: 6px 8px; border-radius: 8px;
+  cursor: pointer; padding: 7px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .t-card .t-del:hover { color: var(--accent); }
 

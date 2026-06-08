@@ -24,6 +24,15 @@ export async function createPlayer(name: string, team: string): Promise<Player> 
 }
 
 /**
+ * Remove a player from the registry. Past tournaments/matches keep their recorded
+ * names (they store text, not a reference), so history is unaffected.
+ */
+export async function deletePlayer(id: string): Promise<void> {
+  const { error } = await supabase.from('players').delete().eq('id', id)
+  if (error) throw error
+}
+
+/**
  * Create a tournament (or a single game) + its round-robin matches.
  * A `game` is simply a 2-player round-robin, i.e. one match. Returns the new id.
  */

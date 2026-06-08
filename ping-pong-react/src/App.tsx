@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Board from "./components/Board";
 import Home from "./components/Home";
+import Players from "./components/Players";
 import Setup from "./components/Setup";
 import { hasSupabaseConfig } from "./lib/supabase";
 
@@ -8,12 +9,14 @@ type Route =
 	| { name: "home" }
 	| { name: "new" }
 	| { name: "game" }
+	| { name: "players" }
 	| { name: "board"; id: string };
 
 function parseRoute(): Route {
 	const h = window.location.hash.replace(/^#/, "");
 	if (h === "/new") return { name: "new" };
 	if (h === "/game") return { name: "game" };
+	if (h === "/players") return { name: "players" };
 	const m = h.match(/^\/t\/(.+)$/);
 	if (m) return { name: "board", id: decodeURIComponent(m[1]) };
 	return { name: "home" };
@@ -69,6 +72,8 @@ export default function App() {
 					onCancel={() => navigate("/")}
 				/>
 			);
+		case "players":
+			return <Players onBack={() => navigate("/")} />;
 		case "board":
 			return (
 				<Board
@@ -83,6 +88,7 @@ export default function App() {
 					onOpen={(id) => navigate(`/t/${id}`)}
 					onNew={() => navigate("/new")}
 					onNewGame={() => navigate("/game")}
+					onPlayers={() => navigate("/players")}
 				/>
 			);
 	}
