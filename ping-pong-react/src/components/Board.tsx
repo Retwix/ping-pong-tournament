@@ -6,6 +6,7 @@ import GameResult from "./GameResult";
 import LiveScorer from "./LiveScorer";
 import MatchList from "./MatchList";
 import Standings from "./Standings";
+import ThemeToggle from "./ThemeToggle";
 
 interface Props {
 	id: string;
@@ -89,6 +90,7 @@ export default function Board({ id, onBack, onNew }: Props) {
 	return (
 		<div className="wrap">
 			<header>
+				<ThemeToggle className="header-toggle" />
 				<div className="kicker">
 					Round-robin · {tournament.players.length} joueurs · {matches.length}{" "}
 					matchs · jeu en {tournament.target}

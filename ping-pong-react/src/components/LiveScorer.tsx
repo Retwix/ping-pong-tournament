@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { IconArrowsLeftRight } from '@tabler/icons-react'
 import { formatDuration, isMatchPoint, isWon, matchDuration, serverIsA } from '../lib/pingpong'
 import type { Match, MatchSide } from '../types'
 
@@ -10,11 +11,32 @@ interface Props {
   onFinish: () => void
 }
 
+const FLIP_KEY = 'rv-score-flip'
+
 export default function LiveScorer({ match, target, onPatch, onClose, onFinish }: Props) {
   // Per-session undo stack of [score_a, score_b] snapshots.
   const historyRef = useRef<[number, number][]>([])
   // Tick state purely to re-render the running clock.
   const [, forceTick] = useState(0)
+  // Visual left/right swap (persisted) so the layout matches the physical table.
+  const [flipped, setFlipped] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(FLIP_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleFlip = () =>
+    setFlipped((f) => {
+      const next = !f
+      try {
+        localStorage.setItem(FLIP_KEY, next ? '1' : '0')
+      } catch {
+        /* storage unavailable */
+      }
+      return next
+    })
 
   const won = isWon(match.score_a, match.score_b, target)
   const aWon = won && match.score_a > match.score_b
@@ -48,6 +70,9 @@ export default function LiveScorer({ match, target, onPatch, onClose, onFinish }
     }
   }
 
+  // Visual order of the two panels (left → right).
+  const order: MatchSide[] = flipped ? ['b', 'a'] : ['a', 'b']
+
   // Running clock while the match is live.
   useEffect(() => {
     if (match.done) return
@@ -55,17 +80,17 @@ export default function LiveScorer({ match, target, onPatch, onClose, onFinish }
     return () => clearInterval(id)
   }, [match.done])
 
-  // Keyboard shortcuts (rebound each render so closures see the latest score).
+  // Keyboard shortcuts. Left/Right follow the VISUAL order, not the player index.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault()
-          addPoint('a')
+          addPoint(order[0])
           break
         case 'ArrowRight':
           e.preventDefault()
-          addPoint('b')
+          addPoint(order[1])
           break
         case 'z':
         case 'Z':
@@ -87,45 +112,53 @@ export default function LiveScorer({ match, target, onPatch, onClose, onFinish }
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  const sideData: Record<MatchSide, { name: string; score: number; serving: boolean; isWinner: boolean; mpoint: boolean }> = {
+    a: { name: match.player_a, score: match.score_a, serving: aServe, isWinner: aWon, mpoint: aMp },
+    b: { name: match.player_b, score: match.score_b, serving: !won && !aServe, isWinner: bWon, mpoint: bMp },
+  }
+
+  const renderSide = (side: MatchSide) => {
+    const d = sideData[side]
+    return (
+      <div
+        key={side}
+        className={`side${d.serving ? ' serving' : ''}${d.isWinner ? ' winner' : ''}${d.mpoint ? ' mpoint' : ''}`}
+        onClick={() => addPoint(side)}
+      >
+        <span className="matchpoint-flag">Balle de match</span>
+        <span className="side-name">
+          <span className="serve-pip" />
+          <span className="nm">{d.name}</span>
+        </span>
+        <span className="side-score">{d.score}</span>
+        <span className="tap-hint">{d.isWinner ? 'Vainqueur 🏆' : 'Tape pour +1'}</span>
+      </div>
+    )
+  }
+
   return (
     <div className="overlay">
       <div className="ov-top">
-        <button className="ov-close" onClick={onClose}>
-          ✕
-        </button>
+        <div className="ov-left">
+          <button className="ov-close" onClick={onClose} aria-label="Fermer" title="Fermer">
+            ✕
+          </button>
+          <button
+            className={`ov-close${flipped ? ' active' : ''}`}
+            onClick={toggleFlip}
+            aria-label="Inverser les côtés"
+            title="Inverser les côtés"
+          >
+            <IconArrowsLeftRight size={20} stroke={1.9} />
+          </button>
+        </div>
         <span className="ov-timer">{formatDuration(matchDuration(match))}</span>
         <span className="ov-target">
           Jeu en {target} · {match.player_a} vs {match.player_b}
         </span>
       </div>
 
-      <div className="scoreboard">
-        <div
-          className={`side${aServe ? ' serving' : ''}${aWon ? ' winner' : ''}${aMp ? ' mpoint' : ''}`}
-          onClick={() => addPoint('a')}
-        >
-          <span className="matchpoint-flag">Balle de match</span>
-          <span className="side-name">
-            <span className="serve-pip" />
-            <span className="nm">{match.player_a}</span>
-          </span>
-          <span className="side-score">{match.score_a}</span>
-          <span className="tap-hint">{aWon ? 'Vainqueur 🏆' : 'Tape pour +1'}</span>
-        </div>
-
-        <div
-          className={`side${!won && !aServe ? ' serving' : ''}${bWon ? ' winner' : ''}${bMp ? ' mpoint' : ''}`}
-          onClick={() => addPoint('b')}
-        >
-          <span className="matchpoint-flag">Balle de match</span>
-          <span className="side-name">
-            <span className="serve-pip" />
-            <span className="nm">{match.player_b}</span>
-          </span>
-          <span className="side-score">{match.score_b}</span>
-          <span className="tap-hint">{bWon ? 'Vainqueur 🏆' : 'Tape pour +1'}</span>
-        </div>
-      </div>
+      <div className="scoreboard">{order.map(renderSide)}</div>
 
       <div className="ov-controls">
         <button onClick={undo}>↶ Annuler</button>

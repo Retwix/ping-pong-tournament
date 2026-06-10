@@ -1,8 +1,9 @@
-import { useState, type MouseEvent } from 'react'
-import { IconTrash } from '@tabler/icons-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { IconArrowLeft, IconPlus, IconTrash } from '@tabler/icons-react'
 import { createPlayer, deletePlayer } from '../lib/db'
 import { usePlayers } from '../hooks/usePlayers'
-import { TEAMS, teamLabel, type TeamKey } from '../lib/teams'
+import { TEAMS, teamColor, teamLabel, type TeamKey } from '../lib/teams'
+import ThemeToggle from './ThemeToggle'
 
 interface Props {
   onBack: () => void
@@ -11,14 +12,36 @@ interface Props {
 export default function Players({ onBack }: Props) {
   const { players, loading, error, refresh } = usePlayers()
 
-  const [showNew, setShowNew] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newTeam, setNewTeam] = useState<TeamKey>('guests')
+  const [adding, setAdding] = useState(false)
+  const [name, setName] = useState('')
+  const [dept, setDept] = useState<TeamKey>('tech')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [leaving, setLeaving] = useState<Set<string>>(new Set())
 
-  const addNew = async () => {
-    const nm = newName.trim()
+  // sort alphabetically (French locale)
+  const sorted = [...players].sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+
+  // Escape closes the modal
+  useEffect(() => {
+    if (!adding) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAdding(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [adding])
+
+  const openModal = () => {
+    setName('')
+    setDept('tech')
+    setFormError(null)
+    setAdding(true)
+  }
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    const nm = name.trim()
     if (!nm || saving) return
     if (players.some((p) => p.name.toLowerCase() === nm.toLowerCase())) {
       setFormError('Ce joueur existe déjà.')
@@ -27,35 +50,41 @@ export default function Players({ onBack }: Props) {
     setSaving(true)
     setFormError(null)
     try {
-      await createPlayer(nm, newTeam)
-      setNewName('')
-      setNewTeam('guests')
-      setShowNew(false)
+      await createPlayer(nm, dept)
+      setAdding(false)
       refresh()
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : String(e))
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err))
     } finally {
       setSaving(false)
     }
   }
 
-  const onDelete = async (e: MouseEvent, id: string, name: string) => {
-    e.stopPropagation()
-    if (confirm(`Supprimer « ${name} » du registre ? Les tournois passés ne sont pas affectés.`)) {
-      await deletePlayer(id)
-    }
+  const handleDelete = (id: string) => {
+    setLeaving((s) => new Set(s).add(id))
+    setTimeout(() => {
+      deletePlayer(id).catch(() => {
+        // restore on failure
+        setLeaving((s) => {
+          const next = new Set(s)
+          next.delete(id)
+          return next
+        })
+      })
+    }, 270)
   }
 
   return (
     <div className="wrap">
       <header>
-        <div className="kicker">Registre des joueurs</div>
+        <ThemeToggle className="header-toggle" />
+        <div className="eyebrow">Registre des joueurs</div>
         <h1>
           Les <span className="em">joueurs</span>
         </h1>
         <p className="subtitle">
-          Ajoute, gère et supprime les joueurs. Supprimer un joueur ne touche pas aux tournois ni aux
-          parties déjà jouées.
+          Ajoute, gère et supprime les joueurs. Supprimer un joueur ne touche pas aux tournois ni
+          aux parties déjà jouées.
         </p>
       </header>
 
@@ -64,72 +93,116 @@ export default function Players({ onBack }: Props) {
       <section>
         <div className="home-top">
           <span className="setup-label" style={{ margin: 0 }}>
-            {players.length} joueur{players.length > 1 ? 's' : ''}
+            {sorted.length} joueur{sorted.length > 1 ? 's' : ''}
           </span>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn-primary" onClick={() => setShowNew((v) => !v)}>
-              + Nouveau joueur
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn-primary" onClick={openModal}>
+              <IconPlus size={16} stroke={1.8} />
+              Nouveau joueur
             </button>
             <button className="link-btn" onClick={onBack}>
-              ← Accueil
+              <IconArrowLeft size={16} stroke={1.8} />
+              Accueil
             </button>
           </div>
         </div>
 
-        {formError && <div className="error-banner">{formError}</div>}
-
-        {showNew && (
-          <div className="new-player" style={{ marginBottom: 14 }}>
-            <div className="np-row">
-              <input
-                className="name-input"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Nom du joueur"
-                maxLength={20}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') addNew()
-                }}
-              />
-            </div>
-            <div className="np-row">
-              <select
-                className="select-input"
-                value={newTeam}
-                onChange={(e) => setNewTeam(e.target.value as TeamKey)}
-              >
-                {TEAMS.map((t) => (
-                  <option key={t.key} value={t.key}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button className="add-player" disabled={!newName.trim() || saving} onClick={addNew}>
-              {saving ? 'Ajout…' : 'Enregistrer'}
-            </button>
-          </div>
-        )}
-
         {loading ? (
           <div className="empty">Chargement…</div>
-        ) : players.length === 0 ? (
-          <div className="empty">Aucun joueur enregistré. Ajoute le premier !</div>
+        ) : sorted.length === 0 ? (
+          <div className="empty">Aucun joueur pour l'instant. Ajoute le premier membre de l'équipe.</div>
         ) : (
-          players.map((p) => (
-            <div className="t-card" key={p.id} style={{ cursor: 'default' }}>
-              <div>
-                <div className="t-name">{p.name}</div>
-                <div className="t-meta">{teamLabel(p.team)}</div>
+          sorted.map((p, i) => {
+            const color = teamColor(p.team)
+            const initial = (p.name.trim()[0] ?? '?').toUpperCase()
+            const isLeaving = leaving.has(p.id)
+            return (
+              <div
+                key={p.id}
+                className={`t-card ${isLeaving ? 'leaving' : 'enter'}`}
+                style={{
+                  cursor: 'default',
+                  animationDelay: isLeaving ? undefined : `${Math.min(i, 12) * 35}ms`,
+                }}
+              >
+                <div className="avatar" style={{ background: `${color}24`, color }}>
+                  {initial}
+                </div>
+                <div className="player-block">
+                  <div className="t-name">{p.name}</div>
+                  <div className="player-dept">
+                    <span className="dept-dot" style={{ background: color }} />
+                    {teamLabel(p.team)}
+                  </div>
+                </div>
+                <button className="t-del" title="Supprimer" onClick={() => handleDelete(p.id)}>
+                  <IconTrash size={17} stroke={1.75} />
+                </button>
               </div>
-              <button className="t-del" title="Supprimer" onClick={(e) => onDelete(e, p.id, p.name)}>
-                <IconTrash size={18} stroke={1.75} />
-              </button>
-            </div>
-          ))
+            )
+          })
         )}
       </section>
+
+      {adding && (
+        <div
+          className="scrim"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setAdding(false)
+          }}
+        >
+          <form className="modal" onSubmit={submit}>
+            <h2>Nouveau joueur</h2>
+            <p className="modal-hint">Ajoute un membre de l'équipe au registre.</p>
+
+            <div className="field">
+              <label className="field-label">Nom</label>
+              <input
+                className="name-input"
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ex. Camille"
+                maxLength={20}
+              />
+            </div>
+
+            <div className="field">
+              <label className="field-label">Pôle</label>
+              <div className="chip-row">
+                {TEAMS.map((t) => (
+                  <button
+                    type="button"
+                    key={t.key}
+                    className={`chip ${dept === t.key ? 'selected' : ''}`}
+                    style={dept === t.key ? { color: t.color } : undefined}
+                    onClick={() => setDept(t.key)}
+                  >
+                    <span className="dept-dot" style={{ background: t.color }} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {formError && (
+              <div className="error-banner" style={{ marginTop: 4, marginBottom: 0 }}>
+                {formError}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button type="button" className="link-btn" onClick={() => setAdding(false)}>
+                Annuler
+              </button>
+              <button type="submit" className="btn-primary" disabled={!name.trim() || saving}>
+                <IconPlus size={16} stroke={1.8} />
+                {saving ? 'Ajout…' : 'Ajouter'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

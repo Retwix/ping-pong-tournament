@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { generateSchedule } from './roundRobin'
+import { generateSchedule, shuffle } from './roundRobin'
 import type { Match, Player, Tournament, TournamentKind } from '../types'
 
 // ---------- players registry ----------
@@ -42,14 +42,18 @@ export async function createTournament(
   target: number,
   kind: TournamentKind = 'tournament'
 ): Promise<string> {
+  // Shuffle the running order so the same roster produces a different bracket
+  // (which matchups land early, who gets byes, left/right side) each time.
+  const ordered = shuffle(players)
+
   const { data: t, error } = await supabase
     .from('tournaments')
-    .insert({ name, players, target, status: 'active', kind })
+    .insert({ name, players: ordered, target, status: 'active', kind })
     .select()
     .single()
   if (error) throw error
 
-  const rounds = generateSchedule(players)
+  const rounds = generateSchedule(ordered)
   const rows: Omit<Match, 'id'>[] = []
   let idx = 0
   rounds.forEach((rd, ri) => {

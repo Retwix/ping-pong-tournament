@@ -7,6 +7,16 @@ export interface ScheduledRound {
 
 const BYE = '__BYE__'
 
+/** Returns a new array with the elements randomly shuffled (Fisher–Yates). */
+export function shuffle<T>(input: T[]): T[] {
+  const arr = input.slice()
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
 /**
  * Round-robin schedule via the circle method.
  * Every player meets every other exactly once. Odd counts get one bye per round.

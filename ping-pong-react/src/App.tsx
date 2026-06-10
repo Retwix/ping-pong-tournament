@@ -32,7 +32,7 @@ function ConfigError() {
 			<header>
 				<div className="kicker">Configuration requise</div>
 				<h1>
-					Tournoi <span className="em">ping-pong</span>
+					Ping-Pong <span className="em">Recovr</span>
 				</h1>
 			</header>
 			<div className="error-banner">
@@ -45,17 +45,8 @@ function ConfigError() {
 	);
 }
 
-export default function App() {
-	const [route, setRoute] = useState<Route>(parseRoute());
-
-	useEffect(() => {
-		const onHashChange = () => setRoute(parseRoute());
-		window.addEventListener("hashchange", onHashChange);
-		return () => window.removeEventListener("hashchange", onHashChange);
-	}, []);
-
+function renderRoute(route: Route) {
 	if (!hasSupabaseConfig) return <ConfigError />;
-
 	switch (route.name) {
 		case "new":
 			return (
@@ -92,4 +83,16 @@ export default function App() {
 				/>
 			);
 	}
+}
+
+export default function App() {
+	const [route, setRoute] = useState<Route>(parseRoute());
+
+	useEffect(() => {
+		const onHashChange = () => setRoute(parseRoute());
+		window.addEventListener("hashchange", onHashChange);
+		return () => window.removeEventListener("hashchange", onHashChange);
+	}, []);
+
+	return renderRoute(route);
 }

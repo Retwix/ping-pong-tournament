@@ -2,6 +2,7 @@ import type { MouseEvent } from 'react'
 import { IconTrash } from '@tabler/icons-react'
 import { deleteTournament } from '../lib/db'
 import { useTournaments } from '../hooks/useTournaments'
+import ThemeToggle from './ThemeToggle'
 
 interface Props {
   onOpen: (id: string) => void
@@ -23,6 +24,7 @@ export default function Home({ onOpen, onNew, onNewGame, onPlayers }: Props) {
   return (
     <div className="wrap">
       <header>
+        <ThemeToggle className="header-toggle" />
         <div className="kicker">Round-robin · live</div>
         <h1>
           Tournoi <span className="em">ping-pong</span>

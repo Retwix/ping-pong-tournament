@@ -8,6 +8,14 @@ Thumbs.db
 # Vercel
 .vercel
 
-# Local project tooling (not part of the app)
+# Local project tooling / docs (not part of the app)
 claude-project-context.md
 tournoi-ping-pong-live.html
+
+# Design references / handoffs (not shipped)
+design_handoff*/
+
+# Non-code assets / references
+*.pdf
+*.sketch
+*.fig
