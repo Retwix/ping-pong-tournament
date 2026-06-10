@@ -46,6 +46,11 @@ export async function createTournament(
   // (which matchups land early, who gets byes, left/right side) each time.
   const ordered = shuffle(players)
 
+  // Resolve names -> player ids so matches carry a stable identity (rename-proof
+  // stats). Unknown names (e.g. since-removed players) keep a null id.
+  const { data: reg } = await supabase.from('players').select('id, name')
+  const idByName = new Map<string, string>((reg ?? []).map((p) => [p.name, p.id]))
+
   const { data: t, error } = await supabase
     .from('tournaments')
     .insert({ name, players: ordered, target, status: 'active', kind })
@@ -64,6 +69,8 @@ export async function createTournament(
         idx: idx++,
         player_a: a,
         player_b: b,
+        player_a_id: idByName.get(a) ?? null,
+        player_b_id: idByName.get(b) ?? null,
         score_a: 0,
         score_b: 0,
         done: false,
@@ -125,21 +132,4 @@ export async function updateTournament(id: string, patch: Partial<Tournament>): 
 export async function deleteTournament(id: string): Promise<void> {
   const { error } = await supabase.from('tournaments').delete().eq('id', id)
   if (error) throw error
-}
-
-/** Zero out all matches and reactivate the tournament. */
-export async function resetTournament(id: string): Promise<void> {
-  const { error: mErr } = await supabase
-    .from('matches')
-    .update({
-      score_a: 0,
-      score_b: 0,
-      done: false,
-      serve_start: 'a',
-      started_at: null,
-      ended_at: null,
-    })
-    .eq('tournament_id', id)
-  if (mErr) throw mErr
-  await updateTournament(id, { status: 'active', champion: null })
 }

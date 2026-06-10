@@ -9,6 +9,7 @@ import {
   h2hWins,
   opponentRecords,
   recentMatchesFor,
+  sideKey,
   winnerLoser,
   type MatchHighlight,
   type PlayerStat,
@@ -42,13 +43,7 @@ export default function Stats({ onBack }: { onBack: () => void }) {
   const [sortKey, setSortKey] = useState<SortKey>('wins')
   const [selected, setSelected] = useState<string | null>(null)
 
-  const teamByName = useMemo(() => {
-    const m = new Map<string, string>()
-    players.forEach((p) => m.set(p.name, p.team))
-    return m
-  }, [players])
-
-  const playerStats = useMemo(() => computePlayerStats(matches, teamByName), [matches, teamByName])
+  const playerStats = useMemo(() => computePlayerStats(matches, players), [matches, players])
   const teamStats = useMemo(() => computeTeamStats(playerStats), [playerStats])
   const h2h = useMemo(() => computeHeadToHead(matches), [matches])
   const supers = useMemo(() => computeSuperlatives(matches), [matches])
@@ -165,7 +160,7 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                 </thead>
                 <tbody>
                   {sortedPlayers.map((s, i) => (
-                    <tr key={s.name} className={`r${i + 1}`} onClick={() => setSelected(s.name)}>
+                    <tr key={s.key} className={`r${i + 1}`} onClick={() => setSelected(s.key)}>
                       <td className="left">
                         <span className="rank">{i + 1}</span>
                         <span className="lb-player">
@@ -271,7 +266,7 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                     <tr>
                       <th className="corner" />
                       {matrixPlayers.map((c) => (
-                        <th key={c.name} title={c.name}>
+                        <th key={c.key} title={c.name}>
                           {(c.name.trim()[0] ?? '?').toUpperCase()}
                         </th>
                       ))}
@@ -279,17 +274,17 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                   </thead>
                   <tbody>
                     {matrixPlayers.map((row) => (
-                      <tr key={row.name}>
+                      <tr key={row.key}>
                         <th className="rowname" title={row.name}>
                           {row.name}
                         </th>
                         {matrixPlayers.map((col) => {
-                          if (row.name === col.name) return <td key={col.name} className="self">·</td>
-                          const w = h2hWins(h2h, row.name, col.name)
-                          const l = h2hWins(h2h, col.name, row.name)
+                          if (row.key === col.key) return <td key={col.key} className="self">·</td>
+                          const w = h2hWins(h2h, row.key, col.key)
+                          const l = h2hWins(h2h, col.key, row.key)
                           const cls = w > l ? 'pos' : w < l ? 'neg' : ''
                           return (
-                            <td key={col.name} className={cls} title={`${row.name} ${w}–${l} ${col.name}`}>
+                            <td key={col.key} className={cls} title={`${row.name} ${w}–${l} ${col.name}`}>
                               {w + l === 0 ? '–' : `${w}-${l}`}
                             </td>
                           )
@@ -316,7 +311,7 @@ export default function Stats({ onBack }: { onBack: () => void }) {
 
       {selected && (
         <PlayerDetail
-          name={selected}
+          playerKey={selected}
           stats={playerStats}
           matches={matches}
           onClose={() => setSelected(null)}
@@ -337,27 +332,27 @@ function SuperCard({ label, value, sub }: { label: string; value: string; sub: s
 }
 
 function PlayerDetail({
-  name,
+  playerKey,
   stats,
   matches,
   onClose,
 }: {
-  name: string
+  playerKey: string
   stats: PlayerStat[]
   matches: Match[]
   onClose: () => void
 }) {
-  const s = stats.find((p) => p.name === name)
+  const s = stats.find((p) => p.key === playerKey)
   if (!s) return null
 
-  const opps = opponentRecords(name, matches)
+  const opps = opponentRecords(playerKey, matches)
   const nemesis = opps
     .filter((o) => o.losses > 0)
     .sort((a, b) => b.losses - a.losses || a.wins - a.losses - (b.wins - b.losses))[0]
   const victim = opps
     .filter((o) => o.wins > 0)
     .sort((a, b) => b.wins - a.wins || b.wins - b.losses - (a.wins - a.losses))[0]
-  const recent = recentMatchesFor(name, matches, 8)
+  const recent = recentMatchesFor(playerKey, matches, 8)
 
   return (
     <div
@@ -412,7 +407,7 @@ function PlayerDetail({
         <div className="sc-label" style={{ marginBottom: 8 }}>Derniers matchs</div>
         <div className="pd-recent">
           {recent.map((m) => {
-            const isA = m.player_a === name
+            const isA = sideKey(m.player_a_id, m.player_a) === playerKey
             const my = isA ? m.score_a : m.score_b
             const their = isA ? m.score_b : m.score_a
             const opp = isA ? m.player_b : m.player_a

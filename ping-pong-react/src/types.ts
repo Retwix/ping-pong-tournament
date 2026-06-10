@@ -28,6 +28,8 @@ export interface Match {
   idx: number
   player_a: string
   player_b: string
+  player_a_id: string | null
+  player_b_id: string | null
   score_a: number
   score_b: number
   done: boolean

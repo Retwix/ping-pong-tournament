@@ -1,8 +1,9 @@
-import type { Match } from '../types'
+import type { Match, Player } from '../types'
 import { matchDuration } from './pingpong'
 
 export interface PlayerStat {
-  name: string
+  key: string // stable identity: player id, or `name:<name>` fallback
+  name: string // display name (current registry name, or recorded name)
   team: string | null
   played: number
   wins: number
@@ -36,7 +37,17 @@ export interface Superlatives {
   mostPoints?: MatchHighlight
 }
 
-/** Chronological key for a match (ISO strings sort lexicographically). */
+export interface OpponentRecord {
+  name: string
+  wins: number
+  losses: number
+}
+
+/** Stable identity key for a match side — the player id, or a name fallback. */
+export function sideKey(id: string | null, name: string): string {
+  return id ?? `name:${name}`
+}
+
 function timeKey(m: Match): string {
   return m.ended_at ?? m.started_at ?? ''
 }
@@ -60,16 +71,29 @@ function trailingRun(results: boolean[]): number {
   return run
 }
 
-export function computePlayerStats(matches: Match[], teamByName: Map<string, string>): PlayerStat[] {
+export function computePlayerStats(matches: Match[], players: Player[]): PlayerStat[] {
+  const nameById = new Map<string, string>()
+  const teamById = new Map<string, string>()
+  const teamByName = new Map<string, string>()
+  for (const p of players) {
+    nameById.set(p.id, p.name)
+    teamById.set(p.id, p.team)
+    teamByName.set(p.name, p.team)
+  }
+
   const map = new Map<string, PlayerStat>()
   const results = new Map<string, boolean[]>()
 
-  const ensure = (name: string): PlayerStat => {
-    let s = map.get(name)
+  const ensure = (id: string | null, recordedName: string): PlayerStat => {
+    const key = sideKey(id, recordedName)
+    let s = map.get(key)
     if (!s) {
+      const name = (id && nameById.get(id)) || recordedName
+      const team = (id && teamById.get(id)) || teamByName.get(recordedName) || null
       s = {
+        key,
         name,
-        team: teamByName.get(name) ?? null,
+        team,
         played: 0,
         wins: 0,
         losses: 0,
@@ -80,21 +104,21 @@ export function computePlayerStats(matches: Match[], teamByName: Map<string, str
         currentStreak: 0,
         longestStreak: 0,
       }
-      map.set(name, s)
+      map.set(key, s)
     }
     return s
   }
-  const pushResult = (name: string, win: boolean) => {
-    const arr = results.get(name) ?? []
+  const pushResult = (key: string, win: boolean) => {
+    const arr = results.get(key) ?? []
     arr.push(win)
-    results.set(name, arr)
+    results.set(key, arr)
   }
 
   const sorted = [...matches].sort((a, b) => timeKey(a).localeCompare(timeKey(b)))
   for (const m of sorted) {
     const aWin = m.score_a > m.score_b
-    const A = ensure(m.player_a)
-    const B = ensure(m.player_b)
+    const A = ensure(m.player_a_id, m.player_a)
+    const B = ensure(m.player_b_id, m.player_b)
     A.played++
     B.played++
     A.pointsFor += m.score_a
@@ -108,14 +132,14 @@ export function computePlayerStats(matches: Match[], teamByName: Map<string, str
       B.wins++
       A.losses++
     }
-    pushResult(m.player_a, aWin)
-    pushResult(m.player_b, !aWin)
+    pushResult(A.key, aWin)
+    pushResult(B.key, !aWin)
   }
 
   for (const s of map.values()) {
     s.diff = s.pointsFor - s.pointsAgainst
     s.winRate = s.played ? s.wins / s.played : 0
-    const r = results.get(s.name) ?? []
+    const r = results.get(s.key) ?? []
     s.longestStreak = longestRun(r)
     s.currentStreak = trailingRun(r)
   }
@@ -136,15 +160,15 @@ export function computeTeamStats(playerStats: PlayerStat[]): TeamStat[] {
   return [...map.values()].sort((a, b) => b.winRate - a.winRate || b.wins - a.wins)
 }
 
-/** winner name -> loser name -> number of wins. */
+/** winner key -> loser key -> number of wins. */
 export type HeadToHead = Map<string, Map<string, number>>
 
 export function computeHeadToHead(matches: Match[]): HeadToHead {
   const h: HeadToHead = new Map()
   for (const m of matches) {
     const aWin = m.score_a > m.score_b
-    const winner = aWin ? m.player_a : m.player_b
-    const loser = aWin ? m.player_b : m.player_a
+    const winner = aWin ? sideKey(m.player_a_id, m.player_a) : sideKey(m.player_b_id, m.player_b)
+    const loser = aWin ? sideKey(m.player_b_id, m.player_b) : sideKey(m.player_a_id, m.player_a)
     const inner = h.get(winner) ?? new Map<string, number>()
     inner.set(loser, (inner.get(loser) ?? 0) + 1)
     h.set(winner, inner)
@@ -152,8 +176,8 @@ export function computeHeadToHead(matches: Match[]): HeadToHead {
   return h
 }
 
-export function h2hWins(h: HeadToHead, winner: string, loser: string): number {
-  return h.get(winner)?.get(loser) ?? 0
+export function h2hWins(h: HeadToHead, winnerKey: string, loserKey: string): number {
+  return h.get(winnerKey)?.get(loserKey) ?? 0
 }
 
 export function computeSuperlatives(matches: Match[]): Superlatives {
@@ -182,38 +206,32 @@ export function computeSuperlatives(matches: Match[]): Superlatives {
   return out
 }
 
-export interface OpponentRecord {
-  name: string
-  wins: number
-  losses: number
-}
-
-/** A player's win/loss record against each opponent they've faced. */
-export function opponentRecords(name: string, matches: Match[]): OpponentRecord[] {
+/** A player's win/loss record against each opponent they've faced (by identity). */
+export function opponentRecords(key: string, matches: Match[]): OpponentRecord[] {
   const map = new Map<string, OpponentRecord>()
   for (const m of matches) {
-    let opp: string | null = null
-    let win = false
-    if (m.player_a === name) {
-      opp = m.player_b
-      win = m.score_a > m.score_b
-    } else if (m.player_b === name) {
-      opp = m.player_a
-      win = m.score_b > m.score_a
-    }
-    if (!opp) continue
-    const r = map.get(opp) ?? { name: opp, wins: 0, losses: 0 }
+    const aKey = sideKey(m.player_a_id, m.player_a)
+    const bKey = sideKey(m.player_b_id, m.player_b)
+    let meIsA: boolean
+    if (aKey === key) meIsA = true
+    else if (bKey === key) meIsA = false
+    else continue
+    const oppKey = meIsA ? bKey : aKey
+    const oppName = meIsA ? m.player_b : m.player_a
+    const win = meIsA ? m.score_a > m.score_b : m.score_b > m.score_a
+    const r = map.get(oppKey) ?? { name: oppName, wins: 0, losses: 0 }
+    r.name = oppName
     if (win) r.wins++
     else r.losses++
-    map.set(opp, r)
+    map.set(oppKey, r)
   }
   return [...map.values()]
 }
 
 /** A player's most recent matches, newest first. */
-export function recentMatchesFor(name: string, matches: Match[], limit = 8): Match[] {
+export function recentMatchesFor(key: string, matches: Match[], limit = 8): Match[] {
   return matches
-    .filter((m) => m.player_a === name || m.player_b === name)
+    .filter((m) => sideKey(m.player_a_id, m.player_a) === key || sideKey(m.player_b_id, m.player_b) === key)
     .sort((a, b) => timeKey(b).localeCompare(timeKey(a)))
     .slice(0, limit)
 }

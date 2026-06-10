@@ -47,6 +47,20 @@ create table if not exists public.players (
   team        text not null default 'guests'
 );
 
+-- ---------- player identity on matches ----------
+-- Matches reference players by id so stats survive renames / duplicate names.
+-- The player_a / player_b text columns are kept as a display snapshot (name at
+-- the time of the match). `on delete set null` keeps match history if a player
+-- is removed from the registry.
+alter table public.matches add column if not exists player_a_id uuid references public.players(id) on delete set null;
+alter table public.matches add column if not exists player_b_id uuid references public.players(id) on delete set null;
+
+-- Backfill ids for existing matches by matching the recorded name.
+update public.matches m set player_a_id = p.id
+  from public.players p where m.player_a_id is null and p.name = m.player_a;
+update public.matches m set player_b_id = p.id
+  from public.players p where m.player_b_id is null and p.name = m.player_b;
+
 -- ---------- realtime ----------
 -- Lets clients subscribe to live INSERT/UPDATE/DELETE on these tables.
 -- Guarded so re-running this file does not error if already added.
