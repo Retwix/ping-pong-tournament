@@ -9,9 +9,10 @@ interface Props {
   onNew: () => void
   onNewGame: () => void
   onPlayers: () => void
+  onStats: () => void
 }
 
-export default function Home({ onOpen, onNew, onNewGame, onPlayers }: Props) {
+export default function Home({ onOpen, onNew, onNewGame, onPlayers, onStats }: Props) {
   const { tournaments, loading, error } = useTournaments()
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
@@ -42,6 +43,9 @@ export default function Home({ onOpen, onNew, onNewGame, onPlayers }: Props) {
             Tes parties &amp; tournois
           </span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="link-btn" onClick={onStats}>
+              Stats
+            </button>
             <button className="link-btn" onClick={onPlayers}>
               Joueurs
             </button>

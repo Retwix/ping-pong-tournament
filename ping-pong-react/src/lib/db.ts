@@ -95,6 +95,13 @@ export async function getTournament(id: string): Promise<Tournament | null> {
   return (data as Tournament) ?? null
 }
 
+/** Every finished match across all tournaments and games (for stats). */
+export async function listAllDoneMatches(): Promise<Match[]> {
+  const { data, error } = await supabase.from('matches').select('*').eq('done', true)
+  if (error) throw error
+  return (data ?? []) as Match[]
+}
+
 export async function getMatches(tournamentId: string): Promise<Match[]> {
   const { data, error } = await supabase
     .from('matches')

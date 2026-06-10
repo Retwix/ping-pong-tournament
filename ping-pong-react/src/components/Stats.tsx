@@ -1,0 +1,440 @@
+import { useMemo, useState, type ReactNode } from 'react'
+import { IconArrowLeft } from '@tabler/icons-react'
+import { useStats } from '../hooks/useStats'
+import {
+  computeHeadToHead,
+  computePlayerStats,
+  computeSuperlatives,
+  computeTeamStats,
+  h2hWins,
+  opponentRecords,
+  recentMatchesFor,
+  winnerLoser,
+  type MatchHighlight,
+  type PlayerStat,
+} from '../lib/stats'
+import { formatDuration } from '../lib/pingpong'
+import { teamColor, teamLabel } from '../lib/teams'
+import type { Match } from '../types'
+import ThemeToggle from './ThemeToggle'
+
+type SortKey = 'wins' | 'winRate' | 'diff' | 'played'
+
+const pct = (r: number) => `${Math.round(r * 100)}%`
+
+function Avatar({ name, team, lg }: { name: string; team: string | null; lg?: boolean }) {
+  const color = teamColor(team ?? '')
+  const initial = (name.trim()[0] ?? '?').toUpperCase()
+  return (
+    <span className={`avatar${lg ? '' : ' sm'}`} style={{ background: `${color}24`, color }}>
+      {initial}
+    </span>
+  )
+}
+
+function matchLabel(m: MatchHighlight['match']) {
+  const { winner, loser, ws, ls } = winnerLoser(m)
+  return `${winner} ${ws}–${ls} ${loser}`
+}
+
+export default function Stats({ onBack }: { onBack: () => void }) {
+  const { matches, players, loading, error } = useStats()
+  const [sortKey, setSortKey] = useState<SortKey>('wins')
+  const [selected, setSelected] = useState<string | null>(null)
+
+  const teamByName = useMemo(() => {
+    const m = new Map<string, string>()
+    players.forEach((p) => m.set(p.name, p.team))
+    return m
+  }, [players])
+
+  const playerStats = useMemo(() => computePlayerStats(matches, teamByName), [matches, teamByName])
+  const teamStats = useMemo(() => computeTeamStats(playerStats), [playerStats])
+  const h2h = useMemo(() => computeHeadToHead(matches), [matches])
+  const supers = useMemo(() => computeSuperlatives(matches), [matches])
+
+  const sortedPlayers = useMemo(() => {
+    const cmp: Record<SortKey, (a: PlayerStat, b: PlayerStat) => number> = {
+      wins: (a, b) => b.wins - a.wins || b.diff - a.diff,
+      winRate: (a, b) => b.winRate - a.winRate || b.wins - a.wins,
+      diff: (a, b) => b.diff - a.diff || b.wins - a.wins,
+      played: (a, b) => b.played - a.played || b.wins - a.wins,
+    }
+    return [...playerStats].sort(cmp[sortKey])
+  }, [playerStats, sortKey])
+
+  const matrixPlayers = useMemo(
+    () => [...playerStats].sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name, 'fr')),
+    [playerStats]
+  )
+
+  const totalPoints = useMemo(
+    () => matches.reduce((sum, m) => sum + m.score_a + m.score_b, 0),
+    [matches]
+  )
+  const mostActive = playerStats.reduce<PlayerStat | null>(
+    (best, s) => (!best || s.played > best.played ? s : best),
+    null
+  )
+  const streakHolder = playerStats.reduce<PlayerStat | null>(
+    (best, s) => (!best || s.longestStreak > best.longestStreak ? s : best),
+    null
+  )
+
+  const header = (
+    <header>
+      <ThemeToggle className="header-toggle" />
+      <div className="eyebrow">Statistiques</div>
+      <h1>
+        Les <span className="em">stats</span>
+      </h1>
+      <p className="subtitle">
+        Toutes les parties et tous les tournois terminés, cumulés. Classements, confrontations
+        directes et records.
+      </p>
+    </header>
+  )
+
+  if (loading) {
+    return (
+      <div className="wrap">
+        {header}
+        <p className="empty">Chargement…</p>
+      </div>
+    )
+  }
+
+  const Th = ({ k, children }: { k: SortKey; children: ReactNode }) => (
+    <th className={`sortable${sortKey === k ? ' active' : ''}`} onClick={() => setSortKey(k)}>
+      {children}
+      {sortKey === k ? ' ↓' : ''}
+    </th>
+  )
+
+  return (
+    <div className="wrap">
+      {header}
+
+      {error && <div className="error-banner">Erreur : {error}</div>}
+
+      {matches.length === 0 ? (
+        <section>
+          <div className="empty">Aucun match terminé pour l'instant. Joue une partie pour voir les stats !</div>
+          <div className="footer-row">
+            <span />
+            <button className="link-btn" onClick={onBack}>
+              <IconArrowLeft size={16} stroke={1.8} /> Accueil
+            </button>
+          </div>
+        </section>
+      ) : (
+        <>
+          {/* KPI strip */}
+          <section>
+            <div className="kpi-strip">
+              <div className="kpi">
+                <div className="num">{matches.length}</div>
+                <div className="lbl">Matchs joués</div>
+              </div>
+              <div className="kpi">
+                <div className="num">{playerStats.length}</div>
+                <div className="lbl">Joueurs</div>
+              </div>
+              <div className="kpi">
+                <div className="num">{totalPoints}</div>
+                <div className="lbl">Points marqués</div>
+              </div>
+            </div>
+          </section>
+
+          {/* Player leaderboard */}
+          <section>
+            <div className="section-title">Classement des joueurs</div>
+            <div className="panel">
+              <table className="leaderboard">
+                <thead>
+                  <tr>
+                    <th className="left">Joueur</th>
+                    <Th k="played">J</Th>
+                    <Th k="wins">V</Th>
+                    <th>D</th>
+                    <Th k="winRate">%</Th>
+                    <Th k="diff">Diff</Th>
+                    <th>Série</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedPlayers.map((s, i) => (
+                    <tr key={s.name} className={`r${i + 1}`} onClick={() => setSelected(s.name)}>
+                      <td className="left">
+                        <span className="rank">{i + 1}</span>
+                        <span className="lb-player">
+                          <Avatar name={s.name} team={s.team} />
+                          {s.name}
+                        </span>
+                      </td>
+                      <td>{s.played}</td>
+                      <td className="wins">{s.wins}</td>
+                      <td>{s.losses}</td>
+                      <td>{pct(s.winRate)}</td>
+                      <td className={`diff ${s.diff > 0 ? 'pos' : s.diff < 0 ? 'neg' : ''}`}>
+                        {s.diff > 0 ? '+' : ''}
+                        {s.diff}
+                      </td>
+                      <td>{s.currentStreak >= 2 ? `🔥${s.currentStreak}` : s.currentStreak}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="setup-hint" style={{ textAlign: 'left' }}>
+              Clique sur une colonne pour trier. La série compte les victoires consécutives en cours.
+            </p>
+          </section>
+
+          {/* Team leaderboard */}
+          {teamStats.length > 0 && (
+            <section>
+              <div className="section-title">Classement des pôles</div>
+              <div className="panel">
+                <table>
+                  <thead>
+                    <tr>
+                      <th className="left">Pôle</th>
+                      <th>Joueurs</th>
+                      <th>J</th>
+                      <th>V</th>
+                      <th>%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teamStats.map((t, i) => (
+                      <tr key={t.team} className={`r${i + 1}`}>
+                        <td className="left">
+                          <span className="rank">{i + 1}</span>
+                          <span className="lb-player">
+                            <span className="dept-dot" style={{ background: teamColor(t.team) }} />
+                            {teamLabel(t.team)}
+                          </span>
+                        </td>
+                        <td>{t.players}</td>
+                        <td>{t.played}</td>
+                        <td className="wins">{t.wins}</td>
+                        <td>{pct(t.winRate)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* Superlatives */}
+          <section>
+            <div className="section-title">Records</div>
+            <div className="super-grid">
+              {supers.longestMatch && (
+                <SuperCard label="Plus long match" value={formatDuration(supers.longestMatch.value)} sub={matchLabel(supers.longestMatch.match)} />
+              )}
+              {supers.shortestMatch && (
+                <SuperCard label="Plus court match" value={formatDuration(supers.shortestMatch.value)} sub={matchLabel(supers.shortestMatch.match)} />
+              )}
+              {supers.biggestBlowout && (
+                <SuperCard label="Plus gros écart" value={`+${supers.biggestBlowout.value}`} sub={matchLabel(supers.biggestBlowout.match)} />
+              )}
+              {supers.closestGame && (
+                <SuperCard
+                  label="Match le plus serré"
+                  value={`${Math.max(supers.closestGame.match.score_a, supers.closestGame.match.score_b)}–${Math.min(supers.closestGame.match.score_a, supers.closestGame.match.score_b)}`}
+                  sub={matchLabel(supers.closestGame.match)}
+                />
+              )}
+              {supers.mostPoints && (
+                <SuperCard label="Plus de points" value={`${supers.mostPoints.value}`} sub={matchLabel(supers.mostPoints.match)} />
+              )}
+              {mostActive && mostActive.played > 0 && (
+                <SuperCard label="Plus actif" value={mostActive.name} sub={`${mostActive.played} matchs`} />
+              )}
+              {streakHolder && streakHolder.longestStreak >= 2 && (
+                <SuperCard label="Plus longue série" value={streakHolder.name} sub={`${streakHolder.longestStreak} victoires d'affilée`} />
+              )}
+            </div>
+          </section>
+
+          {/* Head-to-head matrix */}
+          {matrixPlayers.length > 1 && (
+            <section>
+              <div className="section-title">Confrontations directes</div>
+              <div className="panel h2h-wrap">
+                <table className="h2h">
+                  <thead>
+                    <tr>
+                      <th className="corner" />
+                      {matrixPlayers.map((c) => (
+                        <th key={c.name} title={c.name}>
+                          {(c.name.trim()[0] ?? '?').toUpperCase()}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrixPlayers.map((row) => (
+                      <tr key={row.name}>
+                        <th className="rowname" title={row.name}>
+                          {row.name}
+                        </th>
+                        {matrixPlayers.map((col) => {
+                          if (row.name === col.name) return <td key={col.name} className="self">·</td>
+                          const w = h2hWins(h2h, row.name, col.name)
+                          const l = h2hWins(h2h, col.name, row.name)
+                          const cls = w > l ? 'pos' : w < l ? 'neg' : ''
+                          return (
+                            <td key={col.name} className={cls} title={`${row.name} ${w}–${l} ${col.name}`}>
+                              {w + l === 0 ? '–' : `${w}-${l}`}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="setup-hint" style={{ textAlign: 'left' }}>
+                Chaque case : victoires de la ligne contre la colonne (V-D). Vert = avantage à la ligne.
+              </p>
+            </section>
+          )}
+
+          <div className="footer-row">
+            <span className="hint">Les stats cumulent parties rapides et tournois.</span>
+            <button className="link-btn" onClick={onBack}>
+              <IconArrowLeft size={16} stroke={1.8} /> Accueil
+            </button>
+          </div>
+        </>
+      )}
+
+      {selected && (
+        <PlayerDetail
+          name={selected}
+          stats={playerStats}
+          matches={matches}
+          onClose={() => setSelected(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function SuperCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="super-card">
+      <div className="sc-label">{label}</div>
+      <div className="sc-value">{value}</div>
+      <div className="sc-sub">{sub}</div>
+    </div>
+  )
+}
+
+function PlayerDetail({
+  name,
+  stats,
+  matches,
+  onClose,
+}: {
+  name: string
+  stats: PlayerStat[]
+  matches: Match[]
+  onClose: () => void
+}) {
+  const s = stats.find((p) => p.name === name)
+  if (!s) return null
+
+  const opps = opponentRecords(name, matches)
+  const nemesis = opps
+    .filter((o) => o.losses > 0)
+    .sort((a, b) => b.losses - a.losses || a.wins - a.losses - (b.wins - b.losses))[0]
+  const victim = opps
+    .filter((o) => o.wins > 0)
+    .sort((a, b) => b.wins - a.wins || b.wins - b.losses - (a.wins - a.losses))[0]
+  const recent = recentMatchesFor(name, matches, 8)
+
+  return (
+    <div
+      className="scrim"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="modal pd">
+        <div className="pd-head">
+          <Avatar name={s.name} team={s.team} lg />
+          <div>
+            <h2 style={{ marginBottom: 2 }}>{s.name}</h2>
+            <div className="modal-hint" style={{ marginBottom: 0 }}>
+              {s.team ? teamLabel(s.team) : '—'}
+            </div>
+          </div>
+        </div>
+
+        <div className="pd-kpis">
+          <div className="pd-kpi"><div className="n">{s.played}</div><div className="l">Matchs</div></div>
+          <div className="pd-kpi"><div className="n">{pct(s.winRate)}</div><div className="l">Victoires</div></div>
+          <div className="pd-kpi"><div className="n">{s.wins}-{s.losses}</div><div className="l">V-D</div></div>
+          <div className="pd-kpi"><div className="n">{s.diff > 0 ? '+' : ''}{s.diff}</div><div className="l">Diff</div></div>
+          <div className="pd-kpi"><div className="n">{s.currentStreak >= 2 ? `🔥${s.currentStreak}` : s.currentStreak}</div><div className="l">Série</div></div>
+          <div className="pd-kpi"><div className="n">{s.longestStreak}</div><div className="l">Meilleure série</div></div>
+        </div>
+
+        <div className="pd-foes">
+          <div className="pd-foe">
+            <div className="sc-label">Bête noire</div>
+            {nemesis ? (
+              <div className="pd-foe-v">
+                {nemesis.name} <span className="muted">({nemesis.wins}-{nemesis.losses})</span>
+              </div>
+            ) : (
+              <div className="pd-foe-v muted">—</div>
+            )}
+          </div>
+          <div className="pd-foe">
+            <div className="sc-label">Victime favorite</div>
+            {victim ? (
+              <div className="pd-foe-v">
+                {victim.name} <span className="muted">({victim.wins}-{victim.losses})</span>
+              </div>
+            ) : (
+              <div className="pd-foe-v muted">—</div>
+            )}
+          </div>
+        </div>
+
+        <div className="sc-label" style={{ marginBottom: 8 }}>Derniers matchs</div>
+        <div className="pd-recent">
+          {recent.map((m) => {
+            const isA = m.player_a === name
+            const my = isA ? m.score_a : m.score_b
+            const their = isA ? m.score_b : m.score_a
+            const opp = isA ? m.player_b : m.player_a
+            const win = my > their
+            const date = m.ended_at ? new Date(m.ended_at).toLocaleDateString('fr-FR') : ''
+            return (
+              <div className="pd-row" key={m.id}>
+                <span className={`pd-res ${win ? 'w' : 'l'}`}>{win ? 'V' : 'D'}</span>
+                <span className="pd-opp">{opp}</span>
+                <span className="pd-score">{my}–{their}</span>
+                <span className="pd-date">{date}</span>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="modal-actions">
+          <button className="btn-primary" onClick={onClose}>
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

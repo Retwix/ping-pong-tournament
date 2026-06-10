@@ -3,6 +3,7 @@ import Board from "./components/Board";
 import Home from "./components/Home";
 import Players from "./components/Players";
 import Setup from "./components/Setup";
+import Stats from "./components/Stats";
 import { hasSupabaseConfig } from "./lib/supabase";
 
 type Route =
@@ -10,6 +11,7 @@ type Route =
 	| { name: "new" }
 	| { name: "game" }
 	| { name: "players" }
+	| { name: "stats" }
 	| { name: "board"; id: string };
 
 function parseRoute(): Route {
@@ -17,6 +19,7 @@ function parseRoute(): Route {
 	if (h === "/new") return { name: "new" };
 	if (h === "/game") return { name: "game" };
 	if (h === "/players") return { name: "players" };
+	if (h === "/stats") return { name: "stats" };
 	const m = h.match(/^\/t\/(.+)$/);
 	if (m) return { name: "board", id: decodeURIComponent(m[1]) };
 	return { name: "home" };
@@ -65,12 +68,15 @@ function renderRoute(route: Route) {
 			);
 		case "players":
 			return <Players onBack={() => navigate("/")} />;
+		case "stats":
+			return <Stats onBack={() => navigate("/")} />;
 		case "board":
 			return (
 				<Board
 					id={route.id}
 					onBack={() => navigate("/")}
 					onNew={() => navigate("/new")}
+					onOpen={(id) => navigate(`/t/${id}`)}
 				/>
 			);
 		default:
@@ -80,6 +86,7 @@ function renderRoute(route: Route) {
 					onNew={() => navigate("/new")}
 					onNewGame={() => navigate("/game")}
 					onPlayers={() => navigate("/players")}
+					onStats={() => navigate("/stats")}
 				/>
 			);
 	}

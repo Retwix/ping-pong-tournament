@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTournament } from "../hooks/useTournament";
-import { resetTournament } from "../lib/db";
+import { createTournament } from "../lib/db";
 import Champion from "./Champion";
 import GameResult from "./GameResult";
 import LiveScorer from "./LiveScorer";
@@ -12,9 +12,10 @@ interface Props {
 	id: string;
 	onBack: () => void;
 	onNew: () => void;
+	onOpen: (id: string) => void;
 }
 
-export default function Board({ id, onBack, onNew }: Props) {
+export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
@@ -49,13 +50,18 @@ export default function Board({ id, onBack, onNew }: Props) {
 			);
 		}
 		if (match.done) {
-			return (
-				<GameResult
-					match={match}
-					onReplay={() => resetTournament(id)}
-					onHome={onBack}
-				/>
-			);
+			// Rematch = a brand-new game with the same players, so the finished one
+			// stays in history/stats instead of being overwritten.
+			const rematch = async () => {
+				const newId = await createTournament(
+					tournament.name,
+					tournament.players,
+					tournament.target,
+					"game"
+				);
+				onOpen(newId);
+			};
+			return <GameResult match={match} onReplay={rematch} onHome={onBack} />;
 		}
 		return (
 			<LiveScorer
@@ -80,13 +86,6 @@ export default function Board({ id, onBack, onNew }: Props) {
 			/* clipboard unavailable */
 		}
 	};
-	const reset = async () => {
-		if (confirm("Réinitialiser tous les scores de ce tournoi ?")) {
-			setDismissedChampion(false);
-			await resetTournament(id);
-		}
-	};
-
 	return (
 		<div className="wrap">
 			<header>
@@ -118,14 +117,9 @@ export default function Board({ id, onBack, onNew }: Props) {
 					<span className="hint">
 						Départage : victoires, puis différence de points.
 					</span>
-					<div style={{ display: "flex", gap: 10 }}>
-						<button className="reset" onClick={reset}>
-							Réinitialiser
-						</button>
-						<button className="link-btn" onClick={onBack}>
-							← Tous les tournois
-						</button>
-					</div>
+					<button className="link-btn" onClick={onBack}>
+						← Tous les tournois
+					</button>
 				</div>
 			</section>
 
