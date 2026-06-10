@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useTournament } from "../hooks/useTournament";
 import { createTournament } from "../lib/db";
+import { isCapot } from "../lib/stats";
+import type { Match } from "../types";
+import CapotScreen from "./CapotScreen";
 import Champion from "./Champion";
 import GameResult from "./GameResult";
 import LiveScorer from "./LiveScorer";
@@ -19,6 +22,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
+	const [capotMatch, setCapotMatch] = useState<Match | null>(null);
 
 	if (loading) {
 		return (
@@ -77,7 +81,9 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	}
 
 	const openMatch = matches.find((m) => m.id === openId) ?? null;
-	const showChampion = tournament.status === "done" && !dismissedChampion;
+	// Capot celebration takes precedence over the champion screen, so they don't stack.
+	const showChampion =
+		tournament.status === "done" && !dismissedChampion && !capotMatch;
 
 	const copyLink = async () => {
 		try {
@@ -129,8 +135,31 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 					target={tournament.target}
 					onPatch={(patch) => patchMatch(openMatch.id, patch)}
 					onClose={() => setOpenId(null)}
-					onFinish={() => setOpenId(null)}
+					onFinish={() => {
+						if (openMatch && isCapot(openMatch)) setCapotMatch(openMatch);
+						setOpenId(null);
+					}}
 				/>
+			)}
+
+			{capotMatch && (
+				<CapotScreen
+					winner={
+						capotMatch.score_a > capotMatch.score_b
+							? capotMatch.player_a
+							: capotMatch.player_b
+					}
+					loser={
+						capotMatch.score_a > capotMatch.score_b
+							? capotMatch.player_b
+							: capotMatch.player_a
+					}
+					winnerScore={Math.max(capotMatch.score_a, capotMatch.score_b)}
+				>
+					<button className="solid" onClick={() => setCapotMatch(null)}>
+						Continuer
+					</button>
+				</CapotScreen>
 			)}
 
 			{showChampion && (

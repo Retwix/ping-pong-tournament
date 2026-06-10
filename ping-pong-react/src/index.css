@@ -353,6 +353,23 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 .champ-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .champ-actions button { padding: 13px 22px; }
 
+/* ===== capot ("sous la table") ===== */
+.champ-kicker.capot-kick { color: var(--coral); letter-spacing: 0.22em; }
+.champ-name.capot-title { color: var(--coral); animation: capot-wobble 2.6s var(--ease) infinite; }
+@keyframes capot-wobble { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+.capot-loser { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--fg-2); margin: 4px 0 18px; }
+.capot-loser .under {
+  display: inline-block; font-weight: 800; color: var(--coral);
+  animation: dunk 2.2s var(--ease) infinite;
+}
+@keyframes dunk {
+  0%, 100% { transform: translateY(0) rotate(0); opacity: 1; }
+  50% { transform: translateY(34px) rotate(-6deg); opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .champ-name.capot-title, .capot-loser .under { animation: none; }
+}
+
 /* ===== modal ===== */
 .scrim { position: fixed; inset: 0; background: var(--scrim); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 24px; z-index: 60; animation: fade 0.18s var(--ease); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }

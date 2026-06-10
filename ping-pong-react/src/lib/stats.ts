@@ -14,6 +14,13 @@ export interface PlayerStat {
   winRate: number // 0..1
   currentStreak: number // consecutive wins ending at the most recent match
   longestStreak: number
+  capotsDealt: number // shutout wins inflicted (opponent left on 0)
+  capotsTaken: number // times sent under the table (scored 0)
+}
+
+/** A finished match where the loser scored 0 — a "capot" / sous la table. */
+export function isCapot(m: Match): boolean {
+  return Math.min(m.score_a, m.score_b) === 0 && Math.max(m.score_a, m.score_b) > 0
 }
 
 export interface TeamStat {
@@ -103,6 +110,8 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
         winRate: 0,
         currentStreak: 0,
         longestStreak: 0,
+        capotsDealt: 0,
+        capotsTaken: 0,
       }
       map.set(key, s)
     }
@@ -131,6 +140,12 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
     } else {
       B.wins++
       A.losses++
+    }
+    if (isCapot(m)) {
+      const winner = aWin ? A : B
+      const loser = aWin ? B : A
+      winner.capotsDealt++
+      loser.capotsTaken++
     }
     pushResult(A.key, aWin)
     pushResult(B.key, !aWin)

@@ -75,6 +75,14 @@ export default function Stats({ onBack }: { onBack: () => void }) {
     (best, s) => (!best || s.longestStreak > best.longestStreak ? s : best),
     null
   )
+  const bourreau = playerStats.reduce<PlayerStat | null>(
+    (best, s) => (!best || s.capotsDealt > best.capotsDealt ? s : best),
+    null
+  )
+  const roiTable = playerStats.reduce<PlayerStat | null>(
+    (best, s) => (!best || s.capotsTaken > best.capotsTaken ? s : best),
+    null
+  )
 
   const header = (
     <header>
@@ -253,6 +261,12 @@ export default function Stats({ onBack }: { onBack: () => void }) {
               {streakHolder && streakHolder.longestStreak >= 2 && (
                 <SuperCard label="Plus longue série" value={streakHolder.name} sub={`${streakHolder.longestStreak} victoires d'affilée`} />
               )}
+              {bourreau && bourreau.capotsDealt > 0 && (
+                <SuperCard label="Bourreau 🪑" value={bourreau.name} sub={`${bourreau.capotsDealt} capot${bourreau.capotsDealt > 1 ? 's' : ''} infligé${bourreau.capotsDealt > 1 ? 's' : ''}`} />
+              )}
+              {roiTable && roiTable.capotsTaken > 0 && (
+                <SuperCard label="Roi de la table 🙈" value={roiTable.name} sub={`${roiTable.capotsTaken} passage${roiTable.capotsTaken > 1 ? 's' : ''} sous la table`} />
+              )}
             </div>
           </section>
 
@@ -379,6 +393,8 @@ function PlayerDetail({
           <div className="pd-kpi"><div className="n">{s.diff > 0 ? '+' : ''}{s.diff}</div><div className="l">Diff</div></div>
           <div className="pd-kpi"><div className="n">{s.currentStreak >= 2 ? `🔥${s.currentStreak}` : s.currentStreak}</div><div className="l">Série</div></div>
           <div className="pd-kpi"><div className="n">{s.longestStreak}</div><div className="l">Meilleure série</div></div>
+          <div className="pd-kpi"><div className="n">{s.capotsDealt}</div><div className="l">Capots infligés</div></div>
+          <div className="pd-kpi"><div className="n">{s.capotsTaken}</div><div className="l">Sous la table</div></div>
         </div>
 
         <div className="pd-foes">

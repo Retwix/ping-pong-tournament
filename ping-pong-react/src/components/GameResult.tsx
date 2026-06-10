@@ -1,4 +1,6 @@
 import type { Match } from "../types";
+import { isCapot } from "../lib/stats";
+import CapotScreen from "./CapotScreen";
 import Confetti from "./Confetti";
 
 interface Props {
@@ -8,8 +10,24 @@ interface Props {
 }
 
 export default function GameResult({ match, onReplay, onHome }: Props) {
-	const winner =
-		match.score_a > match.score_b ? match.player_a : match.player_b;
+	const aWin = match.score_a > match.score_b;
+	const winner = aWin ? match.player_a : match.player_b;
+	const loser = aWin ? match.player_b : match.player_a;
+	const ws = aWin ? match.score_a : match.score_b;
+
+	// 0-point loss → the office "sous la table" humiliation.
+	if (isCapot(match)) {
+		return (
+			<CapotScreen winner={winner} loser={loser} winnerScore={ws}>
+				<button className="ghost" onClick={onReplay}>
+					Rejouer
+				</button>
+				<button className="solid" onClick={onHome}>
+					Accueil
+				</button>
+			</CapotScreen>
+		);
+	}
 
 	return (
 		<div className="champion">
