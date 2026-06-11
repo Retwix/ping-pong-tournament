@@ -209,6 +209,7 @@ section { margin-top: 32px; }
   display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 17px;
 }
 .player-block { flex: 1; min-width: 0; }
+.team-edit { margin-top: 6px; padding: 6px 10px; font-size: 13px; max-width: 220px; flex: none; }
 .player-dept { display: inline-flex; align-items: center; gap: 7px; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--fg-3); }
 .dept-dot { width: 7px; height: 7px; border-radius: 999px; flex: none; }
 

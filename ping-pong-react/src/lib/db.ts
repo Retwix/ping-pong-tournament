@@ -23,6 +23,15 @@ export async function createPlayer(name: string, team: string): Promise<Player> 
   return data as Player
 }
 
+/** Update a player's name and/or team. */
+export async function updatePlayer(
+  id: string,
+  patch: { name?: string; team?: string }
+): Promise<void> {
+  const { error } = await supabase.from('players').update(patch).eq('id', id)
+  if (error) throw error
+}
+
 /**
  * Remove a player from the registry. Past tournaments/matches keep their recorded
  * names (they store text, not a reference), so history is unaffected.

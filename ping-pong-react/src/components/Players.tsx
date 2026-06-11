@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { IconArrowLeft, IconPlus, IconTrash } from '@tabler/icons-react'
-import { createPlayer, deletePlayer } from '../lib/db'
+import { IconArrowLeft, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { createPlayer, deletePlayer, updatePlayer } from '../lib/db'
 import { usePlayers } from '../hooks/usePlayers'
 import { TEAMS, teamColor, teamLabel, type TeamKey } from '../lib/teams'
 import ThemeToggle from './ThemeToggle'
@@ -18,6 +18,17 @@ export default function Players({ onBack }: Props) {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [leaving, setLeaving] = useState<Set<string>>(new Set())
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  const changeTeam = async (id: string, team: string) => {
+    setEditingId(null)
+    try {
+      await updatePlayer(id, { team })
+      refresh()
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err))
+    }
+  }
 
   // sort alphabetically (French locale)
   const sorted = [...players].sort((a, b) => a.name.localeCompare(b.name, 'fr'))
@@ -130,11 +141,34 @@ export default function Players({ onBack }: Props) {
                 </div>
                 <div className="player-block">
                   <div className="t-name">{p.name}</div>
-                  <div className="player-dept">
-                    <span className="dept-dot" style={{ background: color }} />
-                    {teamLabel(p.team)}
-                  </div>
+                  {editingId === p.id ? (
+                    <select
+                      className="select-input team-edit"
+                      value={p.team}
+                      autoFocus
+                      onChange={(e) => changeTeam(p.id, e.target.value)}
+                      onBlur={() => setEditingId(null)}
+                    >
+                      {TEAMS.map((t) => (
+                        <option key={t.key} value={t.key}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="player-dept">
+                      <span className="dept-dot" style={{ background: color }} />
+                      {teamLabel(p.team)}
+                    </div>
+                  )}
                 </div>
+                <button
+                  className="t-del"
+                  title="Changer le pôle"
+                  onClick={() => setEditingId(editingId === p.id ? null : p.id)}
+                >
+                  <IconPencil size={17} stroke={1.75} />
+                </button>
                 <button className="t-del" title="Supprimer" onClick={() => handleDelete(p.id)}>
                   <IconTrash size={17} stroke={1.75} />
                 </button>
