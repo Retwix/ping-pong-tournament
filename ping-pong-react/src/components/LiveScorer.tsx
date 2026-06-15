@@ -7,6 +7,7 @@ import {
 	matchDuration,
 	serverIsA,
 } from "../lib/pingpong";
+import { playDing } from "../lib/sound";
 import type { Match, MatchSide } from "../types";
 
 interface Props {
@@ -28,6 +29,8 @@ export default function LiveScorer({
 }: Props) {
 	// Per-session undo stack of [score_a, score_b] snapshots.
 	const historyRef = useRef<[number, number][]>([]);
+	// Last known serving side, to ding when the service switches.
+	const prevServeRef = useRef<boolean | null>(null);
 	// Tick state purely to re-render the running clock.
 	const [, forceTick] = useState(0);
 	// Visual left/right swap (persisted) so the layout matches the physical table.
@@ -93,6 +96,18 @@ export default function LiveScorer({
 		const id = setInterval(() => forceTick((n) => n + 1), 500);
 		return () => clearInterval(id);
 	}, [match.done]);
+
+	// Small "ding" when the service switches between players.
+	useEffect(() => {
+		if (won || match.done) {
+			prevServeRef.current = aServe;
+			return;
+		}
+		if (prevServeRef.current !== null && prevServeRef.current !== aServe) {
+			playDing();
+		}
+		prevServeRef.current = aServe;
+	}, [aServe, won, match.done]);
 
 	// Keyboard shortcuts. Left/Right follow the VISUAL order, not the player index.
 	useEffect(() => {
