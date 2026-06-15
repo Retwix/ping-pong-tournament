@@ -10,6 +10,7 @@ import LiveScorer from "./LiveScorer";
 import MatchList from "./MatchList";
 import Standings from "./Standings";
 import ThemeToggle from "./ThemeToggle";
+import TopBack from "./TopBack";
 
 interface Props {
 	id: string;
@@ -94,6 +95,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	};
 	return (
 		<div className="wrap">
+			<TopBack onClick={onBack} label="Tous les tournois" />
 			<header>
 				<ThemeToggle className="header-toggle" />
 				<div className="kicker">

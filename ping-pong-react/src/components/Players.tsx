@@ -4,6 +4,7 @@ import { createPlayer, deletePlayer, updatePlayer } from '../lib/db'
 import { usePlayers } from '../hooks/usePlayers'
 import { TEAMS, teamColor, teamLabel, type TeamKey } from '../lib/teams'
 import ThemeToggle from './ThemeToggle'
+import TopBack from './TopBack'
 
 interface Props {
   onBack: () => void
@@ -87,6 +88,7 @@ export default function Players({ onBack }: Props) {
 
   return (
     <div className="wrap">
+      <TopBack onClick={onBack} />
       <header>
         <ThemeToggle className="header-toggle" />
         <div className="eyebrow">Registre des joueurs</div>

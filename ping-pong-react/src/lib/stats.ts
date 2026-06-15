@@ -258,3 +258,106 @@ export function winnerLoser(m: Match): { winner: string; loser: string; ws: numb
     ? { winner: m.player_a, loser: m.player_b, ws: m.score_a, ls: m.score_b }
     : { winner: m.player_b, loser: m.player_a, ws: m.score_b, ls: m.score_a }
 }
+
+/** A repeated matchup between two players, with the running head-to-head tally. */
+export interface Rivalry {
+  aKey: string
+  aName: string
+  aTeam: string | null
+  bKey: string
+  bName: string
+  bTeam: string | null
+  total: number
+  aWins: number
+  bWins: number
+  lastPlayed: string | null
+}
+
+/**
+ * All matchups that have been played at least `minGames` times, with the
+ * win tally on each side. Pairs are keyed by identity, order-independent.
+ */
+export function computeRivalries(matches: Match[], players: Player[], minGames = 2): Rivalry[] {
+  const teamById = new Map<string, string>()
+  const teamByName = new Map<string, string>()
+  for (const p of players) {
+    teamById.set(p.id, p.team)
+    teamByName.set(p.name, p.team)
+  }
+  const teamFor = (id: string | null, name: string): string | null =>
+    (id && teamById.get(id)) || teamByName.get(name) || null
+
+  const map = new Map<string, Rivalry>()
+  for (const m of matches) {
+    const aKey = sideKey(m.player_a_id, m.player_a)
+    const bKey = sideKey(m.player_b_id, m.player_b)
+    if (aKey === bKey) continue
+    // Canonical, order-independent pair key.
+    const aFirst = aKey < bKey
+    const pairKey = aFirst ? `${aKey}|${bKey}` : `${bKey}|${aKey}`
+
+    let r = map.get(pairKey)
+    if (!r) {
+      r = aFirst
+        ? {
+            aKey,
+            aName: m.player_a,
+            aTeam: teamFor(m.player_a_id, m.player_a),
+            bKey,
+            bName: m.player_b,
+            bTeam: teamFor(m.player_b_id, m.player_b),
+            total: 0,
+            aWins: 0,
+            bWins: 0,
+            lastPlayed: null,
+          }
+        : {
+            aKey: bKey,
+            aName: m.player_b,
+            aTeam: teamFor(m.player_b_id, m.player_b),
+            bKey: aKey,
+            bName: m.player_a,
+            bTeam: teamFor(m.player_a_id, m.player_a),
+            total: 0,
+            aWins: 0,
+            bWins: 0,
+            lastPlayed: null,
+          }
+      map.set(pairKey, r)
+    }
+
+    r.total++
+    const winnerKey = m.score_a > m.score_b ? aKey : bKey
+    if (winnerKey === r.aKey) r.aWins++
+    else r.bWins++
+    const t = m.ended_at ?? m.started_at ?? null
+    if (t && (!r.lastPlayed || t > r.lastPlayed)) r.lastPlayed = t
+  }
+
+  return [...map.values()].filter((r) => r.total >= minGames)
+}
+
+/** How "even" a rivalry is: 1 = perfectly split, 0 = one-sided sweep. */
+export function rivalryBalance(r: Rivalry): number {
+  return r.total ? Math.min(r.aWins, r.bWins) / (r.total / 2) : 0
+}
+
+/** A single day bucket for the activity chart. */
+export interface DayCount {
+  date: string // YYYY-MM-DD
+  count: number
+}
+
+/** Number of matches played per calendar day, oldest first. Untimed matches are skipped. */
+export function matchesByDay(matches: Match[]): DayCount[] {
+  const map = new Map<string, number>()
+  for (const m of matches) {
+    const t = m.ended_at ?? m.started_at
+    if (!t) continue
+    const day = new Date(t).toISOString().slice(0, 10)
+    map.set(day, (map.get(day) ?? 0) + 1)
+  }
+  return [...map.entries()]
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+}

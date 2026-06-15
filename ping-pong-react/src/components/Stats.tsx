@@ -4,20 +4,26 @@ import { useStats } from '../hooks/useStats'
 import {
   computeHeadToHead,
   computePlayerStats,
+  computeRivalries,
   computeSuperlatives,
   computeTeamStats,
   h2hWins,
+  matchesByDay,
   opponentRecords,
   recentMatchesFor,
+  rivalryBalance,
   sideKey,
   winnerLoser,
   type MatchHighlight,
   type PlayerStat,
+  type Rivalry,
 } from '../lib/stats'
 import { formatDuration } from '../lib/pingpong'
 import { teamColor, teamLabel } from '../lib/teams'
 import type { Match } from '../types'
+import { ActivityChart, WinRateBars, type BarDatum } from './Charts'
 import ThemeToggle from './ThemeToggle'
+import TopBack from './TopBack'
 
 type SortKey = 'wins' | 'winRate' | 'diff' | 'played'
 
@@ -63,6 +69,38 @@ export default function Stats({ onBack }: { onBack: () => void }) {
     [playerStats]
   )
 
+  const dayCounts = useMemo(() => matchesByDay(matches), [matches])
+
+  const winRateData = useMemo<BarDatum[]>(
+    () =>
+      [...playerStats]
+        .filter((s) => s.played > 0)
+        .sort((a, b) => b.winRate - a.winRate || b.played - a.played)
+        .slice(0, 8)
+        .map((s) => ({
+          key: s.key,
+          name: s.name,
+          team: s.team,
+          value: s.winRate,
+          sub: `${s.played} matchs`,
+        })),
+    [playerStats]
+  )
+
+  const rivalries = useMemo(() => computeRivalries(matches, players, 2), [matches, players])
+  const mostPlayed = useMemo(
+    () => [...rivalries].sort((a, b) => b.total - a.total || (b.lastPlayed ?? '').localeCompare(a.lastPlayed ?? '')).slice(0, 6),
+    [rivalries]
+  )
+  const tightest = useMemo(
+    () =>
+      [...rivalries]
+        .filter((r) => r.total >= 3)
+        .sort((a, b) => rivalryBalance(b) - rivalryBalance(a) || b.total - a.total)
+        .slice(0, 3),
+    [rivalries]
+  )
+
   const totalPoints = useMemo(
     () => matches.reduce((sum, m) => sum + m.score_a + m.score_b, 0),
     [matches]
@@ -85,8 +123,10 @@ export default function Stats({ onBack }: { onBack: () => void }) {
   )
 
   const header = (
-    <header>
-      <ThemeToggle className="header-toggle" />
+    <>
+      <TopBack onClick={onBack} />
+      <header>
+        <ThemeToggle className="header-toggle" />
       <div className="eyebrow">Statistiques</div>
       <h1>
         Les <span className="em">stats</span>
@@ -95,7 +135,8 @@ export default function Stats({ onBack }: { onBack: () => void }) {
         Toutes les parties et tous les tournois terminés, cumulés. Classements, confrontations
         directes et records.
       </p>
-    </header>
+      </header>
+    </>
   )
 
   if (loading) {
@@ -150,6 +191,19 @@ export default function Stats({ onBack }: { onBack: () => void }) {
             </div>
           </section>
 
+          {/* Activity over time */}
+          {dayCounts.length > 1 && (
+            <section>
+              <div className="section-title">Activité</div>
+              <div className="panel chart-panel">
+                <ActivityChart data={dayCounts} />
+              </div>
+              <p className="setup-hint" style={{ textAlign: 'left' }}>
+                Matchs joués par jour. Survole une barre pour le détail.
+              </p>
+            </section>
+          )}
+
           {/* Player leaderboard */}
           <section>
             <div className="section-title">Classement des joueurs</div>
@@ -194,6 +248,16 @@ export default function Stats({ onBack }: { onBack: () => void }) {
               Clique sur une colonne pour trier. La série compte les victoires consécutives en cours.
             </p>
           </section>
+
+          {/* Win-rate bars */}
+          {winRateData.length > 0 && (
+            <section>
+              <div className="section-title">Taux de victoire</div>
+              <div className="panel chart-panel">
+                <WinRateBars data={winRateData} />
+              </div>
+            </section>
+          )}
 
           {/* Team leaderboard */}
           {teamStats.length > 0 && (
@@ -314,6 +378,23 @@ export default function Stats({ onBack }: { onBack: () => void }) {
             </section>
           )}
 
+          {/* Rivalries */}
+          {mostPlayed.length > 0 && (
+            <section>
+              <div className="section-title">Rivalités</div>
+              {tightest.length > 0 && (
+                <p className="setup-hint" style={{ textAlign: 'left', marginTop: 0 }}>
+                  Les duels les plus serrés : {tightest.map((r) => `${r.aName} vs ${r.bName}`).join(' · ')}
+                </p>
+              )}
+              <div className="rivalry-grid">
+                {mostPlayed.map((r) => (
+                  <RivalryCard key={`${r.aKey}|${r.bKey}`} r={r} />
+                ))}
+              </div>
+            </section>
+          )}
+
           <div className="footer-row">
             <span className="hint">Les stats cumulent parties rapides et tournois.</span>
             <button className="link-btn" onClick={onBack}>
@@ -341,6 +422,33 @@ function SuperCard({ label, value, sub }: { label: string; value: string; sub: s
       <div className="sc-label">{label}</div>
       <div className="sc-value">{value}</div>
       <div className="sc-sub">{sub}</div>
+    </div>
+  )
+}
+
+function RivalryCard({ r }: { r: Rivalry }) {
+  const aColor = teamColor(r.aTeam ?? '')
+  const bColor = teamColor(r.bTeam ?? '')
+  const aPct = r.total ? (r.aWins / r.total) * 100 : 50
+  const leader = r.aWins === r.bWins ? null : r.aWins > r.bWins ? r.aName : r.bName
+  return (
+    <div className="rivalry-card">
+      <div className="rv-top">
+        <span className="rv-name" style={{ color: aColor }} title={r.aName}>
+          {r.aName}
+        </span>
+        <span className="rv-vs">{r.aWins}–{r.bWins}</span>
+        <span className="rv-name rv-right" style={{ color: bColor }} title={r.bName}>
+          {r.bName}
+        </span>
+      </div>
+      <div className="rv-bar">
+        <span className="rv-fill" style={{ width: `${aPct}%`, background: aColor }} />
+        <span className="rv-fill" style={{ width: `${100 - aPct}%`, background: bColor }} />
+      </div>
+      <div className="rv-sub">
+        {r.total} matchs · {leader ? `${leader} mène` : 'égalité parfaite'}
+      </div>
     </div>
   )
 }

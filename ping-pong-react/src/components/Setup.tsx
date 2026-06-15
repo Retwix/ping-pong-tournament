@@ -4,6 +4,7 @@ import { matchCount, roundCount } from '../lib/roundRobin'
 import { TEAMS, teamLabel, type TeamKey } from '../lib/teams'
 import { usePlayers } from '../hooks/usePlayers'
 import ThemeToggle from './ThemeToggle'
+import TopBack from './TopBack'
 import type { Player } from '../types'
 
 interface Props {
@@ -97,6 +98,7 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
 
   return (
     <div className="wrap">
+      <TopBack onClick={onCancel} />
       <header>
         <ThemeToggle className="header-toggle" />
         <div className="kicker">{isGame ? 'Partie rapide' : 'Round-robin · nouveau tournoi'}</div>

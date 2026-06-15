@@ -5,6 +5,15 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Dependencies & build output
+node_modules/
+dist/
+*.tsbuildinfo
+package-lock.json
+# Compiled config (source is vite.config.ts)
+ping-pong-react/vite.config.js
+ping-pong-react/vite.config.d.ts
+
 # Vercel
 .vercel
 
