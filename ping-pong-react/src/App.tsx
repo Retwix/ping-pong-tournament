@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import Board from "./components/Board";
+import CurrentView from "./components/CurrentView";
 import Home from "./components/Home";
 import LiveView from "./components/LiveView";
 import Players from "./components/Players";
 import Setup from "./components/Setup";
 import Stats from "./components/Stats";
+import { currentPath, navigate } from "./lib/router";
 import { hasSupabaseConfig } from "./lib/supabase";
 
 type Route =
@@ -14,23 +16,24 @@ type Route =
 	| { name: "players" }
 	| { name: "stats" }
 	| { name: "board"; id: string }
-	| { name: "live"; id: string };
+	| { name: "live"; id: string }
+	| { name: "live-current" }
+	| { name: "ref-current" };
 
 function parseRoute(): Route {
-	const h = window.location.hash.replace(/^#/, "");
-	if (h === "/new") return { name: "new" };
-	if (h === "/game") return { name: "game" };
-	if (h === "/players") return { name: "players" };
-	if (h === "/stats") return { name: "stats" };
-	const live = h.match(/^\/t\/(.+)\/live$/);
+	const p = currentPath();
+	if (p === "/new") return { name: "new" };
+	if (p === "/game") return { name: "game" };
+	if (p === "/players") return { name: "players" };
+	if (p === "/stats") return { name: "stats" };
+	// Stable, shareable views that follow the current tournament (no id needed).
+	if (p === "/live") return { name: "live-current" };
+	if (p === "/ref") return { name: "ref-current" };
+	const live = p.match(/^\/t\/(.+)\/live$/);
 	if (live) return { name: "live", id: decodeURIComponent(live[1]) };
-	const m = h.match(/^\/t\/(.+)$/);
+	const m = p.match(/^\/t\/(.+)$/);
 	if (m) return { name: "board", id: decodeURIComponent(m[1]) };
 	return { name: "home" };
-}
-
-function navigate(hash: string) {
-	window.location.hash = hash;
 }
 
 function ConfigError() {
@@ -90,6 +93,16 @@ function renderRoute(route: Route) {
 					onBack={() => navigate(`/t/${route.id}`)}
 				/>
 			);
+		case "live-current":
+			return (
+				<CurrentView
+					readOnly
+					onHome={() => navigate("/")}
+					onRef={() => navigate("/ref")}
+				/>
+			);
+		case "ref-current":
+			return <CurrentView readOnly={false} onHome={() => navigate("/")} />;
 		default:
 			return (
 				<Home
@@ -98,6 +111,8 @@ function renderRoute(route: Route) {
 					onNewGame={() => navigate("/game")}
 					onPlayers={() => navigate("/players")}
 					onStats={() => navigate("/stats")}
+					onLive={() => navigate("/live")}
+					onRef={() => navigate("/ref")}
 				/>
 			);
 	}
@@ -107,9 +122,9 @@ export default function App() {
 	const [route, setRoute] = useState<Route>(parseRoute());
 
 	useEffect(() => {
-		const onHashChange = () => setRoute(parseRoute());
-		window.addEventListener("hashchange", onHashChange);
-		return () => window.removeEventListener("hashchange", onHashChange);
+		const onNavigate = () => setRoute(parseRoute());
+		window.addEventListener("popstate", onNavigate);
+		return () => window.removeEventListener("popstate", onNavigate);
 	}, []);
 
 	return renderRoute(route);

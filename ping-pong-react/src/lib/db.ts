@@ -69,9 +69,17 @@ export async function createTournament(
   const { data: reg } = await supabase.from('players').select('id, name')
   const idByName = new Map<string, string>((reg ?? []).map((p) => [p.name, p.id]))
 
+  // Hand the "current" pointer to the new tournament: clear it everywhere first so
+  // the partial unique index (at most one active) is never violated on insert.
+  const { error: clearErr } = await supabase
+    .from('tournaments')
+    .update({ is_active: false })
+    .eq('is_active', true)
+  if (clearErr) throw clearErr
+
   const { data: t, error } = await supabase
     .from('tournaments')
-    .insert({ name, players: ordered, target, status: 'active', kind })
+    .insert({ name, players: ordered, target, status: 'active', kind, is_active: true })
     .select()
     .single()
   if (error) throw error
@@ -116,6 +124,23 @@ export async function listTournaments(): Promise<Tournament[]> {
 
 export async function getTournament(id: string): Promise<Tournament | null> {
   const { data, error } = await supabase.from('tournaments').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  return (data as Tournament) ?? null
+}
+
+/**
+ * The tournament/game currently on the table (is_active = true), or null if none.
+ * Backs the stable /live and /ref views. `limit(1)` keeps it safe even if the
+ * one-active invariant is ever broken.
+ */
+export async function getActiveTournament(): Promise<Tournament | null> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   if (error) throw error
   return (data as Tournament) ?? null
 }

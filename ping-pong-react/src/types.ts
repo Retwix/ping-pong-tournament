@@ -21,6 +21,8 @@ export interface Tournament {
   status: TournamentStatus
   kind: TournamentKind
   champion: string | null
+  /** Sticky pointer to the tournament shown by the stable /live and /ref views. */
+  is_active: boolean
   /** Slack: conversation + message ts of the invitation (results reply in this thread). */
   slack_channel: string | null
   slack_thread_ts: string | null

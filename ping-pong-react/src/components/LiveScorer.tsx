@@ -18,6 +18,8 @@ interface Props {
 	onFinish?: () => void;
 	/** Spectator display: no tapping/keyboard/controls, just the live scoreboard. */
 	readOnly?: boolean;
+	/** Spectator-only: jump straight into referee mode for the same live match. */
+	onRef?: () => void;
 }
 
 const FLIP_KEY = "rv-score-flip";
@@ -29,6 +31,7 @@ export default function LiveScorer({
 	onClose,
 	onFinish,
 	readOnly = false,
+	onRef,
 }: Props) {
 	// Per-session undo stack of [score_a, score_b] snapshots.
 	const historyRef = useRef<[number, number][]>([]);
@@ -222,6 +225,16 @@ export default function LiveScorer({
 					>
 						<IconArrowsLeftRight size={20} stroke={1.9} />
 					</button>
+					{readOnly && onRef && (
+						<button
+							className="ov-close ov-ref"
+							onClick={onRef}
+							aria-label="Passer en mode arbitre"
+							title="Passer en mode arbitre"
+						>
+							🧑‍⚖️
+						</button>
+					)}
 				</div>
 				<span className="ov-timer">{formatDuration(matchDuration(match))}</span>
 				<span className="ov-target">

@@ -9,6 +9,13 @@ import ThemeToggle from "./ThemeToggle";
 interface Props {
 	id: string;
 	onBack: () => void;
+	/**
+	 * Spectator view (default) is read-only. Pass `readOnly={false}` for referee
+	 * mode: the same auto-following scoreboard, but tappable and with controls.
+	 */
+	readOnly?: boolean;
+	/** Spectator-only: jump from the live view straight into referee mode. */
+	onRef?: () => void;
 }
 
 // How long a finished match stays on screen before the view advances to the next.
@@ -20,14 +27,18 @@ function isLive(m: Match): boolean {
 }
 
 /**
- * Read-only spectator / TV view. It auto-follows whatever match is currently
- * being played — no tapping required — so a projector stays in sync with the
- * referee's device. When a match is validated it lingers briefly on the result,
- * then advances to the next match. Once every match is done it shows the final
- * standings and champion.
+ * Auto-follows whatever match is currently being played — no tapping required —
+ * so a projector (or the referee on /ref) stays in sync. When a match is validated
+ * it lingers briefly on the result, then advances to the next match. Once every
+ * match is done it shows the final standings and champion.
+ *
+ * In spectator mode (default) it is read-only. In referee mode (`readOnly={false}`)
+ * the same followed match is scorable.
  */
-export default function LiveView({ id, onBack }: Props) {
-	const { tournament, matches, loading, error } = useTournament(id);
+export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) {
+	// Only offer the "jump to ref" shortcut from the spectator view.
+	const showRef = readOnly && !!onRef;
+	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	const [shownId, setShownId] = useState<string | null>(null);
 
 	// Always-current matches for use inside the deferred hold timer.
@@ -112,6 +123,11 @@ export default function LiveView({ id, onBack }: Props) {
 				<section>
 					<Standings players={tournament.players} matches={matches} />
 					<div className="footer-row">
+						{showRef && (
+							<button className="link-btn" onClick={onRef}>
+								🧑‍⚖️ Mode arbitre
+							</button>
+						)}
 						<button className="link-btn" onClick={onBack}>
 							← Quitter le mode live
 						</button>
@@ -127,9 +143,16 @@ export default function LiveView({ id, onBack }: Props) {
 		return (
 			<div className="wrap">
 				<p className="empty">En attente du prochain match…</p>
-				<button className="link-btn" onClick={onBack}>
-					← Quitter le mode live
-				</button>
+				<div className="footer-row">
+					{showRef && (
+						<button className="link-btn" onClick={onRef}>
+							🧑‍⚖️ Mode arbitre
+						</button>
+					)}
+					<button className="link-btn" onClick={onBack}>
+						← Quitter le mode live
+					</button>
+				</div>
 			</div>
 		);
 	}
@@ -139,8 +162,12 @@ export default function LiveView({ id, onBack }: Props) {
 			key={shownMatch.id}
 			match={shownMatch}
 			target={tournament.target}
-			readOnly
+			readOnly={readOnly}
+			onPatch={
+				readOnly ? undefined : (patch) => patchMatch(shownMatch.id, patch)
+			}
 			onClose={onBack}
+			onRef={onRef}
 		/>
 	);
 }

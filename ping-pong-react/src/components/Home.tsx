@@ -10,9 +10,11 @@ interface Props {
   onNewGame: () => void
   onPlayers: () => void
   onStats: () => void
+  onLive: () => void
+  onRef: () => void
 }
 
-export default function Home({ onOpen, onNew, onNewGame, onPlayers, onStats }: Props) {
+export default function Home({ onOpen, onNew, onNewGame, onPlayers, onStats, onLive, onRef }: Props) {
   const { tournaments, loading, error } = useTournaments()
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
@@ -43,6 +45,12 @@ export default function Home({ onOpen, onNew, onNewGame, onPlayers, onStats }: P
             Tes parties &amp; tournois
           </span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="link-btn" onClick={onLive} title="Affichage spectateur du match en cours (lien fixe à partager)">
+              📺 Live
+            </button>
+            <button className="link-btn" onClick={onRef} title="Mode arbitre du match en cours (lien fixe à partager)">
+              🧑‍⚖️ Arbitre
+            </button>
             <button className="link-btn" onClick={onStats}>
               Stats
             </button>

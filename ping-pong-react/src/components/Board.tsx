@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTournament } from "../hooks/useTournament";
 import { createTournament } from "../lib/db";
+import { navigate } from "../lib/router";
 import { isCapot } from "../lib/stats";
 import type { Match } from "../types";
 import CapotScreen from "./CapotScreen";
@@ -113,12 +114,17 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 					</button>
 					<button
 						className="link-btn"
-						onClick={() => {
-							window.location.hash = `#/t/${id}/live`;
-						}}
-						title="Affichage spectateur : suit automatiquement le match en cours"
+						onClick={() => navigate("/live")}
+						title="Affichage spectateur (lien fixe) : suit automatiquement le match en cours"
 					>
 						📺 Mode live
+					</button>
+					<button
+						className="link-btn"
+						onClick={() => navigate("/ref")}
+						title="Mode arbitre (lien fixe) : marque le match en cours"
+					>
+						🧑‍⚖️ Mode arbitre
 					</button>
 				</div>
 			</header>

@@ -29,6 +29,23 @@ alter table public.tournaments add column if not exists slack_channel   text;
 alter table public.tournaments add column if not exists slack_thread_ts text;
 alter table public.tournaments add column if not exists result_notified boolean not null default false;
 
+-- ---------- "current" pointer ----------
+-- `is_active` marks the one tournament/game shown by the stable /live and /ref
+-- views. It is a sticky pointer to whatever is on the table right now: set when a
+-- tournament is created (clearing any previous one), kept on the finished one so
+-- /live can linger on the champion, and only replaced when the next one starts.
+alter table public.tournaments add column if not exists is_active boolean not null default false;
+
+-- At most one tournament may be active at a time (partial unique index).
+create unique index if not exists tournaments_one_active
+  on public.tournaments (is_active) where is_active;
+
+-- Backfill: if nothing is marked active yet (existing DBs), point at the latest
+-- tournament so /live and /ref have something to show.
+update public.tournaments set is_active = true
+  where id = (select id from public.tournaments order by created_at desc limit 1)
+    and not exists (select 1 from public.tournaments where is_active);
+
 create table if not exists public.matches (
   id            uuid primary key default gen_random_uuid(),
   tournament_id uuid not null references public.tournaments(id) on delete cascade,
