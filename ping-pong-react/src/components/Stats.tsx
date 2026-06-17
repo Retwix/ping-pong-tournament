@@ -50,7 +50,7 @@ export default function Stats({ onBack }: { onBack: () => void }) {
   const [selected, setSelected] = useState<string | null>(null)
 
   const playerStats = useMemo(() => computePlayerStats(matches, players), [matches, players])
-  const teamStats = useMemo(() => computeTeamStats(playerStats), [playerStats])
+  const teamStats = useMemo(() => computeTeamStats(matches, players), [matches, players])
   const h2h = useMemo(() => computeHeadToHead(matches), [matches])
   const supers = useMemo(() => computeSuperlatives(matches), [matches])
 

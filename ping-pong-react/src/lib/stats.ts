@@ -161,17 +161,59 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
   return [...map.values()]
 }
 
-export function computeTeamStats(playerStats: PlayerStat[]): TeamStat[] {
-  const map = new Map<string, TeamStat>()
-  for (const s of playerStats) {
-    if (!s.team) continue
-    const t = map.get(s.team) ?? { team: s.team, players: 0, played: 0, wins: 0, winRate: 0 }
-    t.players++
-    t.played += s.played
-    t.wins += s.wins
-    map.set(s.team, t)
+/**
+ * Team ("pôle") standings. Matches between two players of the same team are
+ * excluded entirely — they don't count toward played, wins, or win rate, since
+ * a teammate-vs-teammate game can't change a team's standing against the others.
+ */
+export function computeTeamStats(matches: Match[], players: Player[]): TeamStat[] {
+  const teamById = new Map<string, string>()
+  const teamByName = new Map<string, string>()
+  for (const p of players) {
+    teamById.set(p.id, p.team)
+    teamByName.set(p.name, p.team)
   }
-  for (const t of map.values()) t.winRate = t.played ? t.wins / t.played : 0
+  const teamFor = (id: string | null, name: string): string | null =>
+    (id && teamById.get(id)) || teamByName.get(name) || null
+
+  const map = new Map<string, TeamStat>()
+  const rosters = new Map<string, Set<string>>()
+  const ensure = (team: string): TeamStat => {
+    let t = map.get(team)
+    if (!t) {
+      t = { team, players: 0, played: 0, wins: 0, winRate: 0 }
+      map.set(team, t)
+      rosters.set(team, new Set())
+    }
+    return t
+  }
+
+  for (const m of matches) {
+    const aTeam = teamFor(m.player_a_id, m.player_a)
+    const bTeam = teamFor(m.player_b_id, m.player_b)
+    // A player still belongs to their team's roster even in an intra-team game.
+    if (aTeam) {
+      ensure(aTeam)
+      rosters.get(aTeam)!.add(sideKey(m.player_a_id, m.player_a))
+    }
+    if (bTeam) {
+      ensure(bTeam)
+      rosters.get(bTeam)!.add(sideKey(m.player_b_id, m.player_b))
+    }
+    // Skip teammate-vs-teammate (and matches missing a team).
+    if (!aTeam || !bTeam || aTeam === bTeam) continue
+    const ta = ensure(aTeam)
+    const tb = ensure(bTeam)
+    ta.played++
+    tb.played++
+    if (m.score_a > m.score_b) ta.wins++
+    else tb.wins++
+  }
+
+  for (const t of map.values()) {
+    t.players = rosters.get(t.team)?.size ?? 0
+    t.winRate = t.played ? t.wins / t.played : 0
+  }
   return [...map.values()].sort((a, b) => b.winRate - a.winRate || b.wins - a.wins)
 }
 

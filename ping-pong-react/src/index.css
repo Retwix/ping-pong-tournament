@@ -500,3 +500,67 @@ table.h2h td.neg { background: rgba(215, 66, 81, 0.14); color: var(--coral); }
   .bar-row { grid-template-columns: 90px 1fr 40px; gap: 8px; }
   .act-plot { height: 110px; }
 }
+
+/* ============================================================
+   Pronostics (predictions / betting) — no-currency streak model
+   ============================================================ */
+.prono-panel { padding: 18px; display: flex; flex-direction: column; gap: 18px; }
+
+.prono-id { display: flex; flex-direction: column; gap: 6px; }
+.prono-id-label { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3); }
+.prono-id .name-input { max-width: 260px; }
+
+.prono-block { display: flex; flex-direction: column; gap: 12px; }
+.prono-head { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--fg-1); }
+
+.prono-locked, .prono-open, .prono-result {
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+}
+.prono-locked { color: var(--fg-3); background: var(--bg); }
+.prono-open { color: var(--green); background: rgba(43, 165, 114, 0.14); }
+.prono-result { color: var(--green); background: rgba(43, 165, 114, 0.14); text-transform: none; letter-spacing: 0; }
+
+.prono-tally, .prono-you {
+  font-family: var(--font-display); font-weight: 800; font-size: 11px;
+  background: var(--bg); color: var(--fg-2); border-radius: 999px; padding: 1px 7px;
+}
+.prono-you { color: var(--primary); background: var(--primary-glow); }
+
+.prono-match { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.prono-match-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.prono-round { font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 0.08em; color: var(--fg-3); }
+
+.prono-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.prono-side { justify-content: center; width: 100%; }
+.chip.won { border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--green); color: var(--green); }
+.chip.lost { opacity: 0.55; }
+.chip:disabled { cursor: default; opacity: 0.5; }
+.chip.selected:disabled { opacity: 0.85; }
+
+.prono-split { display: flex; align-items: center; gap: 10px; }
+.prono-pct { font-family: var(--font-display); font-weight: 800; font-size: 12px; color: var(--fg-2); min-width: 16px; text-align: center; }
+.prono-bar { flex: 1; display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--bg); }
+.prono-fill { display: block; height: 100%; transition: width var(--dur) var(--ease); }
+.prono-fill.a { background: var(--primary); }
+.prono-fill.b { background: var(--coral); }
+
+/* leaderboard (/pronos) */
+.prono-board { padding: 6px 10px; }
+.prono-board-head, .prono-board-row {
+  display: grid; grid-template-columns: 36px 1fr 64px 72px 64px; align-items: center; gap: 8px;
+  padding: 11px 8px;
+}
+.prono-board-head { color: var(--fg-3); font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.prono-board-row { border-top: 1px solid var(--border); }
+.lb-rank { font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--fg-2); text-align: center; }
+.lb-name { font-family: var(--font-display); font-weight: 600; color: var(--fg-1); display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lb-cell { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--fg-1); text-align: center; }
+.lb-cell .lb-sub { color: var(--fg-3); font-weight: 500; font-size: 12px; margin-left: 2px; }
+.prono-pending { font-family: var(--font-body); font-weight: 500; font-size: 11px; color: var(--fg-3); background: var(--bg); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+
+@media (max-width: 460px) {
+  .prono-board-head, .prono-board-row { grid-template-columns: 28px 1fr 52px 56px 50px; gap: 4px; padding: 10px 4px; }
+  .lb-cell { font-size: 13px; }
+  .prono-pending { display: none; }
+}

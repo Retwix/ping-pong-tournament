@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Board from "./components/Board";
 import CurrentView from "./components/CurrentView";
 import Home from "./components/Home";
+import Leaderboard from "./components/Leaderboard";
 import LiveView from "./components/LiveView";
 import Players from "./components/Players";
 import Setup from "./components/Setup";
@@ -15,6 +16,7 @@ type Route =
 	| { name: "game" }
 	| { name: "players" }
 	| { name: "stats" }
+	| { name: "pronos" }
 	| { name: "board"; id: string }
 	| { name: "live"; id: string }
 	| { name: "live-current" }
@@ -26,6 +28,7 @@ function parseRoute(): Route {
 	if (p === "/game") return { name: "game" };
 	if (p === "/players") return { name: "players" };
 	if (p === "/stats") return { name: "stats" };
+	if (p === "/pronos") return { name: "pronos" };
 	// Stable, shareable views that follow the current tournament (no id needed).
 	if (p === "/live") return { name: "live-current" };
 	if (p === "/ref") return { name: "ref-current" };
@@ -77,6 +80,8 @@ function renderRoute(route: Route) {
 			return <Players onBack={() => navigate("/")} />;
 		case "stats":
 			return <Stats onBack={() => navigate("/")} />;
+		case "pronos":
+			return <Leaderboard onBack={() => navigate("/")} />;
 		case "board":
 			return (
 				<Board
@@ -111,6 +116,7 @@ function renderRoute(route: Route) {
 					onNewGame={() => navigate("/game")}
 					onPlayers={() => navigate("/players")}
 					onStats={() => navigate("/stats")}
+					onPronos={() => navigate("/pronos")}
 					onLive={() => navigate("/live")}
 					onRef={() => navigate("/ref")}
 				/>
