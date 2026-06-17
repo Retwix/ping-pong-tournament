@@ -13,9 +13,11 @@ import type { Match, MatchSide } from "../types";
 interface Props {
 	match: Match;
 	target: number;
-	onPatch: (patch: Partial<Match>) => void;
-	onClose: () => void;
-	onFinish: () => void;
+	onPatch?: (patch: Partial<Match>) => void;
+	onClose?: () => void;
+	onFinish?: () => void;
+	/** Spectator display: no tapping/keyboard/controls, just the live scoreboard. */
+	readOnly?: boolean;
 }
 
 const FLIP_KEY = "rv-score-flip";
@@ -26,6 +28,7 @@ export default function LiveScorer({
 	onPatch,
 	onClose,
 	onFinish,
+	readOnly = false,
 }: Props) {
 	// Per-session undo stack of [score_a, score_b] snapshots.
 	const historyRef = useRef<[number, number][]>([]);
@@ -61,6 +64,7 @@ export default function LiveScorer({
 	const bMp = !won && isMatchPoint(false, match.score_a, match.score_b, target);
 
 	const addPoint = (side: MatchSide) => {
+		if (readOnly || !onPatch) return;
 		if (isWon(match.score_a, match.score_b, target)) return;
 		historyRef.current.push([match.score_a, match.score_b]);
 		const patch: Partial<Match> =
@@ -73,15 +77,18 @@ export default function LiveScorer({
 		onPatch(patch);
 	};
 	const undo = () => {
+		if (readOnly || !onPatch) return;
 		const prev = historyRef.current.pop();
 		if (prev) onPatch({ score_a: prev[0], score_b: prev[1] });
 	};
 	const finish = () => {
+		if (readOnly || !onPatch) return;
 		if (!isWon(match.score_a, match.score_b, target)) return;
 		onPatch({ done: true, ended_at: new Date().toISOString() });
-		onFinish();
+		onFinish?.();
 	};
 	const swapServe = () => {
+		if (readOnly || !onPatch) return;
 		if (match.score_a + match.score_b === 0) {
 			onPatch({ serve_start: match.serve_start === "a" ? "b" : "a" });
 		}
@@ -111,6 +118,7 @@ export default function LiveScorer({
 
 	// Keyboard shortcuts. Left/Right follow the VISUAL order, not the player index.
 	useEffect(() => {
+		if (readOnly) return;
 		const onKey = (e: KeyboardEvent) => {
 			switch (e.key) {
 				case "ArrowLeft":
@@ -133,7 +141,7 @@ export default function LiveScorer({
 					break;
 				case "Escape":
 					e.preventDefault();
-					onClose();
+					onClose?.();
 					break;
 			}
 		};
@@ -186,7 +194,7 @@ export default function LiveScorer({
 				</span>
 				<span className="side-score">{d.score}</span>
 				<span className="tap-hint">
-					{d.isWinner ? "Vainqueur 🏆" : "Tape pour +1"}
+					{d.isWinner ? "Vainqueur 🏆" : readOnly ? "" : "Tape pour +1"}
 				</span>
 			</div>
 		);
@@ -196,14 +204,16 @@ export default function LiveScorer({
 		<div className="overlay">
 			<div className="ov-top">
 				<div className="ov-left">
-					<button
-						className="ov-close"
-						onClick={onClose}
-						aria-label="Fermer"
-						title="Fermer"
-					>
-						✕
-					</button>
+					{onClose && (
+						<button
+							className="ov-close"
+							onClick={onClose}
+							aria-label="Fermer"
+							title="Fermer"
+						>
+							✕
+						</button>
+					)}
 					<button
 						className={`ov-close${flipped ? " active" : ""}`}
 						onClick={toggleFlip}
@@ -221,17 +231,21 @@ export default function LiveScorer({
 
 			<div className="scoreboard">{order.map(renderSide)}</div>
 
-			<div className="ov-controls">
-				<button onClick={undo}>↶ Annuler</button>
-				<button onClick={swapServe}>🏓 Service</button>
-				<button className="primary" disabled={!won} onClick={finish}>
-					Valider le match
-				</button>
-			</div>
-			<div className="kbd-hint">
-				<kbd>←</kbd> point gauche · <kbd>→</kbd> point droite · <kbd>Z</kbd>{" "}
-				annuler · <kbd>Entrée</kbd> valider · <kbd>Échap</kbd> fermer
-			</div>
+			{!readOnly && (
+				<>
+					<div className="ov-controls">
+						<button onClick={undo}>↶ Annuler</button>
+						<button onClick={swapServe}>🏓 Service</button>
+						<button className="primary" disabled={!won} onClick={finish}>
+							Valider le match
+						</button>
+					</div>
+					<div className="kbd-hint">
+						<kbd>←</kbd> point gauche · <kbd>→</kbd> point droite · <kbd>Z</kbd>{" "}
+						annuler · <kbd>Entrée</kbd> valider · <kbd>Échap</kbd> fermer
+					</div>
+				</>
+			)}
 		</div>
 	);
 }

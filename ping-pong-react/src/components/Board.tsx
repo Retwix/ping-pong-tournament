@@ -111,6 +111,15 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 					<button className="link-btn" onClick={copyLink}>
 						Copier le lien
 					</button>
+					<button
+						className="link-btn"
+						onClick={() => {
+							window.location.hash = `#/t/${id}/live`;
+						}}
+						title="Affichage spectateur : suit automatiquement le match en cours"
+					>
+						📺 Mode live
+					</button>
 				</div>
 			</header>
 

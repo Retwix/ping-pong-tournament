@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Board from "./components/Board";
 import Home from "./components/Home";
+import LiveView from "./components/LiveView";
 import Players from "./components/Players";
 import Setup from "./components/Setup";
 import Stats from "./components/Stats";
@@ -12,7 +13,8 @@ type Route =
 	| { name: "game" }
 	| { name: "players" }
 	| { name: "stats" }
-	| { name: "board"; id: string };
+	| { name: "board"; id: string }
+	| { name: "live"; id: string };
 
 function parseRoute(): Route {
 	const h = window.location.hash.replace(/^#/, "");
@@ -20,6 +22,8 @@ function parseRoute(): Route {
 	if (h === "/game") return { name: "game" };
 	if (h === "/players") return { name: "players" };
 	if (h === "/stats") return { name: "stats" };
+	const live = h.match(/^\/t\/(.+)\/live$/);
+	if (live) return { name: "live", id: decodeURIComponent(live[1]) };
 	const m = h.match(/^\/t\/(.+)$/);
 	if (m) return { name: "board", id: decodeURIComponent(m[1]) };
 	return { name: "home" };
@@ -77,6 +81,13 @@ function renderRoute(route: Route) {
 					onBack={() => navigate("/")}
 					onNew={() => navigate("/new")}
 					onOpen={(id) => navigate(`/t/${id}`)}
+				/>
+			);
+		case "live":
+			return (
+				<LiveView
+					id={route.id}
+					onBack={() => navigate(`/t/${route.id}`)}
 				/>
 			);
 		default:
