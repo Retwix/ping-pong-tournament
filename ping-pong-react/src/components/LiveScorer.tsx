@@ -33,8 +33,8 @@ export default function LiveScorer({
 	readOnly = false,
 	onRef,
 }: Props) {
-	// Per-session undo stack of [score_a, score_b] snapshots.
-	const historyRef = useRef<[number, number][]>([]);
+	// Per-session undo stack of [score_a, score_b, mb_saved_a, mb_saved_b] snapshots.
+	const historyRef = useRef<[number, number, number, number][]>([]);
 	// Last known serving side, to ding when the service switches.
 	const prevServeRef = useRef<boolean | null>(null);
 	// Tick state purely to re-render the running clock.
@@ -69,11 +69,19 @@ export default function LiveScorer({
 	const addPoint = (side: MatchSide) => {
 		if (readOnly || !onPatch) return;
 		if (isWon(match.score_a, match.score_b, target)) return;
-		historyRef.current.push([match.score_a, match.score_b]);
+		const savedA = match.mb_saved_a ?? 0;
+		const savedB = match.mb_saved_b ?? 0;
+		historyRef.current.push([match.score_a, match.score_b, savedA, savedB]);
+		// Was the side that did NOT score one point away from winning? If so, the
+		// scoring side just saved a match ball (and the opponent wasted one).
+		const aWasMp = isMatchPoint(true, match.score_a, match.score_b, target);
+		const bWasMp = isMatchPoint(false, match.score_a, match.score_b, target);
 		const patch: Partial<Match> =
 			side === "a"
 				? { score_a: match.score_a + 1 }
 				: { score_b: match.score_b + 1 };
+		if (side === "a" && bWasMp) patch.mb_saved_a = savedA + 1;
+		if (side === "b" && aWasMp) patch.mb_saved_b = savedB + 1;
 		if (!match.started_at && match.score_a + match.score_b === 0) {
 			patch.started_at = new Date().toISOString();
 		}
@@ -82,7 +90,13 @@ export default function LiveScorer({
 	const undo = () => {
 		if (readOnly || !onPatch) return;
 		const prev = historyRef.current.pop();
-		if (prev) onPatch({ score_a: prev[0], score_b: prev[1] });
+		if (prev)
+			onPatch({
+				score_a: prev[0],
+				score_b: prev[1],
+				mb_saved_a: prev[2],
+				mb_saved_b: prev[3],
+			});
 	};
 	const finish = () => {
 		if (readOnly || !onPatch) return;
