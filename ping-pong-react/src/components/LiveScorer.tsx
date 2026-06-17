@@ -169,13 +169,17 @@ export default function LiveScorer({
 
 	const renderSide = (side: MatchSide) => {
 		const d = sideData[side];
+		// A "capot" is a shutout: if this side is on match point while the
+		// opponent is still on 0, the next point ends the game as a capot.
+		const oppScore = sideData[side === "a" ? "b" : "a"].score;
+		const flagText = d.mpoint && oppScore === 0 ? "Balla di capot" : "Balla di maccio";
 		return (
 			<div
 				key={side}
 				className={`side${d.serving ? " serving" : ""}${d.isWinner ? " winner" : ""}${d.mpoint ? " mpoint" : ""}`}
 				onClick={() => addPoint(side)}
 			>
-				<span className="matchpoint-flag">Balla di matcho</span>
+				<span className="matchpoint-flag">{flagText}</span>
 				<span className="side-name">
 					<span className="serve-pip" />
 					<span className="nm">{d.name}</span>
