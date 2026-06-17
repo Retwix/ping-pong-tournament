@@ -58,8 +58,17 @@ create table if not exists public.matches (
   done          boolean not null default false,
   serve_start   text not null default 'a',      -- 'a' | 'b'
   started_at    timestamptz,
-  ended_at      timestamptz
+  ended_at      timestamptz,
+  -- Match balls (match points) saved by each side: points won while the
+  -- opponent was one point from winning. A save for one side is a wasted match
+  -- ball for the other, so "wasted" is derived (= opponent's saved) not stored.
+  mb_saved_a    int  not null default 0,
+  mb_saved_b    int  not null default 0
 );
+
+-- Add match-ball columns to databases created before they existed.
+alter table public.matches add column if not exists mb_saved_a int not null default 0;
+alter table public.matches add column if not exists mb_saved_b int not null default 0;
 
 create index if not exists matches_tournament_idx on public.matches(tournament_id, idx);
 

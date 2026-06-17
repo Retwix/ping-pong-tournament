@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useBettorName } from "../hooks/useBettorName";
 import { useTournament } from "../hooks/useTournament";
 import { createTournament } from "../lib/db";
 import { navigate } from "../lib/router";
@@ -9,6 +10,7 @@ import Champion from "./Champion";
 import GameResult from "./GameResult";
 import LiveScorer from "./LiveScorer";
 import MatchList from "./MatchList";
+import Predictions from "./Predictions";
 import Standings from "./Standings";
 import ThemeToggle from "./ThemeToggle";
 import TopBack from "./TopBack";
@@ -22,6 +24,7 @@ interface Props {
 
 export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
+	const { name: bettorName, setName: setBettorName } = useBettorName();
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
 	const [capotMatch, setCapotMatch] = useState<Match | null>(null);
@@ -132,6 +135,13 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 			{error && <div className="error-banner">{error}</div>}
 
 			<MatchList tournament={tournament} matches={matches} onOpen={setOpenId} />
+
+			<Predictions
+				tournament={tournament}
+				matches={matches}
+				bettorName={bettorName}
+				onNameChange={setBettorName}
+			/>
 
 			<section>
 				<div className="section-title">Classement</div>

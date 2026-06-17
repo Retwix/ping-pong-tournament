@@ -25,7 +25,7 @@ import { ActivityChart, WinRateBars, type BarDatum } from './Charts'
 import ThemeToggle from './ThemeToggle'
 import TopBack from './TopBack'
 
-type SortKey = 'wins' | 'winRate' | 'diff' | 'played'
+type SortKey = 'wins' | 'winRate' | 'diff' | 'played' | 'mbSaved' | 'mbWasted'
 
 const pct = (r: number) => `${Math.round(r * 100)}%`
 
@@ -50,7 +50,7 @@ export default function Stats({ onBack }: { onBack: () => void }) {
   const [selected, setSelected] = useState<string | null>(null)
 
   const playerStats = useMemo(() => computePlayerStats(matches, players), [matches, players])
-  const teamStats = useMemo(() => computeTeamStats(playerStats), [playerStats])
+  const teamStats = useMemo(() => computeTeamStats(matches, players), [matches, players])
   const h2h = useMemo(() => computeHeadToHead(matches), [matches])
   const supers = useMemo(() => computeSuperlatives(matches), [matches])
 
@@ -60,6 +60,8 @@ export default function Stats({ onBack }: { onBack: () => void }) {
       winRate: (a, b) => b.winRate - a.winRate || b.wins - a.wins,
       diff: (a, b) => b.diff - a.diff || b.wins - a.wins,
       played: (a, b) => b.played - a.played || b.wins - a.wins,
+      mbSaved: (a, b) => b.matchBallsSaved - a.matchBallsSaved || b.wins - a.wins,
+      mbWasted: (a, b) => b.matchBallsWasted - a.matchBallsWasted || b.wins - a.wins,
     }
     return [...playerStats].sort(cmp[sortKey])
   }, [playerStats, sortKey])
@@ -121,6 +123,14 @@ export default function Stats({ onBack }: { onBack: () => void }) {
     (best, s) => (!best || s.capotsTaken > best.capotsTaken ? s : best),
     null
   )
+  const clutch = playerStats.reduce<PlayerStat | null>(
+    (best, s) => (!best || s.matchBallsSaved > best.matchBallsSaved ? s : best),
+    null
+  )
+  const cardiaque = playerStats.reduce<PlayerStat | null>(
+    (best, s) => (!best || s.matchBallsWasted > best.matchBallsWasted ? s : best),
+    null
+  )
 
   const header = (
     <>
@@ -148,8 +158,12 @@ export default function Stats({ onBack }: { onBack: () => void }) {
     )
   }
 
-  const Th = ({ k, children }: { k: SortKey; children: ReactNode }) => (
-    <th className={`sortable${sortKey === k ? ' active' : ''}`} onClick={() => setSortKey(k)}>
+  const Th = ({ k, children, title }: { k: SortKey; children: ReactNode; title?: string }) => (
+    <th
+      className={`sortable${sortKey === k ? ' active' : ''}`}
+      onClick={() => setSortKey(k)}
+      title={title}
+    >
       {children}
       {sortKey === k ? ' ↓' : ''}
     </th>
@@ -218,6 +232,12 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                     <Th k="winRate">%</Th>
                     <Th k="diff">Diff</Th>
                     <th>Série</th>
+                    <Th k="mbSaved" title="Balles de match sauvées (un point de la défaite)">
+                      BM ✓
+                    </Th>
+                    <Th k="mbWasted" title="Balles de match gâchées (point de match non converti)">
+                      BM ✗
+                    </Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -239,6 +259,8 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                         {s.diff}
                       </td>
                       <td>{s.currentStreak >= 2 ? `🔥${s.currentStreak}` : s.currentStreak}</td>
+                      <td>{s.matchBallsSaved}</td>
+                      <td>{s.matchBallsWasted}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -330,6 +352,12 @@ export default function Stats({ onBack }: { onBack: () => void }) {
               )}
               {roiTable && roiTable.capotsTaken > 0 && (
                 <SuperCard label="Roi de la table 🙈" value={roiTable.name} sub={`${roiTable.capotsTaken} passage${roiTable.capotsTaken > 1 ? 's' : ''} sous la table`} />
+              )}
+              {clutch && clutch.matchBallsSaved > 0 && (
+                <SuperCard label="Sang-froid 🧊" value={clutch.name} sub={`${clutch.matchBallsSaved} balle${clutch.matchBallsSaved > 1 ? 's' : ''} de match sauvée${clutch.matchBallsSaved > 1 ? 's' : ''}`} />
+              )}
+              {cardiaque && cardiaque.matchBallsWasted > 0 && (
+                <SuperCard label="Cardiaque 😰" value={cardiaque.name} sub={`${cardiaque.matchBallsWasted} balle${cardiaque.matchBallsWasted > 1 ? 's' : ''} de match gâchée${cardiaque.matchBallsWasted > 1 ? 's' : ''}`} />
               )}
             </div>
           </section>
@@ -503,6 +531,8 @@ function PlayerDetail({
           <div className="pd-kpi"><div className="n">{s.longestStreak}</div><div className="l">Meilleure série</div></div>
           <div className="pd-kpi"><div className="n">{s.capotsDealt}</div><div className="l">Capots infligés</div></div>
           <div className="pd-kpi"><div className="n">{s.capotsTaken}</div><div className="l">Sous la table</div></div>
+          <div className="pd-kpi"><div className="n">{s.matchBallsSaved}</div><div className="l">Balles de match sauvées</div></div>
+          <div className="pd-kpi"><div className="n">{s.matchBallsWasted}</div><div className="l">Balles de match gâchées</div></div>
         </div>
 
         <div className="pd-foes">

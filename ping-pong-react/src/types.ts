@@ -44,6 +44,14 @@ export interface Match {
   serve_start: MatchSide
   started_at: string | null
   ended_at: string | null
+  /**
+   * Match balls (match points) saved by each side in this match — i.e. points
+   * won while the opponent was one point from winning the match. A match ball
+   * saved by one side is, by definition, a match ball wasted by the other, so
+   * "wasted" is derived from the opponent's saved count rather than stored.
+   */
+  mb_saved_a: number
+  mb_saved_b: number
 }
 
 /** A row in the live standings table. */

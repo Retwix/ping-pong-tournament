@@ -26,6 +26,9 @@ npm install
 2. In the dashboard, open **SQL Editor → New query**, paste the contents of
    [`supabase/schema.sql`](./supabase/schema.sql), and click **Run**. This creates the
    `tournaments` and `matches` tables, enables realtime, and sets open access policies.
+   To enable the **Pronostics** (betting) feature, run
+   [`supabase/predictions-migration.sql`](./supabase/predictions-migration.sql) the same
+   way — it adds the `predictions` table (no-currency streak model, no auth).
 3. Open **Project Settings → API** and copy:
    - **Project URL**
    - **anon public** key
