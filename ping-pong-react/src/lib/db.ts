@@ -16,23 +16,28 @@ export async function listPlayers(): Promise<Player[]> {
 export async function createPlayer(
   name: string,
   team: string,
-  slackUserId?: string | null
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _slackUserId?: string | null
 ): Promise<Player> {
+  // NOTE: the `slack_user_id` column isn't in the DB schema yet, so we don't
+  // write it. Re-add it here (and below) once the column exists in Supabase.
   const { data, error } = await supabase
     .from('players')
-    .insert({ name, team, slack_user_id: slackUserId?.trim() || null })
+    .insert({ name, team })
     .select()
     .single()
   if (error) throw error
   return data as Player
 }
 
-/** Update a player's name, team, and/or Slack user id. */
+/** Update a player's name and/or team. */
 export async function updatePlayer(
   id: string,
   patch: { name?: string; team?: string; slack_user_id?: string | null }
 ): Promise<void> {
-  const { error } = await supabase.from('players').update(patch).eq('id', id)
+  // Strip slack_user_id until the column exists in the DB schema.
+  const { slack_user_id: _ignored, ...dbPatch } = patch
+  const { error } = await supabase.from('players').update(dbPatch).eq('id', id)
   if (error) throw error
 }
 
