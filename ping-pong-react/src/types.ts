@@ -8,6 +8,8 @@ export interface Player {
   created_at: string
   name: string
   team: string
+  /** Slack user id (e.g. U0123ABCD) for private invitations. null = not on Slack. */
+  slack_user_id: string | null
 }
 
 export interface Tournament {
@@ -19,6 +21,10 @@ export interface Tournament {
   status: TournamentStatus
   kind: TournamentKind
   champion: string | null
+  /** Slack: conversation + message ts of the invitation (results reply in this thread). */
+  slack_channel: string | null
+  slack_thread_ts: string | null
+  result_notified: boolean
 }
 
 export interface Match {

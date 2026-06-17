@@ -13,20 +13,24 @@ export async function listPlayers(): Promise<Player[]> {
   return (data ?? []) as Player[]
 }
 
-export async function createPlayer(name: string, team: string): Promise<Player> {
+export async function createPlayer(
+  name: string,
+  team: string,
+  slackUserId?: string | null
+): Promise<Player> {
   const { data, error } = await supabase
     .from('players')
-    .insert({ name, team })
+    .insert({ name, team, slack_user_id: slackUserId?.trim() || null })
     .select()
     .single()
   if (error) throw error
   return data as Player
 }
 
-/** Update a player's name and/or team. */
+/** Update a player's name, team, and/or Slack user id. */
 export async function updatePlayer(
   id: string,
-  patch: { name?: string; team?: string }
+  patch: { name?: string; team?: string; slack_user_id?: string | null }
 ): Promise<void> {
   const { error } = await supabase.from('players').update(patch).eq('id', id)
   if (error) throw error

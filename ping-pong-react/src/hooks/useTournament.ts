@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getMatches, getTournament, updateMatch, updateTournament } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
 import type { Match, Tournament } from '../types'
 
@@ -172,9 +173,13 @@ export function useTournament(id: string | null) {
     if (!matches.length || !matches.every((m) => m.done)) return
     const champ = computeStandings(tournament.players, matches)[0]?.name ?? null
     setTournament((prev) => (prev ? { ...prev, status: 'done', champion: champ } : prev))
-    updateTournament(tournament.id, { status: 'done', champion: champ }).catch((e) =>
-      setError(e instanceof Error ? e.message : String(e))
-    )
+    updateTournament(tournament.id, { status: 'done', champion: champ })
+      .then(() => {
+        // Post final standings into the Slack invitation thread (no-op unless
+        // configured; the Edge Function dedupes so multiple devices are fine).
+        void postSlackResult(tournament.id)
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [matches, tournament])
 
   return { tournament, matches, loading, error, patchMatch }

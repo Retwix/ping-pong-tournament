@@ -1,11 +1,26 @@
 import { useState } from 'react'
+import { IconDownload } from '@tabler/icons-react'
 import { createPlayer, createTournament } from '../lib/db'
+import { inviteToSlack } from '../lib/slack'
+import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { matchCount, roundCount } from '../lib/roundRobin'
 import { TEAMS, teamLabel, type TeamKey } from '../lib/teams'
+import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
 import { usePlayers } from '../hooks/usePlayers'
 import ThemeToggle from './ThemeToggle'
 import TopBack from './TopBack'
 import type { Player } from '../types'
+
+function slugify(s: string, fallback: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || fallback
+  )
+}
 
 interface Props {
   mode?: 'tournament' | 'game'
@@ -21,6 +36,7 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
 
   const [name, setName] = useState('')
   const [target, setTarget] = useState(11)
+  const [time, setTime] = useState('')
   const [selected, setSelected] = useState<Player[]>([])
 
   const [showNew, setShowNew] = useState(false)
@@ -30,6 +46,7 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
 
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [posterBusy, setPosterBusy] = useState(false)
 
   const full = isGame && selected.length >= 2
   const available = players.filter((p) => !selected.some((s) => s.id === p.id))
@@ -87,10 +104,41 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
         target || 11,
         isGame ? 'game' : 'tournament'
       )
+      // Fire the Slack invitation (no-op unless configured); never blocks navigation.
+      void inviteToSlack(id)
       onCreated(id)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setCreating(false)
+    }
+  }
+
+  const canPoster = isGame ? selected.length === 2 : true
+
+  const downloadPoster = async () => {
+    if (posterBusy || !canPoster) return
+    setPosterBusy(true)
+    try {
+      const fontCss = await getEmbeddedFontCss()
+      const t = target || 11
+      const { svg, width, height, filename } = isGame
+        ? {
+            ...buildChallengePosterSvg(
+              { playerA: selected[0].name, playerB: selected[1].name, target: t, time },
+              fontCss
+            ),
+            filename: `challenge-${slugify(`${selected[0].name}-vs-${selected[1].name}`, 'challenge')}.png`,
+          }
+        : {
+            ...buildTournamentPosterSvg({ name: name.trim(), target: t, time }, fontCss),
+            filename: `tournament-${slugify(name, 'poster')}-poster.png`,
+          }
+      const blob = await svgToPngBlob(svg, width, height, 2)
+      downloadBlob(blob, filename)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setPosterBusy(false)
     }
   }
 
@@ -240,8 +288,33 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
             />
           </div>
 
+          <div className="setup-divider" />
+
+          <div className="setup-label">
+            Heure <span className="opt">(optionnel · pour l’invitation)</span>
+          </div>
+          <input
+            type="time"
+            className="name-input time-input"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
+
           <button className="generate" disabled={!valid || creating} onClick={generate}>
             {creating ? 'Création…' : isGame ? 'Lancer la partie' : 'Générer le tournoi'}
+          </button>
+          <button
+            type="button"
+            className="poster-btn"
+            disabled={!canPoster || posterBusy}
+            onClick={downloadPoster}
+          >
+            <IconDownload size={17} stroke={1.8} />
+            {posterBusy
+              ? 'Génération…'
+              : isGame
+                ? 'Télécharger le défi (PNG)'
+                : "Télécharger l'affiche (PNG)"}
           </button>
           <p className="setup-hint">{hint}</p>
         </div>

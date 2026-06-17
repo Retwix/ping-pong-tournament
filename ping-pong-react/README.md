@@ -55,6 +55,14 @@ npm run dev
 Open the printed URL. Create a tournament, then **Copier le lien** gives you a shareable URL
 (`/#/t/<id>`). Open that same link on the TV and on phones — everyone sees scores update live.
 
+## Slack notifications (optional)
+
+Send a **private group invitation** when a tournament is created and post the **final
+standings into that same thread** when the champion is crowned. The Slack bot token lives
+in a Supabase Edge Function (never in the browser). Players are mapped to Slack ids in the
+**Les joueurs** screen. Full walkthrough: [`supabase/SLACK_SETUP.md`](./supabase/SLACK_SETUP.md).
+When `VITE_SLACK_ENABLED` is unset, the app never calls Slack.
+
 ## Build & deploy (Vercel)
 
 ```bash

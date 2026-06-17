@@ -225,6 +225,8 @@ section { margin-top: 32px; }
   font-family: var(--font-body); font-size: 15px; padding: 12px 14px; border-radius: 12px; min-width: 0;
 }
 .name-input { width: 100%; }
+.time-input { width: auto; min-width: 150px; }
+.setup-label .opt { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--fg-3); font-size: 12px; }
 .player-row input:focus, .name-input:focus, .select-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus-ring); }
 .player-row .pname { flex: 1; font-family: var(--font-display); font-size: 15px; font-weight: 600; }
 .player-row .team-tag { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); border: 1px solid var(--border-strong); border-radius: 999px; padding: 3px 9px; flex: none; }
@@ -252,6 +254,16 @@ section { margin-top: 32px; }
 .target input { width: 64px; background: var(--surface); border: 1px solid var(--border-strong); color: var(--fg-1); font-family: var(--font-display); font-size: 15px; text-align: center; padding: 6px 8px; border-radius: 9px; }
 .target input:focus { outline: none; border-color: var(--primary); }
 .generate { margin-top: 22px; width: 100%; padding: 15px; }
+.poster-btn {
+  margin-top: 10px; width: 100%; padding: 13px;
+  font-family: var(--font-display); font-weight: 600; font-size: 14px;
+  background: transparent; border: 1px solid var(--ghost-border); color: var(--fg-2);
+  border-radius: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all var(--dur) var(--ease);
+}
+.poster-btn:hover:not(:disabled) { background: var(--ghost-hover); color: var(--fg-1); border-color: var(--border-strong); }
+.poster-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .setup-hint { color: var(--fg-3); font-size: 12.5px; margin-top: 12px; text-align: center; }
 
 /* ===== rounds + match rows ===== */

@@ -14,11 +14,20 @@ create table if not exists public.tournaments (
   players     text[] not null,
   status      text not null default 'active',   -- 'active' | 'done'
   kind        text not null default 'tournament', -- 'tournament' | 'game'
-  champion    text
+  champion    text,
+  -- Slack integration: the invitation message anchors a thread that results reply into.
+  slack_channel    text,    -- conversation id the invitation was posted to (group DM or channel)
+  slack_thread_ts  text,    -- ts of the invitation message (parent of the results reply)
+  result_notified  boolean not null default false  -- guard so the result is posted only once
 );
 
 -- Add `kind` to databases created before this column existed.
 alter table public.tournaments add column if not exists kind text not null default 'tournament';
+
+-- Slack columns for databases created before this integration existed.
+alter table public.tournaments add column if not exists slack_channel   text;
+alter table public.tournaments add column if not exists slack_thread_ts text;
+alter table public.tournaments add column if not exists result_notified boolean not null default false;
 
 create table if not exists public.matches (
   id            uuid primary key default gen_random_uuid(),
@@ -44,8 +53,12 @@ create table if not exists public.players (
   id          uuid primary key default gen_random_uuid(),
   created_at  timestamptz not null default now(),
   name        text not null unique,
-  team        text not null default 'guests'
+  team        text not null default 'guests',
+  slack_user_id text   -- Slack user id (e.g. U0123ABCD) for private invitations; null = not on Slack
 );
+
+-- Add `slack_user_id` to databases created before this column existed.
+alter table public.players add column if not exists slack_user_id text;
 
 -- ---------- player identity on matches ----------
 -- Matches reference players by id so stats survive renames / duplicate names.

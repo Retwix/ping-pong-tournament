@@ -16,15 +16,35 @@ export default function Players({ onBack }: Props) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [dept, setDept] = useState<TeamKey>('tech')
+  const [slackId, setSlackId] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [leaving, setLeaving] = useState<Set<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [slackDraft, setSlackDraft] = useState('')
 
   const changeTeam = async (id: string, team: string) => {
-    setEditingId(null)
     try {
       await updatePlayer(id, { team })
+      refresh()
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  const openEdit = (id: string, currentSlack: string | null) => {
+    if (editingId === id) {
+      setEditingId(null)
+      return
+    }
+    setSlackDraft(currentSlack ?? '')
+    setEditingId(id)
+  }
+
+  const saveSlack = async (id: string) => {
+    try {
+      await updatePlayer(id, { slack_user_id: slackDraft.trim() || null })
+      setEditingId(null)
       refresh()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : String(err))
@@ -47,6 +67,7 @@ export default function Players({ onBack }: Props) {
   const openModal = () => {
     setName('')
     setDept('tech')
+    setSlackId('')
     setFormError(null)
     setAdding(true)
   }
@@ -62,7 +83,7 @@ export default function Players({ onBack }: Props) {
     setSaving(true)
     setFormError(null)
     try {
-      await createPlayer(nm, dept)
+      await createPlayer(nm, dept, slackId.trim() || null)
       setAdding(false)
       refresh()
     } catch (err) {
@@ -144,30 +165,56 @@ export default function Players({ onBack }: Props) {
                 <div className="player-block">
                   <div className="t-name">{p.name}</div>
                   {editingId === p.id ? (
-                    <select
-                      className="select-input team-edit"
-                      value={p.team}
-                      autoFocus
-                      onChange={(e) => changeTeam(p.id, e.target.value)}
-                      onBlur={() => setEditingId(null)}
+                    <div
+                      style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}
                     >
-                      {TEAMS.map((t) => (
-                        <option key={t.key} value={t.key}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
+                      <select
+                        className="select-input team-edit"
+                        value={p.team}
+                        autoFocus
+                        onChange={(e) => changeTeam(p.id, e.target.value)}
+                      >
+                        {TEAMS.map((t) => (
+                          <option key={t.key} value={t.key}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className="name-input"
+                        style={{ flex: '1 1 150px', minWidth: 120 }}
+                        value={slackDraft}
+                        placeholder="Slack ID (U0123ABCD)"
+                        onChange={(e) => setSlackDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveSlack(p.id)
+                          if (e.key === 'Escape') setEditingId(null)
+                        }}
+                      />
+                      <button className="icon-btn" title="Enregistrer" onClick={() => saveSlack(p.id)}>
+                        ✓
+                      </button>
+                    </div>
                   ) : (
                     <div className="player-dept">
                       <span className="dept-dot" style={{ background: color }} />
                       {teamLabel(p.team)}
+                      {p.slack_user_id && (
+                        <span
+                          className="team-tag"
+                          title={`Slack : ${p.slack_user_id}`}
+                          style={{ marginLeft: 8 }}
+                        >
+                          Slack ✓
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
                 <button
                   className="t-del"
-                  title="Changer le pôle"
-                  onClick={() => setEditingId(editingId === p.id ? null : p.id)}
+                  title="Modifier (pôle · Slack)"
+                  onClick={() => openEdit(p.id, p.slack_user_id)}
                 >
                   <IconPencil size={17} stroke={1.75} />
                 </button>
@@ -219,6 +266,19 @@ export default function Players({ onBack }: Props) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="field">
+              <label className="field-label">
+                Slack ID <span className="opt">(optionnel · pour les invitations)</span>
+              </label>
+              <input
+                className="name-input"
+                value={slackId}
+                onChange={(e) => setSlackId(e.target.value)}
+                placeholder="U0123ABCD"
+                maxLength={20}
+              />
             </div>
 
             {formError && (
