@@ -3,6 +3,7 @@ import { getMatches, getTournament, updateMatch, updateTournament } from '../lib
 import { supabase } from '../lib/supabase'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
+import { reconcileBracket } from '../lib/doubleElim'
 import type { Match, Tournament } from '../types'
 
 interface MatchChangePayload {
@@ -166,10 +167,51 @@ export function useTournament(id: string | null) {
     [markPending]
   )
 
-  // Auto-crown the champion once every match is finished. Runs reactively, so it
-  // fires no matter which device scored the last point (realtime updates `matches`).
+  // Double-elimination advancement. Whenever matches change, reconcile the
+  // bracket: fill slots that just resolved, auto-complete walkovers, and crown
+  // the grand-final winner. `reconcileBracket` only writes still-pending slots,
+  // so this is idempotent and converges (and self-heals after reloads).
+  const reconcilingRef = useRef(false)
+  useEffect(() => {
+    if (!tournament || tournament.format !== 'double_elim') return
+    if (reconcilingRef.current || !matches.length) return
+
+    const { writes, champion } = reconcileBracket(matches)
+
+    if (writes.length) {
+      reconcilingRef.current = true
+      // Optimistically apply so the UI advances immediately.
+      setMatches((prev) =>
+        prev.map((m) => {
+          const w = writes.find((x) => x.id === m.id)
+          return w ? { ...m, ...w.patch } : m
+        })
+      )
+      ;(async () => {
+        try {
+          await Promise.all(writes.map((w) => updateMatch(w.id, w.patch)))
+        } catch (e) {
+          setError(e instanceof Error ? e.message : String(e))
+        } finally {
+          reconcilingRef.current = false
+        }
+      })()
+      return
+    }
+
+    if (champion && tournament.status !== 'done') {
+      setTournament((prev) => (prev ? { ...prev, status: 'done', champion } : prev))
+      updateTournament(tournament.id, { status: 'done', champion })
+        .then(() => void postSlackResult(tournament.id))
+        .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+    }
+  }, [matches, tournament])
+
+  // Auto-crown the champion once every match is finished. Round-robin only —
+  // double elimination crowns its grand-final winner in the effect above.
   useEffect(() => {
     if (!tournament || tournament.status === 'done') return
+    if (tournament.format === 'double_elim') return
     if (!matches.length || !matches.every((m) => m.done)) return
     const champ = computeStandings(tournament.players, matches)[0]?.name ?? null
     setTournament((prev) => (prev ? { ...prev, status: 'done', champion: champ } : prev))

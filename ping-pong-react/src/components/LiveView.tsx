@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTournament } from "../hooks/useTournament";
 import { computeStandings } from "../lib/pingpong";
+import { isPlayable } from "../lib/doubleElim";
 import type { Match } from "../types";
 import LiveScorer from "./LiveScorer";
 import Standings from "./Standings";
@@ -67,13 +68,14 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			// We were showing a match that just finished — linger on the result.
 			holdRef.current = setTimeout(() => {
 				holdRef.current = null;
-				const next = matchesRef.current.find((m) => !m.done);
+				const next = matchesRef.current.find(isPlayable);
 				setShownId(next ? next.id : shown.id);
 			}, HOLD_MS);
 			return;
 		}
-		// Otherwise show the next unplayed match (or the last one if all done).
-		const next = matches.find((m) => !m.done);
+		// Otherwise show the next playable match (skips bracket matches still
+		// waiting on their players), or the last one if nothing is playable.
+		const next = matches.find(isPlayable);
 		setShownId(next ? next.id : matches[matches.length - 1].id);
 	}, [matches, shownId]);
 

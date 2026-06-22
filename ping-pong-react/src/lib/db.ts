@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { generateSchedule, shuffle } from './roundRobin'
-import type { Match, Player, Tournament, TournamentKind } from '../types'
+import { buildDoubleElim } from './doubleElim'
+import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
 
@@ -50,19 +51,44 @@ export async function deletePlayer(id: string): Promise<void> {
   if (error) throw error
 }
 
+/** A blank match row, before the matchup-specific fields are filled in. */
+function blankMatch(tournamentId: string): Omit<Match, 'id' | 'round' | 'idx' | 'player_a' | 'player_b'> {
+  return {
+    tournament_id: tournamentId,
+    player_a_id: null,
+    player_b_id: null,
+    score_a: 0,
+    score_b: 0,
+    done: false,
+    serve_start: 'a',
+    started_at: null,
+    ended_at: null,
+    mb_saved_a: 0,
+    mb_saved_b: 0,
+    bracket: null,
+    match_key: null,
+    win_to: null,
+    win_slot: null,
+    lose_to: null,
+    lose_slot: null,
+    bye: false,
+  }
+}
+
 /**
- * Create a tournament (or a single game) + its round-robin matches.
- * A `game` is simply a 2-player round-robin, i.e. one match. Returns the new id.
+ * Create a tournament (or a single game) + its matches. A `game` is a single
+ * round-robin match. Tournaments are either round-robin (everyone plays everyone)
+ * or a double-elimination bracket, per `format`. Returns the new id.
  */
 export async function createTournament(
   name: string,
   players: string[],
   target: number,
-  kind: TournamentKind = 'tournament'
+  kind: TournamentKind = 'tournament',
+  format: TournamentFormat = 'round_robin'
 ): Promise<string> {
-  // Shuffle the running order so the same roster produces a different bracket
-  // (which matchups land early, who gets byes, left/right side) each time.
-  const ordered = shuffle(players)
+  // Games are always a single round-robin match regardless of the chosen format.
+  const effectiveFormat: TournamentFormat = kind === 'game' ? 'round_robin' : format
 
   // Resolve names -> player ids so matches carry a stable identity (rename-proof
   // stats). Unknown names (e.g. since-removed players) keep a null id.
@@ -77,37 +103,63 @@ export async function createTournament(
     .eq('is_active', true)
   if (clearErr) throw clearErr
 
+  // Players are persisted in the order they'll be displayed/seeded; the bracket
+  // builder shuffles internally, so keep the given order for round-robin.
+  const ordered = effectiveFormat === 'double_elim' ? players.slice() : shuffle(players)
+
   const { data: t, error } = await supabase
     .from('tournaments')
-    .insert({ name, players: ordered, target, status: 'active', kind, is_active: true })
+    .insert({
+      name,
+      players: ordered,
+      target,
+      status: 'active',
+      kind,
+      format: effectiveFormat,
+      is_active: true,
+    })
     .select()
     .single()
   if (error) throw error
 
-  const rounds = generateSchedule(ordered)
+  const base = blankMatch(t.id)
   const rows: Omit<Match, 'id'>[] = []
-  let idx = 0
-  rounds.forEach((rd, ri) => {
-    rd.pairs.forEach(([a, b]) => {
+
+  if (effectiveFormat === 'double_elim') {
+    for (const r of buildDoubleElim(ordered)) {
       rows.push({
-        tournament_id: t.id,
-        round: ri + 1,
-        idx: idx++,
-        player_a: a,
-        player_b: b,
-        player_a_id: idByName.get(a) ?? null,
-        player_b_id: idByName.get(b) ?? null,
-        score_a: 0,
-        score_b: 0,
-        done: false,
-        serve_start: 'a',
-        started_at: null,
-        ended_at: null,
-        mb_saved_a: 0,
-        mb_saved_b: 0,
+        ...base,
+        round: r.round,
+        idx: r.idx,
+        player_a: r.player_a,
+        player_b: r.player_b,
+        player_a_id: idByName.get(r.player_a) ?? null,
+        player_b_id: idByName.get(r.player_b) ?? null,
+        bracket: r.bracket,
+        match_key: r.match_key,
+        win_to: r.win_to,
+        win_slot: r.win_slot,
+        lose_to: r.lose_to,
+        lose_slot: r.lose_slot,
+      })
+    }
+  } else {
+    let idx = 0
+    generateSchedule(ordered).forEach((rd, ri) => {
+      rd.pairs.forEach(([a, b]) => {
+        rows.push({
+          ...base,
+          round: ri + 1,
+          idx: idx++,
+          player_a: a,
+          player_b: b,
+          player_a_id: idByName.get(a) ?? null,
+          player_b_id: idByName.get(b) ?? null,
+        })
       })
     })
-  })
+  }
+
   if (rows.length) {
     const { error: mErr } = await supabase.from('matches').insert(rows)
     if (mErr) throw mErr
@@ -151,7 +203,9 @@ export async function getActiveTournament(): Promise<Tournament | null> {
 export async function listAllDoneMatches(): Promise<Match[]> {
   const { data, error } = await supabase.from('matches').select('*').eq('done', true)
   if (error) throw error
-  return (data ?? []) as Match[]
+  // Exclude double-elimination walkovers (auto-completed BYE matches): they are
+  // not real games and would skew per-player stats.
+  return ((data ?? []) as Match[]).filter((m) => !m.bye)
 }
 
 export async function getMatches(tournamentId: string): Promise<Match[]> {

@@ -4,12 +4,13 @@ import { createPlayer, createTournament } from '../lib/db'
 import { inviteToSlack } from '../lib/slack'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { matchCount, roundCount } from '../lib/roundRobin'
+import { doubleElimMatchCount, MIN_DE_PLAYERS } from '../lib/doubleElim'
 import { TEAMS, teamLabel, type TeamKey } from '../lib/teams'
 import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
 import { usePlayers } from '../hooks/usePlayers'
 import ThemeToggle from './ThemeToggle'
 import TopBack from './TopBack'
-import type { Player } from '../types'
+import type { Player, TournamentFormat } from '../types'
 
 function slugify(s: string, fallback: string): string {
   return (
@@ -38,6 +39,7 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
   const [target, setTarget] = useState(11)
   const [time, setTime] = useState('')
   const [selected, setSelected] = useState<Player[]>([])
+  const [format, setFormat] = useState<TournamentFormat>('round_robin')
 
   const [showNew, setShowNew] = useState(false)
   const [newName, setNewName] = useState('')
@@ -51,10 +53,22 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
   const full = isGame && selected.length >= 2
   const available = players.filter((p) => !selected.some((s) => s.id === p.id))
 
-  const valid = isGame ? selected.length === 2 : selected.length >= 2
+  const isDouble = !isGame && format === 'double_elim'
+  const valid = isGame
+    ? selected.length === 2
+    : isDouble
+      ? selected.length >= MIN_DE_PLAYERS
+      : selected.length >= 2
   let hint: string
   if (isGame) {
     hint = full ? `${selected[0].name} vs ${selected[1].name} · jeu en ${target}` : 'Choisis 2 joueurs.'
+  } else if (isDouble) {
+    const n = selected.length
+    if (n < MIN_DE_PLAYERS) {
+      hint = `Sélectionne au moins ${MIN_DE_PLAYERS} joueurs pour une élimination directe.`
+    } else {
+      hint = `${n} joueurs · ${doubleElimMatchCount(n)} matchs · 2 défaites = éliminé`
+    }
   } else if (valid) {
     const n = selected.length
     const odd = n % 2 !== 0
@@ -102,7 +116,8 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
         name.trim() || defaultName,
         selected.map((p) => p.name),
         target || 11,
-        isGame ? 'game' : 'tournament'
+        isGame ? 'game' : 'tournament',
+        isGame ? 'round_robin' : format
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
       void inviteToSlack(id)
@@ -149,7 +164,11 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
       <TopBack onClick={onCancel} />
       <header>
         <ThemeToggle className="header-toggle" />
-        <div className="kicker">{isGame ? 'Partie rapide' : 'Round-robin · nouveau tournoi'}</div>
+        <div className="kicker">
+          {isGame
+            ? 'Partie rapide'
+            : `${isDouble ? 'Élimination directe' : 'Round-robin'} · nouveau tournoi`}
+        </div>
         <h1>
           {isGame ? 'Partie' : 'Tournoi'} <span className="em">ping-pong</span>
         </h1>
@@ -175,6 +194,27 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
                 placeholder="Tournoi du bureau"
                 maxLength={40}
               />
+              <div className="setup-divider" />
+
+              <div className="setup-label">Format</div>
+              <div className="format-choice">
+                <button
+                  type="button"
+                  className={`format-card${format === 'round_robin' ? ' active' : ''}`}
+                  onClick={() => setFormat('round_robin')}
+                >
+                  <span className="fc-title">Round-robin</span>
+                  <span className="fc-desc">Chacun affronte tout le monde. Le plus équitable.</span>
+                </button>
+                <button
+                  type="button"
+                  className={`format-card${format === 'double_elim' ? ' active' : ''}`}
+                  onClick={() => setFormat('double_elim')}
+                >
+                  <span className="fc-title">Élimination directe</span>
+                  <span className="fc-desc">Tableau à double élimination. 2 défaites = éliminé. Plus rapide.</span>
+                </button>
+              </div>
               <div className="setup-divider" />
             </>
           )}
@@ -321,7 +361,11 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
 
         <div className="footer-row">
           <span className="hint">
-            {isGame ? 'Premier à atteindre le score, avec 2 points d’écart.' : 'Départage : victoires, puis différence de points.'}
+            {isGame
+              ? 'Premier à atteindre le score, avec 2 points d’écart.'
+              : isDouble
+                ? 'Tableau à double élimination : il faut perdre 2 fois pour être éliminé.'
+                : 'Départage : victoires, puis différence de points.'}
           </span>
           <button className="link-btn" onClick={onCancel}>
             ← Retour
