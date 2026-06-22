@@ -1,4 +1,5 @@
 import { computeStandings } from '../lib/pingpong'
+import { bracketPodium } from '../lib/doubleElim'
 import type { Match, Tournament } from '../types'
 import Confetti from './Confetti'
 
@@ -12,9 +13,19 @@ interface Props {
 const MEDALS = ['🥇', '🥈', '🥉']
 
 export default function Champion({ tournament, matches, onClose, onNew }: Props) {
-  const ranked = computeStandings(tournament.players, matches)
-  const champ = ranked[0]
+  const isDouble = tournament.format === 'double_elim'
+
+  // Double elimination: rank from the bracket result. Round-robin: from standings.
+  const podium = isDouble
+    ? bracketPodium(matches).map((r) => ({ name: r.name, sub: r.rank === 1 ? 'Vainqueur' : '' }))
+    : computeStandings(tournament.players, matches)
+        .slice(0, 3)
+        .map((s) => ({ name: s.name, sub: `${s.wins} V` }))
+
+  const champ = podium[0] ?? (tournament.champion ? { name: tournament.champion, sub: '' } : null)
   if (!champ) return null
+
+  const standings = isDouble ? null : computeStandings(tournament.players, matches)[0]
 
   return (
     <div className="champion">
@@ -24,20 +35,26 @@ export default function Champion({ tournament, matches, onClose, onNew }: Props)
         <div className="champ-trophy">🏆</div>
         <div className="champ-name">{champ.name}</div>
         <div className="champ-sub">
-          <b>{champ.wins}</b> victoires · différence{' '}
-          <b>
-            {champ.diff >= 0 ? '+' : ''}
-            {champ.diff}
-          </b>
+          {isDouble ? (
+            'Champion · double élimination'
+          ) : standings ? (
+            <>
+              <b>{standings.wins}</b> victoires · différence{' '}
+              <b>
+                {standings.diff >= 0 ? '+' : ''}
+                {standings.diff}
+              </b>
+            </>
+          ) : null}
         </div>
         <div className="champ-podium">
-          {ranked.slice(0, 3).map((s, i) => (
+          {podium.slice(0, 3).map((s, i) => (
             <div key={s.name} className={`prow p${i + 1}`}>
               <span className="who">
                 <span className="medal">{MEDALS[i]}</span>
                 {s.name}
               </span>
-              <span className="pwins">{s.wins} V</span>
+              <span className="pwins">{s.sub}</span>
             </div>
           ))}
         </div>

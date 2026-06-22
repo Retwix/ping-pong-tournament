@@ -10,6 +10,7 @@ import Champion from "./Champion";
 import GameResult from "./GameResult";
 import LiveScorer from "./LiveScorer";
 import MatchList from "./MatchList";
+import BracketView from "./BracketView";
 import Predictions from "./Predictions";
 import Standings from "./Standings";
 import ThemeToggle from "./ThemeToggle";
@@ -85,6 +86,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 		);
 	}
 
+	const isDouble = tournament.format === "double_elim";
 	const openMatch = matches.find((m) => m.id === openId) ?? null;
 	// Capot celebration takes precedence over the champion screen, so they don't stack.
 	const showChampion =
@@ -103,12 +105,14 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 			<header>
 				<ThemeToggle className="header-toggle" />
 				<div className="kicker">
-					Round-robin · {tournament.players.length} joueurs · {matches.length}{" "}
-					matchs · jeu en {tournament.target}
+					{isDouble ? "Élimination directe" : "Round-robin"} ·{" "}
+					{tournament.players.length} joueurs · jeu en {tournament.target}
 				</div>
 				<h1>{tournament.name}</h1>
 				<p className="subtitle">
-					Tape un match pour ouvrir le marqueur. Tout se synchronise en direct.
+					{isDouble
+						? "Le gagnant avance, le perdant tombe dans le tableau des perdants. Tape un match prêt pour le marquer."
+						: "Tape un match pour ouvrir le marqueur. Tout se synchronise en direct."}
 				</p>
 				<div className="share-bar">
 					<span className="url">{window.location.href}</span>
@@ -134,27 +138,48 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 
 			{error && <div className="error-banner">{error}</div>}
 
-			<MatchList tournament={tournament} matches={matches} onOpen={setOpenId} />
+			{isDouble ? (
+				<>
+					<BracketView matches={matches} onOpen={setOpenId} />
+					<div className="footer-row">
+						<span className="hint">
+							Tableau à double élimination : il faut perdre 2 fois pour être
+							éliminé.
+						</span>
+						<button className="link-btn" onClick={onBack}>
+							← Tous les tournois
+						</button>
+					</div>
+				</>
+			) : (
+				<>
+					<MatchList
+						tournament={tournament}
+						matches={matches}
+						onOpen={setOpenId}
+					/>
 
-			<Predictions
-				tournament={tournament}
-				matches={matches}
-				bettorName={bettorName}
-				onNameChange={setBettorName}
-			/>
+					<Predictions
+						tournament={tournament}
+						matches={matches}
+						bettorName={bettorName}
+						onNameChange={setBettorName}
+					/>
 
-			<section>
-				<div className="section-title">Classement</div>
-				<Standings players={tournament.players} matches={matches} />
-				<div className="footer-row">
-					<span className="hint">
-						Départage : victoires, puis différence de points.
-					</span>
-					<button className="link-btn" onClick={onBack}>
-						← Tous les tournois
-					</button>
-				</div>
-			</section>
+					<section>
+						<div className="section-title">Classement</div>
+						<Standings players={tournament.players} matches={matches} />
+						<div className="footer-row">
+							<span className="hint">
+								Départage : victoires, puis différence de points.
+							</span>
+							<button className="link-btn" onClick={onBack}>
+								← Tous les tournois
+							</button>
+						</div>
+					</section>
+				</>
+			)}
 
 			{openMatch && (
 				<LiveScorer

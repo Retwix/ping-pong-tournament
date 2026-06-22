@@ -14,6 +14,7 @@ create table if not exists public.tournaments (
   players     text[] not null,
   status      text not null default 'active',   -- 'active' | 'done'
   kind        text not null default 'tournament', -- 'tournament' | 'game'
+  format      text not null default 'round_robin', -- 'round_robin' | 'double_elim'
   champion    text,
   -- Slack integration: the invitation message anchors a thread that results reply into.
   slack_channel    text,    -- conversation id the invitation was posted to (group DM or channel)
@@ -23,6 +24,9 @@ create table if not exists public.tournaments (
 
 -- Add `kind` to databases created before this column existed.
 alter table public.tournaments add column if not exists kind text not null default 'tournament';
+
+-- Add `format` to databases created before double-elimination existed.
+alter table public.tournaments add column if not exists format text not null default 'round_robin';
 
 -- Slack columns for databases created before this integration existed.
 alter table public.tournaments add column if not exists slack_channel   text;
@@ -70,7 +74,17 @@ create table if not exists public.matches (
 alter table public.matches add column if not exists mb_saved_a int not null default 0;
 alter table public.matches add column if not exists mb_saved_b int not null default 0;
 
+-- Double-elimination bracket metadata (null/false for round-robin matches).
+alter table public.matches add column if not exists bracket   text;
+alter table public.matches add column if not exists match_key text;
+alter table public.matches add column if not exists win_to    text;
+alter table public.matches add column if not exists win_slot  text;
+alter table public.matches add column if not exists lose_to   text;
+alter table public.matches add column if not exists lose_slot text;
+alter table public.matches add column if not exists bye boolean not null default false;
+
 create index if not exists matches_tournament_idx on public.matches(tournament_id, idx);
+create index if not exists matches_match_key on public.matches(tournament_id, match_key);
 
 -- Registry of people who play. Tournaments are built by picking from this list,
 -- which makes per-player and per-team stats possible later.
