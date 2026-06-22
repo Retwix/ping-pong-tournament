@@ -89,15 +89,21 @@ export default function Predictions({ tournament, matches, bettorName, onNameCha
           <label className="prono-id-label" htmlFor="prono-name">
             Ton nom de parieur
           </label>
-          <input
+          <select
             id="prono-name"
             className="name-input"
-            placeholder="ex. Léo"
             value={bettorName}
             onChange={(e) => onNameChange(e.target.value)}
-          />
+          >
+            <option value="">— Choisis ton nom —</option>
+            {tournament.players.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
           <span className="hint">
-            Pas de compte : choisis un nom, on te fait confiance. 🤝
+            Pas de compte : choisis ton nom dans la liste, on te fait confiance. 🤝
           </span>
         </div>
 
