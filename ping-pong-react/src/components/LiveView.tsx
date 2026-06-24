@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useAvatars } from "../hooks/useAvatars";
 import { useTournament } from "../hooks/useTournament";
 import { computeStandings } from "../lib/pingpong";
 import { isPlayable } from "../lib/doubleElim";
@@ -40,6 +41,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 	// Only offer the "jump to ref" shortcut from the spectator view.
 	const showRef = readOnly && !!onRef;
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
+	const { avatarOf } = useAvatars();
 	const [shownId, setShownId] = useState<string | null>(null);
 
 	// Always-current matches for use inside the deferred hold timer.
@@ -164,6 +166,8 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			key={shownMatch.id}
 			match={shownMatch}
 			target={tournament.target}
+			avatarA={avatarOf(shownMatch.player_a_id, shownMatch.player_a)}
+			avatarB={avatarOf(shownMatch.player_b_id, shownMatch.player_b)}
 			readOnly={readOnly}
 			onPatch={
 				readOnly ? undefined : (patch) => patchMatch(shownMatch.id, patch)

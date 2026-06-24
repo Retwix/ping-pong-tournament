@@ -97,6 +97,28 @@ Rebuild / redeploy. That's it.
 If Slack is down or misconfigured, the app logs a console warning and carries on — Slack
 problems never block creating a tournament or scoring.
 
+## Pause / resume notifications
+
+The Edge Function has a kill switch via the `SLACK_NOTIFY_ENABLED` secret (defaults to
+`true`). When set to `false`, the function no-ops — it returns `{ skipped: "disabled" }`
+and never calls Slack. The rest of the app is unaffected.
+
+```bash
+cd ping-pong-react
+
+# Pause
+supabase secrets set SLACK_NOTIFY_ENABLED=false
+supabase functions deploy slack-notify   # redeploy so the new secret is picked up
+
+# Resume
+supabase secrets set SLACK_NOTIFY_ENABLED=true   # (or: supabase secrets unset SLACK_NOTIFY_ENABLED)
+supabase functions deploy slack-notify
+```
+
+> Secret changes are only guaranteed to take effect on the next deploy, so redeploy
+> after flipping the value. You can also set the secret from the dashboard:
+> **Edge Functions → Manage secrets**, then redeploy.
+
 ## Want individual 1:1 DMs instead of a group DM?
 
 The default group DM is the cleanest fit for "private invite to everyone + one results

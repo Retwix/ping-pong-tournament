@@ -13,6 +13,9 @@ import type { Match, MatchSide } from "../types";
 interface Props {
 	match: Match;
 	target: number;
+	/** Photo URLs for player A / B (shown big on the scoreboard). null = initials. */
+	avatarA?: string | null;
+	avatarB?: string | null;
 	onPatch?: (patch: Partial<Match>) => void;
 	onClose?: () => void;
 	onFinish?: () => void;
@@ -27,6 +30,8 @@ const FLIP_KEY = "rv-score-flip";
 export default function LiveScorer({
 	match,
 	target,
+	avatarA = null,
+	avatarB = null,
 	onPatch,
 	onClose,
 	onFinish,
@@ -170,6 +175,7 @@ export default function LiveScorer({
 		MatchSide,
 		{
 			name: string;
+			avatar: string | null;
 			score: number;
 			serving: boolean;
 			isWinner: boolean;
@@ -178,6 +184,7 @@ export default function LiveScorer({
 	> = {
 		a: {
 			name: match.player_a,
+			avatar: avatarA,
 			score: match.score_a,
 			serving: aServe,
 			isWinner: aWon,
@@ -185,6 +192,7 @@ export default function LiveScorer({
 		},
 		b: {
 			name: match.player_b,
+			avatar: avatarB,
 			score: match.score_b,
 			serving: !won && !aServe,
 			isWinner: bWon,
@@ -205,6 +213,15 @@ export default function LiveScorer({
 				onClick={() => addPoint(side)}
 			>
 				<span className="matchpoint-flag">{flagText}</span>
+				<span className="side-photo" aria-hidden="true">
+					{d.avatar ? (
+						<img src={d.avatar} alt="" />
+					) : (
+						<span className="side-photo-initial">
+							{(d.name.trim()[0] ?? "?").toUpperCase()}
+						</span>
+					)}
+				</span>
 				<span className="side-name">
 					<span className="serve-pip" />
 					<span className="nm">{d.name}</span>

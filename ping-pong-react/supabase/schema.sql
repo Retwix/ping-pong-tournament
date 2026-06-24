@@ -94,11 +94,16 @@ create table if not exists public.players (
   created_at  timestamptz not null default now(),
   name        text not null unique,
   team        text not null default 'guests',
-  slack_user_id text   -- Slack user id (e.g. U0123ABCD) for private invitations; null = not on Slack
+  slack_user_id text,  -- Slack user id (e.g. U0123ABCD) for private invitations; null = not on Slack
+  avatar_url  text     -- public URL of the player's photo (Storage bucket 'avatars'); null = no photo
 );
 
 -- Add `slack_user_id` to databases created before this column existed.
 alter table public.players add column if not exists slack_user_id text;
+
+-- Add `avatar_url` to databases created before profile pictures existed.
+-- The matching Storage bucket + policies live in avatars-migration.sql.
+alter table public.players add column if not exists avatar_url text;
 
 -- ---------- player identity on matches ----------
 -- Matches reference players by id so stats survive renames / duplicate names.

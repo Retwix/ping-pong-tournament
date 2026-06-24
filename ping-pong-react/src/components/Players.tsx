@@ -1,12 +1,14 @@
 import {
 	IconArrowLeft,
+	IconCamera,
 	IconPencil,
 	IconPlus,
 	IconTrash,
+	IconX,
 } from "@tabler/icons-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { usePlayers } from "../hooks/usePlayers";
-import { createPlayer, deletePlayer, updatePlayer } from "../lib/db";
+import { createPlayer, deletePlayer, updatePlayer, uploadAvatar } from "../lib/db";
 import { TEAMS, type TeamKey, teamColor, teamLabel } from "../lib/teams";
 import ThemeToggle from "./ThemeToggle";
 import TopBack from "./TopBack";
@@ -27,6 +29,63 @@ export default function Players({ onBack }: Props) {
 	const [leaving, setLeaving] = useState<Set<string>>(new Set());
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [slackDraft, setSlackDraft] = useState("");
+	// New-player photo (uploaded before the player row exists).
+	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+	const [uploading, setUploading] = useState(false);
+	// Per-row "uploading photo" indicator (keyed by player id).
+	const [photoBusy, setPhotoBusy] = useState<string | null>(null);
+	const newFileRef = useRef<HTMLInputElement>(null);
+	const rowFileRef = useRef<HTMLInputElement>(null);
+	const rowTargetId = useRef<string | null>(null);
+
+	// Upload the picked file for the new-player modal.
+	const onPickNewPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		e.target.value = ""; // allow re-picking the same file
+		if (!file) return;
+		setUploading(true);
+		setFormError(null);
+		try {
+			setAvatarUrl(await uploadAvatar(file));
+		} catch (err) {
+			setFormError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setUploading(false);
+		}
+	};
+
+	// Upload + save a photo for an existing player row.
+	const onPickRowPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		const id = rowTargetId.current;
+		e.target.value = "";
+		if (!file || !id) return;
+		setPhotoBusy(id);
+		setFormError(null);
+		try {
+			const url = await uploadAvatar(file);
+			await updatePlayer(id, { avatar_url: url });
+			refresh();
+		} catch (err) {
+			setFormError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setPhotoBusy(null);
+		}
+	};
+
+	const triggerRowPhoto = (id: string) => {
+		rowTargetId.current = id;
+		rowFileRef.current?.click();
+	};
+
+	const removeAvatar = async (id: string) => {
+		try {
+			await updatePlayer(id, { avatar_url: null });
+			refresh();
+		} catch (err) {
+			setFormError(err instanceof Error ? err.message : String(err));
+		}
+	};
 
 	const changeTeam = async (id: string, team: string) => {
 		try {
@@ -75,6 +134,7 @@ export default function Players({ onBack }: Props) {
 		setName("");
 		setDept("tech");
 		setSlackId("");
+		setAvatarUrl(null);
 		setFormError(null);
 		setAdding(true);
 	};
@@ -90,7 +150,7 @@ export default function Players({ onBack }: Props) {
 		setSaving(true);
 		setFormError(null);
 		try {
-			await createPlayer(nm, dept, slackId.trim() || null);
+			await createPlayer(nm, dept, slackId.trim() || null, avatarUrl);
 			setAdding(false);
 			refresh();
 		} catch (err) {
@@ -117,6 +177,14 @@ export default function Players({ onBack }: Props) {
 	return (
 		<div className="wrap">
 			<TopBack onClick={onBack} />
+			{/* Shared hidden input that uploads a photo for the row in rowTargetId. */}
+			<input
+				ref={rowFileRef}
+				type="file"
+				accept="image/*"
+				hidden
+				onChange={onPickRowPhoto}
+			/>
 			<header>
 				<ThemeToggle className="header-toggle" />
 				<div className="eyebrow">Registre des joueurs</div>
@@ -170,12 +238,30 @@ export default function Players({ onBack }: Props) {
 										: `${Math.min(i, 12) * 35}ms`,
 								}}
 							>
-								<div
-									className="avatar"
-									style={{ background: `${color}24`, color }}
+								<button
+									type="button"
+									className="avatar avatar-edit"
+									style={
+										p.avatar_url
+											? undefined
+											: { background: `${color}24`, color }
+									}
+									title="Changer la photo"
+									onClick={() => triggerRowPhoto(p.id)}
 								>
-									{initial}
-								</div>
+									{p.avatar_url ? (
+										<img src={p.avatar_url} alt={p.name} />
+									) : (
+										initial
+									)}
+									<span className="avatar-cam">
+										{photoBusy === p.id ? (
+											"…"
+										) : (
+											<IconCamera size={13} stroke={1.9} />
+										)}
+									</span>
+								</button>
 								<div className="player-block">
 									<div className="t-name">{p.name}</div>
 									{editingId === p.id ? (
@@ -218,6 +304,17 @@ export default function Players({ onBack }: Props) {
 											>
 												✓
 											</button>
+											{p.avatar_url && (
+												<button
+													type="button"
+													className="link-btn"
+													style={{ fontSize: 13 }}
+													onClick={() => removeAvatar(p.id)}
+												>
+													<IconX size={14} stroke={1.9} />
+													Retirer la photo
+												</button>
+											)}
 										</div>
 									) : (
 										<div className="player-dept">
@@ -270,6 +367,34 @@ export default function Players({ onBack }: Props) {
 						<p className="modal-hint">
 							Ajoute un membre de l'équipe au registre.
 						</p>
+
+						<div className="field" style={{ alignItems: "center", display: "flex", flexDirection: "column", gap: 10 }}>
+							<button
+								type="button"
+								className="avatar avatar-edit avatar-lg"
+								title="Ajouter une photo"
+								onClick={() => newFileRef.current?.click()}
+							>
+								{avatarUrl ? (
+									<img src={avatarUrl} alt="" />
+								) : (
+									<IconCamera size={26} stroke={1.7} />
+								)}
+								<span className="avatar-cam">
+									<IconCamera size={14} stroke={1.9} />
+								</span>
+							</button>
+							<span className="opt" style={{ fontSize: 12 }}>
+								{uploading ? "Envoi…" : "Photo (optionnel)"}
+							</span>
+							<input
+								ref={newFileRef}
+								type="file"
+								accept="image/*"
+								hidden
+								onChange={onPickNewPhoto}
+							/>
+						</div>
 
 						<div className="field">
 							<label className="field-label">Nom</label>
@@ -338,7 +463,7 @@ export default function Players({ onBack }: Props) {
 							<button
 								type="submit"
 								className="btn-primary"
-								disabled={!name.trim() || saving}
+								disabled={!name.trim() || saving || uploading}
 							>
 								<IconPlus size={16} stroke={1.8} />
 								{saving ? "Ajout…" : "Ajouter"}

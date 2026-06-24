@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBettorName } from "../hooks/useBettorName";
+import { useAvatars } from "../hooks/useAvatars";
 import { useTournament } from "../hooks/useTournament";
 import { createTournament } from "../lib/db";
 import { navigate } from "../lib/router";
@@ -25,6 +26,7 @@ interface Props {
 
 export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
+	const { avatarOf } = useAvatars();
 	const { name: bettorName, setName: setBettorName } = useBettorName();
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
@@ -77,6 +79,8 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 			<LiveScorer
 				match={match}
 				target={tournament.target}
+				avatarA={avatarOf(match.player_a_id, match.player_a)}
+				avatarB={avatarOf(match.player_b_id, match.player_b)}
 				onPatch={(patch) => patchMatch(match.id, patch)}
 				onClose={onBack}
 				onFinish={() => {
@@ -185,6 +189,8 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 				<LiveScorer
 					match={openMatch}
 					target={tournament.target}
+					avatarA={avatarOf(openMatch.player_a_id, openMatch.player_a)}
+					avatarB={avatarOf(openMatch.player_b_id, openMatch.player_b)}
 					onPatch={(patch) => patchMatch(openMatch.id, patch)}
 					onClose={() => setOpenId(null)}
 					onFinish={() => {

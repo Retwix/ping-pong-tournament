@@ -208,7 +208,19 @@ section { margin-top: 32px; }
 .avatar {
   width: 44px; height: 44px; border-radius: 999px; flex: none;
   display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 17px;
+  overflow: hidden;
 }
+.avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+/* Editable avatar: clickable, with a camera badge that appears on hover. */
+.avatar-edit { position: relative; border: none; padding: 0; cursor: pointer; background: var(--surface-hover); color: var(--fg-2); }
+.avatar-cam {
+  position: absolute; right: -2px; bottom: -2px; width: 19px; height: 19px; border-radius: 999px;
+  display: grid; place-items: center; background: var(--primary); color: #fff;
+  border: 2px solid var(--surface); opacity: 0; transition: opacity var(--dur) var(--ease);
+}
+.avatar-edit:hover .avatar-cam, .avatar-lg .avatar-cam { opacity: 1; }
+.avatar-lg { width: 96px; height: 96px; font-size: 30px; }
+.avatar-lg .avatar-cam { width: 30px; height: 30px; right: 2px; bottom: 2px; }
 .player-block { flex: 1; min-width: 0; }
 .team-edit { margin-top: 6px; padding: 6px 10px; font-size: 13px; max-width: 220px; flex: none; }
 .player-dept { display: inline-flex; align-items: center; gap: 7px; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--fg-3); }
@@ -330,7 +342,19 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 .side:active { background: var(--surface-hover); }
 .side.serving { border-color: transparent; box-shadow: var(--shadow-serve); }
 .side.winner { border-color: var(--green); background: rgba(43, 165, 114, 0.08); box-shadow: 0 0 0 5px rgba(43, 165, 114, 0.26), 0 0 34px rgba(43, 165, 114, 0.3); }
-.side-name { font-family: var(--font-display); font-size: clamp(30px, 6.5vw, 64px); font-weight: 700; margin-top: 28px; display: flex; align-items: center; gap: 16px; text-align: center; padding: 0 12px; }
+/* Big circular player photo on the live scoreboard ("the big forehead"). */
+.side-photo {
+  width: clamp(110px, 22vw, 240px); height: clamp(110px, 22vw, 240px);
+  margin-top: clamp(20px, 4vw, 44px); border-radius: 999px; overflow: hidden; flex: none;
+  display: grid; place-items: center; background: var(--surface-hover);
+  border: 4px solid var(--border); box-shadow: var(--shadow-card);
+  transition: border-color var(--dur) var(--ease);
+}
+.side-photo img { width: 100%; height: 100%; object-fit: cover; }
+.side-photo-initial { font-family: var(--font-display); font-weight: 800; font-size: clamp(48px, 10vw, 110px); color: var(--fg-3); }
+.side.serving .side-photo { border-color: var(--serve); }
+.side.winner .side-photo { border-color: var(--green); }
+.side-name { font-family: var(--font-display); font-size: clamp(30px, 6.5vw, 64px); font-weight: 700; margin-top: 18px; display: flex; align-items: center; gap: 16px; text-align: center; padding: 0 12px; }
 .serve-pip { width: 20px; height: 20px; border-radius: 50%; background: var(--serve); display: none; }
 .side.serving .serve-pip { display: inline-block; animation: pulse 1.2s infinite; }
 .side-score { font-family: var(--font-display); font-weight: 800; font-size: clamp(80px, 26vw, 180px); line-height: 1; margin: auto 0; }

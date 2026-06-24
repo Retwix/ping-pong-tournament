@@ -20,12 +20,21 @@
 // Optional:
 //   SLACK_CHANNEL     C0123ABCD          post the invitation to this channel
 //                                        instead of a private group DM
+//   SLACK_NOTIFY_ENABLED  true|false     kill switch (default: true). Set to
+//                                        "false" to pause: the function then
+//                                        no-ops (returns { skipped: "disabled" })
+//                                        without touching Slack. Set back to
+//                                        "true" (or unset) to resume.
 // Provided automatically by the Edge runtime:
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Kill switch. Defaults to enabled so existing setups keep working; set the
+// SLACK_NOTIFY_ENABLED secret to "false" to pause all notifications.
+const SLACK_NOTIFY_ENABLED =
+  (Deno.env.get("SLACK_NOTIFY_ENABLED") ?? "true").toLowerCase() !== "false";
 const SLACK_BOT_TOKEN = Deno.env.get("SLACK_BOT_TOKEN") ?? "";
 const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") ?? "").replace(/\/+$/, "");
 const SLACK_CHANNEL = Deno.env.get("SLACK_CHANNEL") ?? "";
@@ -419,6 +428,14 @@ async function handleResult(tournamentId: string) {
 // ---------- HTTP entry ----------
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  // Paused via the kill switch: no-op cleanly (200) so callers treat it as a
+  // successful skip rather than an error.
+  if (!SLACK_NOTIFY_ENABLED) {
+    return new Response(JSON.stringify({ skipped: "disabled" }), {
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     if (!SLACK_BOT_TOKEN) throw new Error("SLACK_BOT_TOKEN is not set");
