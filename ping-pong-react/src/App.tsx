@@ -5,6 +5,7 @@ import Home from "./components/Home";
 import Leaderboard from "./components/Leaderboard";
 import LiveView from "./components/LiveView";
 import Players from "./components/Players";
+import Ratings from "./components/Ratings";
 import Setup from "./components/Setup";
 import Stats from "./components/Stats";
 import { currentPath, navigate } from "./lib/router";
@@ -16,6 +17,7 @@ type Route =
 	| { name: "game" }
 	| { name: "players" }
 	| { name: "stats" }
+	| { name: "classement" }
 	| { name: "pronos" }
 	| { name: "board"; id: string }
 	| { name: "live"; id: string }
@@ -28,6 +30,7 @@ function parseRoute(): Route {
 	if (p === "/game") return { name: "game" };
 	if (p === "/players") return { name: "players" };
 	if (p === "/stats") return { name: "stats" };
+	if (p === "/classement") return { name: "classement" };
 	if (p === "/pronos") return { name: "pronos" };
 	// Stable, shareable views that follow the current tournament (no id needed).
 	if (p === "/live") return { name: "live-current" };
@@ -80,6 +83,8 @@ function renderRoute(route: Route) {
 			return <Players onBack={() => navigate("/")} />;
 		case "stats":
 			return <Stats onBack={() => navigate("/")} />;
+		case "classement":
+			return <Ratings onBack={() => navigate("/")} />;
 		case "pronos":
 			return <Leaderboard onBack={() => navigate("/")} />;
 		case "board":
@@ -116,6 +121,7 @@ function renderRoute(route: Route) {
 					onNewGame={() => navigate("/game")}
 					onPlayers={() => navigate("/players")}
 					onStats={() => navigate("/stats")}
+					onClassement={() => navigate("/classement")}
 					onPronos={() => navigate("/pronos")}
 					onLive={() => navigate("/live")}
 					onRef={() => navigate("/ref")}

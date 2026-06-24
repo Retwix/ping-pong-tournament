@@ -125,8 +125,99 @@ function mention(name: string, ids: Map<string, string>): string {
   return id ? `<@${id}>` : `*${name}*`;
 }
 
-function boardLink(id: string): string {
-  return APP_BASE_URL ? `${APP_BASE_URL}/#/t/${id}` : "";
+// Always link to the stable live-score view, which follows whichever tournament
+// is currently on the table (no per-tournament id in the URL).
+function boardLink(_id: string): string {
+  return APP_BASE_URL ? `${APP_BASE_URL}/live` : "";
+}
+
+// ============================================================
+// Flavour: capot shaming + a "fun fact" line for result posts.
+// ============================================================
+
+/** A finished match where the loser scored 0 — a "capot" / sous la table. */
+function isCapot(m: Match): boolean {
+  return Math.min(m.score_a, m.score_b) === 0 && Math.max(m.score_a, m.score_b) > 0;
+}
+
+/** Minimal shape we need from history to read win/loss streaks. */
+interface HistMatch {
+  player_a: string;
+  player_b: string;
+  score_a: number;
+  score_b: number;
+  ended_at: string | null;
+  started_at: string | null;
+}
+
+function histTime(m: HistMatch): string {
+  return m.ended_at ?? m.started_at ?? "";
+}
+
+/**
+ * The player's current run of identical results (the most recent matches),
+ * across all tournaments. e.g. { type: "L", count: 3 } = three losses in a row.
+ */
+function trailingStreak(
+  name: string,
+  all: HistMatch[],
+): { type: "W" | "L" | null; count: number } {
+  const mine = all
+    .filter((m) => m.player_a === name || m.player_b === name)
+    .sort((a, b) => histTime(a).localeCompare(histTime(b)));
+  let type: "W" | "L" | null = null;
+  let count = 0;
+  for (let i = mine.length - 1; i >= 0; i--) {
+    const m = mine[i];
+    const meA = m.player_a === name;
+    const won = (meA ? m.score_a : m.score_b) > (meA ? m.score_b : m.score_a);
+    const r: "W" | "L" = won ? "W" : "L";
+    if (type === null) {
+      type = r;
+      count = 1;
+    } else if (r === type) {
+      count++;
+    } else break;
+  }
+  return { type, count };
+}
+
+const ORDINAL_F = ["", "1re", "2e", "3e", "4e", "5e", "6e", "7e", "8e", "9e", "10e"];
+function ordinalF(n: number): string {
+  return ORDINAL_F[n] ?? `${n}e`;
+}
+
+// Light, ping-pong-flavoured filler when there's no juicier stat to surface.
+const TAUNTS = [
+  "Les raquettes ont parlé. 🏓",
+  "La revanche se joue à la machine à café. ☕",
+  "Le filet, lui, n'a rien demandé.",
+  "Quelqu'un veut une revanche ? 👀",
+  "Statistiquement mérité. Probablement.",
+  "On range la table, la légende est écrite. 📜",
+];
+function randomTaunt(): string {
+  return TAUNTS[Math.floor(Math.random() * TAUNTS.length)];
+}
+
+/**
+ * One flavour line for the result post. Prefers a real stat (loser on a losing
+ * streak, winner on a hot streak), else falls back to a random taunt.
+ */
+function funFactLine(
+  winner: string,
+  loser: string,
+  history: HistMatch[],
+): string {
+  const loserStreak = trailingStreak(loser, history);
+  if (loserStreak.type === "L" && loserStreak.count >= 2) {
+    return `📉 ${loser} en est à sa ${ordinalF(loserStreak.count)} défaite d'affilée. Courage.`;
+  }
+  const winnerStreak = trailingStreak(winner, history);
+  if (winnerStreak.type === "W" && winnerStreak.count >= 3) {
+    return `🔥 ${winner} enchaîne : ${winnerStreak.count} victoires d'affilée.`;
+  }
+  return randomTaunt();
 }
 
 // ---------- action: invite ----------
@@ -191,7 +282,11 @@ async function handleInvite(tournamentId: string) {
     ...scheduleLines,
   ];
   if (link) lines.push("", `:point_right: Tableau de score en direct : ${link}`);
-  if (missing.length) {
+  // The "without Slack" hint only makes sense when inviting via a private group DM,
+  // where missing ids mean those people don't get pinged. In fixed-channel mode
+  // (SLACK_CHANNEL set) nobody is mentioned individually, so listing everyone here
+  // is just noise — skip it.
+  if (!SLACK_CHANNEL && missing.length) {
     lines.push("", `_Sans Slack (à inviter à la main) : ${missing.join(", ")}_`);
   }
 
@@ -245,16 +340,34 @@ async function handleResult(tournamentId: string) {
   const champ = tour.champion ?? standings[0]?.name ?? null;
   const medals = ["🥇", "🥈", "🥉"];
 
+  // All finished matches across every tournament, for win/loss-streak facts.
+  const { data: allMs } = await admin
+    .from("matches")
+    .select("player_a, player_b, score_a, score_b, ended_at, started_at")
+    .eq("done", true);
+  const history = (allMs ?? []) as HistMatch[];
+
   const isGame = tour.kind === "game";
   const lines: string[] = [];
   if (isGame) {
     const m = matches.find((x) => x.done);
     lines.push(`🏁 *Résultat — ${tour.name}*`);
     if (m) {
-      const winner = m.score_a > m.score_b ? m.player_a : m.player_b;
+      const aWin = m.score_a > m.score_b;
+      const winner = aWin ? m.player_a : m.player_b;
+      const loser = aWin ? m.player_b : m.player_a;
       const sa = Math.max(m.score_a, m.score_b);
       const sb = Math.min(m.score_a, m.score_b);
-      lines.push("", `${mention(winner, ids)} l'emporte *${sa}–${sb}* 🏆`);
+      if (isCapot(m)) {
+        lines.push(
+          "",
+          `🪑 *Capot !* ${mention(loser, ids)} passe sous la table, la méga honte.`,
+          `${mention(winner, ids)} s'impose *${sa}–${sb}* sans pitié 🫣`,
+        );
+      } else {
+        lines.push("", `${mention(winner, ids)} l'emporte *${sa}–${sb}* 🏆`);
+      }
+      lines.push("", funFactLine(winner, loser, history));
     }
   } else {
     lines.push(`🏆 *${tour.name} terminé !*`);
@@ -265,14 +378,37 @@ async function handleResult(tournamentId: string) {
       const diff = s.diff > 0 ? `+${s.diff}` : `${s.diff}`;
       lines.push(`${medal} ${s.name} — ${s.wins} V · diff ${diff}`);
     });
+
+    // Name and shame: every capot inflicted during the tournament.
+    const capots = matches.filter((m) => m.done && isCapot(m));
+    if (capots.length) {
+      lines.push("", "*Sous la table* 🪑");
+      for (const m of capots) {
+        const aWin = m.score_a > m.score_b;
+        const w = aWin ? m.player_a : m.player_b;
+        const l = aWin ? m.player_b : m.player_a;
+        const hi = Math.max(m.score_a, m.score_b);
+        lines.push(`${mention(w, ids)} colle un capot à ${mention(l, ids)} (${hi}–0)`);
+      }
+    }
+
+    // One flavour line — champion's hot streak if any, else a taunt.
+    if (champ) {
+      const cs = trailingStreak(champ, history);
+      lines.push(
+        "",
+        cs.type === "W" && cs.count >= 2
+          ? `🔥 ${champ} reste sur ${cs.count} victoires d'affilée.`
+          : randomTaunt(),
+      );
+    }
   }
-  const link = boardLink(tournamentId);
-  if (link) lines.push("", `:bar_chart: Détails : ${link}`);
 
   await slack("chat.postMessage", {
     channel: tour.slack_channel,
     thread_ts: tour.slack_thread_ts,
-    reply_broadcast: true,
+    // Keep the result inside the thread only — no broadcast back to the channel.
+    reply_broadcast: false,
     text: lines.join("\n"),
     unfurl_links: false,
   });
