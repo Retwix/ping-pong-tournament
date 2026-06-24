@@ -66,6 +66,8 @@ export interface RatingEvent {
   name: string
   opponentKey: string
   opponentName: string
+  scoreFor: number
+  scoreAgainst: number
   ratingBefore: number
   ratingAfter: number
   rdBefore: number
@@ -296,6 +298,8 @@ export function replayRatings(
       name: A.name,
       opponentKey: B.key,
       opponentName: B.name,
+      scoreFor: m.score_a,
+      scoreAgainst: m.score_b,
       ratingBefore: A.rating,
       ratingAfter: newA.rating,
       rdBefore: rdA,
@@ -313,6 +317,8 @@ export function replayRatings(
       name: B.name,
       opponentKey: A.key,
       opponentName: A.name,
+      scoreFor: m.score_b,
+      scoreAgainst: m.score_a,
       ratingBefore: B.rating,
       ratingAfter: newB.rating,
       rdBefore: rdB,
