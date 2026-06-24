@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { generateSchedule, shuffle } from './roundRobin'
 import { buildDoubleElim } from './doubleElim'
+import { RATING, replayRatings } from './rating'
 import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -231,4 +232,75 @@ export async function updateTournament(id: string, patch: Partial<Tournament>): 
 export async function deleteTournament(id: string): Promise<void> {
   const { error } = await supabase.from('tournaments').delete().eq('id', id)
   if (error) throw error
+}
+
+// ---------- ratings ----------
+
+/**
+ * Recompute every player's Glicko-2 rating by replaying all finished matches in
+ * order, then persist the result: current state onto `players`, and per-match
+ * history into `rating_events`. The view derives ratings in-memory the same way,
+ * so this exists to keep stored values fresh for Slack / external use.
+ *
+ * Deterministic and idempotent: registered players with no rated games are reset
+ * to defaults, so deleting history can never leave a stale rating behind.
+ * Requires supabase/ratings-migration.sql to have been run.
+ */
+export async function recomputeRatings(): Promise<void> {
+  const [matches, players, tournaments] = await Promise.all([
+    listAllDoneMatches(),
+    listPlayers(),
+    listTournaments(),
+  ])
+  const targetByTournament = new Map(tournaments.map((t) => [t.id, t.target]))
+  const { states, events } = replayRatings(matches, players, { targetByTournament })
+
+  // Persist current state for every registered player (reset to defaults when
+  // they have no rated games left).
+  await Promise.all(
+    players.map((p) => {
+      const s = states.get(p.id)
+      const patch = s
+        ? {
+            rating: s.rating,
+            rd: s.rd,
+            vol: s.vol,
+            rated_games: s.games,
+            peak_rating: s.peak,
+            last_rated_at: s.lastPlayedAt,
+          }
+        : {
+            rating: RATING.R0,
+            rd: RATING.RD0,
+            vol: RATING.VOL0,
+            rated_games: 0,
+            peak_rating: RATING.R0,
+            last_rated_at: null,
+          }
+      return supabase.from('players').update(patch).eq('id', p.id)
+    })
+  )
+
+  // Persist per-match history for players that have a registry id (FK target).
+  const rows = events
+    .filter((e) => e.playerId)
+    .map((e) => ({
+      match_id: e.matchId,
+      player_id: e.playerId,
+      rating_before: e.ratingBefore,
+      rating_after: e.ratingAfter,
+      rd_before: e.rdBefore,
+      rd_after: e.rdAfter,
+      delta: e.delta,
+      weight: e.weight,
+      stakes: e.stakes,
+      won: e.won,
+      played_at: e.at,
+    }))
+  if (rows.length) {
+    const { error } = await supabase
+      .from('rating_events')
+      .upsert(rows, { onConflict: 'match_id,player_id' })
+    if (error) throw error
+  }
 }

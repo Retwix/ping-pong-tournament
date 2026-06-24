@@ -565,6 +565,19 @@ table.h2h td.neg { background: rgba(215, 66, 81, 0.14); color: var(--coral); }
   .prono-pending { display: none; }
 }
 
+/* ---------- Elo classement ---------- */
+.rating-board .rt-rating { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--fg-1); }
+.rating-board .rt-rd { font-family: var(--font-body); font-size: 12.5px; color: var(--fg-3); white-space: nowrap; }
+.rt-prov { font-family: var(--font-body); font-weight: 500; font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-3); background: var(--bg); border: 1px solid var(--border-strong); border-radius: 999px; padding: 2px 7px; margin-left: 8px; white-space: nowrap; }
+.rt-trend { font-family: var(--font-display); font-weight: 700; font-size: 13px; white-space: nowrap; }
+.rt-trend.up { color: var(--green); }
+.rt-trend.down { color: var(--coral); }
+.rt-trend.flat { color: var(--fg-4); }
+
+@media (max-width: 460px) {
+  .rt-prov { display: none; }
+}
+
 /* ---------- format picker (setup) ---------- */
 .format-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
 .format-card {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getMatches, getTournament, updateMatch, updateTournament } from '../lib/db'
+import { getMatches, getTournament, recomputeRatings, updateMatch, updateTournament } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
@@ -160,6 +160,11 @@ export function useTournament(id: string | null) {
       setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, ...patch } : m)))
       try {
         await updateMatch(matchId, patch)
+        // A finished match changes ratings: refresh the stored Glicko-2 state.
+        // Fire-and-forget — the Classement view recomputes in-memory regardless.
+        if (patch.done) {
+          recomputeRatings().catch((e) => console.error('recomputeRatings failed', e))
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e))
       }

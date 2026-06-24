@@ -120,6 +120,7 @@ interface Props {
 	onNewGame: () => void;
 	onPlayers: () => void;
 	onStats: () => void;
+	onClassement: () => void;
 	onPronos: () => void;
 	onLive: () => void;
 	onRef: () => void;
@@ -131,6 +132,7 @@ export default function Home({
 	onNewGame,
 	onPlayers,
 	onStats,
+	onClassement,
 	onPronos,
 	onLive,
 	onRef,
@@ -186,6 +188,13 @@ export default function Home({
 							title="Classement des parieurs"
 						>
 							🔮 Pronos
+						</button>
+						<button
+							className="link-btn"
+							onClick={onClassement}
+							title="Classement Elo des joueurs"
+						>
+							🏓 Classement
 						</button>
 						<button className="link-btn" onClick={onStats}>
 							Stats
