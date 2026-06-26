@@ -1,7 +1,14 @@
-import { IconChevronDown, IconTrash } from "@tabler/icons-react";
+import {
+	IconChevronDown,
+	IconChevronRight,
+	IconTrash,
+	IconUsers,
+} from "@tabler/icons-react";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useTournaments } from "../hooks/useTournaments";
 import { deleteTournament } from "../lib/db";
+import LiveBanner from "./LiveBanner";
+import RankingHero from "./RankingHero";
 import ThemeToggle from "./ThemeToggle";
 
 /** "Nouveau" split button: a dropdown to start a quick game or a full tournament. */
@@ -147,102 +154,110 @@ export default function Home({
 	};
 
 	return (
-		<div className="wrap">
-			<header>
-				<ThemeToggle className="header-toggle" />
-				<div className="kicker">Round-robin · live</div>
-				<h1>
-					Tournoi <span className="em">ping-pong</span>
-				</h1>
-				<p className="subtitle">
-					Crée un tournoi ou reprends-en un. Les scores se synchronisent en
-					direct sur tous les écrans.
-				</p>
-			</header>
+		<div className="wrap dash">
+			<div className="dash-head">
+				<div className="titles">
+					<div className="kicker">Round-robin · live</div>
+					<h1>
+						Tournoi <span className="em">ping-pong</span>
+					</h1>
+				</div>
+				<div className="dash-actions">
+					<ThemeToggle />
+					<NewMenu onNew={onNew} onNewGame={onNewGame} />
+				</div>
+			</div>
 
 			{error && <div className="error-banner">Erreur : {error}</div>}
 
-			<section>
-				<div className="home-top">
-					<span className="setup-label" style={{ margin: 0 }}>
-						Tes parties &amp; tournois
-					</span>
-					<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-						<button
-							className="link-btn"
-							onClick={onLive}
-							title="Affichage spectateur du match en cours (lien fixe à partager)"
-						>
-							📺 Live
+			<LiveBanner onWatch={onLive} onRef={onRef} />
+
+			<div className="dash-grid">
+				<div className="dash-main">
+					<RankingHero onFull={onClassement} />
+
+					<div className="teaser-row">
+						<button className="teaser" onClick={onPronos}>
+							<div className="teaser-top">
+								<span className="t">🔮 Pronostics</span>
+								<span className="more">Voir →</span>
+							</div>
+							<div className="desc">
+								Qui lit le mieux le jeu ? Parie sur les matchs —{" "}
+								<b>sans argent, juste l'honneur</b>.
+							</div>
 						</button>
-						<button
-							className="link-btn"
-							onClick={onRef}
-							title="Mode arbitre du match en cours (lien fixe à partager)"
-						>
-							🧑‍⚖️ Arbitre
+						<button className="teaser" onClick={onStats}>
+							<div className="teaser-top">
+								<span className="t">📊 Statistiques</span>
+								<span className="more">Voir →</span>
+							</div>
+							<div className="desc">
+								Face-à-face, rivalités, séries et <b>superlatifs</b> de la saison.
+							</div>
 						</button>
-						<button
-							className="link-btn"
-							onClick={onPronos}
-							title="Classement des parieurs"
-						>
-							🔮 Pronos
-						</button>
-						<button
-							className="link-btn"
-							onClick={onClassement}
-							title="Classement Elo des joueurs"
-						>
-							🏓 Classement
-						</button>
-						<button className="link-btn" onClick={onStats}>
-							Stats
-						</button>
-						<button className="link-btn" onClick={onPlayers}>
-							Joueurs
-						</button>
-						<NewMenu onNew={onNew} onNewGame={onNewGame} />
 					</div>
 				</div>
 
-				{loading ? (
-					<div className="empty">Chargement…</div>
-				) : tournaments.length === 0 ? (
-					<div className="empty">
-						Aucun tournoi pour l'instant. Crée le premier !
-					</div>
-				) : (
-					tournaments.map((t) => (
-						<div className="t-card" key={t.id} onClick={() => onOpen(t.id)}>
-							<div>
-								<div className="t-name">{t.name}</div>
-								<div className="t-meta">
-									{t.kind === "game"
-										? "Partie"
-										: `Tournoi · ${t.players.length} joueurs`}{" "}
-									· jeu en {t.target} ·{" "}
-									{new Date(t.created_at).toLocaleDateString("fr-FR")}
+				<aside className="dash-rail">
+					<div>
+						<div className="rail-label">Tes parties &amp; tournois</div>
+						{loading ? (
+							<div className="empty">Chargement…</div>
+						) : tournaments.length === 0 ? (
+							<div className="empty">
+								Aucun tournoi pour l'instant. Crée le premier !
+							</div>
+						) : (
+							tournaments.map((t) => (
+								<div className="t-card" key={t.id} onClick={() => onOpen(t.id)}>
+									<div>
+										<div className="t-name">{t.name}</div>
+										<div className="t-meta">
+											{t.kind === "game"
+												? "Partie"
+												: `Tournoi · ${t.players.length} joueurs`}{" "}
+											· jeu en {t.target} ·{" "}
+											{new Date(t.created_at).toLocaleDateString("fr-FR")}
+										</div>
+									</div>
+									<div
+										style={{ display: "flex", alignItems: "center", gap: 10 }}
+									>
+										<span
+											className={`t-badge${t.status === "done" ? " done" : ""}`}
+										>
+											{t.status === "done" ? "Terminé" : "En cours"}
+										</span>
+										<button
+											className="t-del"
+											title="Supprimer"
+											onClick={(e) => onDelete(e, t.id, t.name)}
+										>
+											<IconTrash size={18} stroke={1.75} />
+										</button>
+									</div>
 								</div>
+							))
+						)}
+					</div>
+
+					<div>
+						<div className="rail-div" />
+						<div className="rail-label">Gérer</div>
+						<button className="manage-card" onClick={onPlayers}>
+							<span className="manage-ico">
+								<IconUsers size={18} stroke={1.8} />
+							</span>
+							<div className="mc-body">
+								<div className="mc-title">Joueurs</div>
+								<div className="mc-sub">Gérer la liste</div>
 							</div>
-							<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-								<span
-									className={`t-badge${t.status === "done" ? " done" : ""}`}
-								>
-									{t.status === "done" ? "Terminé" : "En cours"}
-								</span>
-								<button
-									className="t-del"
-									title="Supprimer"
-									onClick={(e) => onDelete(e, t.id, t.name)}
-								>
-									<IconTrash size={18} stroke={1.75} />
-								</button>
-							</div>
-						</div>
-					))
-				)}
-			</section>
+							<IconChevronRight className="mc-arrow" size={18} stroke={1.8} />
+						</button>
+					</div>
+				</aside>
+			</div>
 		</div>
 	);
 }
