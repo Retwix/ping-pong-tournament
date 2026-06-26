@@ -1,14 +1,12 @@
 import {
 	IconChevronDown,
 	IconChevronRight,
-	IconTrash,
 	IconUsers,
 } from "@tabler/icons-react";
-import { type MouseEvent, useEffect, useRef, useState } from "react";
-import { useTournaments } from "../hooks/useTournaments";
-import { deleteTournament } from "../lib/db";
+import { useEffect, useRef, useState } from "react";
 import LiveBanner from "./LiveBanner";
 import RankingHero from "./RankingHero";
+import RecentMatches from "./RecentMatches";
 import ThemeToggle from "./ThemeToggle";
 
 /** "Nouveau" split button: a dropdown to start a quick game or a full tournament. */
@@ -131,6 +129,7 @@ interface Props {
 	onPronos: () => void;
 	onLive: () => void;
 	onRef: () => void;
+	onHistory: () => void;
 }
 
 export default function Home({
@@ -143,16 +142,8 @@ export default function Home({
 	onPronos,
 	onLive,
 	onRef,
+	onHistory,
 }: Props) {
-	const { tournaments, loading, error } = useTournaments();
-
-	const onDelete = async (e: MouseEvent, id: string, name: string) => {
-		e.stopPropagation();
-		if (confirm(`Supprimer « ${name} » ? Cette action est définitive.`)) {
-			await deleteTournament(id);
-		}
-	};
-
 	return (
 		<div className="wrap dash">
 			<div className="dash-head">
@@ -167,8 +158,6 @@ export default function Home({
 					<NewMenu onNew={onNew} onNewGame={onNewGame} />
 				</div>
 			</div>
-
-			{error && <div className="error-banner">Erreur : {error}</div>}
 
 			<LiveBanner onWatch={onLive} onRef={onRef} />
 
@@ -200,47 +189,7 @@ export default function Home({
 				</div>
 
 				<aside className="dash-rail">
-					<div>
-						<div className="rail-label">Tes parties &amp; tournois</div>
-						{loading ? (
-							<div className="empty">Chargement…</div>
-						) : tournaments.length === 0 ? (
-							<div className="empty">
-								Aucun tournoi pour l'instant. Crée le premier !
-							</div>
-						) : (
-							tournaments.map((t) => (
-								<div className="t-card" key={t.id} onClick={() => onOpen(t.id)}>
-									<div>
-										<div className="t-name">{t.name}</div>
-										<div className="t-meta">
-											{t.kind === "game"
-												? "Partie"
-												: `Tournoi · ${t.players.length} joueurs`}{" "}
-											· jeu en {t.target} ·{" "}
-											{new Date(t.created_at).toLocaleDateString("fr-FR")}
-										</div>
-									</div>
-									<div
-										style={{ display: "flex", alignItems: "center", gap: 10 }}
-									>
-										<span
-											className={`t-badge${t.status === "done" ? " done" : ""}`}
-										>
-											{t.status === "done" ? "Terminé" : "En cours"}
-										</span>
-										<button
-											className="t-del"
-											title="Supprimer"
-											onClick={(e) => onDelete(e, t.id, t.name)}
-										>
-											<IconTrash size={18} stroke={1.75} />
-										</button>
-									</div>
-								</div>
-							))
-						)}
-					</div>
+					<RecentMatches onOpen={onOpen} onHistory={onHistory} />
 
 					<div>
 						<div className="rail-div" />
