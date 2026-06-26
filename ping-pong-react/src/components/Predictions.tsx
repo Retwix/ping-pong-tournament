@@ -1,4 +1,5 @@
 import { useTournamentPredictions } from '../hooks/useTournamentPredictions'
+import { isLive } from '../lib/pingpong'
 import {
   isChampionBettable,
   isMatchBettable,
@@ -69,7 +70,6 @@ export default function Predictions({ tournament, matches, bettorName, onNameCha
 
   // Show only matches worth a betting row: still bettable, in progress, or anything
   // people already bet on. Keeps this from duplicating the full schedule above.
-  const isLive = (m: Match) => !m.done && (m.started_at || m.score_a > 0 || m.score_b > 0)
   const relevant = matches.filter(
     (m) => isMatchBettable(m) || isLive(m) || votesFor(m.id, m.player_a) + votesFor(m.id, m.player_b) > 0
   )
