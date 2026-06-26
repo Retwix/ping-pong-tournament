@@ -5,6 +5,11 @@ export function isWon(a: number, b: number, target: number): boolean {
   return (a >= target || b >= target) && Math.abs(a - b) >= 2
 }
 
+/** A match is "live" once it has been started or has at least one point. */
+export function isLive(m: Match): boolean {
+  return !m.done && (m.score_a + m.score_b > 0 || !!m.started_at)
+}
+
 /** Would the given side win with one more point? */
 export function isMatchPoint(forA: boolean, a: number, b: number, target: number): boolean {
   if (forA) return isWon(a + 1, b, target) && a >= b
