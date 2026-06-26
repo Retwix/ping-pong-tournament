@@ -22,22 +22,13 @@ import { formatDuration } from '../lib/pingpong'
 import { teamColor, teamLabel } from '../lib/teams'
 import type { Match } from '../types'
 import { ActivityChart, WinRateBars, type BarDatum } from './Charts'
+import Avatar from './Avatar'
 import ThemeToggle from './ThemeToggle'
 import TopBack from './TopBack'
 
 type SortKey = 'wins' | 'winRate' | 'diff' | 'played' | 'mbSaved' | 'mbWasted'
 
 const pct = (r: number) => `${Math.round(r * 100)}%`
-
-function Avatar({ name, team, lg }: { name: string; team: string | null; lg?: boolean }) {
-  const color = teamColor(team ?? '')
-  const initial = (name.trim()[0] ?? '?').toUpperCase()
-  return (
-    <span className={`avatar${lg ? '' : ' sm'}`} style={{ background: `${color}24`, color }}>
-      {initial}
-    </span>
-  )
-}
 
 function matchLabel(m: MatchHighlight['match']) {
   const { winner, loser, ws, ls } = winnerLoser(m)
@@ -246,7 +237,7 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                       <td className="left">
                         <span className="rank">{i + 1}</span>
                         <span className="lb-player">
-                          <Avatar name={s.name} team={s.team} />
+                          <Avatar name={s.name} team={s.team} size="sm" />
                           {s.name}
                         </span>
                       </td>
@@ -513,7 +504,7 @@ function PlayerDetail({
     >
       <div className="modal pd">
         <div className="pd-head">
-          <Avatar name={s.name} team={s.team} lg />
+          <Avatar name={s.name} team={s.team} />
           <div>
             <h2 style={{ marginBottom: 2 }}>{s.name}</h2>
             <div className="modal-hint" style={{ marginBottom: 0 }}>

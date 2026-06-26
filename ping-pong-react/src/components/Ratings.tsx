@@ -2,30 +2,10 @@ import { useMemo, useState } from 'react'
 import { IconArrowLeft, IconRefresh } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING } from '../lib/rating'
-import { teamColor } from '../lib/teams'
+import Avatar from './Avatar'
+import Trend from './Trend'
 import TopBack from './TopBack'
 import ThemeToggle from './ThemeToggle'
-
-function Avatar({ name, team }: { name: string; team: string | null }) {
-  const color = teamColor(team ?? '')
-  const initial = (name.trim()[0] ?? '?').toUpperCase()
-  return (
-    <span className="avatar sm" style={{ background: `${color}24`, color }}>
-      {initial}
-    </span>
-  )
-}
-
-function Trend({ delta }: { delta: number }) {
-  const v = Math.round(delta)
-  if (v === 0) return <span className="rt-trend flat">–</span>
-  const up = v > 0
-  return (
-    <span className={`rt-trend ${up ? 'up' : 'down'}`}>
-      {up ? '▲' : '▼'} {Math.abs(v)}
-    </span>
-  )
-}
 
 const STAKES_LABEL: Record<RatingEvent['stakes'], string | null> = {
   normal: null,
@@ -238,7 +218,7 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
                       <td className="left">
                         <span className="rank">{r.rank}</span>
                         <span className="lb-player">
-                          <Avatar name={r.name} team={r.team} />
+                          <Avatar name={r.name} team={r.team} size="sm" />
                           {r.name}
                           {r.provisional && <span className="rt-prov">provisoire</span>}
                         </span>
