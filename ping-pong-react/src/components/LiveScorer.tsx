@@ -20,6 +20,8 @@ interface Props {
 	readOnly?: boolean;
 	/** Spectator-only: jump straight into referee mode for the same live match. */
 	onRef?: () => void;
+	/** Error from the last persistence attempt, surfaced so the referee sees it. */
+	error?: string | null;
 }
 
 const FLIP_KEY = "rv-score-flip";
@@ -32,6 +34,7 @@ export default function LiveScorer({
 	onFinish,
 	readOnly = false,
 	onRef,
+	error,
 }: Props) {
 	// Per-session undo stack of [score_a, score_b, mb_saved_a, mb_saved_b] snapshots.
 	const historyRef = useRef<[number, number, number, number][]>([]);
@@ -100,6 +103,7 @@ export default function LiveScorer({
 	};
 	const finish = () => {
 		if (readOnly || !onPatch) return;
+		if (match.done) return;
 		if (!isWon(match.score_a, match.score_b, target)) return;
 		onPatch({ done: true, ended_at: new Date().toISOString() });
 		onFinish?.();
@@ -256,6 +260,8 @@ export default function LiveScorer({
 				</span>
 			</div>
 
+			{error && <div className="error-banner ov-error">⚠️ {error}</div>}
+
 			<div className="scoreboard">{order.map(renderSide)}</div>
 
 			{!readOnly && (
@@ -263,8 +269,12 @@ export default function LiveScorer({
 					<div className="ov-controls">
 						<button onClick={undo}>↶ Annuler</button>
 						<button onClick={swapServe}>🏓 Service</button>
-						<button className="primary" disabled={!won} onClick={finish}>
-							Valider le match
+						<button
+							className="primary"
+							disabled={!won || match.done}
+							onClick={finish}
+						>
+							{match.done ? "Validé ✓" : "Valider le match"}
 						</button>
 					</div>
 					<div className="kbd-hint">

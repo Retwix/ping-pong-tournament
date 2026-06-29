@@ -39,8 +39,14 @@ function isLive(m: Match): boolean {
 export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) {
 	// Only offer the "jump to ref" shortcut from the spectator view.
 	const showRef = readOnly && !!onRef;
+	// Referee mode is interactive; spectator mode auto-advances on a timer.
+	const isRef = !readOnly;
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	const [shownId, setShownId] = useState<string | null>(null);
+	// Referee-only: after a match is validated we stop on an explicit "up next"
+	// screen instead of auto-advancing, so the ref starts the next game when the
+	// players are actually ready.
+	const [awaitingNext, setAwaitingNext] = useState(false);
 
 	// Always-current matches for use inside the deferred hold timer.
 	const matchesRef = useRef<Match[]>([]);
@@ -58,14 +64,20 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 				clearTimeout(holdRef.current);
 				holdRef.current = null;
 			}
+			if (awaitingNext) setAwaitingNext(false);
 			setShownId(live.id);
 			return;
 		}
-		// Nothing live. If a hold is already running, let its timer advance us.
-		if (holdRef.current) return;
 		const shown = matches.find((m) => m.id === shownId);
 		if (shown && shown.done) {
-			// We were showing a match that just finished — linger on the result.
+			if (isRef) {
+				// Referee mode: hold on the "up next" screen until the ref starts
+				// the next game. No timer — the referee is in control.
+				if (!awaitingNext) setAwaitingNext(true);
+				return;
+			}
+			// Spectator mode: linger on the result, then auto-advance.
+			if (holdRef.current) return;
 			holdRef.current = setTimeout(() => {
 				holdRef.current = null;
 				const next = matchesRef.current.find(isPlayable);
@@ -73,11 +85,24 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			}, HOLD_MS);
 			return;
 		}
-		// Otherwise show the next playable match (skips bracket matches still
-		// waiting on their players), or the last one if nothing is playable.
+		// Nothing live and nothing freshly finished: show the next playable match
+		// (skips bracket matches still waiting on their players), or the last one.
+		if (holdRef.current) return;
 		const next = matches.find(isPlayable);
 		setShownId(next ? next.id : matches[matches.length - 1].id);
-	}, [matches, shownId]);
+	}, [matches, shownId, isRef, awaitingNext]);
+
+	// Referee taps "Commencer": jump straight into the next playable match.
+	const startNext = () => {
+		const next = matchesRef.current.find(isPlayable);
+		if (!next) return;
+		if (holdRef.current) {
+			clearTimeout(holdRef.current);
+			holdRef.current = null;
+		}
+		setAwaitingNext(false);
+		setShownId(next.id);
+	};
 
 	// Clean up the hold timer on unmount.
 	useEffect(
@@ -139,6 +164,58 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 		);
 	}
 
+	// Referee "up next" interstitial: shown right after a match is validated, as
+	// unmistakable confirmation, and to let the ref start the next game on cue.
+	if (awaitingNext) {
+		const finished = matches.find((m) => m.id === shownId) ?? null;
+		const next = matches.find(isPlayable) ?? null;
+		const winner = finished
+			? finished.score_a > finished.score_b
+				? finished.player_a
+				: finished.player_b
+			: null;
+		return (
+			<div className="wrap up-next">
+				<header>
+					<ThemeToggle className="header-toggle" />
+					<div className="kicker">Mode arbitre</div>
+					{winner && finished && (
+						<p className="up-next-result">
+							✅ <span className="em">{winner}</span> l'emporte{" "}
+							{Math.max(finished.score_a, finished.score_b)}–
+							{Math.min(finished.score_a, finished.score_b)}
+						</p>
+					)}
+					<div className="up-next-label">À suivre</div>
+					{next ? (
+						<h1 className="up-next-match">
+							<span className="em">{next.player_a}</span>
+							<span className="vs"> vs </span>
+							<span className="em">{next.player_b}</span>
+						</h1>
+					) : (
+						<h1 className="up-next-match">En attente du prochain match…</h1>
+					)}
+				</header>
+				{error && <div className="error-banner">⚠️ {error}</div>}
+				<section>
+					<button
+						className="btn-primary up-next-start"
+						disabled={!next}
+						onClick={startNext}
+					>
+						▶ Commencer le match
+					</button>
+					<div className="footer-row">
+						<button className="link-btn" onClick={onBack}>
+							← Quitter le mode arbitre
+						</button>
+					</div>
+				</section>
+			</div>
+		);
+	}
+
 	const shownMatch = matches.find((m) => m.id === shownId) ?? null;
 
 	if (!shownMatch) {
@@ -170,6 +247,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			}
 			onClose={onBack}
 			onRef={onRef}
+			error={isRef ? error : null}
 		/>
 	);
 }
