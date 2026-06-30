@@ -33,12 +33,14 @@ export default function LiveBanner({ onWatch, onRef }: Props) {
     <div className="live-banner">
       <div className="live-active">
         <div className="lb-left">
-          <span className="pulse-dot white" />
-          <span className="live-flag">EN DIRECT</span>
+          <span className="lb-flag">
+            <span className="pulse-dot white" />
+            <span className="live-flag">EN DIRECT</span>
+          </span>
           <span className="live-sep" />
           <div style={{ minWidth: 0 }}>
             <div className="live-match">
-              {m.player_a} <span className="sc">{m.score_a} — {m.score_b}</span> {m.player_b}
+              {m.player_a} <span className="sc">{m.score_a}</span> — <span className="sc">{m.score_b}</span> {m.player_b}
             </div>
             <div className="live-sub">
               Manche {m.round} · jeu en {t.target}

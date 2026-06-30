@@ -62,13 +62,20 @@ export default function RankingHero({ onFull }: Props) {
             {podium.map((r, i) =>
               r ? (
                 <div className={`podium-col${r.rank === 1 ? ' first' : ''}`} key={r.key}>
+                  {r.rank === 1 && (
+                    <div className="podium-crown">
+                      <IconCrown size={20} stroke={1.6} />
+                    </div>
+                  )}
                   <div className="podium-av">
-                    {r.rank === 1 && <IconCrown className="podium-crown" size={20} stroke={1.6} />}
                     <Avatar
                       name={r.name}
                       team={r.team}
                       px={r.rank === 1 ? 58 : 46}
-                      style={{ border: `3px solid ${RING[r.rank as 1 | 2 | 3] ?? RING[3]}` }}
+                      style={{
+                        border: `${r.rank === 1 ? 3 : 2.5}px solid ${RING[r.rank as 1 | 2 | 3] ?? RING[3]}`,
+                        boxShadow: r.rank === 1 ? '0 10px 22px rgba(74,42,164,.3)' : undefined,
+                      }}
                     />
                   </div>
                   <div className="podium-name">{r.name}</div>

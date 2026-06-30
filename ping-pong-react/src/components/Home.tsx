@@ -168,7 +168,7 @@ export default function Home({
 					<div className="teaser-row">
 						<button className="teaser" onClick={onPronos}>
 							<div className="teaser-top">
-								<span className="t">🔮 Pronostics</span>
+								<span className="t">Pronos</span>
 								<span className="more">Voir →</span>
 							</div>
 							<div className="desc">
@@ -178,7 +178,7 @@ export default function Home({
 						</button>
 						<button className="teaser" onClick={onStats}>
 							<div className="teaser-top">
-								<span className="t">📊 Statistiques</span>
+								<span className="t">Stats</span>
 								<span className="more">Voir →</span>
 							</div>
 							<div className="desc">
