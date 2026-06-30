@@ -8,8 +8,10 @@ interface Props {
 }
 
 /**
- * Contextual live-match banner. Full-colour with matchup + score and two CTAs
- * while a match is on the table; collapses to a thin muted line otherwise.
+ * Contextual live-match banner with three states: full-colour with matchup + score
+ * and two CTAs while a match is on the table; a calmer "about to start" banner —
+ * still navigable, so a referee can open a match before the first point; and a thin
+ * muted line when nothing is on.
  */
 export default function LiveBanner({ onWatch, onRef }: Props) {
   const { live } = useLiveMatch()
@@ -28,7 +30,37 @@ export default function LiveBanner({ onWatch, onRef }: Props) {
     )
   }
 
-  const { match: m, tournament: t } = live
+  const { match: m, tournament: t, status } = live
+
+  if (status === 'upcoming') {
+    return (
+      <div className="live-banner">
+        <div className="live-upcoming">
+          <div className="lb-left">
+            <span className="up-flag">VA COMMENCER</span>
+            <span className="live-sep" />
+            <div style={{ minWidth: 0 }}>
+              <div className="up-match">
+                {m.player_a} <span className="vs">vs</span> {m.player_b}
+              </div>
+              <div className="up-sub">
+                Manche {m.round} · jeu en {t.target} · en attente du 1er point
+              </div>
+            </div>
+          </div>
+          <div className="live-cta">
+            <button className="ref-primary" onClick={onRef}>
+              Arbitrer
+            </button>
+            <button className="watch-ghost" onClick={onWatch}>
+              Regarder
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="live-banner">
       <div className="live-active">
