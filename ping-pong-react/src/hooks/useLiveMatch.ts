@@ -9,10 +9,12 @@ export interface LiveMatchInfo {
 }
 
 /**
- * Resolves the match currently being played on the table, if any: the active
- * tournament (is_active) plus the first match within it that is live. Returns
- * `live: null` when nothing is on. Composes the existing live-match pointer
- * hooks, so it stays fresh via their realtime subscriptions.
+ * Resolves the match currently being played on the table, if any, using the exact
+ * same resolution as the /live and /ref views: the active tournament (is_active)
+ * plus the first match within it that is live (`isLive` — started, or with a point
+ * on the board). The active pointer is kept honest by `setActiveTournament`, which
+ * claims it the moment a match goes live, so the banner and live mode never diverge.
+ * Returns `live: null` when nothing is on.
  */
 export function useLiveMatch(): { live: LiveMatchInfo | null; loading: boolean } {
   const { id, loading: idLoading } = useCurrentTournament()

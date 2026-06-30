@@ -229,6 +229,25 @@ export async function updateTournament(id: string, patch: Partial<Tournament>): 
   if (error) throw error
 }
 
+/**
+ * Hand the "on the table" pointer to `id`: clear `is_active` everywhere else, then
+ * set it here. Called when a match goes live so the stable /live and /ref views and
+ * the dashboard banner follow whatever is actually being played — including a
+ * resumed older tournament, which otherwise never reclaims the active pointer.
+ * Order matters: the partial unique index allows at most one active row, so we
+ * clear the others (skipping `id`) before setting this one.
+ */
+export async function setActiveTournament(id: string): Promise<void> {
+  const { error: clearErr } = await supabase
+    .from('tournaments')
+    .update({ is_active: false })
+    .eq('is_active', true)
+    .neq('id', id)
+  if (clearErr) throw clearErr
+  const { error } = await supabase.from('tournaments').update({ is_active: true }).eq('id', id)
+  if (error) throw error
+}
+
 export async function deleteTournament(id: string): Promise<void> {
   const { error } = await supabase.from('tournaments').delete().eq('id', id)
   if (error) throw error
