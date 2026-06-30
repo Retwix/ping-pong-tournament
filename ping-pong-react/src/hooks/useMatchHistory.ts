@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { listAllDoneMatches, listTournaments } from '../lib/db'
+import { listAllDoneMatches, listLiveMatches, listTournaments } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import type { Match, Tournament } from '../types'
 
@@ -16,14 +16,20 @@ function recency(m: Match): number {
  */
 export function useMatchHistory() {
   const [matches, setMatches] = useState<Match[]>([])
+  const [liveMatches, setLiveMatches] = useState<Match[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const [ms, ts] = await Promise.all([listAllDoneMatches(), listTournaments()])
+      const [ms, live, ts] = await Promise.all([
+        listAllDoneMatches(),
+        listLiveMatches(),
+        listTournaments(),
+      ])
       setMatches(ms)
+      setLiveMatches(live)
       setTournaments(ts)
       setError(null)
     } catch (e) {
@@ -49,6 +55,10 @@ export function useMatchHistory() {
     () => [...matches].sort((a, b) => recency(b) - recency(a)),
     [matches]
   )
+  const liveSorted = useMemo(
+    () => [...liveMatches].sort((a, b) => recency(b) - recency(a)),
+    [liveMatches]
+  )
   const nameById = useMemo(
     () => new Map(tournaments.map((t) => [t.id, t.name])),
     [tournaments]
@@ -56,6 +66,7 @@ export function useMatchHistory() {
 
   return {
     matches: sorted,
+    liveMatches: liveSorted,
     tournaments,
     tournamentName: (id: string) => nameById.get(id) ?? '',
     loading,

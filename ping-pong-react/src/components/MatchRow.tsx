@@ -6,6 +6,8 @@ interface Props {
   context?: string
   /** Open the match's tournament board. */
   onOpen?: () => void
+  /** Render as an in-progress match: live score, "en cours" marker, no winner. */
+  live?: boolean
 }
 
 function fmtDate(at: string | null): string {
@@ -18,20 +20,38 @@ function fmtDate(at: string | null): string {
   )
 }
 
-/** One finished match: the two players, the score (winner bolded), and meta. */
-export default function MatchRow({ match: m, context, onOpen }: Props) {
-  const aWin = m.score_a > m.score_b
+/**
+ * One match row: the two players and the score. For a finished match the winner is
+ * bolded and the meta shows when it was played; for a live match (`live`) neither
+ * side is bolded and the meta carries an "en cours" marker instead of a date.
+ */
+export default function MatchRow({ match: m, context, onOpen, live }: Props) {
+  const aWin = !live && m.score_a > m.score_b
+  const bWin = !live && m.score_b > m.score_a
   const date = fmtDate(m.ended_at ?? m.started_at)
   return (
-    <button className="match-row" onClick={onOpen} disabled={!onOpen}>
+    <button className={`match-row${live ? ' is-live' : ''}`} onClick={onOpen} disabled={!onOpen}>
       <div className="mr-main">
         <span className={`mr-name${aWin ? ' win' : ''}`}>{m.player_a}</span>
         <span className="mr-sc">
           {m.score_a}–{m.score_b}
         </span>
-        <span className={`mr-name end${!aWin ? ' win' : ''}`}>{m.player_b}</span>
+        <span className={`mr-name end${bWin ? ' win' : ''}`}>{m.player_b}</span>
       </div>
-      <div className="mr-sub">{context ? `${context} · ${date}` : date}</div>
+      <div className="mr-sub">
+        {live ? (
+          <>
+            <span className="mr-live">
+              <span className="pulse-dot coral" /> En cours
+            </span>
+            {context ? ` · ${context}` : ''}
+          </>
+        ) : context ? (
+          `${context} · ${date}`
+        ) : (
+          date
+        )}
+      </div>
     </button>
   )
 }

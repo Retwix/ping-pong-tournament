@@ -789,6 +789,9 @@ table.h2h td.neg { background: rgba(215, 66, 81, 0.14); color: var(--coral); }
 .mr-sc { flex: none; font-weight: 800; color: var(--fg-1); font-variant-numeric: tabular-nums; }
 .mr-sub { font-family: var(--font-body); font-size: 11px; color: var(--fg-4); font-weight: 500; }
 .rail-history-link { display: block; width: 100%; text-align: center; margin-top: 12px; padding: 6px; background: none; border: none; cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--primary); }
+.match-row.is-live { border-color: var(--serve-ring); }
+.mr-live { display: inline-flex; align-items: center; gap: 6px; color: var(--coral); font-weight: 700; }
+.mr-live .pulse-dot { width: 7px; height: 7px; }
 
 /* ----- history page tabs ----- */
 .hist-tabs { display: inline-flex; gap: 4px; background: var(--toggle-track); border-radius: 12px; padding: 4px; margin: 8px 0 18px; }

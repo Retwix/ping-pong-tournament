@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { generateSchedule, shuffle } from './roundRobin'
 import { buildDoubleElim } from './doubleElim'
 import { RATING, replayRatings } from './rating'
+import { isLive } from './pingpong'
 import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -207,6 +208,17 @@ export async function listAllDoneMatches(): Promise<Match[]> {
   // Exclude double-elimination walkovers (auto-completed BYE matches): they are
   // not real games and would skew per-player stats.
   return ((data ?? []) as Match[]).filter((m) => !m.bye)
+}
+
+/**
+ * Matches being played right now across all tournaments — not yet done but already
+ * live (started, or with a point on the board). Backs the "en cours" entries the
+ * history page shows above finished results. BYE walkovers are excluded.
+ */
+export async function listLiveMatches(): Promise<Match[]> {
+  const { data, error } = await supabase.from('matches').select('*').eq('done', false)
+  if (error) throw error
+  return ((data ?? []) as Match[]).filter((m) => !m.bye && isLive(m))
 }
 
 export async function getMatches(tournamentId: string): Promise<Match[]> {

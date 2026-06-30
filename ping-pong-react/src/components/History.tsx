@@ -14,7 +14,7 @@ interface Props {
 type Tab = 'matches' | 'tournaments'
 
 export default function History({ onBack, onOpen }: Props) {
-  const { matches, tournaments, tournamentName, loading, error } = useMatchHistory()
+  const { matches, liveMatches, tournaments, tournamentName, loading, error } = useMatchHistory()
   const [tab, setTab] = useState<Tab>('matches')
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
@@ -23,6 +23,25 @@ export default function History({ onBack, onOpen }: Props) {
       await deleteTournament(id)
     }
   }
+
+  const matchRow = (m: (typeof matches)[number], live = false) => {
+    const name = tournamentName(m.tournament_id)
+    return (
+      <div className="hist-row" key={m.id}>
+        <MatchRow match={m} context={name} onOpen={() => onOpen(m.tournament_id)} live={live} />
+        <button
+          className="hist-del"
+          title="Supprimer la partie"
+          aria-label="Supprimer la partie"
+          onClick={(e) => onDelete(e, m.tournament_id, name || 'cette partie')}
+        >
+          <IconTrash size={18} stroke={1.75} />
+        </button>
+      </div>
+    )
+  }
+
+  const matchCount = matches.length + liveMatches.length
 
   return (
     <div className="wrap">
@@ -45,7 +64,7 @@ export default function History({ onBack, onOpen }: Props) {
           className={tab === 'matches' ? 'active' : ''}
           onClick={() => setTab('matches')}
         >
-          Matchs{matches.length ? ` (${matches.length})` : ''}
+          Matchs{matchCount ? ` (${matchCount})` : ''}
         </button>
         <button
           className={tab === 'tournaments' ? 'active' : ''}
@@ -58,30 +77,12 @@ export default function History({ onBack, onOpen }: Props) {
       {loading ? (
         <div className="empty">Chargement…</div>
       ) : tab === 'matches' ? (
-        matches.length === 0 ? (
+        matchCount === 0 ? (
           <div className="empty">Aucun match joué pour l'instant.</div>
         ) : (
           <section style={{ marginTop: 0 }}>
-            {matches.map((m) => {
-              const name = tournamentName(m.tournament_id)
-              return (
-                <div className="hist-row" key={m.id}>
-                  <MatchRow
-                    match={m}
-                    context={name}
-                    onOpen={() => onOpen(m.tournament_id)}
-                  />
-                  <button
-                    className="hist-del"
-                    title="Supprimer la partie"
-                    aria-label="Supprimer la partie"
-                    onClick={(e) => onDelete(e, m.tournament_id, name || 'cette partie')}
-                  >
-                    <IconTrash size={18} stroke={1.75} />
-                  </button>
-                </div>
-              )
-            })}
+            {liveMatches.map((m) => matchRow(m, true))}
+            {matches.map((m) => matchRow(m))}
           </section>
         )
       ) : tournaments.length === 0 ? (
