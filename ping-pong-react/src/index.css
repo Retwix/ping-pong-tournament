@@ -799,6 +799,19 @@ table.h2h td.neg { background: rgba(215, 66, 81, 0.14); color: var(--coral); }
 }
 .hist-tabs button.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow-card); }
 
+/* ----- history: deletable match rows ----- */
+.hist-row { display: flex; align-items: center; gap: 8px; }
+.hist-row + .hist-row { margin-top: 10px; }
+.hist-row .match-row { flex: 1; min-width: 0; }
+.hist-del {
+  flex: none; background: transparent; border: none; color: var(--fg-3);
+  cursor: pointer; padding: 7px; border-radius: 10px; opacity: 0.55;
+  display: inline-flex; align-items: center; justify-content: center; transition: all var(--dur) var(--ease);
+}
+.hist-row:hover .hist-del { opacity: 1; }
+.hist-del:hover { background: rgba(215, 66, 81, 0.12); color: var(--coral); }
+[data-theme='dark'] .hist-del:hover { color: var(--coral-bright); }
+
 @media (max-width: 900px) {
   .dash-grid { flex-direction: column; }
   .dash-rail { width: 100%; }

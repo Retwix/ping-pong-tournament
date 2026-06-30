@@ -62,14 +62,26 @@ export default function History({ onBack, onOpen }: Props) {
           <div className="empty">Aucun match joué pour l'instant.</div>
         ) : (
           <section style={{ marginTop: 0 }}>
-            {matches.map((m) => (
-              <MatchRow
-                key={m.id}
-                match={m}
-                context={tournamentName(m.tournament_id)}
-                onOpen={() => onOpen(m.tournament_id)}
-              />
-            ))}
+            {matches.map((m) => {
+              const name = tournamentName(m.tournament_id)
+              return (
+                <div className="hist-row" key={m.id}>
+                  <MatchRow
+                    match={m}
+                    context={name}
+                    onOpen={() => onOpen(m.tournament_id)}
+                  />
+                  <button
+                    className="hist-del"
+                    title="Supprimer la partie"
+                    aria-label="Supprimer la partie"
+                    onClick={(e) => onDelete(e, m.tournament_id, name || 'cette partie')}
+                  >
+                    <IconTrash size={18} stroke={1.75} />
+                  </button>
+                </div>
+              )
+            })}
           </section>
         )
       ) : tournaments.length === 0 ? (
