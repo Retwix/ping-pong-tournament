@@ -179,3 +179,58 @@ describe('rollScope', () => {
 		expect(counts.targeted / N).toBeCloseTo(SCOPE_WEIGHTS.targeted, 1)
 	})
 })
+
+import {
+	rollChaos,
+	shouldRoll,
+	DEFAULT_CHAOS_INTERVAL,
+	type ActiveModifier,
+} from './chaos'
+
+describe('shouldRoll (cadence)', () => {
+	it('does not roll at the start of the game', () => {
+		expect(shouldRoll(0, 2)).toBe(false)
+	})
+
+	it('rolls on every multiple of the interval', () => {
+		expect(shouldRoll(2, 2)).toBe(true)
+		expect(shouldRoll(3, 2)).toBe(false)
+		expect(shouldRoll(4, 2)).toBe(true)
+		expect(shouldRoll(6, 3)).toBe(true)
+		expect(shouldRoll(7, 3)).toBe(false)
+	})
+
+	it('interval of 1 (Mayhem) rolls every point', () => {
+		expect(shouldRoll(0, 1)).toBe(false)
+		expect(shouldRoll(1, 1)).toBe(true)
+		expect(shouldRoll(5, 1)).toBe(true)
+	})
+
+	it('a non-positive interval never rolls', () => {
+		expect(shouldRoll(4, 0)).toBe(false)
+		expect(shouldRoll(4, -2)).toBe(false)
+	})
+
+	it('exposes a sane default interval', () => {
+		expect(DEFAULT_CHAOS_INTERVAL).toBe(2)
+	})
+})
+
+describe('rollChaos', () => {
+	const full: ChaosConfig = { intensity: 'full', legendary: true }
+
+	it('returns exactly one modifier with a legal scope (no stacking)', () => {
+		const rng = lcg(99)
+		for (let i = 0; i < 200; i++) {
+			const active: ActiveModifier = rollChaos(full, rng)
+			expect(CHAOS_POOL).toContainEqual(active.modifier)
+			expect(active.modifier.scope).toContain(active.scope)
+		}
+	})
+
+	it('is deterministic for a given rng sequence', () => {
+		const a = rollChaos(full, seq(0.5, 0.5, 0.5))
+		const b = rollChaos(full, seq(0.5, 0.5, 0.5))
+		expect(a).toEqual(b)
+	})
+})

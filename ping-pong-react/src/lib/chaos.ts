@@ -179,3 +179,34 @@ export function rollScope(modifier: ChaosModifier, rng: Rng): ChaosScope {
   }
   return allowed[allowed.length - 1]
 }
+
+// ---------- cadence & full roll ----------
+
+/** Default roll cadence: a twist every 2 combined points. */
+export const DEFAULT_CHAOS_INTERVAL = 2
+
+/**
+ * Whether a roll fires now. Rolls land on every positive multiple of the
+ * interval of the *combined* score, and never at 0-0. An interval < 1 disables
+ * rolling entirely.
+ */
+export function shouldRoll(combinedScore: number, interval: number): boolean {
+  return interval >= 1 && combinedScore > 0 && combinedScore % interval === 0
+}
+
+/** The single modifier in effect until the next roll. No stacking by design. */
+export interface ActiveModifier {
+  modifier: ChaosModifier
+  scope: ChaosScope
+}
+
+/**
+ * Perform a full roll: pick the "what" then the "who". Each call is independent
+ * and yields at most one active modifier, so applying its result replaces any
+ * previous one (the no-stacking rule).
+ */
+export function rollChaos(config: ChaosConfig, rng: Rng): ActiveModifier {
+  const modifier = rollModifier(config, rng)
+  const scope = rollScope(modifier, rng)
+  return { modifier, scope }
+}
