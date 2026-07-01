@@ -73,3 +73,63 @@ describe('eligiblePool', () => {
 		}
 	})
 })
+
+import { rollModifier, LEGENDARY_CHANCE } from './chaos'
+
+/** rng that yields the given numbers in order, then repeats. */
+function seq(...xs: number[]): () => number {
+	let i = 0
+	return () => xs[i++ % xs.length]
+}
+
+/** Deterministic LCG in [0,1) for statistical checks. */
+function lcg(seed: number): () => number {
+	let s = seed >>> 0
+	return () => {
+		s = (1664525 * s + 1013904223) >>> 0
+		return s / 0x100000000
+	}
+}
+
+describe('rollModifier', () => {
+	const mild: ChaosConfig = { intensity: 'mild', legendary: false }
+	const full: ChaosConfig = { intensity: 'full', legendary: true }
+
+	it('always returns a member of the eligible pool', () => {
+		const rng = lcg(42)
+		const ids = new Set(eligiblePool(full).map((m) => m.id))
+		for (let i = 0; i < 200; i++) expect(ids.has(rollModifier(full, rng).id)).toBe(true)
+	})
+
+	it('is deterministic for a given rng sequence', () => {
+		const a = rollModifier(full, seq(0.5, 0.5))
+		const b = rollModifier(full, seq(0.5, 0.5))
+		expect(a.id).toBe(b.id)
+	})
+
+	it('never yields a legendary when legendaries are off', () => {
+		for (let i = 0; i < 50; i++) {
+			expect(rollModifier(mild, seq(i / 50)).tier).not.toBe('legendary')
+		}
+	})
+
+	it('a low first draw selects the legendary bucket', () => {
+		const m = rollModifier(full, seq(LEGENDARY_CHANCE / 2, 0))
+		expect(m.tier).toBe('legendary')
+	})
+
+	it('a high first draw selects a regular modifier', () => {
+		const m = rollModifier(full, seq(0.99, 0))
+		expect(m.tier).not.toBe('legendary')
+	})
+
+	it('legendaries land roughly LEGENDARY_CHANCE of the time', () => {
+		const rng = lcg(7)
+		let legendary = 0
+		const N = 20000
+		for (let i = 0; i < N; i++) if (rollModifier(full, rng).tier === 'legendary') legendary++
+		const rate = legendary / N
+		expect(rate).toBeGreaterThan(LEGENDARY_CHANCE - 0.02)
+		expect(rate).toBeLessThan(LEGENDARY_CHANCE + 0.02)
+	})
+})

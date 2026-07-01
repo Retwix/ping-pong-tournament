@@ -106,6 +106,8 @@ export interface ChaosConfig {
   intensity: ChaosIntensity
   /** Whether legendary modifiers can appear. */
   legendary: boolean
+  /** Override the per-roll legendary probability (defaults to LEGENDARY_CHANCE). */
+  legendaryChance?: number
 }
 
 /**
@@ -119,4 +121,36 @@ export function eligiblePool(config: ChaosConfig, pool: ChaosModifier[] = CHAOS_
     if (m.tier === 'malus') return config.intensity === 'full'
     return true
   })
+}
+
+// ---------- rolling: what ----------
+
+/** Random source returning a float in [0, 1). Inject for deterministic tests. */
+export type Rng = () => number
+
+/** Per-roll probability that a legendary drops (when legendaries are enabled). */
+export const LEGENDARY_CHANCE = 0.05
+
+/** Uniformly pick one element using a single rng draw. */
+function pick<T>(arr: T[], rng: Rng): T {
+  return arr[Math.min(Math.floor(rng() * arr.length), arr.length - 1)]
+}
+
+/**
+ * Roll the "what": a modifier drawn from the eligible pool. Legendaries are
+ * kept rare — rather than sitting in the uniform draw, they win their own
+ * `LEGENDARY_CHANCE` coin flip first, otherwise a regular modifier is picked.
+ *
+ * rng draws: when legendaries are eligible, one draw decides legendary-vs-regular
+ * and a second picks within the chosen bucket; otherwise a single draw picks a
+ * regular.
+ */
+export function rollModifier(config: ChaosConfig, rng: Rng): ChaosModifier {
+  const eligible = eligiblePool(config)
+  const legendaries = eligible.filter((m) => m.tier === 'legendary')
+  const regulars = eligible.filter((m) => m.tier !== 'legendary')
+  const chance = config.legendaryChance ?? LEGENDARY_CHANCE
+  const useLegendary = legendaries.length > 0 && rng() < chance
+  const bucket = useLegendary || regulars.length === 0 ? legendaries : regulars
+  return pick(bucket, rng)
 }
