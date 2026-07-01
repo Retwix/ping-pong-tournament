@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
 import { reconcileBracket } from '../lib/doubleElim'
+import { mergeWithPending, reconcileEcho, upsertSorted, withRetry, type PendingValue } from '../lib/realtimeSync'
 import type { Match, Tournament } from '../types'
 
 interface MatchChangePayload {
@@ -12,18 +13,8 @@ interface MatchChangePayload {
   old: Partial<Match>
 }
 
-interface PendingValue {
-  score_a: number
-  score_b: number
-  done: boolean
-}
-
-function upsertSorted(list: Match[], row: Match): Match[] {
-  const next = list.some((m) => m.id === row.id)
-    ? list.map((m) => (m.id === row.id ? row : m))
-    : [...list, row]
-  return next.sort((a, b) => a.idx - b.idx)
-}
+// How often to refetch as a safety net against a silently dropped realtime event.
+const POLL_MS = 15000
 
 /**
  * Loads one tournament + its matches and keeps them live via Supabase realtime.
@@ -32,6 +23,10 @@ function upsertSorted(list: Match[], row: Match): Match[] {
  * when scoring fast, we remember the latest value we wrote per match and ignore
  * realtime echoes that don't match it yet — those are stale intermediate echoes of
  * our own writes. Genuine remote changes flow through once our write has settled.
+ *
+ * Writes are retried and rolled back on failure, and the live data self-heals from
+ * a refetch on reconnect / tab focus / a slow poll — so a dropped realtime event
+ * or a flaky second device can't leave the scoreboard permanently stale.
  */
 export function useTournament(id: string | null) {
   const [tournament, setTournament] = useState<Tournament | null>(null)
@@ -69,6 +64,21 @@ export function useTournament(id: string | null) {
     },
     [clearPending]
   )
+
+  // Refetch tournament + matches from the DB and merge, preserving any pending
+  // optimistic writes. Used on (re)subscribe, tab focus, and the slow poll to
+  // recover from any realtime event we missed while the socket was down.
+  const reload = useCallback(async () => {
+    if (!id) return
+    try {
+      const [t, ms] = await Promise.all([getTournament(id), getMatches(id)])
+      setTournament(t)
+      setMatches(mergeWithPending(ms, pendingRef.current))
+      setError(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }, [id])
 
   useEffect(() => {
     if (!id) {
@@ -109,20 +119,11 @@ export function useTournament(id: string | null) {
           }
 
           const row = p.new as Match
-          const pending = pendingRef.current.get(row.id)
-          if (pending) {
-            const matchesPending =
-              pending.score_a === row.score_a &&
-              pending.score_b === row.score_b &&
-              pending.done === row.done
-            if (matchesPending) {
-              // Our latest write echoed back — settle and apply.
-              clearPending(row.id)
-            } else {
-              // Stale intermediate echo of our own write — ignore to avoid flicker.
-              return
-            }
-          }
+          const decision = reconcileEcho(pendingRef.current.get(row.id), row)
+          // Stale intermediate echo of our own write — ignore to avoid flicker.
+          if (decision === 'ignore') return
+          // Our latest write echoed back — settle so genuine remote updates flow.
+          if (decision === 'settle') clearPending(row.id)
           setMatches((prev) => upsertSorted(prev, row))
         }
       )
@@ -134,42 +135,70 @@ export function useTournament(id: string | null) {
           setTournament(payload.new as Tournament)
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        // On (re)subscribe, refetch to catch anything that changed while the
+        // socket was down (mobile backgrounding, wifi roam, projector sleep).
+        if (status === 'SUBSCRIBED') void reload()
+      })
+
+    // Safety net: realtime can silently drop an event under load, and mobile tabs
+    // stop receiving while backgrounded. Refetch when the tab regains focus and on
+    // a slow poll so a stale live view always self-heals.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void reload()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    const poll = setInterval(() => {
+      if (document.visibilityState === 'visible') void reload()
+    }, POLL_MS)
 
     return () => {
       cancelled = true
       supabase.removeChannel(channel)
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(poll)
       pendingTimers.current.forEach((t) => clearTimeout(t))
       pendingTimers.current.clear()
       pendingRef.current.clear()
     }
-  }, [id, clearPending])
+  }, [id, clearPending, reload])
 
-  /** Optimistic match update with echo reconciliation. */
+  /** Optimistic match update with retry, echo reconciliation, and rollback. */
   const patchMatch = useCallback(
     async (matchId: string, patch: Partial<Match>) => {
       const cur = matchesRef.current.find((m) => m.id === matchId)
-      if (cur) {
-        const merged = { ...cur, ...patch }
-        markPending(matchId, {
-          score_a: merged.score_a,
-          score_b: merged.score_b,
-          done: merged.done,
-        })
+      if (!cur) return
+      // Snapshot only the keys we're about to change, so a rollback restores
+      // exactly those without clobbering an unrelated concurrent update.
+      const rollback: Partial<Match> = {}
+      for (const k of Object.keys(patch) as (keyof Match)[]) {
+        rollback[k] = cur[k] as never
       }
+      const merged = { ...cur, ...patch }
+      markPending(matchId, {
+        score_a: merged.score_a,
+        score_b: merged.score_b,
+        done: merged.done,
+      })
       setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, ...patch } : m)))
       try {
-        await updateMatch(matchId, patch)
+        await withRetry(() => updateMatch(matchId, patch))
+        setError(null)
         // A finished match changes ratings: refresh the stored Glicko-2 state.
         // Fire-and-forget — the Classement view recomputes in-memory regardless.
         if (patch.done) {
           recomputeRatings().catch((e) => console.error('recomputeRatings failed', e))
         }
       } catch (e) {
+        // The write failed for good. Roll the optimistic change back so this
+        // device matches the DB (and the live view), and stop suppressing echoes
+        // for this match so genuine remote updates flow again.
+        clearPending(matchId)
+        setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, ...rollback } : m)))
         setError(e instanceof Error ? e.message : String(e))
       }
     },
-    [markPending]
+    [markPending, clearPending]
   )
 
   // Double-elimination advancement. Whenever matches change, reconcile the
@@ -194,7 +223,7 @@ export function useTournament(id: string | null) {
       )
       ;(async () => {
         try {
-          await Promise.all(writes.map((w) => updateMatch(w.id, w.patch)))
+          await Promise.all(writes.map((w) => withRetry(() => updateMatch(w.id, w.patch))))
         } catch (e) {
           setError(e instanceof Error ? e.message : String(e))
         } finally {
