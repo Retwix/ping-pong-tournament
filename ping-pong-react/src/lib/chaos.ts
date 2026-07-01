@@ -154,3 +154,28 @@ export function rollModifier(config: ChaosConfig, rng: Rng): ChaosModifier {
   const bucket = useLegendary || regulars.length === 0 ? legendaries : regulars
   return pick(bucket, rng)
 }
+
+// ---------- rolling: who ----------
+
+/**
+ * Target distribution for the "who" roll. Hitting both often keeps it feeling
+ * fair; targeting adds the drama. Renormalized per modifier to its allowed
+ * scopes, so a both-only modifier is always "both".
+ */
+export const SCOPE_WEIGHTS: Record<ChaosScope, number> = {
+  both: 0.4,
+  one: 0.3,
+  targeted: 0.3,
+}
+
+/** Roll the "who": a scope among the modifier's allowed set, weighted. */
+export function rollScope(modifier: ChaosModifier, rng: Rng): ChaosScope {
+  const allowed = modifier.scope
+  const total = allowed.reduce((sum, s) => sum + SCOPE_WEIGHTS[s], 0)
+  let r = rng() * total
+  for (const s of allowed) {
+    r -= SCOPE_WEIGHTS[s]
+    if (r < 0) return s
+  }
+  return allowed[allowed.length - 1]
+}

@@ -133,3 +133,49 @@ describe('rollModifier', () => {
 		expect(rate).toBeLessThan(LEGENDARY_CHANCE + 0.02)
 	})
 })
+
+import { rollScope, SCOPE_WEIGHTS } from './chaos'
+
+const get = (id: string): ChaosModifier => {
+	const m = CHAOS_POOL.find((x) => x.id === id)
+	if (!m) throw new Error(`no modifier ${id}`)
+	return m
+}
+
+describe('rollScope', () => {
+	it('a both-only modifier is always "both"', () => {
+		const m = get('double_points') // scope ['both']
+		for (let i = 0; i < 20; i++) expect(rollScope(m, seq(i / 20))).toBe('both')
+	})
+
+	it('always returns one of the modifier\'s allowed scopes', () => {
+		const rng = lcg(11)
+		for (const m of CHAOS_POOL) {
+			for (let i = 0; i < 20; i++) expect(m.scope).toContain(rollScope(m, rng))
+		}
+	})
+
+	it('a single-player modifier splits between one and targeted', () => {
+		const m = get('frying_pan') // scope ['one','targeted'], equal weight
+		expect(rollScope(m, seq(0.1))).toBe('one')
+		expect(rollScope(m, seq(0.9))).toBe('targeted')
+	})
+
+	it('a flexible modifier honours the 40/30/30 weighting order', () => {
+		const m = get('wrong_hand') // scope ['both','one','targeted'], total weight = 1
+		expect(rollScope(m, seq(0.1))).toBe('both')
+		expect(rollScope(m, seq(0.5))).toBe('one')
+		expect(rollScope(m, seq(0.85))).toBe('targeted')
+	})
+
+	it('flexible modifiers approximate the target distribution', () => {
+		const m = get('wrong_hand')
+		const rng = lcg(3)
+		const counts: Record<string, number> = { both: 0, one: 0, targeted: 0 }
+		const N = 30000
+		for (let i = 0; i < N; i++) counts[rollScope(m, rng)]++
+		expect(counts.both / N).toBeCloseTo(SCOPE_WEIGHTS.both, 1)
+		expect(counts.one / N).toBeCloseTo(SCOPE_WEIGHTS.one, 1)
+		expect(counts.targeted / N).toBeCloseTo(SCOPE_WEIGHTS.targeted, 1)
+	})
+})
