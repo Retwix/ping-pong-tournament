@@ -96,3 +96,27 @@ export const CHAOS_POOL: ChaosModifier[] = [
   mod('kings_decree', 'Décret royal', 'legendary', BOTH),
   mod('sudden_death_duel', 'Duel à mort subite', 'legendary', BOTH),
 ]
+
+// ---------- roll configuration & eligibility ----------
+
+/** Which tiers are in the deck. `mild` drops penalties; `full` adds them. */
+export type ChaosIntensity = 'mild' | 'full'
+
+export interface ChaosConfig {
+  intensity: ChaosIntensity
+  /** Whether legendary modifiers can appear. */
+  legendary: boolean
+}
+
+/**
+ * The modifiers eligible under a config. `mild` keeps only bonus + neutral;
+ * `full` adds malus. Legendaries appear only when `legendary` is on, at either
+ * intensity.
+ */
+export function eligiblePool(config: ChaosConfig, pool: ChaosModifier[] = CHAOS_POOL): ChaosModifier[] {
+  return pool.filter((m) => {
+    if (m.tier === 'legendary') return config.legendary
+    if (m.tier === 'malus') return config.intensity === 'full'
+    return true
+  })
+}
