@@ -11,6 +11,7 @@ import { usePlayers } from '../hooks/usePlayers'
 import ThemeToggle from './ThemeToggle'
 import TopBack from './TopBack'
 import type { Player, TournamentFormat } from '../types'
+import { DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from '../lib/chaos'
 
 function slugify(s: string, fallback: string): string {
   return (
@@ -40,6 +41,7 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
   const [time, setTime] = useState('')
   const [selected, setSelected] = useState<Player[]>([])
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
+  const [chaos, setChaos] = useState<ChaosSettings>(DEFAULT_CHAOS_SETTINGS)
 
   const [showNew, setShowNew] = useState(false)
   const [newName, setNewName] = useState('')
@@ -117,7 +119,8 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
         selected.map((p) => p.name),
         target || 11,
         isGame ? 'game' : 'tournament',
-        isGame ? 'round_robin' : format
+        isGame ? 'round_robin' : format,
+        chaos
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
       void inviteToSlack(id)
@@ -327,6 +330,67 @@ export default function Setup({ mode = 'tournament', onCreated, onCancel }: Prop
               }}
             />
           </div>
+
+          <div className="setup-divider" />
+
+          <div className="setup-label">
+            Mode chaos <span className="opt">(optionnel · le fun avant la compétition)</span>
+          </div>
+          <label className="chaos-toggle">
+            <input
+              type="checkbox"
+              checked={chaos.enabled}
+              onChange={(e) => setChaos((c) => ({ ...c, enabled: e.target.checked }))}
+            />
+            <span>Activer le mode chaos</span>
+          </label>
+
+          {chaos.enabled && (
+            <div className="chaos-options">
+              <div className="setup-label">Fréquence des tirages</div>
+              <div className="target">
+                {[1, 2, 3].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={chaos.interval === v ? 'active' : ''}
+                    onClick={() => setChaos((c) => ({ ...c, interval: v }))}
+                  >
+                    {v === 1 ? 'Chaque point' : `Tous les ${v}`}
+                  </button>
+                ))}
+              </div>
+
+              <div className="setup-label">Intensité</div>
+              <div className="format-choice">
+                <button
+                  type="button"
+                  className={`format-card${chaos.intensity === 'mild' ? ' active' : ''}`}
+                  onClick={() => setChaos((c) => ({ ...c, intensity: 'mild' }))}
+                >
+                  <span className="fc-title">Modéré</span>
+                  <span className="fc-desc">Que des bonus. Rien de méchant, juste rigolo.</span>
+                </button>
+                <button
+                  type="button"
+                  className={`format-card${chaos.intensity === 'full' ? ' active' : ''}`}
+                  onClick={() => setChaos((c) => ({ ...c, intensity: 'full' }))}
+                >
+                  <span className="fc-title">Chaos total</span>
+                  <span className="fc-desc">Bonus et malus. Tout peut arriver.</span>
+                </button>
+              </div>
+
+              <label className="chaos-toggle">
+                <input
+                  type="checkbox"
+                  checked={chaos.legendary}
+                  onChange={(e) => setChaos((c) => ({ ...c, legendary: e.target.checked }))}
+                />
+                <span>Modificateurs légendaires (rares, spectaculaires)</span>
+              </label>
+            </div>
+          )}
 
           <div className="setup-divider" />
 

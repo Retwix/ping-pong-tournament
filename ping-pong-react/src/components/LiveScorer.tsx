@@ -8,6 +8,13 @@ import {
 	serverIsA,
 } from "../lib/pingpong";
 import { playDing } from "../lib/sound";
+import {
+	activeChaosAt,
+	applyScoreMutation,
+	chaosWho,
+	isScoreMutating,
+	type ChaosSettings,
+} from "../lib/chaos";
 import type { Match, MatchSide } from "../types";
 import type { MatchRatings } from "../hooks/useRatingDeltas";
 import { RatingChip } from "./RatingDelta";
@@ -26,6 +33,8 @@ interface Props {
 	onRef?: () => void;
 	/** Error from the last persistence attempt, surfaced so the referee sees it. */
 	error?: string | null;
+	/** Chaos Mode settings for this tournament; when enabled, drives the banner. */
+	chaos?: ChaosSettings;
 }
 
 const FLIP_KEY = "rv-score-flip";
@@ -40,11 +49,14 @@ export default function LiveScorer({
 	ratings,
 	onRef,
 	error,
+	chaos,
 }: Props) {
 	// Per-session undo stack of [score_a, score_b, mb_saved_a, mb_saved_b] snapshots.
 	const historyRef = useRef<[number, number, number, number][]>([]);
 	// Last known serving side, to ding when the service switches.
 	const prevServeRef = useRef<boolean | null>(null);
+	// Last chaos interval-block seen, to cue when a fresh modifier rolls.
+	const prevChaosBlockRef = useRef<number | null>(null);
 	// Tick state purely to re-render the running clock.
 	const [, forceTick] = useState(0);
 	// Visual left/right swap (persisted) so the layout matches the physical table.
@@ -55,6 +67,9 @@ export default function LiveScorer({
 			return false;
 		}
 	});
+	// Which chaos block's score-mutating legendary has already been applied, so
+	// the "Appliquer" action fires at most once per roll.
+	const [appliedChaosBlock, setAppliedChaosBlock] = useState<number | null>(null);
 
 	const toggleFlip = () =>
 		setFlipped((f) => {
@@ -73,6 +88,31 @@ export default function LiveScorer({
 	const aServe = !won && serverIsA(match, target);
 	const aMp = !won && isMatchPoint(true, match.score_a, match.score_b, target);
 	const bMp = !won && isMatchPoint(false, match.score_a, match.score_b, target);
+
+	// Chaos Mode — the active modifier is derived from the score, so it needs no
+	// storage and is identical here, on /live, and after a refresh.
+	const combined = match.score_a + match.score_b;
+	const chaosOn = !!chaos && chaos.enabled && chaos.interval >= 1;
+	const chaosActive = chaosOn && !won ? activeChaosAt(match.id, combined, chaos!) : null;
+	const chaosBlock = chaosOn ? Math.floor(combined / chaos!.interval) : 0;
+	const chaosWhoLabel =
+		chaosActive && chaos
+			? chaosWho(chaosActive, {
+					matchId: match.id,
+					combined,
+					interval: chaos.interval,
+					nameA: match.player_a,
+					nameB: match.player_b,
+					scoreA: match.score_a,
+					scoreB: match.score_b,
+				})
+			: "";
+	const chaosTierLabel: Record<string, string> = {
+		malus: "Malus",
+		bonus: "Bonus",
+		neutral: "Chaos",
+		legendary: "Légendaire",
+	};
 
 	const addPoint = (side: MatchSide) => {
 		if (readOnly || !onPatch) return;
@@ -105,6 +145,27 @@ export default function LiveScorer({
 				mb_saved_a: prev[2],
 				mb_saved_b: prev[3],
 			});
+	};
+
+	// Apply a score-mutating legendary (Heist / Wipeout / Mirror). Snapshots the
+	// score first so it is undoable, and guards to once per interval-block.
+	const applyChaosMutation = () => {
+		if (readOnly || !onPatch || !chaosActive) return;
+		if (!isScoreMutating(chaosActive.modifier)) return;
+		if (appliedChaosBlock === chaosBlock) return;
+		const next = applyScoreMutation(chaosActive.modifier.id, {
+			a: match.score_a,
+			b: match.score_b,
+		});
+		if (!next) return;
+		historyRef.current.push([
+			match.score_a,
+			match.score_b,
+			match.mb_saved_a ?? 0,
+			match.mb_saved_b ?? 0,
+		]);
+		setAppliedChaosBlock(chaosBlock);
+		onPatch({ score_a: next.a, score_b: next.b });
 	};
 	const finish = () => {
 		if (readOnly || !onPatch) return;
@@ -141,6 +202,23 @@ export default function LiveScorer({
 		}
 		prevServeRef.current = aServe;
 	}, [aServe, won, match.done]);
+
+	// Cue a fresh chaos roll (a new interval-block) with a double ding.
+	useEffect(() => {
+		if (!chaosOn || won || match.done) {
+			prevChaosBlockRef.current = chaosBlock;
+			return;
+		}
+		if (
+			prevChaosBlockRef.current !== null &&
+			chaosBlock > prevChaosBlockRef.current &&
+			chaosBlock >= 1
+		) {
+			playDing();
+			window.setTimeout(() => playDing(), 110);
+		}
+		prevChaosBlockRef.current = chaosBlock;
+	}, [chaosBlock, chaosOn, won, match.done]);
 
 	// Keyboard shortcuts. Left/Right follow the VISUAL order, not the player index.
 	useEffect(() => {
@@ -274,6 +352,30 @@ export default function LiveScorer({
 			</div>
 
 			{error && <div className="error-banner ov-error">⚠️ {error}</div>}
+
+			{chaosActive && (
+				<div className={`chaos-banner chaos-${chaosActive.modifier.tier}`}>
+					<span className="chaos-emoji">{chaosActive.modifier.emoji}</span>
+					<span className="chaos-body">
+						<span className="chaos-label">{chaosActive.modifier.label}</span>
+						<span className="chaos-who">{chaosWhoLabel}</span>
+					</span>
+					<span className="chaos-tier">
+						{chaosTierLabel[chaosActive.modifier.tier] ?? "Chaos"}
+					</span>
+					{!readOnly &&
+						isScoreMutating(chaosActive.modifier) &&
+						appliedChaosBlock !== chaosBlock && (
+							<button
+								type="button"
+								className="chaos-apply"
+								onClick={applyChaosMutation}
+							>
+								Appliquer
+							</button>
+						)}
+				</div>
+			)}
 
 			<div className="scoreboard">{order.map(renderSide)}</div>
 

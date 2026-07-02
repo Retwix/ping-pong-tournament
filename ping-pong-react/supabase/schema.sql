@@ -33,6 +33,12 @@ alter table public.tournaments add column if not exists slack_channel   text;
 alter table public.tournaments add column if not exists slack_thread_ts text;
 alter table public.tournaments add column if not exists result_notified boolean not null default false;
 
+-- Chaos Mode columns for databases created before this feature existed.
+alter table public.tournaments add column if not exists chaos_enabled   boolean not null default false;
+alter table public.tournaments add column if not exists chaos_interval  int     not null default 2;
+alter table public.tournaments add column if not exists chaos_intensity text    not null default 'full';
+alter table public.tournaments add column if not exists chaos_legendary boolean not null default true;
+
 -- ---------- "current" pointer ----------
 -- `is_active` marks the one tournament/game shown by the stable /live and /ref
 -- views. It is a sticky pointer to whatever is on the table right now: set when a

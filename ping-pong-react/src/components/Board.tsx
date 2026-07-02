@@ -3,6 +3,7 @@ import { useBettorName } from "../hooks/useBettorName";
 import { useRatingDeltas } from "../hooks/useRatingDeltas";
 import { useTournament } from "../hooks/useTournament";
 import { createTournament } from "../lib/db";
+import { chaosSettingsFromTournament } from "../lib/chaos";
 import { navigate } from "../lib/router";
 import { isCapot } from "../lib/stats";
 import type { Match } from "../types";
@@ -87,6 +88,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 			<LiveScorer
 				match={match}
 				target={tournament.target}
+				chaos={chaosSettingsFromTournament(tournament)}
 				onPatch={(patch) => patchMatch(match.id, patch)}
 				onClose={onBack}
 				onFinish={() => {
@@ -199,6 +201,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 				<LiveScorer
 					match={openMatch}
 					target={tournament.target}
+					chaos={chaosSettingsFromTournament(tournament)}
 					onPatch={(patch) => patchMatch(openMatch.id, patch)}
 					onClose={() => setOpenId(null)}
 					onFinish={() => {
