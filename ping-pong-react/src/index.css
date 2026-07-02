@@ -583,6 +583,50 @@ table.h2h td.neg { background: rgba(215, 66, 81, 0.14); color: var(--coral); }
 .rt-trend.down { color: var(--coral); }
 .rt-trend.flat { color: var(--fg-4); }
 
+/* --- Rating gain/loss: referee "up next" block --- */
+.rd-block { margin: 16px auto 0; max-width: 420px; }
+.rd-block-label { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
+.rd-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2, rgba(127,127,127,0.06)); margin-top: 6px; }
+.rd-row.win { box-shadow: inset 0 0 0 1.5px rgba(43, 165, 114, 0.4); }
+.rd-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-move { font-family: var(--font-display); font-size: 13px; color: var(--fg-2); white-space: nowrap; }
+.rd-move b { color: var(--fg-0, inherit); }
+.rd-tags { grid-column: 1 / -1; display: flex; gap: 6px; justify-content: flex-start; }
+.rd-badge { font-family: var(--font-display); font-weight: 600; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; }
+.rd-badge.stakes { color: var(--accent); background: rgba(127,127,127,0.1); }
+.rd-badge.rank { color: var(--fg-3); background: rgba(127,127,127,0.1); }
+.rd-badge.prov { color: var(--coral); background: rgba(230, 90, 70, 0.12); }
+
+/* --- Rating gain/loss: spectator scoreboard chip --- */
+.tap-hint--rating { display: inline-flex; align-items: center; gap: 12px; }
+.tap-hint--rating .win-flag { color: var(--green); }
+.rd-chip { display: inline-flex; align-items: baseline; gap: 8px; font-family: var(--font-display); font-weight: 800; padding: 4px 12px; border-radius: 999px; background: rgba(127,127,127,0.08); }
+.rd-chip-delta { font-size: clamp(18px, 2.4vw, 26px); }
+.rd-chip-rating { font-size: clamp(12px, 1.5vw, 16px); font-weight: 600; color: var(--fg-3); }
+.rd-chip.up .rd-chip-delta { color: var(--green); }
+.rd-chip.down .rd-chip-delta { color: var(--coral); }
+.rd-chip.flat .rd-chip-delta { color: var(--fg-4); }
+
+/* --- Rating gain/loss: compact tags on the single-game result --- */
+.champ-elo { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin: 2px 0 20px; }
+.ce-item { display: inline-flex; align-items: baseline; gap: 7px; font-family: var(--font-display); }
+.ce-name { color: var(--fg-2); font-weight: 600; font-size: 14px; }
+.ce-delta { font-weight: 800; font-size: 16px; }
+.ce-item.up .ce-delta { color: var(--green); }
+.ce-item.down .ce-delta { color: var(--coral); }
+.ce-item.flat .ce-delta { color: var(--fg-4); }
+
+/* Net-Élo tag on each podium row of the tournament celebration. */
+.pelo { font-family: var(--font-display); font-weight: 800; font-size: 14px; margin-left: 10px; }
+.pelo.up { color: var(--green); }
+.pelo.down { color: var(--coral); }
+.pelo.flat { color: var(--fg-4); }
+
+/* --- Rating gain/loss: Élo column in the standings table --- */
+td.elo { font-family: var(--font-display); font-weight: 700; white-space: nowrap; color: var(--fg-4); }
+td.elo.pos { color: var(--green); }
+td.elo.neg { color: var(--coral); }
+
 @media (max-width: 460px) {
   .rt-prov { display: none; }
 }
