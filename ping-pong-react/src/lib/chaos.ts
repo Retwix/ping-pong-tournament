@@ -285,3 +285,46 @@ export function chaosColumns(settings: ChaosSettings): Required<ChaosRow> {
     chaos_legendary: settings.legendary,
   }
 }
+
+// ---------- deterministic, storage-free active modifier ----------
+
+/** FNV-1a hash of the parts joined — a stable 32-bit seed. */
+export function hashSeed(...parts: Array<string | number>): number {
+  let h = 2166136261 >>> 0
+  const str = parts.join('|')
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+/** mulberry32 PRNG — a small, fast, deterministic Rng from a 32-bit seed. */
+export function seededRng(seed: number): Rng {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
+ * The modifier in effect at a given combined score — derived, not stored. Each
+ * interval-block (points [k·X, (k+1)·X)) rolls once, seeded from the match id and
+ * the block index, so the result is identical in the scorer, the spectator view,
+ * and after a refresh, and undo falls out for free (it's a function of the score).
+ * Returns null before the first roll (combined < X) or when chaos is off.
+ */
+export function activeChaosAt(
+  matchId: string,
+  combined: number,
+  settings: ChaosSettings,
+): ActiveModifier | null {
+  if (!settings.enabled || settings.interval < 1) return null
+  const block = Math.floor(combined / settings.interval)
+  if (block < 1) return null
+  const rng = seededRng(hashSeed(matchId, block))
+  return rollChaos(toChaosConfig(settings), rng)
+}

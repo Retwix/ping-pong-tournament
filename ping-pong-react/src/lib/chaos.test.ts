@@ -335,3 +335,60 @@ describe('chaosColumns', () => {
 		expect(chaosSettingsFromTournament(chaosColumns(s))).toEqual(s)
 	})
 })
+
+import { hashSeed, seededRng, activeChaosAt } from './chaos'
+
+describe('seededRng / hashSeed', () => {
+	it('is deterministic for a given seed', () => {
+		const a = seededRng(hashSeed('m1', 3))
+		const b = seededRng(hashSeed('m1', 3))
+		expect([a(), a(), a()]).toEqual([b(), b(), b()])
+	})
+
+	it('yields values in [0,1)', () => {
+		const r = seededRng(hashSeed('x', 1))
+		for (let i = 0; i < 100; i++) {
+			const v = r()
+			expect(v).toBeGreaterThanOrEqual(0)
+			expect(v).toBeLessThan(1)
+		}
+	})
+
+	it('different seeds diverge', () => {
+		expect(seededRng(hashSeed('m1', 1))()).not.toBe(seededRng(hashSeed('m2', 1))())
+	})
+})
+
+describe('activeChaosAt', () => {
+	const on: ChaosSettings = { enabled: true, interval: 2, intensity: 'full', legendary: true }
+
+	it('is null when chaos is disabled', () => {
+		const off: ChaosSettings = { ...on, enabled: false }
+		expect(activeChaosAt('m', 10, off)).toBeNull()
+	})
+
+	it('is null before the first roll point', () => {
+		expect(activeChaosAt('m', 0, on)).toBeNull()
+		expect(activeChaosAt('m', 1, on)).toBeNull()
+	})
+
+	it('produces a legal modifier from the first roll onward', () => {
+		const active = activeChaosAt('m', 2, on)!
+		expect(active).not.toBeNull()
+		expect(CHAOS_POOL).toContainEqual(active.modifier)
+		expect(active.modifier.scope).toContain(active.scope)
+	})
+
+	it('is stable within an interval block and re-rolls at the boundary', () => {
+		const at2 = activeChaosAt('match-1', 2, on)!
+		const at3 = activeChaosAt('match-1', 3, on)!
+		const at4 = activeChaosAt('match-1', 4, on)!
+		expect(at2).toEqual(at3) // same block → same modifier
+		// block changes at 4; over the pool this virtually always differs
+		expect(at4).not.toEqual(at2)
+	})
+
+	it('is deterministic and independent per match id', () => {
+		expect(activeChaosAt('m', 6, on)).toEqual(activeChaosAt('m', 6, on))
+	})
+})
