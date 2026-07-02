@@ -366,3 +366,33 @@ export function chaosWho(active: ActiveModifier, ctx: ChaosWhoContext): string {
   if (t === 'both') return 'Les deux joueurs'
   return t === 'a' ? ctx.nameA : ctx.nameB
 }
+
+// ---------- score-mutating legendaries ----------
+
+/** A match score pair, side a vs side b. */
+export interface Score {
+  a: number
+  b: number
+}
+
+/**
+ * Legendaries that transform the current score outright, keyed by modifier id.
+ * Each is pure and returns a fresh Score. Other legendaries (e.g. Godmode, The
+ * Tithe) are self-enforced rules for upcoming points and are display-only here.
+ */
+export const SCORE_MUTATORS: Record<string, (s: Score) => Score> = {
+  the_heist: (s) => ({ a: s.b, b: s.a }), // swap scores
+  wipeout: () => ({ a: 0, b: 0 }), // reset both to zero
+  mirror_match: (s) => ({ a: Math.min(s.a, s.b), b: Math.min(s.a, s.b) }), // both to the lower
+}
+
+/** Whether a modifier changes the score the instant it is applied. */
+export function isScoreMutating(modifier: ChaosModifier): boolean {
+  return modifier.id in SCORE_MUTATORS
+}
+
+/** Apply a score-mutating modifier by id, or null if it doesn't mutate score. */
+export function applyScoreMutation(id: string, score: Score): Score | null {
+  const fn = SCORE_MUTATORS[id]
+  return fn ? fn(score) : null
+}

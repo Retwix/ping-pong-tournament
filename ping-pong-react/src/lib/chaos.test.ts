@@ -427,3 +427,52 @@ describe('chaosWho / resolveChaosTarget', () => {
 		expect(a).toBe(b)
 	})
 })
+
+import {
+	applyScoreMutation,
+	isScoreMutating,
+	SCORE_MUTATORS,
+	type Score,
+} from './chaos'
+
+describe('score mutations', () => {
+	it('The Heist swaps the two scores', () => {
+		expect(applyScoreMutation('the_heist', { a: 3, b: 7 })).toEqual({ a: 7, b: 3 })
+	})
+
+	it('Wipeout resets both scores to zero', () => {
+		expect(applyScoreMutation('wipeout', { a: 5, b: 9 })).toEqual({ a: 0, b: 0 })
+	})
+
+	it('Mirror Match sets both scores to the lower one', () => {
+		expect(applyScoreMutation('mirror_match', { a: 7, b: 3 })).toEqual({ a: 3, b: 3 })
+		expect(applyScoreMutation('mirror_match', { a: 2, b: 8 })).toEqual({ a: 2, b: 2 })
+	})
+
+	it('returns null for a non-mutating modifier', () => {
+		expect(applyScoreMutation('double_points', { a: 1, b: 1 })).toBeNull()
+		expect(applyScoreMutation('frying_pan', { a: 1, b: 1 })).toBeNull()
+	})
+
+	it('isScoreMutating flags exactly the score-changing modifiers', () => {
+		const mut = (id: string) => isScoreMutating(get(id))
+		expect(mut('the_heist')).toBe(true)
+		expect(mut('wipeout')).toBe(true)
+		expect(mut('mirror_match')).toBe(true)
+		expect(mut('double_points')).toBe(false)
+		expect(mut('godmode')).toBe(false)
+	})
+
+	it('does not mutate its input', () => {
+		const input: Score = { a: 4, b: 1 }
+		applyScoreMutation('the_heist', input)
+		expect(input).toEqual({ a: 4, b: 1 })
+	})
+
+	it('every SCORE_MUTATORS key is a real legendary modifier', () => {
+		for (const id of Object.keys(SCORE_MUTATORS)) {
+			const m = CHAOS_POOL.find((x) => x.id === id)
+			expect(m?.tier).toBe('legendary')
+		}
+	})
+})
