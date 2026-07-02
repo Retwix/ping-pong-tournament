@@ -763,3 +763,17 @@ td.elo.neg { color: var(--coral); }
 .chaos-neutral   .chaos-tier { background: #4d8bd6; }
 .chaos-legendary { border-color: #d9a021; box-shadow: 0 0 0 2px rgba(217, 160, 33, 0.25); }
 .chaos-legendary .chaos-tier { background: linear-gradient(90deg, #d9a021, #f0c95a); color: #3a2a00; }
+
+.chaos-apply {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  color: #3a2a00;
+  background: linear-gradient(90deg, #d9a021, #f0c95a);
+  box-shadow: 0 2px 8px rgba(217, 160, 33, 0.4);
+}
+.chaos-apply:hover { filter: brightness(1.06); }

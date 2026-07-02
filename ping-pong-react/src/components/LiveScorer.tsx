@@ -8,7 +8,13 @@ import {
 	serverIsA,
 } from "../lib/pingpong";
 import { playDing } from "../lib/sound";
-import { activeChaosAt, chaosWho, type ChaosSettings } from "../lib/chaos";
+import {
+	activeChaosAt,
+	applyScoreMutation,
+	chaosWho,
+	isScoreMutating,
+	type ChaosSettings,
+} from "../lib/chaos";
 import type { Match, MatchSide } from "../types";
 import type { MatchRatings } from "../hooks/useRatingDeltas";
 import { RatingChip } from "./RatingDelta";
@@ -61,6 +67,9 @@ export default function LiveScorer({
 			return false;
 		}
 	});
+	// Which chaos block's score-mutating legendary has already been applied, so
+	// the "Appliquer" action fires at most once per roll.
+	const [appliedChaosBlock, setAppliedChaosBlock] = useState<number | null>(null);
 
 	const toggleFlip = () =>
 		setFlipped((f) => {
@@ -136,6 +145,27 @@ export default function LiveScorer({
 				mb_saved_a: prev[2],
 				mb_saved_b: prev[3],
 			});
+	};
+
+	// Apply a score-mutating legendary (Heist / Wipeout / Mirror). Snapshots the
+	// score first so it is undoable, and guards to once per interval-block.
+	const applyChaosMutation = () => {
+		if (readOnly || !onPatch || !chaosActive) return;
+		if (!isScoreMutating(chaosActive.modifier)) return;
+		if (appliedChaosBlock === chaosBlock) return;
+		const next = applyScoreMutation(chaosActive.modifier.id, {
+			a: match.score_a,
+			b: match.score_b,
+		});
+		if (!next) return;
+		historyRef.current.push([
+			match.score_a,
+			match.score_b,
+			match.mb_saved_a ?? 0,
+			match.mb_saved_b ?? 0,
+		]);
+		setAppliedChaosBlock(chaosBlock);
+		onPatch({ score_a: next.a, score_b: next.b });
 	};
 	const finish = () => {
 		if (readOnly || !onPatch) return;
@@ -333,6 +363,17 @@ export default function LiveScorer({
 					<span className="chaos-tier">
 						{chaosTierLabel[chaosActive.modifier.tier] ?? "Chaos"}
 					</span>
+					{!readOnly &&
+						isScoreMutating(chaosActive.modifier) &&
+						appliedChaosBlock !== chaosBlock && (
+							<button
+								type="button"
+								className="chaos-apply"
+								onClick={applyChaosMutation}
+							>
+								Appliquer
+							</button>
+						)}
 				</div>
 			)}
 
