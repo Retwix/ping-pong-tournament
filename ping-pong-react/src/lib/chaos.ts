@@ -257,3 +257,21 @@ export function normalizeChaosSettings(raw?: Partial<ChaosSettings> | null): Cha
 export function toChaosConfig(settings: ChaosSettings): ChaosConfig {
   return { intensity: settings.intensity, legendary: settings.legendary }
 }
+
+/** The chaos_* subset of a persisted tournament row. */
+export interface ChaosRow {
+  chaos_enabled?: boolean | null
+  chaos_interval?: number | null
+  chaos_intensity?: ChaosIntensity | null
+  chaos_legendary?: boolean | null
+}
+
+/** Read a tournament row's chaos columns into normalized settings. */
+export function chaosSettingsFromTournament(t: ChaosRow): ChaosSettings {
+  return normalizeChaosSettings({
+    enabled: t.chaos_enabled ?? undefined,
+    interval: t.chaos_interval ?? undefined,
+    intensity: t.chaos_intensity ?? undefined,
+    legendary: t.chaos_legendary ?? undefined,
+  })
+}

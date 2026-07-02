@@ -281,3 +281,37 @@ describe('toChaosConfig', () => {
 		expect(toChaosConfig(s)).toEqual({ intensity: 'mild', legendary: false })
 	})
 })
+
+import { chaosSettingsFromTournament } from './chaos'
+
+describe('chaosSettingsFromTournament', () => {
+	it('reads the chaos_* columns into settings', () => {
+		const s = chaosSettingsFromTournament({
+			chaos_enabled: true,
+			chaos_interval: 1,
+			chaos_intensity: 'mild',
+			chaos_legendary: false,
+		})
+		expect(s).toEqual({ enabled: true, interval: 1, intensity: 'mild', legendary: false })
+	})
+
+	it('falls back to defaults for a pre-migration row (missing columns)', () => {
+		expect(chaosSettingsFromTournament({})).toEqual(DEFAULT_CHAOS_SETTINGS)
+	})
+
+	it('treats null columns as unset', () => {
+		const s = chaosSettingsFromTournament({
+			chaos_enabled: null,
+			chaos_interval: null,
+			chaos_intensity: null,
+			chaos_legendary: null,
+		})
+		expect(s).toEqual(DEFAULT_CHAOS_SETTINGS)
+	})
+
+	it('normalizes a bad interval from the row', () => {
+		expect(chaosSettingsFromTournament({ chaos_enabled: true, chaos_interval: 0 }).interval).toBe(
+			DEFAULT_CHAOS_INTERVAL,
+		)
+	})
+})

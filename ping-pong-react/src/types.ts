@@ -1,3 +1,5 @@
+import type { ChaosIntensity } from './lib/chaos'
+
 export type MatchSide = 'a' | 'b'
 export type TournamentStatus = 'active' | 'done'
 export type TournamentKind = 'tournament' | 'game'
@@ -37,6 +39,15 @@ export interface Tournament {
   slack_channel: string | null
   slack_thread_ts: string | null
   result_notified: boolean
+  /**
+   * Chaos Mode config (see docs/chaos-mode.md). Absent on tournaments created
+   * before the feature existed; read via chaosSettingsFromTournament, which
+   * normalizes missing columns to the defaults.
+   */
+  chaos_enabled: boolean
+  chaos_interval: number
+  chaos_intensity: ChaosIntensity
+  chaos_legendary: boolean
 }
 
 export interface Match {
