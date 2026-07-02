@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { generateSchedule, shuffle } from './roundRobin'
 import { buildDoubleElim } from './doubleElim'
 import { RATING, replayRatings } from './rating'
+import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
 import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -86,7 +87,8 @@ export async function createTournament(
   players: string[],
   target: number,
   kind: TournamentKind = 'tournament',
-  format: TournamentFormat = 'round_robin'
+  format: TournamentFormat = 'round_robin',
+  chaos: ChaosSettings = DEFAULT_CHAOS_SETTINGS
 ): Promise<string> {
   // Games are always a single round-robin match regardless of the chosen format.
   const effectiveFormat: TournamentFormat = kind === 'game' ? 'round_robin' : format
@@ -118,6 +120,7 @@ export async function createTournament(
       kind,
       format: effectiveFormat,
       is_active: true,
+      ...chaosColumns(chaos),
     })
     .select()
     .single()

@@ -315,3 +315,23 @@ describe('chaosSettingsFromTournament', () => {
 		)
 	})
 })
+
+import { chaosColumns } from './chaos'
+
+describe('chaosColumns', () => {
+	it('maps settings onto the chaos_* db columns', () => {
+		expect(
+			chaosColumns({ enabled: true, interval: 3, intensity: 'full', legendary: true }),
+		).toEqual({
+			chaos_enabled: true,
+			chaos_interval: 3,
+			chaos_intensity: 'full',
+			chaos_legendary: true,
+		})
+	})
+
+	it('round-trips through chaosSettingsFromTournament', () => {
+		const s: ChaosSettings = { enabled: true, interval: 1, intensity: 'mild', legendary: false }
+		expect(chaosSettingsFromTournament(chaosColumns(s))).toEqual(s)
+	})
+})

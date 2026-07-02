@@ -697,3 +697,28 @@ td.elo.neg { color: var(--coral); }
   .format-choice { grid-template-columns: 1fr; }
   .bracket-col { min-width: 180px; }
 }
+
+/* ---------- Chaos Mode setup ---------- */
+.chaos-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin: 8px 0;
+  font-size: 14px;
+  color: var(--fg-1);
+}
+.chaos-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.chaos-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding-left: 2px;
+}

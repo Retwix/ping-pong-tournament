@@ -275,3 +275,13 @@ export function chaosSettingsFromTournament(t: ChaosRow): ChaosSettings {
     legendary: t.chaos_legendary ?? undefined,
   })
 }
+
+/** Project settings onto the tournament chaos_* columns for persistence. */
+export function chaosColumns(settings: ChaosSettings): Required<ChaosRow> {
+  return {
+    chaos_enabled: settings.enabled,
+    chaos_interval: settings.interval,
+    chaos_intensity: settings.intensity,
+    chaos_legendary: settings.legendary,
+  }
+}
