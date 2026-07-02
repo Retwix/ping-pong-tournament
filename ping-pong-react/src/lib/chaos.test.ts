@@ -234,3 +234,50 @@ describe('rollChaos', () => {
 		expect(a).toEqual(b)
 	})
 })
+
+import {
+	DEFAULT_CHAOS_SETTINGS,
+	normalizeChaosSettings,
+	toChaosConfig,
+	type ChaosSettings,
+} from './chaos'
+
+describe('normalizeChaosSettings', () => {
+	it('returns the defaults for nullish or empty input', () => {
+		expect(normalizeChaosSettings()).toEqual(DEFAULT_CHAOS_SETTINGS)
+		expect(normalizeChaosSettings(null)).toEqual(DEFAULT_CHAOS_SETTINGS)
+		expect(normalizeChaosSettings({})).toEqual(DEFAULT_CHAOS_SETTINGS)
+	})
+
+	it('defaults are chaos-off with a sane interval', () => {
+		expect(DEFAULT_CHAOS_SETTINGS.enabled).toBe(false)
+		expect(DEFAULT_CHAOS_SETTINGS.interval).toBe(DEFAULT_CHAOS_INTERVAL)
+	})
+
+	it('clamps the interval to an integer >= 1', () => {
+		expect(normalizeChaosSettings({ interval: 0 }).interval).toBe(DEFAULT_CHAOS_INTERVAL)
+		expect(normalizeChaosSettings({ interval: -3 }).interval).toBe(DEFAULT_CHAOS_INTERVAL)
+		expect(normalizeChaosSettings({ interval: Number.NaN }).interval).toBe(DEFAULT_CHAOS_INTERVAL)
+		expect(normalizeChaosSettings({ interval: 1 }).interval).toBe(1)
+		expect(normalizeChaosSettings({ interval: 2.9 }).interval).toBe(2)
+	})
+
+	it('validates intensity, falling back to the default', () => {
+		expect(normalizeChaosSettings({ intensity: 'mild' }).intensity).toBe('mild')
+		expect(normalizeChaosSettings({ intensity: 'full' }).intensity).toBe('full')
+		// @ts-expect-error invalid intensity is coerced
+		expect(normalizeChaosSettings({ intensity: 'wild' }).intensity).toBe(DEFAULT_CHAOS_SETTINGS.intensity)
+	})
+
+	it('respects explicit boolean flags', () => {
+		expect(normalizeChaosSettings({ enabled: true }).enabled).toBe(true)
+		expect(normalizeChaosSettings({ legendary: false }).legendary).toBe(false)
+	})
+})
+
+describe('toChaosConfig', () => {
+	it('projects settings onto the roll config', () => {
+		const s: ChaosSettings = { enabled: true, interval: 3, intensity: 'mild', legendary: false }
+		expect(toChaosConfig(s)).toEqual({ intensity: 'mild', legendary: false })
+	})
+})

@@ -210,3 +210,50 @@ export function rollChaos(config: ChaosConfig, rng: Rng): ActiveModifier {
   const scope = rollScope(modifier, rng)
   return { modifier, scope }
 }
+
+// ---------- persisted settings ----------
+
+/**
+ * Chaos configuration as stored per tournament. `enabled` and `interval` govern
+ * whether/when rolls fire; `intensity` and `legendary` shape the deck.
+ */
+export interface ChaosSettings {
+  enabled: boolean
+  interval: number
+  intensity: ChaosIntensity
+  legendary: boolean
+}
+
+/** Off by default: a normal match never sees chaos unless it opts in. */
+export const DEFAULT_CHAOS_SETTINGS: ChaosSettings = {
+  enabled: false,
+  interval: DEFAULT_CHAOS_INTERVAL,
+  intensity: 'full',
+  legendary: true,
+}
+
+/**
+ * Coerce a loosely-typed record (e.g. a DB row from before the chaos columns
+ * existed, where fields may be missing) into valid settings. Interval is floored
+ * to an integer >= 1; intensity falls back to the default when unrecognised.
+ */
+export function normalizeChaosSettings(raw?: Partial<ChaosSettings> | null): ChaosSettings {
+  const d = DEFAULT_CHAOS_SETTINGS
+  if (!raw) return { ...d }
+  const interval =
+    typeof raw.interval === 'number' && Number.isFinite(raw.interval) && raw.interval >= 1
+      ? Math.floor(raw.interval)
+      : d.interval
+  const intensity = raw.intensity === 'mild' || raw.intensity === 'full' ? raw.intensity : d.intensity
+  return {
+    enabled: raw.enabled ?? d.enabled,
+    interval,
+    intensity,
+    legendary: raw.legendary ?? d.legendary,
+  }
+}
+
+/** The subset of settings the roll functions consume. */
+export function toChaosConfig(settings: ChaosSettings): ChaosConfig {
+  return { intensity: settings.intensity, legendary: settings.legendary }
+}
