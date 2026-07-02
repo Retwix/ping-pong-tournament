@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBettorName } from "../hooks/useBettorName";
+import { useRatingDeltas } from "../hooks/useRatingDeltas";
 import { useTournament } from "../hooks/useTournament";
 import { createTournament } from "../lib/db";
 import { navigate } from "../lib/router";
@@ -26,6 +27,8 @@ interface Props {
 export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	const { name: bettorName, setName: setBettorName } = useBettorName();
+	const { forMatch: ratingsForMatch, forTournament: ratingsForTournament } =
+		useRatingDeltas();
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
 	const [capotMatch, setCapotMatch] = useState<Match | null>(null);
@@ -71,7 +74,14 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 				);
 				onOpen(newId);
 			};
-			return <GameResult match={match} onReplay={rematch} onHome={onBack} />;
+			return (
+				<GameResult
+					match={match}
+					onReplay={rematch}
+					onHome={onBack}
+					ratings={ratingsForMatch(match)}
+				/>
+			);
 		}
 		return (
 			<LiveScorer
@@ -168,7 +178,11 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 
 					<section>
 						<div className="section-title">Classement</div>
-						<Standings players={tournament.players} matches={matches} />
+						<Standings
+							players={tournament.players}
+							matches={matches}
+							ratings={ratingsForTournament(matches)}
+						/>
 						<div className="footer-row">
 							<span className="hint">
 								Départage : victoires, puis différence de points.
@@ -218,6 +232,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 				<Champion
 					tournament={tournament}
 					matches={matches}
+					ratings={ratingsForTournament(matches)}
 					onClose={() => setDismissedChampion(true)}
 					onNew={onNew}
 				/>

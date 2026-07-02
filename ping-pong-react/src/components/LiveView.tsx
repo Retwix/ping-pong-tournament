@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useTournament } from "../hooks/useTournament";
+import { useRatingDeltas } from "../hooks/useRatingDeltas";
 import { computeStandings } from "../lib/pingpong";
 import { isPlayable } from "../lib/doubleElim";
 import type { Match } from "../types";
 import LiveScorer from "./LiveScorer";
+import { RatingMoveRow } from "./RatingDelta";
 import Standings from "./Standings";
 import ThemeToggle from "./ThemeToggle";
 
@@ -42,6 +44,9 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 	// Referee mode is interactive; spectator mode auto-advances on a timer.
 	const isRef = !readOnly;
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
+	// Global-ladder rating moves: per finished match, and per whole tournament.
+	const { forMatch: ratingsFor, forTournament: ratingsForTournament } =
+		useRatingDeltas();
 	const [shownId, setShownId] = useState<string | null>(null);
 	// Referee-only: after a match is validated we stop on an explicit "up next"
 	// screen instead of auto-advancing, so the ref starts the next game when the
@@ -148,7 +153,11 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 				</header>
 				{error && <div className="error-banner">{error}</div>}
 				<section>
-					<Standings players={tournament.players} matches={matches} />
+					<Standings
+						players={tournament.players}
+						matches={matches}
+						ratings={ratingsForTournament(matches)}
+					/>
 					<div className="footer-row">
 						{showRef && (
 							<button className="link-btn" onClick={onRef}>
@@ -174,6 +183,10 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 				? finished.player_a
 				: finished.player_b
 			: null;
+		// Winner first, loser second — null until the rating replay catches up.
+		const rd = ratingsFor(finished);
+		const rdWinner = rd.a?.won ? rd.a : rd.b?.won ? rd.b : null;
+		const rdLoser = rd.a && !rd.a.won ? rd.a : rd.b && !rd.b.won ? rd.b : null;
 		return (
 			<div className="wrap up-next">
 				<header>
@@ -185,6 +198,13 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 							{Math.max(finished.score_a, finished.score_b)}–
 							{Math.min(finished.score_a, finished.score_b)}
 						</p>
+					)}
+					{(rdWinner || rdLoser) && (
+						<div className="rd-block">
+							<div className="rd-block-label">Classement</div>
+							{rdWinner && <RatingMoveRow side={rdWinner} />}
+							{rdLoser && <RatingMoveRow side={rdLoser} />}
+						</div>
 					)}
 					<div className="up-next-label">À suivre</div>
 					{next ? (
@@ -242,6 +262,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			match={shownMatch}
 			target={tournament.target}
 			readOnly={readOnly}
+			ratings={shownMatch.done ? ratingsFor(shownMatch) : undefined}
 			onPatch={
 				readOnly ? undefined : (patch) => patchMatch(shownMatch.id, patch)
 			}

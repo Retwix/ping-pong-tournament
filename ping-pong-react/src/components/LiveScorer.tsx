@@ -9,6 +9,8 @@ import {
 } from "../lib/pingpong";
 import { playDing } from "../lib/sound";
 import type { Match, MatchSide } from "../types";
+import type { MatchRatings } from "../hooks/useRatingDeltas";
+import { RatingChip } from "./RatingDelta";
 
 interface Props {
 	match: Match;
@@ -18,6 +20,8 @@ interface Props {
 	onFinish?: () => void;
 	/** Spectator display: no tapping/keyboard/controls, just the live scoreboard. */
 	readOnly?: boolean;
+	/** Per-side rating move, shown under each side once the match is finished. */
+	ratings?: MatchRatings;
 	/** Spectator-only: jump straight into referee mode for the same live match. */
 	onRef?: () => void;
 	/** Error from the last persistence attempt, surfaced so the referee sees it. */
@@ -33,6 +37,7 @@ export default function LiveScorer({
 	onClose,
 	onFinish,
 	readOnly = false,
+	ratings,
 	onRef,
 	error,
 }: Props) {
@@ -202,6 +207,7 @@ export default function LiveScorer({
 		// opponent is still on 0, the next point ends the game as a capot.
 		const oppScore = sideData[side === "a" ? "b" : "a"].score;
 		const flagText = d.mpoint && oppScore === 0 ? "Balla di capot" : "Balla di maccio";
+		const rating = ratings?.[side] ?? null;
 		return (
 			<div
 				key={side}
@@ -214,9 +220,16 @@ export default function LiveScorer({
 					<span className="nm">{d.name}</span>
 				</span>
 				<span className="side-score">{d.score}</span>
-				<span className="tap-hint">
-					{d.isWinner ? "Vainqueur 🏆" : readOnly ? "" : "Tape pour +1"}
-				</span>
+				{rating ? (
+					<span className="tap-hint tap-hint--rating">
+						{d.isWinner && <span className="win-flag">Vainqueur 🏆</span>}
+						<RatingChip side={rating} />
+					</span>
+				) : (
+					<span className="tap-hint">
+						{d.isWinner ? "Vainqueur 🏆" : readOnly ? "" : "Tape pour +1"}
+					</span>
+				)}
 			</div>
 		);
 	};

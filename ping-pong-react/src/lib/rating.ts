@@ -361,8 +361,10 @@ export interface RatingRow extends RatingState {
 }
 
 /**
- * Build the ranked leaderboard rows. Players are ordered by a conservative
- * rating (rating − RD) so an unproven high rating doesn't outrank a settled one.
+ * Build the ranked leaderboard rows. Players are ordered by rating alone, so the
+ * order matches the displayed rating column even for provisional players — being
+ * "provisoire" is surfaced as a label, but never pushes a player down the board.
+ * Ties break toward the more certain (lower RD) player, then by name.
  */
 export function rankRatings(result: ReplayResult, players: Player[]): RatingRow[] {
   const teamById = new Map(players.map((p) => [p.id, p.team]))
@@ -382,11 +384,8 @@ export function rankRatings(result: ReplayResult, players: Player[]): RatingRow[
       trend: lastDelta.get(s.key) ?? 0,
     }))
 
-  // Settled players rank above provisional ones; within each, by conservative rating.
-  rows.sort((a, b) => {
-    if (a.provisional !== b.provisional) return a.provisional ? 1 : -1
-    return b.rating - b.rd - (a.rating - a.rd)
-  })
+  // Pure rating order, regardless of provisional status.
+  rows.sort((a, b) => b.rating - a.rating || a.rd - b.rd || a.name.localeCompare(b.name))
   rows.forEach((r, i) => {
     r.rank = i + 1
   })
