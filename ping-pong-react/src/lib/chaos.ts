@@ -328,3 +328,41 @@ export function activeChaosAt(
   const rng = seededRng(hashSeed(matchId, block))
   return rollChaos(toChaosConfig(settings), rng)
 }
+
+// ---------- resolving & labelling "who" ----------
+
+/** Which side a modifier lands on: a specific side, or 'both'. */
+export type ChaosTarget = 'a' | 'b' | 'both'
+
+export interface ChaosWhoContext {
+  matchId: string
+  combined: number
+  interval: number
+  nameA: string
+  nameB: string
+  scoreA: number
+  scoreB: number
+}
+
+/**
+ * Resolve an active modifier's scope to a concrete target. `targeted` hits the
+ * current leader (seeded tie-break); `one` picks a side deterministically from
+ * the same block seed so the scorer and spectator view always agree.
+ */
+export function resolveChaosTarget(active: ActiveModifier, ctx: ChaosWhoContext): ChaosTarget {
+  if (active.scope === 'both') return 'both'
+  if (active.scope === 'targeted') {
+    if (ctx.scoreA > ctx.scoreB) return 'a'
+    if (ctx.scoreB > ctx.scoreA) return 'b'
+    // tie falls through to a seeded pick
+  }
+  const block = ctx.interval >= 1 ? Math.floor(ctx.combined / ctx.interval) : 0
+  return seededRng(hashSeed(ctx.matchId, block, 'who'))() < 0.5 ? 'a' : 'b'
+}
+
+/** French label naming who an active modifier hits. */
+export function chaosWho(active: ActiveModifier, ctx: ChaosWhoContext): string {
+  const t = resolveChaosTarget(active, ctx)
+  if (t === 'both') return 'Les deux joueurs'
+  return t === 'a' ? ctx.nameA : ctx.nameB
+}

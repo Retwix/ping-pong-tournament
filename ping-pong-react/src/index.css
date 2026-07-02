@@ -722,3 +722,44 @@ td.elo.neg { color: var(--coral); }
   margin-top: 6px;
   padding-left: 2px;
 }
+
+/* ---------- Chaos Mode banner (live scorer) ---------- */
+.chaos-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 10px auto 0;
+  max-width: 640px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-2, rgba(127, 127, 127, 0.08));
+  animation: chaos-pop 0.35s ease;
+}
+@keyframes chaos-pop {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.chaos-emoji { font-size: 30px; line-height: 1; flex: 0 0 auto; }
+.chaos-body { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.chaos-label { font-weight: 800; font-size: 17px; letter-spacing: 0.2px; }
+.chaos-who { font-size: 13px; color: var(--fg-3); }
+.chaos-tier {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--fg-3);
+}
+.chaos-malus     { border-color: #e0455e; }
+.chaos-malus     .chaos-tier { background: #e0455e; }
+.chaos-bonus     { border-color: #2fb673; }
+.chaos-bonus     .chaos-tier { background: #2fb673; }
+.chaos-neutral   { border-color: #4d8bd6; }
+.chaos-neutral   .chaos-tier { background: #4d8bd6; }
+.chaos-legendary { border-color: #d9a021; box-shadow: 0 0 0 2px rgba(217, 160, 33, 0.25); }
+.chaos-legendary .chaos-tier { background: linear-gradient(90deg, #d9a021, #f0c95a); color: #3a2a00; }

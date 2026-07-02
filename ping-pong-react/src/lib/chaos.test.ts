@@ -392,3 +392,38 @@ describe('activeChaosAt', () => {
 		expect(activeChaosAt('m', 6, on)).toEqual(activeChaosAt('m', 6, on))
 	})
 })
+
+import { chaosWho, resolveChaosTarget } from './chaos'
+
+describe('chaosWho / resolveChaosTarget', () => {
+	const ctx = (over: Partial<Parameters<typeof chaosWho>[1]> = {}) => ({
+		matchId: 'm',
+		combined: 4,
+		interval: 2,
+		nameA: 'Alice',
+		nameB: 'Bob',
+		scoreA: 0,
+		scoreB: 0,
+		...over,
+	})
+	const both = { modifier: get('double_points'), scope: 'both' as const }
+	const targeted = { modifier: get('frying_pan'), scope: 'targeted' as const }
+	const one = { modifier: get('frying_pan'), scope: 'one' as const }
+
+	it('labels a both-scope modifier for both players', () => {
+		expect(chaosWho(both, ctx())).toBe('Les deux joueurs')
+		expect(resolveChaosTarget(both, ctx())).toBe('both')
+	})
+
+	it('targets the current leader', () => {
+		expect(chaosWho(targeted, ctx({ scoreA: 5, scoreB: 2 }))).toBe('Alice')
+		expect(chaosWho(targeted, ctx({ scoreA: 2, scoreB: 5 }))).toBe('Bob')
+	})
+
+	it('picks a single player deterministically for one-scope', () => {
+		const a = chaosWho(one, ctx())
+		const b = chaosWho(one, ctx())
+		expect(['Alice', 'Bob']).toContain(a)
+		expect(a).toBe(b)
+	})
+})

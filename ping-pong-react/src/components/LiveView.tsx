@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTournament } from "../hooks/useTournament";
+import { chaosSettingsFromTournament } from "../lib/chaos";
 import { useRatingDeltas } from "../hooks/useRatingDeltas";
 import { computeStandings } from "../lib/pingpong";
 import { isPlayable } from "../lib/doubleElim";
@@ -261,6 +262,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			key={shownMatch.id}
 			match={shownMatch}
 			target={tournament.target}
+			chaos={chaosSettingsFromTournament(tournament)}
 			readOnly={readOnly}
 			ratings={shownMatch.done ? ratingsFor(shownMatch) : undefined}
 			onPatch={
