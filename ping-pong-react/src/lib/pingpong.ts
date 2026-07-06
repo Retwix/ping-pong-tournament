@@ -1,4 +1,21 @@
-import type { Match, StandingRow } from '../types'
+import type { Match, MatchSide, StandingRow } from '../types'
+
+/**
+ * Score patch removing one point from the given side (referee correction),
+ * or null when there is nothing to remove: side already at 0, or match
+ * already validated. Unlike adding a point, this stays available on a
+ * winning-but-unvalidated score — that accidental extra tap is the whole
+ * reason the correction exists.
+ */
+export function decrementPatch(
+  m: Pick<Match, 'score_a' | 'score_b' | 'done'>,
+  side: MatchSide
+): Partial<Match> | null {
+  if (m.done) return null
+  const score = side === 'a' ? m.score_a : m.score_b
+  if (score <= 0) return null
+  return side === 'a' ? { score_a: score - 1 } : { score_b: score - 1 }
+}
 
 /** A game is won at >= target points with a 2-point lead. */
 export function isWon(a: number, b: number, target: number): boolean {
