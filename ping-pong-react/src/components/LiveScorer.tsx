@@ -1,6 +1,7 @@
 import { IconArrowsLeftRight } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import {
+	decrementPatch,
 	formatDuration,
 	isMatchPoint,
 	isWon,
@@ -93,6 +94,18 @@ export default function LiveScorer({
 		if (!match.started_at && match.score_a + match.score_b === 0) {
 			patch.started_at = new Date().toISOString();
 		}
+		onPatch(patch);
+	};
+	const removePoint = (side: MatchSide) => {
+		if (readOnly || !onPatch) return;
+		const patch = decrementPatch(match, side);
+		if (!patch) return;
+		historyRef.current.push([
+			match.score_a,
+			match.score_b,
+			match.mb_saved_a ?? 0,
+			match.mb_saved_b ?? 0,
+		]);
 		onPatch(patch);
 	};
 	const undo = () => {
@@ -215,6 +228,20 @@ export default function LiveScorer({
 				onClick={() => addPoint(side)}
 			>
 				<span className="matchpoint-flag">{flagText}</span>
+				{!readOnly && !match.done && (
+					<button
+						className={`side-minus${order[0] === side ? " side-minus--left" : ""}`}
+						disabled={d.score === 0}
+						onClick={(e) => {
+							e.stopPropagation();
+							removePoint(side);
+						}}
+						aria-label={`Retirer un point à ${d.name}`}
+						title={`Retirer un point à ${d.name}`}
+					>
+						−1
+					</button>
+				)}
 				<span className="side-name">
 					<span className="serve-pip" />
 					<span className="nm">{d.name}</span>
