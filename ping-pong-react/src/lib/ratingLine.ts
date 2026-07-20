@@ -1,9 +1,4 @@
-// Pure geometry for the rating-history SVG line chart. No I/O, no React.
-
-export interface XY {
-  x: number
-  y: number
-}
+// Pure scale/tick logic for the rating-history line chart. No I/O, no React.
 
 export interface YDomain {
   min: number
@@ -39,20 +34,6 @@ function multiplesWithin(dom: YDomain, step: number): number[] {
   return out
 }
 
-/** Even x-spacing, y linear in the domain (SVG y grows downward). */
-export function scalePoints(
-  ratings: number[],
-  dom: YDomain,
-  width: number,
-  height: number,
-): XY[] {
-  const n = ratings.length
-  return ratings.map((r, i) => ({
-    x: n === 1 ? width / 2 : (i / (n - 1)) * width,
-    y: height - ((r - dom.min) / (dom.max - dom.min)) * height,
-  }))
-}
-
 /** Up to `maxLabels` x-label positions, endpoints always included. */
 export function labelIndices(n: number, maxLabels = 4): number[] {
   if (n <= maxLabels) return Array.from({ length: n }, (_, i) => i)
@@ -60,19 +41,4 @@ export function labelIndices(n: number, maxLabels = 4): number[] {
     Math.round((k * (n - 1)) / (maxLabels - 1)),
   )
   return [...new Set(picked)]
-}
-
-const fmt = (v: number): string => String(Math.round(v * 10) / 10)
-
-/** SVG path through every point: "M… L… L…". */
-export function linePath(pts: XY[]): string {
-  return pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${fmt(p.x)},${fmt(p.y)}`).join(' ')
-}
-
-/** Line path closed down to the baseline, for the gradient fill. */
-export function areaPath(pts: XY[], height: number): string {
-  if (pts.length === 0) return ''
-  const first = pts[0]
-  const last = pts[pts.length - 1]
-  return `${linePath(pts)} L${fmt(last.x)},${fmt(height)} L${fmt(first.x)},${fmt(height)} Z`
 }

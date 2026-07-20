@@ -788,13 +788,10 @@ td.elo.neg { color: var(--coral); }
 .chaos-apply:hover { filter: brightness(1.06); }
 
 /* ===== rating history chart (player modal) ===== */
-.rl-wrap { margin: 4px 0 2px; }
-.rl-svg { width: 100%; height: auto; display: block; }
-.rl-grid { stroke: var(--border); stroke-width: 1; }
-.rl-yv { fill: var(--fg-3); font-size: 10px; }
-.rl-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.rl-dot { stroke: var(--surface); stroke-width: 1; }
-.rl-x { display: flex; justify-content: space-between; color: var(--fg-3); font-size: 11px; margin-top: 6px; }
+.rl-nivo { height: 260px; margin: 4px 0 2px; }
+.rl-tip { display: flex; align-items: baseline; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 7px 11px; box-shadow: var(--shadow-pop); font-size: 12.5px; }
+.rl-tip-date { color: var(--fg-3); }
+.rl-tip-rating { font-family: var(--font-display); font-weight: 800; color: var(--fg-1); }
 
 /* ===== player rating modal ===== */
 .rt-pm { position: relative; max-width: 680px; }
