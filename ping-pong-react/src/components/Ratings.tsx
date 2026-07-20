@@ -5,6 +5,8 @@ import { RATING } from '../lib/rating'
 import { teamColor } from '../lib/teams'
 import TopBack from './TopBack'
 import ThemeToggle from './ThemeToggle'
+import { playerHistory } from '../lib/playerHistory'
+import PlayerModal from './PlayerModal'
 
 function Avatar({ name, team }: { name: string; team: string | null }) {
   const color = teamColor(team ?? '')
@@ -59,6 +61,7 @@ function LogLine({ e, win }: { e: RatingEvent; win: boolean }) {
 export default function Ratings({ onBack }: { onBack: () => void }) {
   const { rows, events, matchCount, loading, error, recompute } = useRatings()
   const [mode, setMode] = useState<'board' | 'log'>('board')
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
 
   const leader = rows.find((r) => !r.provisional) ?? rows[0]
 
@@ -234,7 +237,11 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.key} className={r.provisional ? '' : `r${r.rank}`}>
+                    <tr
+                      key={r.key}
+                      className={`rt-row${r.provisional ? '' : ` r${r.rank}`}`}
+                      onClick={() => setSelectedKey(r.key)}
+                    >
                       <td className="left">
                         <span className="rank">{r.rank}</span>
                         <span className="lb-player">
@@ -331,6 +338,18 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
           </div>
         </>
       )}
+
+      {(() => {
+        const selected = selectedKey ? rows.find((r) => r.key === selectedKey) : undefined
+        if (!selected) return null
+        return (
+          <PlayerModal
+            row={selected}
+            history={playerHistory(events, rows, selected.key)}
+            onClose={() => setSelectedKey(null)}
+          />
+        )
+      })()}
     </div>
   )
 }

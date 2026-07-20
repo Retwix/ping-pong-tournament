@@ -804,3 +804,7 @@ td.elo.neg { color: var(--coral); }
 .pm-rating { font-family: var(--font-display); font-weight: 700; font-size: 28px; color: var(--fg-1); line-height: 1; }
 .pm-rd { color: var(--fg-3); font-size: 12px; margin-top: 3px; }
 .pm-kpis { margin-top: 14px; }
+
+/* clickable classement rows */
+.rating-board tbody tr.rt-row { cursor: pointer; }
+.rating-board tbody tr.rt-row:hover td { background: var(--surface-hover); }
