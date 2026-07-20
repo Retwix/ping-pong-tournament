@@ -65,8 +65,10 @@ export function playerHistory(
 - **X axis: match sequence** (evenly spaced), with at most ~4 short French
   date labels (`shortDay`) underneath. Even spacing beats time-proportional
   for bursty office play; dates keep temporal context.
-- **Y axis:** 2–3 gridlines at round rating values, auto-scaled to the data
-  with padding.
+- **Y axis:** 1–4 gridlines at round rating values (multiples of 10),
+  auto-scaled to the data with padding — the finest step that yields at most
+  4 lines. (Originally "2–3"; no simple round-step algorithm guarantees that
+  for every range, so the bound was relaxed by decision on 2026-07-20.)
 - Native SVG `<title>` on each point for a cheap hover tooltip
   (date + rating), matching the `title=` pattern in `ActivityChart`.
   A custom hover crosshair is a possible follow-up, not v1.
