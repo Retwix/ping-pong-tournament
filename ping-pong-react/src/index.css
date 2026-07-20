@@ -786,3 +786,24 @@ td.elo.neg { color: var(--coral); }
   box-shadow: 0 2px 8px rgba(217, 160, 33, 0.4);
 }
 .chaos-apply:hover { filter: brightness(1.06); }
+
+/* ===== rating history chart (player modal) ===== */
+.rl-nivo { height: 340px; margin: 4px 0 2px; }
+.rl-tip { display: flex; align-items: baseline; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 7px 11px; box-shadow: var(--shadow-pop); font-size: 12.5px; }
+.rl-tip-date { color: var(--fg-3); }
+.rl-tip-rating { font-family: var(--font-display); font-weight: 800; color: var(--fg-1); }
+
+/* ===== player rating modal ===== */
+.rt-pm { position: relative; max-width: 940px; }
+.pm-rating-row { display: inline-flex; align-items: baseline; gap: 8px; }
+.pm-close { position: absolute; top: 14px; right: 14px; background: none; border: 0; color: var(--fg-3); cursor: pointer; padding: 6px; border-radius: 8px; }
+.pm-close:hover { color: var(--fg-1); background: var(--surface-hover); }
+.pm-now { margin-left: auto; text-align: right; padding-right: 30px; }
+.pm-rating { font-family: var(--font-display); font-weight: 700; font-size: 28px; color: var(--fg-1); line-height: 1; }
+.pm-rd { color: var(--fg-3); font-size: 12px; margin-top: 3px; }
+.pm-kpis { margin-top: 14px; }
+
+/* clickable classement rows */
+.rating-board tbody tr.rt-row { cursor: pointer; }
+.rating-board tbody tr.rt-row:hover td { background: var(--ghost-hover); }
+.rating-board tbody tr.rt-row:focus-visible td { background: var(--ghost-hover); }
