@@ -241,6 +241,14 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
                       key={r.key}
                       className={`rt-row${r.provisional ? '' : ` r${r.rank}`}`}
                       onClick={() => setSelectedKey(r.key)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setSelectedKey(r.key)
+                        }
+                      }}
+                      tabIndex={0}
+                      aria-label={`Voir l'historique de ${r.name}`}
                     >
                       <td className="left">
                         <span className="rank">{r.rank}</span>

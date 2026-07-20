@@ -808,3 +808,4 @@ td.elo.neg { color: var(--coral); }
 /* clickable classement rows */
 .rating-board tbody tr.rt-row { cursor: pointer; }
 .rating-board tbody tr.rt-row:hover td { background: var(--surface-hover); }
+.rating-board tbody tr.rt-row:focus-visible td { background: var(--surface-hover); }
