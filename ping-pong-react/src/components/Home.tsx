@@ -2,6 +2,7 @@ import { IconChevronDown, IconTrash } from "@tabler/icons-react";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useTournaments } from "../hooks/useTournaments";
 import { deleteTournament } from "../lib/db";
+import { splitOnWinner } from "../lib/winnerHighlight";
 import ThemeToggle from "./ThemeToggle";
 
 /** "Nouveau" split button: a dropdown to start a quick game or a full tournament. */
@@ -213,10 +214,24 @@ export default function Home({
 						Aucun tournoi pour l'instant. Crée le premier !
 					</div>
 				) : (
-					tournaments.map((t) => (
+					tournaments.map((t) => {
+						const winner =
+							t.kind === "game" && t.status === "done" ? t.champion : null;
+						const split = winner ? splitOnWinner(t.name, winner) : null;
+						return (
 						<div className="t-card" key={t.id} onClick={() => onOpen(t.id)}>
 							<div>
-								<div className="t-name">{t.name}</div>
+								<div className="t-name">
+									{split ? (
+										<>
+											🏆 {split.before}
+											<span className="t-winner">{split.winner}</span>
+											{split.after}
+										</>
+									) : (
+										t.name
+									)}
+								</div>
 								<div className="t-meta">
 									{t.kind === "game"
 										? "Partie"
@@ -229,7 +244,11 @@ export default function Home({
 								<span
 									className={`t-badge${t.status === "done" ? " done" : ""}`}
 								>
-									{t.status === "done" ? "Terminé" : "En cours"}
+									{winner && !split
+										? `🏆 ${winner}`
+										: t.status === "done"
+											? "Terminé"
+											: "En cours"}
 								</span>
 								<button
 									className="t-del"
@@ -240,7 +259,8 @@ export default function Home({
 								</button>
 							</div>
 						</div>
-					))
+						);
+					})
 				)}
 			</section>
 		</div>
