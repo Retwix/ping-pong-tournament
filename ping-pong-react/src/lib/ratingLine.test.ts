@@ -25,6 +25,12 @@ describe('yDomain', () => {
     expect(d.max - d.min).toBeGreaterThanOrEqual(40)
     expect((d.min + d.max) / 2).toBe(1500)
   })
+
+  it('sizes the padding from the rating swing, not the absolute rating level', () => {
+    const low = yDomain([1300, 1500])
+    const high = yDomain([1700, 1900])
+    expect(high.max - high.min).toBe(low.max - low.min)
+  })
 })
 
 describe('gridValues', () => {
@@ -57,6 +63,11 @@ describe('gridValues', () => {
     expect(values.length).toBeLessThanOrEqual(4)
     for (const v of values) expect(v % 10).toBe(0)
   })
+
+  it('includes the domain max itself when it lands exactly on a round step', () => {
+    const values = gridValues({ min: 1500, max: 1600 })
+    expect(values).toContain(1600)
+  })
 })
 
 describe('scalePoints', () => {
@@ -75,6 +86,10 @@ describe('scalePoints', () => {
 })
 
 describe('labelIndices', () => {
+  it('returns no labels for zero points', () => {
+    expect(labelIndices(0)).toEqual([])
+  })
+
   it('returns all indices when there are few points', () => {
     expect(labelIndices(3)).toEqual([0, 1, 2])
   })
