@@ -873,9 +873,6 @@ td.elo.neg { color: var(--coral); }
 .ref-chrono-time { font-weight: 800; font-size: 15px; color: var(--ref-ink); font-variant-numeric: tabular-nums; }
 .ref-chrono-label { font-weight: 600; font-size: 9px; letter-spacing: 0.12em; color: var(--ref-muted); }
 .ref-topbar .ref-chrono-time { font-size: 20px; }
-.ref-sound { width: 34px; height: 34px; border-radius: 10px; border: none; background: var(--ref-btn-bg-desk); color: var(--ref-btn-icon); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all var(--dur) var(--ease); }
-.ref-sound.is-off { opacity: 0.55; }
-.ref-sound:active { transform: scale(0.94); }
 
 /* Floating back chevron (mobile only, over the top zone) */
 .ref-back { border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all var(--dur) var(--ease); }
@@ -900,34 +897,38 @@ td.elo.neg { color: var(--coral); }
 @media (hover: hover) { .refzone:hover { filter: brightness(1.04); } }
 .refzone:active { filter: brightness(0.96); }
 
-.ref-mp-pill { position: absolute; top: 16px; right: 18px; z-index: 2; display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: #f0c84b; color: #3a2183; font-weight: 800; font-size: 10px; letter-spacing: 0.1em; box-shadow: 0 6px 18px rgba(240, 200, 75, 0.5); animation: rvfloat 2.2s infinite; }
-.ref-zones .refzone:first-child .ref-mp-pill { top: calc(env(safe-area-inset-top, 0px) + 18px); }
+/* Mobile: in normal flow right under the score (the serve label owns the top edge) */
+.ref-mp-pill { order: 1; z-index: 2; display: inline-flex; align-items: center; padding: 6px 12px; margin-top: 12px; border-radius: 999px; background: #f0c84b; color: #3a2183; font-weight: 800; font-size: 10px; letter-spacing: 0.1em; box-shadow: 0 6px 18px rgba(240, 200, 75, 0.5); animation: rvfloat 2.2s infinite; }
 .refzone.is-capot .ref-mp-pill { background: #f35e68; color: #fff; box-shadow: 0 6px 18px rgba(215, 66, 81, 0.5); }
 
 .refzone-head { display: flex; align-items: center; gap: 10px; }
 .refzone-name { font-weight: 700; font-size: 22px; }
 .refzone-elo { font-family: var(--font-body); font-weight: 700; font-size: 11px; background: rgba(255, 255, 255, 0.18); border-radius: 999px; padding: 3px 9px; }
-.refzone-serve { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px; padding: 4px 8px; border: none; background: none; font-family: var(--font-display); font-weight: 700; font-size: 10px; letter-spacing: 0.16em; color: rgba(255, 255, 255, 0.85); cursor: pointer; }
+/* Absolutely positioned at the top of the zone so showing/hiding it never
+   shifts the name/score layout. */
+.refzone-serve { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2; display: inline-flex; align-items: center; gap: 7px; padding: 4px 8px; border: none; background: none; font-family: var(--font-display); font-weight: 700; font-size: 10px; letter-spacing: 0.16em; color: rgba(255, 255, 255, 0.85); cursor: pointer; }
+.ref-zones .refzone:first-child .refzone-serve { top: calc(env(safe-area-inset-top, 0px) + 16px); }
 .refzone-serve:disabled { cursor: default; }
 .refzone-serve-dot { width: 9px; height: 9px; border-radius: 50%; background: #fff; animation: rvserve 1.4s infinite; }
 .refzone-score { font-weight: 900; font-size: clamp(96px, 19vh, 148px); line-height: 0.82; letter-spacing: -0.04em; margin-top: 2px; text-shadow: 0 6px 30px rgba(0, 0, 0, 0.25); font-variant-numeric: tabular-nums; }
-.refzone-caption { font-family: var(--font-body); font-weight: 700; font-size: 12px; color: #f0c84b; margin-top: 8px; }
+.refzone-caption { order: 2; font-family: var(--font-body); font-weight: 700; font-size: 12px; color: #f0c84b; margin-top: 8px; }
 .refzone.is-capot .refzone-caption { color: #ffc9c2; }
 .refzone-caption--win { color: #fff; }
-.refzone-minus { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 8px 14px; border-radius: 11px; background: rgba(0, 0, 0, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.32); font-family: var(--font-display); font-weight: 800; font-size: 13px; color: #fff; cursor: pointer; transition: all var(--dur) var(--ease); }
+.refzone-minus { order: 3; display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 8px 14px; border-radius: 11px; background: rgba(0, 0, 0, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.32); font-family: var(--font-display); font-weight: 800; font-size: 13px; color: #fff; cursor: pointer; transition: all var(--dur) var(--ease); }
 .refzone-minus:active { transform: scale(0.95); }
 .refzone-minus:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
 .refzone-minus-sign { font-weight: 900; font-size: 18px; line-height: 0.5; }
 .refzone-minus-long { display: none; }
 
-/* Mobile: the bottom zone mirrors around the meta bar (score first) */
-.ref-zones .refzone:last-child .refzone-score { order: -1; }
-/* Mobile: the match-point caption replaces the −1 pill in that zone */
-.refzone.is-matchpoint .refzone-minus, .refzone.is-capot .refzone-minus { display: none; }
+/* Mobile: the bottom zone mirrors around the meta bar (score first, pill under it) */
+.ref-zones .refzone:last-child .refzone-score { order: -2; }
+.ref-zones .refzone:last-child .ref-mp-pill { order: -1; }
 
 /* Center meta bar (mobile only) */
 .ref-meta { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 22px; background: var(--ref-bar-bg); border-top: 1px solid var(--ref-bar-border); border-bottom: 1px solid var(--ref-bar-border); }
 .ref-meta .ref-chrono { align-items: flex-start; }
+/* Invisible spacer balancing the chrono so the title stays centered */
+.ref-meta::after { content: ""; flex: none; width: 44px; }
 .ref-meta-center { text-align: center; min-width: 0; }
 .ref-meta-title { font-weight: 800; font-size: 13px; color: var(--ref-ink); }
 .ref-meta-sub { font-family: var(--font-body); font-weight: 600; font-size: 10px; color: var(--ref-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -946,6 +947,22 @@ td.elo.neg { color: var(--coral); }
 .ref-dock-btn--primary .ref-dock-label { color: #fff; }
 .ref-dock-btn--primary:disabled { opacity: 0.45; box-shadow: none; cursor: not-allowed; }
 
+/* ===== phone landscape: cards left/right around a slim center column ===== */
+@media (max-width: 899px) and (orientation: landscape) {
+  .ref-zones { flex-direction: row; }
+  .ref-zones .refzone:first-child, .ref-zones .refzone:last-child { padding: 16px 18px; }
+  .ref-zones .refzone:last-child .refzone-score { order: 0; }
+  .ref-zones .refzone:last-child .ref-mp-pill { order: 1; }
+  .ref-zones .refzone:first-child .refzone-serve { top: 12px; }
+  .refzone-score { font-size: clamp(64px, 30vh, 120px); }
+
+  .ref-meta { flex-direction: column; justify-content: center; gap: 12px; padding: 12px 14px; border-top: none; border-bottom: none; border-left: 1px solid var(--ref-bar-border); border-right: 1px solid var(--ref-bar-border); }
+  .ref-meta .ref-chrono { align-items: center; }
+  .ref-meta::after { display: none; }
+
+  .ref-dock { padding: 10px 18px calc(env(safe-area-inset-bottom, 0px) + 10px); }
+}
+
 /* ===== desktop reflow: left/right split, keyboard-driven ===== */
 @media (min-width: 900px) {
   .ref-topbar { display: flex; }
@@ -963,9 +980,8 @@ td.elo.neg { color: var(--coral); }
   .refzone.is-serving.is-matchpoint, .refzone.is-serving.is-capot { box-shadow: 0 20px 50px var(--zone-shadow), 0 0 0 3px var(--ref-serve-ring), inset 0 0 0 3px var(--mp-ring), inset 0 0 60px var(--mp-glow); }
 
   .ref-zones .refzone:last-child .refzone-score { order: 0; }
-  .refzone.is-matchpoint .refzone-minus, .refzone.is-capot .refzone-minus { display: inline-flex; }
 
-  .ref-mp-pill, .ref-zones .refzone:first-child .ref-mp-pill { top: 18px; right: 18px; }
+  .ref-mp-pill, .ref-zones .refzone:last-child .ref-mp-pill { position: absolute; top: 18px; right: 18px; margin-top: 0; }
   .refzone.is-serving .ref-mp-pill, .ref-zones .refzone:first-child.is-serving .ref-mp-pill { top: 20px; }
 
   .refzone-head { gap: 12px; margin-top: 14px; }

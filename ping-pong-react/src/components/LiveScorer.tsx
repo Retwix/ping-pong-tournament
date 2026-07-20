@@ -4,8 +4,6 @@ import {
 	IconCheck,
 	IconChevronLeft,
 	IconPingPong,
-	IconVolume,
-	IconVolumeOff,
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -49,7 +47,6 @@ interface Props {
 }
 
 const FLIP_KEY = "rv-score-flip";
-const SOUND_KEY = "rv-sound-on";
 
 export default function LiveScorer({
 	match,
@@ -80,14 +77,6 @@ export default function LiveScorer({
 			return false;
 		}
 	});
-	// Service "ding" toggle (persisted). On unless explicitly switched off.
-	const [soundOn, setSoundOn] = useState<boolean>(() => {
-		try {
-			return localStorage.getItem(SOUND_KEY) !== "0";
-		} catch {
-			return true;
-		}
-	});
 	// Which chaos block's score-mutating legendary has already been applied, so
 	// the "Appliquer" action fires at most once per roll.
 	const [appliedChaosBlock, setAppliedChaosBlock] = useState<number | null>(null);
@@ -97,17 +86,6 @@ export default function LiveScorer({
 			const next = !f;
 			try {
 				localStorage.setItem(FLIP_KEY, next ? "1" : "0");
-			} catch {
-				/* storage unavailable */
-			}
-			return next;
-		});
-
-	const toggleSound = () =>
-		setSoundOn((s) => {
-			const next = !s;
-			try {
-				localStorage.setItem(SOUND_KEY, next ? "1" : "0");
 			} catch {
 				/* storage unavailable */
 			}
@@ -240,10 +218,10 @@ export default function LiveScorer({
 			return;
 		}
 		if (prevServeRef.current !== null && prevServeRef.current !== aServe) {
-			if (soundOn) playDing();
+			playDing();
 		}
 		prevServeRef.current = aServe;
-	}, [aServe, won, match.done, soundOn]);
+	}, [aServe, won, match.done]);
 
 	// Cue a fresh chaos roll (a new interval-block) with a double ding.
 	useEffect(() => {
@@ -256,13 +234,11 @@ export default function LiveScorer({
 			chaosBlock > prevChaosBlockRef.current &&
 			chaosBlock >= 1
 		) {
-			if (soundOn) {
-				playDing();
-				window.setTimeout(() => playDing(), 110);
-			}
+			playDing();
+			window.setTimeout(() => playDing(), 110);
 		}
 		prevChaosBlockRef.current = chaosBlock;
-	}, [chaosBlock, chaosOn, won, match.done, soundOn]);
+	}, [chaosBlock, chaosOn, won, match.done]);
 
 	// Keyboard shortcuts. Left/Right follow the VISUAL order, not the player index.
 	useEffect(() => {
@@ -438,21 +414,6 @@ export default function LiveScorer({
 		);
 	};
 
-	const soundButton = (
-		<button
-			className={`ref-sound${soundOn ? "" : " is-off"}`}
-			onClick={toggleSound}
-			aria-label={soundOn ? "Couper le son" : "Activer le son"}
-			title={soundOn ? "Couper le son" : "Activer le son"}
-		>
-			{soundOn ? (
-				<IconVolume size={18} stroke={2} />
-			) : (
-				<IconVolumeOff size={18} stroke={2} />
-			)}
-		</button>
-	);
-
 	return (
 		<div className="refscorer">
 			<div className="ref-topbar">
@@ -483,7 +444,6 @@ export default function LiveScorer({
 						<span className="ref-chrono-time">{clock}</span>
 						<span className="ref-chrono-label">CHRONO</span>
 					</div>
-					{soundButton}
 					{onPresent && (
 						<button className="ref-present" onClick={onPresent}>
 							Mode présentation
@@ -518,7 +478,6 @@ export default function LiveScorer({
 							<div className="ref-meta-sub">{tournamentName}</div>
 						)}
 					</div>
-					{soundButton}
 				</div>
 				<div className="ref-vs">VS</div>
 				{renderZone(order[1])}
