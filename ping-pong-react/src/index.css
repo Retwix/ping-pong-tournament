@@ -795,3 +795,12 @@ td.elo.neg { color: var(--coral); }
 .rl-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .rl-dot { stroke: var(--surface); stroke-width: 1; }
 .rl-x { display: flex; justify-content: space-between; color: var(--fg-3); font-size: 11px; margin-top: 6px; }
+
+/* ===== player rating modal ===== */
+.rt-pm { position: relative; max-width: 520px; }
+.pm-close { position: absolute; top: 14px; right: 14px; background: none; border: 0; color: var(--fg-3); cursor: pointer; padding: 6px; border-radius: 8px; }
+.pm-close:hover { color: var(--fg-1); background: var(--surface-hover); }
+.pm-now { margin-left: auto; text-align: right; padding-right: 30px; }
+.pm-rating { font-family: var(--font-display); font-weight: 700; font-size: 28px; color: var(--fg-1); line-height: 1; }
+.pm-rd { color: var(--fg-3); font-size: 12px; margin-top: 3px; }
+.pm-kpis { margin-top: 14px; }
