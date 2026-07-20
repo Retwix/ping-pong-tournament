@@ -60,7 +60,14 @@ export default function PlayerModal({
             </div>
           </div>
           <div className="pm-now">
-            <div className="pm-rating">{Math.round(row.rating)}</div>
+            <div className="pm-rating-row">
+              <div className="pm-rating">{Math.round(row.rating)}</div>
+              {Math.round(row.trend) !== 0 && (
+                <span className={`rt-trend ${row.trend > 0 ? 'up' : 'down'}`}>
+                  {row.trend > 0 ? '▲' : '▼'} {Math.abs(Math.round(row.trend))}
+                </span>
+              )}
+            </div>
             <div className="pm-rd">± {Math.round(row.rd)}</div>
           </div>
         </div>

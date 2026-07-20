@@ -797,7 +797,8 @@ td.elo.neg { color: var(--coral); }
 .rl-x { display: flex; justify-content: space-between; color: var(--fg-3); font-size: 11px; margin-top: 6px; }
 
 /* ===== player rating modal ===== */
-.rt-pm { position: relative; max-width: 520px; }
+.rt-pm { position: relative; max-width: 680px; }
+.pm-rating-row { display: inline-flex; align-items: baseline; gap: 8px; }
 .pm-close { position: absolute; top: 14px; right: 14px; background: none; border: 0; color: var(--fg-3); cursor: pointer; padding: 6px; border-radius: 8px; }
 .pm-close:hover { color: var(--fg-1); background: var(--surface-hover); }
 .pm-now { margin-left: auto; text-align: right; padding-right: 30px; }
