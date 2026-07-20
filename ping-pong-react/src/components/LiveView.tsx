@@ -281,7 +281,6 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			match={shownMatch}
 			target={tournament.target}
 			chaos={chaosSettingsFromTournament(tournament)}
-			ratings={shownMatch.done ? ratingsFor(shownMatch) : undefined}
 			onPatch={(patch) => patchMatch(shownMatch.id, patch)}
 			onClose={onBack}
 			error={error}

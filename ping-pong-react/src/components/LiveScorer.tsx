@@ -26,9 +26,7 @@ import {
 	type ChaosSettings,
 } from "../lib/chaos";
 import type { Match, MatchSide } from "../types";
-import type { MatchRatings } from "../hooks/useRatingDeltas";
 import type { SideElos } from "../lib/scorerElo";
-import { RatingChip } from "./RatingDelta";
 
 interface Props {
 	match: Match;
@@ -36,12 +34,6 @@ interface Props {
 	onPatch?: (patch: Partial<Match>) => void;
 	onClose?: () => void;
 	onFinish?: () => void;
-	/** Spectator display: no tapping/keyboard/controls, just the live scoreboard. */
-	readOnly?: boolean;
-	/** Per-side rating move, shown under each side once the match is finished. */
-	ratings?: MatchRatings;
-	/** Spectator-only: jump straight into referee mode for the same live match. */
-	onRef?: () => void;
 	/** Error from the last persistence attempt, surfaced so the referee sees it. */
 	error?: string | null;
 	/** Chaos Mode settings for this tournament; when enabled, drives the banner. */
@@ -65,9 +57,6 @@ export default function LiveScorer({
 	onPatch,
 	onClose,
 	onFinish,
-	readOnly = false,
-	ratings,
-	onRef,
 	error,
 	chaos,
 	tournamentName,
@@ -129,8 +118,6 @@ export default function LiveScorer({
 	const aWon = won && match.score_a > match.score_b;
 	const bWon = won && match.score_b > match.score_a;
 	const aServe = !won && serverIsA(match, target);
-	const aMp = !won && isMatchPoint(true, match.score_a, match.score_b, target);
-	const bMp = !won && isMatchPoint(false, match.score_a, match.score_b, target);
 
 	// Chaos Mode — the active modifier is derived from the score, so it needs no
 	// storage and is identical here, on /live, and after a refresh.
@@ -158,7 +145,7 @@ export default function LiveScorer({
 	};
 
 	const addPoint = (side: MatchSide) => {
-		if (readOnly || !onPatch) return;
+		if (!onPatch) return;
 		if (isWon(match.score_a, match.score_b, target)) return;
 		const savedA = match.mb_saved_a ?? 0;
 		const savedB = match.mb_saved_b ?? 0;
@@ -179,7 +166,7 @@ export default function LiveScorer({
 		onPatch(patch);
 	};
 	const removePoint = (side: MatchSide) => {
-		if (readOnly || !onPatch) return;
+		if (!onPatch) return;
 		const patch = decrementPatch(match, side);
 		if (!patch) return;
 		historyRef.current.push([
@@ -191,7 +178,7 @@ export default function LiveScorer({
 		onPatch(patch);
 	};
 	const undo = () => {
-		if (readOnly || !onPatch) return;
+		if (!onPatch) return;
 		const prev = historyRef.current.pop();
 		if (prev)
 			onPatch({
@@ -205,7 +192,7 @@ export default function LiveScorer({
 	// Apply a score-mutating legendary (Heist / Wipeout / Mirror). Snapshots the
 	// score first so it is undoable, and guards to once per interval-block.
 	const applyChaosMutation = () => {
-		if (readOnly || !onPatch || !chaosActive) return;
+		if (!onPatch || !chaosActive) return;
 		if (!isScoreMutating(chaosActive.modifier)) return;
 		if (appliedChaosBlock === chaosBlock) return;
 		const next = applyScoreMutation(chaosActive.modifier.id, {
@@ -223,14 +210,14 @@ export default function LiveScorer({
 		onPatch({ score_a: next.a, score_b: next.b });
 	};
 	const finish = () => {
-		if (readOnly || !onPatch) return;
+		if (!onPatch) return;
 		if (match.done) return;
 		if (!isWon(match.score_a, match.score_b, target)) return;
 		onPatch({ done: true, ended_at: new Date().toISOString() });
 		onFinish?.();
 	};
 	const swapServe = () => {
-		if (readOnly || !onPatch) return;
+		if (!onPatch) return;
 		if (match.score_a + match.score_b === 0) {
 			onPatch({ serve_start: match.serve_start === "a" ? "b" : "a" });
 		}
@@ -279,7 +266,6 @@ export default function LiveScorer({
 
 	// Keyboard shortcuts. Left/Right follow the VISUAL order, not the player index.
 	useEffect(() => {
-		if (readOnly) return;
 		const onKey = (e: KeyboardEvent) => {
 			switch (e.key) {
 				case "ArrowLeft":
@@ -327,7 +313,6 @@ export default function LiveScorer({
 			score: number;
 			serving: boolean;
 			isWinner: boolean;
-			mpoint: boolean;
 		}
 	> = {
 		a: {
@@ -335,14 +320,12 @@ export default function LiveScorer({
 			score: match.score_a,
 			serving: aServe,
 			isWinner: aWon,
-			mpoint: aMp,
 		},
 		b: {
 			name: match.player_b,
 			score: match.score_b,
 			serving: !won && !aServe,
 			isWinner: bWon,
-			mpoint: bMp,
 		},
 	};
 
@@ -360,8 +343,7 @@ export default function LiveScorer({
 					<span className="chaos-tier">
 						{chaosTierLabel[chaosActive.modifier.tier] ?? "Chaos"}
 					</span>
-					{!readOnly &&
-						isScoreMutating(chaosActive.modifier) &&
+					{isScoreMutating(chaosActive.modifier) &&
 						appliedChaosBlock !== chaosBlock && (
 							<button
 								type="button"
@@ -375,85 +357,6 @@ export default function LiveScorer({
 			)}
 		</>
 	);
-
-	// ===== Spectator display (/live): the untouched pre-redesign scoreboard =====
-
-	const renderSide = (side: MatchSide) => {
-		const d = sideData[side];
-		// A "capot" is a shutout: if this side is on match point while the
-		// opponent is still on 0, the next point ends the game as a capot.
-		const oppScore = sideData[side === "a" ? "b" : "a"].score;
-		const flagText = d.mpoint && oppScore === 0 ? "Balla di capot" : "Balla di maccio";
-		const rating = ratings?.[side] ?? null;
-		return (
-			<div
-				key={side}
-				className={`side${d.serving ? " serving" : ""}${d.isWinner ? " winner" : ""}${d.mpoint ? " mpoint" : ""}`}
-			>
-				<span className="matchpoint-flag">{flagText}</span>
-				<span className="side-name">
-					<span className="serve-pip" />
-					<span className="nm">{d.name}</span>
-				</span>
-				<span className="side-score">{d.score}</span>
-				{rating ? (
-					<span className="tap-hint tap-hint--rating">
-						{d.isWinner && <span className="win-flag">Vainqueur 🏆</span>}
-						<RatingChip side={rating} />
-					</span>
-				) : (
-					<span className="tap-hint">{d.isWinner ? "Vainqueur 🏆" : ""}</span>
-				)}
-			</div>
-		);
-	};
-
-	if (readOnly) {
-		return (
-			<div className="overlay">
-				<div className="ov-top">
-					<div className="ov-left">
-						{onClose && (
-							<button
-								className="ov-close"
-								onClick={onClose}
-								aria-label="Fermer"
-								title="Fermer"
-							>
-								✕
-							</button>
-						)}
-						<button
-							className={`ov-close${flipped ? " active" : ""}`}
-							onClick={toggleFlip}
-							aria-label="Inverser les côtés"
-							title="Inverser les côtés"
-						>
-							<IconArrowsLeftRight size={20} stroke={1.9} />
-						</button>
-						{onRef && (
-							<button
-								className="ov-close ov-ref"
-								onClick={onRef}
-								aria-label="Passer en mode arbitre"
-								title="Passer en mode arbitre"
-							>
-								🧑‍⚖️
-							</button>
-						)}
-					</div>
-					<span className="ov-timer">{formatDuration(matchDuration(match))}</span>
-					<span className="ov-target">
-						Jeu en {target} · {match.player_a} vs {match.player_b}
-					</span>
-				</div>
-
-				{banners}
-
-				<div className="scoreboard">{order.map(renderSide)}</div>
-			</div>
-		);
-	}
 
 	// ===== Referee scorer (/ref, board modal): redesigned zones =====
 
