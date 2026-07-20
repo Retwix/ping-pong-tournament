@@ -29,6 +29,21 @@ export function isMatchPoint(forA: boolean, a: number, b: number, target: number
 }
 
 /**
+ * What one more point would mean for the side at `myScore`: winning the game
+ * ('match'), winning it without conceding a single point ('capot'), or nothing
+ * yet (null). Null once the game is already over.
+ */
+export function matchPointKind(
+  myScore: number,
+  oppScore: number,
+  target: number
+): 'match' | 'capot' | null {
+  if (isWon(myScore, oppScore, target)) return null
+  if (!isMatchPoint(true, myScore, oppScore, target)) return null
+  return oppScore === 0 ? 'capot' : 'match'
+}
+
+/**
  * Whether side A is serving. Serve alternates every 2 points,
  * then every point once both players reach target-1 (deuce).
  */

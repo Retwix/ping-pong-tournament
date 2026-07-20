@@ -3,6 +3,7 @@ import { useTournament } from "../hooks/useTournament";
 import { chaosSettingsFromTournament } from "../lib/chaos";
 import { useRatingDeltas } from "../hooks/useRatingDeltas";
 import { computeStandings } from "../lib/pingpong";
+import { navigate } from "../lib/router";
 import { isPlayable } from "../lib/doubleElim";
 import type { Match } from "../types";
 import LiveScorer from "./LiveScorer";
@@ -46,8 +47,11 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 	const isRef = !readOnly;
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	// Global-ladder rating moves: per finished match, and per whole tournament.
-	const { forMatch: ratingsFor, forTournament: ratingsForTournament } =
-		useRatingDeltas();
+	const {
+		forMatch: ratingsFor,
+		forTournament: ratingsForTournament,
+		elosFor,
+	} = useRatingDeltas();
 	const [shownId, setShownId] = useState<string | null>(null);
 	// Referee-only: after a match is validated we stop on an explicit "up next"
 	// screen instead of auto-advancing, so the ref starts the next game when the
@@ -257,6 +261,13 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 		);
 	}
 
+	const formatLabel =
+		tournament.format === "double_elim"
+			? "Élimination directe"
+			: tournament.kind === "game"
+				? "Partie rapide"
+				: "Round-robin";
+
 	return (
 		<LiveScorer
 			key={shownMatch.id}
@@ -271,6 +282,10 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			onClose={onBack}
 			onRef={onRef}
 			error={isRef ? error : null}
+			tournamentName={tournament.name}
+			subtitle={formatLabel}
+			elos={elosFor(shownMatch)}
+			onPresent={isRef ? () => navigate("/live") : undefined}
 		/>
 	);
 }

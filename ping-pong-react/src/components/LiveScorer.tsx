@@ -1,4 +1,12 @@
-import { IconArrowsLeftRight } from "@tabler/icons-react";
+import {
+	IconArrowBackUp,
+	IconArrowsLeftRight,
+	IconCheck,
+	IconChevronLeft,
+	IconPingPong,
+	IconVolume,
+	IconVolumeOff,
+} from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import {
 	decrementPatch,
@@ -6,6 +14,7 @@ import {
 	isMatchPoint,
 	isWon,
 	matchDuration,
+	matchPointKind,
 	serverIsA,
 } from "../lib/pingpong";
 import { playDing } from "../lib/sound";
@@ -18,6 +27,7 @@ import {
 } from "../lib/chaos";
 import type { Match, MatchSide } from "../types";
 import type { MatchRatings } from "../hooks/useRatingDeltas";
+import type { SideElos } from "../lib/scorerElo";
 import { RatingChip } from "./RatingDelta";
 
 interface Props {
@@ -36,9 +46,18 @@ interface Props {
 	error?: string | null;
 	/** Chaos Mode settings for this tournament; when enabled, drives the banner. */
 	chaos?: ChaosSettings;
+	/** Referee chrome: tournament title (desktop top bar / mobile meta bar). */
+	tournamentName?: string;
+	/** Referee chrome: subline under the title (e.g. "Round-robin"). */
+	subtitle?: string;
+	/** Current ladder Elo per side, for the pills next to the player names. */
+	elos?: SideElos;
+	/** Referee desktop: switch to the spectator/presentation view. */
+	onPresent?: () => void;
 }
 
 const FLIP_KEY = "rv-score-flip";
+const SOUND_KEY = "rv-sound-on";
 
 export default function LiveScorer({
 	match,
@@ -51,6 +70,10 @@ export default function LiveScorer({
 	onRef,
 	error,
 	chaos,
+	tournamentName,
+	subtitle,
+	elos,
+	onPresent,
 }: Props) {
 	// Per-session undo stack of [score_a, score_b, mb_saved_a, mb_saved_b] snapshots.
 	const historyRef = useRef<[number, number, number, number][]>([]);
@@ -68,6 +91,14 @@ export default function LiveScorer({
 			return false;
 		}
 	});
+	// Service "ding" toggle (persisted). On unless explicitly switched off.
+	const [soundOn, setSoundOn] = useState<boolean>(() => {
+		try {
+			return localStorage.getItem(SOUND_KEY) !== "0";
+		} catch {
+			return true;
+		}
+	});
 	// Which chaos block's score-mutating legendary has already been applied, so
 	// the "Appliquer" action fires at most once per roll.
 	const [appliedChaosBlock, setAppliedChaosBlock] = useState<number | null>(null);
@@ -77,6 +108,17 @@ export default function LiveScorer({
 			const next = !f;
 			try {
 				localStorage.setItem(FLIP_KEY, next ? "1" : "0");
+			} catch {
+				/* storage unavailable */
+			}
+			return next;
+		});
+
+	const toggleSound = () =>
+		setSoundOn((s) => {
+			const next = !s;
+			try {
+				localStorage.setItem(SOUND_KEY, next ? "1" : "0");
 			} catch {
 				/* storage unavailable */
 			}
@@ -194,7 +236,7 @@ export default function LiveScorer({
 		}
 	};
 
-	// Visual order of the two panels (left → right).
+	// Visual order of the two panels (left → right / top → bottom).
 	const order: MatchSide[] = flipped ? ["b", "a"] : ["a", "b"];
 
 	// Running clock while the match is live.
@@ -211,10 +253,10 @@ export default function LiveScorer({
 			return;
 		}
 		if (prevServeRef.current !== null && prevServeRef.current !== aServe) {
-			playDing();
+			if (soundOn) playDing();
 		}
 		prevServeRef.current = aServe;
-	}, [aServe, won, match.done]);
+	}, [aServe, won, match.done, soundOn]);
 
 	// Cue a fresh chaos roll (a new interval-block) with a double ding.
 	useEffect(() => {
@@ -227,11 +269,13 @@ export default function LiveScorer({
 			chaosBlock > prevChaosBlockRef.current &&
 			chaosBlock >= 1
 		) {
-			playDing();
-			window.setTimeout(() => playDing(), 110);
+			if (soundOn) {
+				playDing();
+				window.setTimeout(() => playDing(), 110);
+			}
 		}
 		prevChaosBlockRef.current = chaosBlock;
-	}, [chaosBlock, chaosOn, won, match.done]);
+	}, [chaosBlock, chaosOn, won, match.done, soundOn]);
 
 	// Keyboard shortcuts. Left/Right follow the VISUAL order, not the player index.
 	useEffect(() => {
@@ -251,6 +295,16 @@ export default function LiveScorer({
 				case "Backspace":
 					e.preventDefault();
 					undo();
+					break;
+				case "f":
+				case "F":
+					e.preventDefault();
+					toggleFlip();
+					break;
+				case "s":
+				case "S":
+					e.preventDefault();
+					swapServe();
 					break;
 				case "Enter":
 					e.preventDefault();
@@ -292,92 +346,8 @@ export default function LiveScorer({
 		},
 	};
 
-	const renderSide = (side: MatchSide) => {
-		const d = sideData[side];
-		// A "capot" is a shutout: if this side is on match point while the
-		// opponent is still on 0, the next point ends the game as a capot.
-		const oppScore = sideData[side === "a" ? "b" : "a"].score;
-		const flagText = d.mpoint && oppScore === 0 ? "Balla di capot" : "Balla di maccio";
-		const rating = ratings?.[side] ?? null;
-		return (
-			<div
-				key={side}
-				className={`side${d.serving ? " serving" : ""}${d.isWinner ? " winner" : ""}${d.mpoint ? " mpoint" : ""}`}
-				onClick={() => addPoint(side)}
-			>
-				<span className="matchpoint-flag">{flagText}</span>
-				{!readOnly && !match.done && (
-					<button
-						className={`side-minus${order[0] === side ? " side-minus--left" : ""}`}
-						disabled={d.score === 0}
-						onClick={(e) => {
-							e.stopPropagation();
-							removePoint(side);
-						}}
-						aria-label={`Retirer un point à ${d.name}`}
-						title={`Retirer un point à ${d.name}`}
-					>
-						−1
-					</button>
-				)}
-				<span className="side-name">
-					<span className="serve-pip" />
-					<span className="nm">{d.name}</span>
-				</span>
-				<span className="side-score">{d.score}</span>
-				{rating ? (
-					<span className="tap-hint tap-hint--rating">
-						{d.isWinner && <span className="win-flag">Vainqueur 🏆</span>}
-						<RatingChip side={rating} />
-					</span>
-				) : (
-					<span className="tap-hint">
-						{d.isWinner ? "Vainqueur 🏆" : readOnly ? "" : "Tape pour +1"}
-					</span>
-				)}
-			</div>
-		);
-	};
-
-	return (
-		<div className="overlay">
-			<div className="ov-top">
-				<div className="ov-left">
-					{onClose && (
-						<button
-							className="ov-close"
-							onClick={onClose}
-							aria-label="Fermer"
-							title="Fermer"
-						>
-							✕
-						</button>
-					)}
-					<button
-						className={`ov-close${flipped ? " active" : ""}`}
-						onClick={toggleFlip}
-						aria-label="Inverser les côtés"
-						title="Inverser les côtés"
-					>
-						<IconArrowsLeftRight size={20} stroke={1.9} />
-					</button>
-					{readOnly && onRef && (
-						<button
-							className="ov-close ov-ref"
-							onClick={onRef}
-							aria-label="Passer en mode arbitre"
-							title="Passer en mode arbitre"
-						>
-							🧑‍⚖️
-						</button>
-					)}
-				</div>
-				<span className="ov-timer">{formatDuration(matchDuration(match))}</span>
-				<span className="ov-target">
-					Jeu en {target} · {match.player_a} vs {match.player_b}
-				</span>
-			</div>
-
+	const banners = (
+		<>
 			{error && <div className="error-banner ov-error">⚠️ {error}</div>}
 
 			{chaosActive && (
@@ -403,28 +373,294 @@ export default function LiveScorer({
 						)}
 				</div>
 			)}
+		</>
+	);
 
-			<div className="scoreboard">{order.map(renderSide)}</div>
+	// ===== Spectator display (/live): the untouched pre-redesign scoreboard =====
 
-			{!readOnly && (
-				<>
-					<div className="ov-controls">
-						<button onClick={undo}>↶ Annuler</button>
-						<button onClick={swapServe}>🏓 Service</button>
+	const renderSide = (side: MatchSide) => {
+		const d = sideData[side];
+		// A "capot" is a shutout: if this side is on match point while the
+		// opponent is still on 0, the next point ends the game as a capot.
+		const oppScore = sideData[side === "a" ? "b" : "a"].score;
+		const flagText = d.mpoint && oppScore === 0 ? "Balla di capot" : "Balla di maccio";
+		const rating = ratings?.[side] ?? null;
+		return (
+			<div
+				key={side}
+				className={`side${d.serving ? " serving" : ""}${d.isWinner ? " winner" : ""}${d.mpoint ? " mpoint" : ""}`}
+			>
+				<span className="matchpoint-flag">{flagText}</span>
+				<span className="side-name">
+					<span className="serve-pip" />
+					<span className="nm">{d.name}</span>
+				</span>
+				<span className="side-score">{d.score}</span>
+				{rating ? (
+					<span className="tap-hint tap-hint--rating">
+						{d.isWinner && <span className="win-flag">Vainqueur 🏆</span>}
+						<RatingChip side={rating} />
+					</span>
+				) : (
+					<span className="tap-hint">{d.isWinner ? "Vainqueur 🏆" : ""}</span>
+				)}
+			</div>
+		);
+	};
+
+	if (readOnly) {
+		return (
+			<div className="overlay">
+				<div className="ov-top">
+					<div className="ov-left">
+						{onClose && (
+							<button
+								className="ov-close"
+								onClick={onClose}
+								aria-label="Fermer"
+								title="Fermer"
+							>
+								✕
+							</button>
+						)}
 						<button
-							className="primary"
-							disabled={!won || match.done}
-							onClick={finish}
+							className={`ov-close${flipped ? " active" : ""}`}
+							onClick={toggleFlip}
+							aria-label="Inverser les côtés"
+							title="Inverser les côtés"
 						>
-							{match.done ? "Validé ✓" : "Valider le match"}
+							<IconArrowsLeftRight size={20} stroke={1.9} />
 						</button>
+						{onRef && (
+							<button
+								className="ov-close ov-ref"
+								onClick={onRef}
+								aria-label="Passer en mode arbitre"
+								title="Passer en mode arbitre"
+							>
+								🧑‍⚖️
+							</button>
+						)}
 					</div>
-					<div className="kbd-hint">
-						<kbd>←</kbd> point gauche · <kbd>→</kbd> point droite · <kbd>Z</kbd>{" "}
-						annuler · <kbd>Entrée</kbd> valider · <kbd>Échap</kbd> fermer
+					<span className="ov-timer">{formatDuration(matchDuration(match))}</span>
+					<span className="ov-target">
+						Jeu en {target} · {match.player_a} vs {match.player_b}
+					</span>
+				</div>
+
+				{banners}
+
+				<div className="scoreboard">{order.map(renderSide)}</div>
+			</div>
+		);
+	}
+
+	// ===== Referee scorer (/ref, board modal): redesigned zones =====
+
+	const clock = formatDuration(matchDuration(match));
+	const canSwapServe = !match.done && match.score_a + match.score_b === 0;
+
+	const renderZone = (side: MatchSide) => {
+		const d = sideData[side];
+		const oppScore = sideData[side === "a" ? "b" : "a"].score;
+		const mpKind = matchPointKind(d.score, oppScore, target);
+		const elo = elos?.[side] ?? null;
+		return (
+			<div
+				key={side}
+				className={`refzone refzone--${side}${d.serving ? " is-serving" : ""}${
+					mpKind === "match" ? " is-matchpoint" : ""
+				}${mpKind === "capot" ? " is-capot" : ""}${d.isWinner ? " is-winner" : ""}`}
+				onClick={() => addPoint(side)}
+			>
+				{mpKind && (
+					<div className="ref-mp-pill">
+						● {mpKind === "capot" ? "BALLE DE CAPOT" : "BALLE DE MATCH"}
 					</div>
-				</>
+				)}
+				<div className="refzone-head">
+					<span className="refzone-name">{d.name}</span>
+					{elo !== null && (
+						<span className="refzone-elo">
+							{elo}
+							<span className="refzone-elo-unit"> Elo</span>
+						</span>
+					)}
+				</div>
+				{d.serving && (
+					<button
+						className="refzone-serve"
+						onClick={(e) => {
+							e.stopPropagation();
+							swapServe();
+						}}
+						disabled={!canSwapServe}
+						aria-label={
+							canSwapServe
+								? "Au service — toucher pour échanger le service"
+								: "Au service"
+						}
+						title={canSwapServe ? "Échanger le service (0–0)" : undefined}
+					>
+						<span className="refzone-serve-dot" />
+						AU SERVICE
+					</button>
+				)}
+				<div className="refzone-score">{d.score}</div>
+				{mpKind && (
+					<div className="refzone-caption">
+						{mpKind === "capot"
+							? "1 point pour le capot !"
+							: "1 point pour gagner le match"}
+					</div>
+				)}
+				{d.isWinner && (
+					<div className="refzone-caption refzone-caption--win">Vainqueur 🏆</div>
+				)}
+				<button
+					className="refzone-minus"
+					disabled={d.score === 0 || match.done}
+					onClick={(e) => {
+						e.stopPropagation();
+						removePoint(side);
+					}}
+					aria-label={`Retirer un point à ${d.name}`}
+					title={`Retirer un point à ${d.name}`}
+				>
+					<span className="refzone-minus-sign">−</span>
+					<span className="refzone-minus-short">1 point</span>
+					<span className="refzone-minus-long">Retirer un point</span>
+				</button>
+			</div>
+		);
+	};
+
+	const soundButton = (
+		<button
+			className={`ref-sound${soundOn ? "" : " is-off"}`}
+			onClick={toggleSound}
+			aria-label={soundOn ? "Couper le son" : "Activer le son"}
+			title={soundOn ? "Couper le son" : "Activer le son"}
+		>
+			{soundOn ? (
+				<IconVolume size={18} stroke={2} />
+			) : (
+				<IconVolumeOff size={18} stroke={2} />
 			)}
+		</button>
+	);
+
+	return (
+		<div className="refscorer">
+			<div className="ref-topbar">
+				<div className="ref-topbar-side">
+					{onClose && (
+						<button
+							className="ref-back ref-back--bar"
+							onClick={onClose}
+							aria-label="Fermer"
+							title="Fermer"
+						>
+							<IconChevronLeft size={22} stroke={2.2} />
+						</button>
+					)}
+					<span className="ref-live-pill">
+						<span className="ref-live-dot" />
+						EN DIRECT
+					</span>
+					<div className="ref-topbar-title">
+						<div className="ref-title">{tournamentName ?? "Tournoi ping-pong"}</div>
+						<div className="ref-subtitle">
+							{subtitle ? `${subtitle} · ` : ""}Jeu en {target}
+						</div>
+					</div>
+				</div>
+				<div className="ref-topbar-side">
+					<div className="ref-chrono">
+						<span className="ref-chrono-time">{clock}</span>
+						<span className="ref-chrono-label">CHRONO</span>
+					</div>
+					{soundButton}
+					{onPresent && (
+						<button className="ref-present" onClick={onPresent}>
+							Mode présentation
+						</button>
+					)}
+				</div>
+			</div>
+
+			{onClose && (
+				<button
+					className="ref-back ref-back--float"
+					onClick={onClose}
+					aria-label="Fermer"
+					title="Fermer"
+				>
+					<IconChevronLeft size={22} stroke={2.2} />
+				</button>
+			)}
+
+			{(error || chaosActive) && <div className="ref-banners">{banners}</div>}
+
+			<div className="ref-zones">
+				{renderZone(order[0])}
+				<div className="ref-meta">
+					<div className="ref-chrono">
+						<span className="ref-chrono-time">{clock}</span>
+						<span className="ref-chrono-label">CHRONO</span>
+					</div>
+					<div className="ref-meta-center">
+						<div className="ref-meta-title">Jeu en {target}</div>
+						{tournamentName && (
+							<div className="ref-meta-sub">{tournamentName}</div>
+						)}
+					</div>
+					{soundButton}
+				</div>
+				<div className="ref-vs">VS</div>
+				{renderZone(order[1])}
+			</div>
+
+			<div className="ref-dock">
+				<button className="ref-dock-btn" onClick={undo}>
+					<IconArrowBackUp size={20} stroke={2.2} />
+					<span className="ref-dock-label">Annuler</span>
+					<kbd>Z</kbd>
+				</button>
+				<button
+					className={`ref-dock-btn${flipped ? " is-active" : ""}`}
+					onClick={toggleFlip}
+				>
+					<IconArrowsLeftRight size={19} stroke={2.2} />
+					<span className="ref-dock-label">
+						Inverser<span className="ref-dock-label-ext"> les côtés</span>
+					</span>
+					<kbd>F</kbd>
+				</button>
+				{canSwapServe && (
+					<button
+						className="ref-dock-btn"
+						onClick={swapServe}
+						title="Changer le serveur (avant le premier point)"
+					>
+						<IconPingPong size={20} stroke={2.2} />
+						<span className="ref-dock-label">Service</span>
+						<kbd>S</kbd>
+					</button>
+				)}
+				<button
+					className="ref-dock-btn ref-dock-btn--primary"
+					disabled={!won || match.done}
+					onClick={finish}
+				>
+					<IconCheck size={20} stroke={2.6} />
+					<span className="ref-dock-label">
+						{match.done ? "Validé" : "Valider"}
+						{!match.done && <span className="ref-dock-label-ext"> la partie</span>}
+					</span>
+					<kbd>Entrée</kbd>
+				</button>
+			</div>
 		</div>
 	);
 }
