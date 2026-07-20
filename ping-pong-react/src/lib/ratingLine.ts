@@ -12,7 +12,7 @@ export interface YDomain {
 
 const MIN_SPAN = 40
 const PAD = 1.3
-const GRID_STEPS = [10, 20, 25, 50, 100, 200, 500]
+const GRID_STEPS = [10, 20, 50, 100, 200, 500]
 
 /** Padded y-domain centered on the data; flat histories get a minimum band. */
 export function yDomain(ratings: number[]): YDomain {
@@ -23,10 +23,16 @@ export function yDomain(ratings: number[]): YDomain {
   return { min: mid - half, max: mid + half }
 }
 
-/** 1–4 round gridline values inside the domain, at the finest step that fits. */
+/** 1–4 round gridline values (multiples of 10), at the finest step that fits. */
 export function gridValues(dom: YDomain): number[] {
-  const span = dom.max - dom.min
-  const step = GRID_STEPS.find((s) => span / s <= 4) ?? 1000
+  for (const step of GRID_STEPS) {
+    const values = multiplesWithin(dom, step)
+    if (values.length <= 4) return values
+  }
+  return multiplesWithin(dom, 1000)
+}
+
+function multiplesWithin(dom: YDomain, step: number): number[] {
   const first = Math.ceil(dom.min / step) * step
   const out: number[] = []
   for (let v = first; v <= dom.max; v += step) out.push(v)

@@ -43,6 +43,20 @@ describe('gridValues', () => {
     const values = gridValues({ min: 1200, max: 1800 })
     for (const v of values) expect(v % 200).toBe(0)
   })
+
+  it('caps at 4 gridlines even for awkwardly aligned domains', () => {
+    const values = gridValues({ min: 1460, max: 1540 })
+    expect(values.length).toBeGreaterThanOrEqual(1)
+    expect(values.length).toBeLessThanOrEqual(4)
+    for (const v of values) expect(v % 10).toBe(0)
+  })
+
+  it('only ever returns multiples of 10, never quarter steps like 1525', () => {
+    const values = gridValues({ min: 1455, max: 1545 })
+    expect(values.length).toBeGreaterThanOrEqual(1)
+    expect(values.length).toBeLessThanOrEqual(4)
+    for (const v of values) expect(v % 10).toBe(0)
+  })
 })
 
 describe('scalePoints', () => {
