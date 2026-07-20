@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { sideKey } from '../lib/stats'
+import { sideElos, type SideElos } from '../lib/scorerElo'
 import type { Match } from '../types'
 import { useRatings, type RatingEvent } from './useRatings'
 
@@ -51,6 +52,13 @@ const EMPTY: MatchRatings = { a: null, b: null }
  */
 export function useRatingDeltas() {
   const { events, rows, loading } = useRatings()
+
+  // Current ladder Elo for each side of a match (referee scorer name pills).
+  const elosFor = useCallback(
+    (match: Match | null | undefined): SideElos =>
+      match ? sideElos(rows, match) : { a: null, b: null },
+    [rows],
+  )
 
   // Events grouped by match, and rank/provisional keyed by ladder identity.
   const byMatch = useMemo(() => {
@@ -140,5 +148,5 @@ export function useRatingDeltas() {
     [events, standingByKey],
   )
 
-  return { forMatch, forTournament, loading }
+  return { forMatch, forTournament, elosFor, loading }
 }

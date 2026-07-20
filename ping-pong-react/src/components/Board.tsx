@@ -28,8 +28,11 @@ interface Props {
 export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	const { name: bettorName, setName: setBettorName } = useBettorName();
-	const { forMatch: ratingsForMatch, forTournament: ratingsForTournament } =
-		useRatingDeltas();
+	const {
+		forMatch: ratingsForMatch,
+		forTournament: ratingsForTournament,
+		elosFor,
+	} = useRatingDeltas();
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
 	const [capotMatch, setCapotMatch] = useState<Match | null>(null);
@@ -94,6 +97,10 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 				onFinish={() => {
 					/* match.done flips via the patch above, which renders GameResult */
 				}}
+				tournamentName={tournament.name}
+				subtitle="Partie rapide"
+				elos={elosFor(match)}
+				onPresent={() => navigate(`/t/${id}/live`)}
 			/>
 		);
 	}
@@ -208,6 +215,10 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 						if (openMatch && isCapot(openMatch)) setCapotMatch(openMatch);
 						setOpenId(null);
 					}}
+					tournamentName={tournament.name}
+					subtitle={isDouble ? "Élimination directe" : "Round-robin"}
+					elos={elosFor(openMatch)}
+					onPresent={() => navigate(`/t/${id}/live`)}
 				/>
 			)}
 
