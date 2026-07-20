@@ -17,11 +17,14 @@ and win/loss record. French UI, consistent with existing design tokens.
 - **Modal content:** rating chart + stat strip (best rating, rank, percentile)
   + W/L record. No recent-matches list (the Journal already covers match-level
   detail).
-- **Hand-rolled SVG chart**, matching the existing dependency-free
-  `Charts.tsx` idiom (CSS-variable theming). `@nivo` was considered and
-  rejected for v1: ~100 kB+ gzipped, JS-object theming that fights the
-  CSS-variable light/dark system, and a second charting idiom to maintain.
-  Revisit if the app grows more charts.
+- **Chart: `@nivo/line`** (decision revised 2026-07-20 after v1 shipped
+  hand-rolled and felt too bare). The hand-rolled SVG was replaced by
+  `ResponsiveLine` with crosshair + tooltip (date · rating · ±delta).
+  The tested pure logic in `ratingLine.ts` (`yDomain`, `gridValues`,
+  `labelIndices`) survives as nivo's scale/tick inputs; the path/scale
+  helpers were deleted with the SVG. Theming: nivo's JS theme object is
+  built from the CSS variables, refreshed by a `MutationObserver` on
+  `data-theme`, so light/dark still follow the app.
 - **Data source: the in-memory replay** already exposed by `useRatings()`
   (`events` + `rows`), not the persisted `rating_events` table. Zero new
   queries and no drift: the modal always agrees with the table it opens from.
