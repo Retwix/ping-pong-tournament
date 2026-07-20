@@ -105,7 +105,10 @@ function chronological(a: Match, b: Match): number {
 }
 
 /** The game target for a match (for margin normalisation). */
-function targetFor(m: Match, opts?: ReplayOptions): number {
+function targetFor(
+  m: Pick<Match, 'tournament_id' | 'score_a' | 'score_b'>,
+  opts?: ReplayOptions
+): number {
   const fromMap = opts?.targetByTournament?.get(m.tournament_id)
   if (fromMap) return fromMap
   // Fallback when the tournament target isn't supplied: infer from the score.
@@ -115,14 +118,20 @@ function targetFor(m: Match, opts?: ReplayOptions): number {
 
 /** Stakes weight class for a match. GF is decisive; the two matches feeding the
  *  grand final (winners' final, losers' final — both `win_to === 'GF'`) are finals. */
-export function stakesOf(m: Match): Stakes {
+export function stakesOf(m: Pick<Match, 'match_key' | 'win_to'>): Stakes {
   if (m.match_key === 'GF') return 'grand_final'
   if (m.win_to === 'GF') return 'final'
   return 'normal'
 }
 
+/** The fields the per-game weight actually reads off a match. */
+export type WeightedMatch = Pick<
+  Match,
+  'score_a' | 'score_b' | 'tournament_id' | 'match_key' | 'win_to'
+>
+
 /** Per-game weight: margin × stakes. */
-export function gameWeight(m: Match, opts?: ReplayOptions): number {
+export function gameWeight(m: WeightedMatch, opts?: ReplayOptions): number {
   const target = targetFor(m, opts)
   const margin = Math.abs(m.score_a - m.score_b)
   const marginRatio = Math.min(1, target > 0 ? margin / target : 0)
@@ -213,6 +222,30 @@ function toGlicko2(rating: number, rd: number, vol: number): Glicko2 {
 
 function fromGlicko2(s: Glicko2): { rating: number; rd: number; vol: number } {
   return { rating: RATING.R0 + RATING.SCALE * s.mu, rd: RATING.SCALE * s.phi, vol: s.sigma }
+}
+
+/** The rating numbers a projection needs for one player. */
+export interface RatingNumbers {
+  rating: number
+  rd: number
+  vol: number
+}
+
+/**
+ * What each player would gain/lose if `aWins`, at the given game weight —
+ * a pure hypothetical (nothing is recorded), used for live "Elo en jeu".
+ */
+export function projectDeltas(
+  a: RatingNumbers,
+  b: RatingNumbers,
+  aWins: boolean,
+  weight: number
+): { a: number; b: number } {
+  const preA = toGlicko2(a.rating, a.rd, a.vol)
+  const preB = toGlicko2(b.rating, b.rd, b.vol)
+  const newA = fromGlicko2(updateOne(preA, preB, aWins ? 1 : 0, weight))
+  const newB = fromGlicko2(updateOne(preB, preA, aWins ? 0 : 1, weight))
+  return { a: newA.rating - a.rating, b: newB.rating - b.rating }
 }
 
 /** Inflate RD for `days` of inactivity, capped at RD0. */

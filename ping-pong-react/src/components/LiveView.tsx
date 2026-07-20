@@ -8,6 +8,7 @@ import { isPlayable } from "../lib/doubleElim";
 import type { Match } from "../types";
 import LiveScorer from "./LiveScorer";
 import { RatingMoveRow } from "./RatingDelta";
+import SpectatorView from "./SpectatorView";
 import Standings from "./Standings";
 import ThemeToggle from "./ThemeToggle";
 
@@ -41,8 +42,6 @@ function isLive(m: Match): boolean {
  * the same followed match is scorable.
  */
 export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) {
-	// Only offer the "jump to ref" shortcut from the spectator view.
-	const showRef = readOnly && !!onRef;
 	// Referee mode is interactive; spectator mode auto-advances on a timer.
 	const isRef = !readOnly;
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
@@ -51,6 +50,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 		forMatch: ratingsFor,
 		forTournament: ratingsForTournament,
 		elosFor,
+		rows,
 	} = useRatingDeltas();
 	const [shownId, setShownId] = useState<string | null>(null);
 	// Referee-only: after a match is validated we stop on an explicit "up next"
@@ -140,6 +140,23 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 		);
 	}
 
+	// Spectator mode: the TV view owns every state — match in progress,
+	// between matches, tournament over.
+	if (readOnly) {
+		return (
+			<SpectatorView
+				tournament={tournament}
+				matches={matches}
+				match={matches.find((m) => m.id === shownId) ?? null}
+				rows={rows}
+				ratingsFor={ratingsFor}
+				onBack={onBack}
+				onRef={onRef}
+				error={error}
+			/>
+		);
+	}
+
 	// Tournament over: show the champion and final standings instead of a match.
 	if (tournament.status === "done") {
 		const champion =
@@ -164,11 +181,6 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 						ratings={ratingsForTournament(matches)}
 					/>
 					<div className="footer-row">
-						{showRef && (
-							<button className="link-btn" onClick={onRef}>
-								🧑‍⚖️ Mode arbitre
-							</button>
-						)}
 						<button className="link-btn" onClick={onBack}>
 							← Quitter le mode live
 						</button>
@@ -248,11 +260,6 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			<div className="wrap">
 				<p className="empty">En attente du prochain match…</p>
 				<div className="footer-row">
-					{showRef && (
-						<button className="link-btn" onClick={onRef}>
-							🧑‍⚖️ Mode arbitre
-						</button>
-					)}
 					<button className="link-btn" onClick={onBack}>
 						← Quitter le mode live
 					</button>
@@ -274,18 +281,14 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 			match={shownMatch}
 			target={tournament.target}
 			chaos={chaosSettingsFromTournament(tournament)}
-			readOnly={readOnly}
 			ratings={shownMatch.done ? ratingsFor(shownMatch) : undefined}
-			onPatch={
-				readOnly ? undefined : (patch) => patchMatch(shownMatch.id, patch)
-			}
+			onPatch={(patch) => patchMatch(shownMatch.id, patch)}
 			onClose={onBack}
-			onRef={onRef}
-			error={isRef ? error : null}
+			error={error}
 			tournamentName={tournament.name}
 			subtitle={formatLabel}
 			elos={elosFor(shownMatch)}
-			onPresent={isRef ? () => navigate("/live") : undefined}
+			onPresent={() => navigate("/live")}
 		/>
 	);
 }

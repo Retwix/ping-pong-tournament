@@ -148,5 +148,5 @@ export function useRatingDeltas() {
     [events, standingByKey],
   )
 
-  return { forMatch, forTournament, elosFor, loading }
+  return { forMatch, forTournament, elosFor, rows, loading }
 }
