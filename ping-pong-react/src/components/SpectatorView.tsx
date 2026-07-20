@@ -8,6 +8,7 @@ import {
 	formatDuration,
 	isWon,
 	matchDuration,
+	matchPointKind,
 	serverIsA,
 } from "../lib/pingpong";
 import type { RatingRow } from "../lib/rating";
@@ -237,12 +238,21 @@ export default function SpectatorView({
 		const realSide = real[side];
 		const stake = stakes?.[side] ?? null;
 		const delta = realSide ? Math.round(realSide.delta) : stake;
+		const opp = sides[side === "a" ? "b" : "a"];
+		// House terms: one point from winning = "Balla di maccio"; one point
+		// from a shutout win = "Balla di capot".
+		const mp = matchPointKind(d.score, opp.score, target);
 		return (
 			<div
 				className={`tv-player tv-player--${side}${d.serving ? " is-serving" : ""}${
 					d.winner ? " is-winner" : ""
 				}`}
 			>
+				{mp && (
+					<div className={`tv-mp-flag${mp === "capot" ? " tv-mp-flag--capot" : ""}`}>
+						{mp === "capot" ? "Balla di capot" : "Balla di maccio"}
+					</div>
+				)}
 				{d.serving ? (
 					<div className="tv-serve-pill">
 						<span className="tv-serve-ball" />
