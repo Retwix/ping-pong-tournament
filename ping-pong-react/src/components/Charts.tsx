@@ -1,6 +1,14 @@
 // Lightweight, dependency-free charts — pure CSS/SVG, themed via CSS variables.
 import type { DayCount } from '../lib/stats'
 import { teamColor } from '../lib/teams'
+import {
+  areaPath,
+  gridValues,
+  labelIndices,
+  linePath,
+  scalePoints,
+  yDomain,
+} from '../lib/ratingLine'
 
 export interface BarDatum {
   key: string
@@ -60,6 +68,67 @@ export function ActivityChart({ data, max = 30 }: { data: DayCount[]; max?: numb
             </div>
             <div className="act-x">{i % step === 0 ? shortDay(d.date) : ''}</div>
           </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export interface RatingPoint {
+  at: string | null
+  rating: number
+}
+
+const ptLabel = (at: string | null): string => (at ? shortDay(at.slice(0, 10)) : '—')
+
+/** Rating-over-time area chart (chess.com style). Pure SVG, themed via CSS vars. */
+export function RatingLine({ points, color }: { points: RatingPoint[]; color: string }) {
+  if (points.length === 0) return null
+  const W = 560
+  const H = 180
+  const ratings = points.map((p) => p.rating)
+  const dom = yDomain(ratings)
+  const pts = scalePoints(ratings, dom, W, H)
+  const grid = gridValues(dom)
+  const labels = labelIndices(points.length)
+  return (
+    <div className="rl-wrap">
+      <svg className="rl-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Évolution de la note">
+        <defs>
+          <linearGradient id="rl-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {grid.map((v) => {
+          const y = H - ((v - dom.min) / (dom.max - dom.min)) * H
+          return (
+            <g key={v}>
+              <line className="rl-grid" x1={0} x2={W} y1={y} y2={y} />
+              <text className="rl-yv" x={4} y={y - 4}>
+                {v}
+              </text>
+            </g>
+          )
+        })}
+        {pts.length >= 2 && <path d={areaPath(pts, H)} fill="url(#rl-fill)" />}
+        {pts.length >= 2 && <path className="rl-line" d={linePath(pts)} style={{ stroke: color }} />}
+        {pts.map((p, i) => (
+          <circle
+            key={`${points[i].at ?? 'start'}-${i}`}
+            className="rl-dot"
+            cx={p.x}
+            cy={p.y}
+            r={pts.length === 1 ? 5 : 3}
+            style={{ fill: color }}
+          >
+            <title>{`${ptLabel(points[i].at)} · ${Math.round(points[i].rating)}`}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="rl-x">
+        {labels.map((i) => (
+          <span key={i}>{ptLabel(points[i].at)}</span>
         ))}
       </div>
     </div>
