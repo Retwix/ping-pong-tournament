@@ -4,6 +4,7 @@ import {
 	AVATAR_SIZE,
 	avatarStoragePath,
 	coverCrop,
+	playerInitials,
 	validateAvatarFile,
 	withCacheBuster,
 } from './avatar'
@@ -56,6 +57,53 @@ describe('withCacheBuster', () => {
 		expect(withCacheBuster('https://x.supabase.co/avatars/players/p1.webp', 1721400000000)).toBe(
 			'https://x.supabase.co/avatars/players/p1.webp?v=1721400000000',
 		)
+	})
+})
+
+describe('playerInitials', () => {
+	it('takes the first two letters of a single-word name', () => {
+		expect(playerInitials('Thibault')).toBe('TH')
+	})
+
+	it('keeps accented letters rather than stripping them', () => {
+		expect(playerInitials('Léo')).toBe('LÉ')
+	})
+
+	it('takes one letter per word when the name has two words', () => {
+		expect(playerInitials('Marie Claire')).toBe('MC')
+	})
+
+	it('treats a hyphen as a word separator, like a space', () => {
+		expect(playerInitials('Jean-Baptiste')).toBe('JB')
+		expect(playerInitials('Marie-Claire')).toBe('MC')
+	})
+
+	it('uses only the first two words when the name has more', () => {
+		expect(playerInitials('Jean Paul Sartre')).toBe('JP')
+	})
+
+	it('returns the single letter of a one-character name', () => {
+		expect(playerInitials('A')).toBe('A')
+	})
+
+	it('uppercases lowercase input', () => {
+		expect(playerInitials('thibault')).toBe('TH')
+		expect(playerInitials('marie claire')).toBe('MC')
+	})
+
+	it('ignores surrounding and repeated whitespace', () => {
+		expect(playerInitials('  Marie   Claire  ')).toBe('MC')
+		expect(playerInitials('  Léo  ')).toBe('LÉ')
+	})
+
+	it('ignores a trailing separator rather than emitting a blank letter', () => {
+		expect(playerInitials('Jean-')).toBe('JE')
+		expect(playerInitials('Léo ')).toBe('LÉ')
+	})
+
+	it('falls back to a placeholder for an empty or whitespace-only name', () => {
+		expect(playerInitials('')).toBe('?')
+		expect(playerInitials('   ')).toBe('?')
 	})
 })
 
