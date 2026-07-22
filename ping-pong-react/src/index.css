@@ -306,7 +306,7 @@ thead th.left { text-align: left; }
 tbody td { padding: 14px 6px; text-align: center; border-bottom: 1px solid var(--border); font-size: 15px; }
 tbody td.left { text-align: left; font-weight: 600; }
 tbody tr:last-child td { border-bottom: none; }
-.rank { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg); font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-right: 10px; }
+.rank { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg); font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-right: 10px; vertical-align: middle; }
 tr.r1 .rank { background: var(--orange); color: #2a1300; }
 tr.r2 .rank { background: #c7ccd4; color: #16181c; }
 tr.r3 .rank { background: #d08a4a; color: #1a1002; }
@@ -444,7 +444,12 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 .kpi .lbl { color: var(--fg-3); font-size: 12.5px; margin-top: 6px; }
 
 .avatar.sm { width: 30px; height: 30px; font-size: 13px; }
-.lb-player { display: inline-flex; align-items: center; gap: 10px; }
+/* `vertical-align: middle` is load-bearing: as a baseline-aligned inline box, this
+   wrapper takes its baseline from the avatar. Initials give a text baseline, but a
+   photo (a block <img> in a grid box) has none, so the baseline is synthesized from
+   the box bottom — which sits the whole avatar above the baseline and makes rows
+   with a photo ~8px taller than rows with initials. Middle alignment sidesteps it. */
+.lb-player { display: inline-flex; align-items: center; gap: 10px; vertical-align: middle; }
 table.leaderboard tbody td.left { font-family: var(--font-display); }
 table.leaderboard tbody tr { cursor: pointer; }
 table.leaderboard tbody tr:hover td { background: var(--ghost-hover); }
