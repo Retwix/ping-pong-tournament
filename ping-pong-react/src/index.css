@@ -788,6 +788,16 @@ td.elo.neg { color: var(--coral); }
 .chaos-apply:hover { filter: brightness(1.06); }
 
 /* ===== rating history chart (player modal) ===== */
+.rl-block { display: flex; flex-direction: column; }
+.rl-toggle { align-self: flex-end; display: inline-flex; gap: 3px; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 10px; padding: 3px; }
+.rl-toggle button {
+  display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 12px;
+  font-family: var(--font-body); font-weight: 600; font-size: 12.5px;
+  background: transparent; border: none; color: var(--fg-3); border-radius: 7px; cursor: pointer;
+  transition: all var(--dur) var(--ease);
+}
+.rl-toggle button:hover { color: var(--fg-1); }
+.rl-toggle button.active { background: var(--primary); color: #fff; }
 .rl-nivo { height: 340px; margin: 4px 0 2px; }
 .rl-tip { display: flex; align-items: baseline; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 7px 11px; box-shadow: var(--shadow-pop); font-size: 12.5px; }
 .rl-tip-date { color: var(--fg-3); }
