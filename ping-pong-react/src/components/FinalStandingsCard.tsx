@@ -35,11 +35,26 @@ function deltaTone(delta: number): string {
 	return delta < -5 ? "down" : "flat";
 }
 
+/**
+ * Where a row sits in a run of tied rows. Only the ends of the run are rounded,
+ * so three-way ties read as one joined block rather than stacked pills.
+ */
+function tiePosition(
+	rows: FinalStandingRow[],
+	i: number,
+): "top" | "middle" | "bottom" | null {
+	if (rows[i]?.exAequo !== true) return null;
+	const first = rows[i - 1]?.exAequo !== true;
+	const last = rows[i + 1]?.exAequo !== true;
+	if (first) return "top";
+	return last ? "bottom" : "middle";
+}
+
 interface RowProps {
 	row: FinalStandingRow;
 	look: LookUpPlayer;
 	/** Position within a run of tied rows, so the shared background can join them. */
-	joined: "top" | "bottom" | null;
+	joined: "top" | "middle" | "bottom" | null;
 }
 
 function StandingsRow({ row, look, joined }: RowProps) {
@@ -104,17 +119,14 @@ export default function FinalStandingsCard({ rows, format, look, actions }: Prop
 			</div>
 
 			<div className="fs-rows">
-				{visible.map((row, i) => {
-					const afterTie = visible[i - 1]?.exAequo === true;
-					return (
-						<StandingsRow
-							key={row.name}
-							row={row}
-							look={look}
-							joined={row.exAequo ? (afterTie ? "bottom" : "top") : null}
-						/>
-					);
-				})}
+				{visible.map((row, i) => (
+					<StandingsRow
+						key={row.name}
+						row={row}
+						look={look}
+						joined={tiePosition(visible, i)}
+					/>
+				))}
 				{collapsed && (
 					<button className="fs-more" onClick={() => setExpanded(true)}>
 						+ {hidden} autre{hidden > 1 ? "s" : ""} joueur{hidden > 1 ? "s" : ""}

@@ -1484,6 +1484,7 @@ td.elo.neg { color: var(--coral); }
 .fs-row--champ .fs-place { color: #f0c84b; }
 .fs-tied { background: rgba(255, 255, 255, 0.05); }
 .fs-tied--top { border-radius: 10px 10px 0 0; }
+.fs-tied--middle { border-radius: 0; }
 .fs-tied--bottom { border-radius: 0 0 10px 10px; }
 .fs-place { font-family: var(--font-display); font-weight: 900; font-size: 15px; color: rgba(255, 255, 255, 0.8); }
 .fs-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
