@@ -5,6 +5,7 @@ export interface PlayerStat {
   key: string // stable identity: player id, or `name:<name>` fallback
   name: string // display name (current registry name, or recorded name)
   team: string | null
+  avatar_url: string | null
   played: number
   wins: number
   losses: number
@@ -84,10 +85,14 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
   const nameById = new Map<string, string>()
   const teamById = new Map<string, string>()
   const teamByName = new Map<string, string>()
+  const avatarById = new Map<string, string | null>()
+  const avatarByName = new Map<string, string | null>()
   for (const p of players) {
     nameById.set(p.id, p.name)
     teamById.set(p.id, p.team)
     teamByName.set(p.name, p.team)
+    avatarById.set(p.id, p.avatar_url)
+    avatarByName.set(p.name, p.avatar_url)
   }
 
   const map = new Map<string, PlayerStat>()
@@ -99,10 +104,12 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
     if (!s) {
       const name = (id && nameById.get(id)) || recordedName
       const team = (id && teamById.get(id)) || teamByName.get(recordedName) || null
+      const avatar_url = (id && avatarById.get(id)) || avatarByName.get(recordedName) || null
       s = {
         key,
         name,
         team,
+        avatar_url,
         played: 0,
         wins: 0,
         losses: 0,

@@ -13,6 +13,7 @@ function makeRow(overrides: Partial<RatingRow> & Pick<RatingRow, 'key' | 'name' 
 		rank: 1,
 		provisional: false,
 		team: null,
+		avatar_url: null,
 		trend: 0,
 		...overrides,
 	}

@@ -390,6 +390,7 @@ export interface RatingRow extends RatingState {
   rank: number
   provisional: boolean
   team: string | null
+  avatar_url: string | null
   trend: number // signed rating delta of the player's most recent match
 }
 
@@ -402,6 +403,8 @@ export interface RatingRow extends RatingState {
 export function rankRatings(result: ReplayResult, players: Player[]): RatingRow[] {
   const teamById = new Map(players.map((p) => [p.id, p.team]))
   const teamByName = new Map(players.map((p) => [p.name, p.team]))
+  const avatarById = new Map(players.map((p) => [p.id, p.avatar_url]))
+  const avatarByName = new Map(players.map((p) => [p.name, p.avatar_url]))
 
   // Last event per player drives the trend arrow.
   const lastDelta = new Map<string, number>()
@@ -414,6 +417,7 @@ export function rankRatings(result: ReplayResult, players: Player[]): RatingRow[
       rank: 0,
       provisional: isProvisional(s),
       team: (s.playerId && teamById.get(s.playerId)) || teamByName.get(s.name) || null,
+      avatar_url: (s.playerId && avatarById.get(s.playerId)) || avatarByName.get(s.name) || null,
       trend: lastDelta.get(s.key) ?? 0,
     }))
 
