@@ -2,10 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
 	AVATAR_MAX_BYTES,
 	AVATAR_SIZE,
+	avatarStoragePath,
 	coverCrop,
 	validateAvatarFile,
 	withCacheBuster,
 } from './avatar'
+
+describe('avatarStoragePath', () => {
+	it('is stable per player so uploads overwrite and removal targets the same object', () => {
+		expect(avatarStoragePath('3f2a-uuid')).toBe('players/3f2a-uuid.webp')
+	})
+})
 
 describe('coverCrop', () => {
 	it('crops a landscape image to a horizontally centered square', () => {

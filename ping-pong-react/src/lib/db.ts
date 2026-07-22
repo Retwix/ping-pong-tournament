@@ -3,7 +3,7 @@ import { generateSchedule, shuffle } from './roundRobin'
 import { buildDoubleElim } from './doubleElim'
 import { RATING, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
-import { withCacheBuster } from './avatar'
+import { avatarStoragePath, withCacheBuster } from './avatar'
 import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -51,13 +51,20 @@ export async function updatePlayer(
  * the player row.
  */
 export async function uploadPlayerAvatar(id: string, blob: Blob): Promise<string> {
-  const path = `players/${id}.webp`
+  const path = avatarStoragePath(id)
   const { error } = await supabase.storage
     .from('avatars')
     .upload(path, blob, { upsert: true, contentType: 'image/webp' })
   if (error) throw error
   const { data } = supabase.storage.from('avatars').getPublicUrl(path)
   return withCacheBuster(data.publicUrl, Date.now())
+}
+
+/** Delete a player's photo (storage object + row pointer). */
+export async function removePlayerAvatar(id: string): Promise<void> {
+  const { error } = await supabase.storage.from('avatars').remove([avatarStoragePath(id)])
+  if (error) throw error
+  await updatePlayer(id, { avatar_url: null })
 }
 
 /**

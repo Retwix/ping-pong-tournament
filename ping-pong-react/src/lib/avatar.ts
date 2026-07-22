@@ -15,6 +15,11 @@ export function coverCrop(width: number, height: number): CropRect {
 	return { sx: (width - size) / 2, sy: (height - size) / 2, size }
 }
 
+/** Stable storage object path per player — uploads overwrite, removal targets it. */
+export function avatarStoragePath(playerId: string): string {
+	return `players/${playerId}.webp`
+}
+
 export type AvatarFileCheck = { ok: true } | { ok: false; error: string }
 
 /** Pre-flight check on the picked file, before any decoding happens. */
