@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useBettorName } from "../hooks/useBettorName";
 import { usePlayers } from "../hooks/usePlayers";
 import { useRatingDeltas } from "../hooks/useRatingDeltas";
@@ -36,7 +36,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 		forTournament: ratingsForTournament,
 		elosFor,
 	} = useRatingDeltas();
-	const look = playerLookup(registry);
+	const look = useMemo(() => playerLookup(registry), [registry]);
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
 	const [capotMatch, setCapotMatch] = useState<Match | null>(null);
@@ -88,6 +88,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 					onReplay={rematch}
 					onHome={onBack}
 					ratings={ratingsForMatch(match)}
+					look={look}
 				/>
 			);
 		}
@@ -239,8 +240,9 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 							: capotMatch.player_a
 					}
 					winnerScore={Math.max(capotMatch.score_a, capotMatch.score_b)}
+					look={look}
 				>
-					<button className="solid" onClick={() => setCapotMatch(null)}>
+					<button className="tk-btn tk-btn--primary" onClick={() => setCapotMatch(null)}>
 						Continuer
 					</button>
 				</CapotScreen>

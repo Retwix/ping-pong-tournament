@@ -1,8 +1,10 @@
 import type { Match } from "../types";
 import type { MatchRatings, SideRating } from "../hooks/useRatingDeltas";
+import type { LookUpPlayer } from "../lib/playerLookup";
 import { isCapot } from "../lib/stats";
+import Avatar from "./Avatar";
 import CapotScreen from "./CapotScreen";
-import Celebration from "./Celebration";
+import Confetti from "./Confetti";
 
 interface Props {
 	match: Match;
@@ -10,75 +12,113 @@ interface Props {
 	onHome: () => void;
 	/** Per-side rating move for this match (from the global ladder). */
 	ratings?: MatchRatings;
+	look: LookUpPlayer;
 }
 
-/** A compact "name +12" tag for one side's Élo change. */
-function EloTag({ side }: { side: SideRating }) {
+function EloStat({ side, tone }: { side: SideRating; tone: "up" | "down" }) {
 	const v = Math.round(side.delta);
-	const dir = v > 0 ? "up" : v < 0 ? "down" : "flat";
-	const txt = v === 0 ? "±0" : `${v > 0 ? "+" : "−"}${Math.abs(v)}`;
 	return (
-		<span className={`ce-item ${dir}`}>
-			<span className="ce-name">{side.name}</span>
-			<span className="ce-delta">{txt}</span>
-		</span>
+		<div className="tk-stat">
+			<div className={`tk-stat-value tk-stat-value--${tone}`}>
+				{v === 0 ? "±0" : `${v > 0 ? "+" : "−"}${Math.abs(v)}`}
+			</div>
+			<div className="tk-stat-label">
+				{side.name} · Élo {Math.round(side.ratingAfter)}
+			</div>
+		</div>
 	);
 }
 
-export default function GameResult({ match, onReplay, onHome, ratings }: Props) {
+/**
+ * The end of a standalone 1v1 — now the only 1v1 result screen, on every surface.
+ * A shutout hands over to the capot screen instead.
+ */
+export default function GameResult({ match, onReplay, onHome, ratings, look }: Props) {
 	const aWin = match.score_a > match.score_b;
 	const winner = aWin ? match.player_a : match.player_b;
 	const loser = aWin ? match.player_b : match.player_a;
-	const ws = aWin ? match.score_a : match.score_b;
-
-	// Winner first, loser second — null until the rating replay has caught up.
-	const rd = ratings ?? { a: null, b: null };
-	const rdWinner = rd.a?.won ? rd.a : rd.b?.won ? rd.b : null;
-	const rdLoser = rd.a && !rd.a.won ? rd.a : rd.b && !rd.b.won ? rd.b : null;
-	const elo =
-		rdWinner || rdLoser ? (
-			<div className="champ-elo">
-				{rdWinner && <EloTag side={rdWinner} />}
-				{rdLoser && <EloTag side={rdLoser} />}
-			</div>
-		) : undefined;
+	const winnerScore = aWin ? match.score_a : match.score_b;
+	const loserScore = aWin ? match.score_b : match.score_a;
 
 	// 0-point loss → the office "sous la table" humiliation.
 	if (isCapot(match)) {
 		return (
-			<CapotScreen winner={winner} loser={loser} winnerScore={ws}>
-				<button className="ghost" onClick={onReplay}>
+			<CapotScreen winner={winner} loser={loser} winnerScore={winnerScore} look={look}>
+				<button className="tk-btn tk-btn--primary" onClick={onReplay}>
 					Rejouer
 				</button>
-				<button className="solid" onClick={onHome}>
+				<button className="tk-btn tk-btn--ghost" onClick={onHome}>
 					Accueil
 				</button>
 			</CapotScreen>
 		);
 	}
 
+	const rd = ratings ?? { a: null, b: null };
+	const rdWinner = rd.a?.won ? rd.a : rd.b?.won ? rd.b : null;
+	const rdLoser = rd.a && !rd.a.won ? rd.a : rd.b && !rd.b.won ? rd.b : null;
+	const winnerLook = look(winner);
+	const loserLook = look(loser);
+
 	return (
-		<Celebration
-			headline="Partie terminée"
-			winnerName={winner}
-			subtitle={
-				<>
-					{match.player_a} <b>{match.score_a}</b> &ndash; <b>{match.score_b}</b>{" "}
-					{match.player_b}
-				</>
-			}
-			actions={
-				<>
-					<button className="ghost" onClick={onReplay}>
+		<div className="takeover takeover--purple">
+			<Confetti />
+			<div className="tk-inner tk-inner--solo">
+				<div className="tk-eyebrow">Partie terminée</div>
+				<Avatar
+					name={winner}
+					team={winnerLook.team}
+					url={winnerLook.url}
+					className="tk-winner-av"
+					fill="hero"
+				/>
+				<div className="tk-winner-name">{winner} gagne</div>
+
+				<div className="tk-scoreline">
+					<div className="tk-face-col">
+						<Avatar
+							name={winner}
+							team={winnerLook.team}
+							url={winnerLook.url}
+							className="tk-face"
+							fill="solid"
+						/>
+						<div className="tk-face-name">{winner}</div>
+					</div>
+					<div className="tk-score">
+						{winnerScore}
+						<span className="tk-score-dash">—</span>
+						{loserScore}
+					</div>
+					<div className="tk-face-col tk-face-col--loser">
+						<Avatar
+							name={loser}
+							team={loserLook.team}
+							url={loserLook.url}
+							className="tk-face"
+							fill="solid"
+						/>
+						<div className="tk-face-name">{loser}</div>
+					</div>
+				</div>
+
+				{(rdWinner || rdLoser) && (
+					<div className="tk-pill">
+						{rdWinner && <EloStat side={rdWinner} tone="up" />}
+						{rdWinner && rdLoser && <div className="tk-pill-sep" />}
+						{rdLoser && <EloStat side={rdLoser} tone="down" />}
+					</div>
+				)}
+
+				<div className="tk-actions">
+					<button className="tk-btn tk-btn--primary" onClick={onReplay}>
 						Rejouer
 					</button>
-					<button className="solid" onClick={onHome}>
+					<button className="tk-btn tk-btn--ghost" onClick={onHome}>
 						Accueil
 					</button>
-				</>
-			}
-		>
-			{elo}
-		</Celebration>
+				</div>
+			</div>
+		</div>
 	);
 }
