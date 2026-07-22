@@ -100,7 +100,8 @@ create table if not exists public.players (
   created_at  timestamptz not null default now(),
   name        text not null unique,
   team        text not null default 'guests',
-  slack_user_id text   -- Slack user id (e.g. U0123ABCD) for private invitations; null = not on Slack
+  slack_user_id text,  -- Slack user id (e.g. U0123ABCD) for private invitations; null = not on Slack
+  avatar_url text      -- public URL of the uploaded profile photo; null = initial-letter avatar
 );
 
 -- Add `slack_user_id` to databases created before this column existed.

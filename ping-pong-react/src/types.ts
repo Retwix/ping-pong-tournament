@@ -20,6 +20,8 @@ export interface Player {
   team: string
   /** Slack user id (e.g. U0123ABCD) for private invitations. null = not on Slack. */
   slack_user_id: string | null
+  /** Public URL of the uploaded profile photo (with cache-buster). null = initial-letter avatar. */
+  avatar_url: string | null
 }
 
 export interface Tournament {
