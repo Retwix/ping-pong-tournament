@@ -1,6 +1,7 @@
 // Charts for the app — hand-rolled CSS/SVG plus the nivo rating line, themed via CSS variables.
 import type { DayCount } from '../lib/stats'
 import { teamColor } from '../lib/teams'
+import { perDayPoints } from '../lib/playerHistory'
 import { linearGradientDef } from '@nivo/core'
 import { ResponsiveLine } from '@nivo/line'
 import { useEffect, useState } from 'react'
@@ -104,67 +105,91 @@ const nivoTheme = (v: Record<string, string>) => ({
   crosshair: { line: { stroke: v['--fg-3'], strokeWidth: 1, strokeOpacity: 0.5 } },
 })
 
+type RatingLineMode = 'match' | 'day'
+
 /** Rating-over-time area chart (chess.com style), themed from the CSS variables. */
 export function RatingLine({ points, color }: { points: RatingPoint[]; color: string }) {
   const cssVars = useCssVars()
+  const [mode, setMode] = useState<RatingLineMode>('match')
   if (points.length === 0) return null
-  const ratings = points.map((p) => p.rating)
+  const shown = mode === 'day' ? perDayPoints(points) : points
+  const ratings = shown.map((p) => p.rating)
   const dom = yDomain(ratings)
   const ticks = gridValues(dom)
   const data = [
-    { id: 'elo', data: points.map((p, i) => ({ x: i, y: p.rating })) },
+    { id: 'elo', data: shown.map((p, i) => ({ x: i, y: p.rating })) },
   ]
   return (
-    <div className="rl-nivo" role="img" aria-label="Évolution de la note">
-      <ResponsiveLine
-        data={data}
-        margin={{ top: 10, right: 16, bottom: 28, left: 44 }}
-        xScale={{ type: 'linear', min: 0, max: Math.max(1, points.length - 1) }}
-        yScale={{ type: 'linear', min: dom.min, max: dom.max }}
-        curve="monotoneX"
-        axisBottom={{
-          tickSize: 0,
-          tickPadding: 10,
-          tickValues: labelIndices(points.length),
-          format: (i) => ptLabel(points[Number(i)]?.at ?? null),
-        }}
-        axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: ticks }}
-        gridYValues={ticks}
-        enableGridX={false}
-        colors={[color]}
-        lineWidth={2.5}
-        enablePoints={points.length === 1}
-        pointSize={9}
-        enableArea
-        defs={[
-          linearGradientDef('rlFill', [
-            { offset: 0, color, opacity: 0.28 },
-            { offset: 100, color, opacity: 0.02 },
-          ]),
-        ]}
-        fill={[{ match: '*', id: 'rlFill' }]}
-        useMesh
-        enableCrosshair
-        crosshairType="x"
-        animate={false}
-        tooltip={({ point }) => {
-          const i = Number(point.data.x)
-          const delta =
-            i > 0 ? Math.round(points[i].rating) - Math.round(points[i - 1].rating) : null
-          return (
-            <div className="rl-tip">
-              <span className="rl-tip-date">{ptLabel(points[i].at)}</span>
-              <span className="rl-tip-rating">{Math.round(points[i].rating)}</span>
-              {delta !== null && delta !== 0 && (
-                <span className={`rt-trend ${delta > 0 ? 'up' : 'down'}`}>
-                  {delta > 0 ? '▲' : '▼'} {Math.abs(delta)}
-                </span>
-              )}
-            </div>
-          )
-        }}
-        theme={nivoTheme(cssVars)}
-      />
+    <div className="rl-block">
+      <div className="rl-toggle" role="tablist" aria-label="Granularité de la courbe">
+        <button
+          role="tab"
+          aria-selected={mode === 'match'}
+          className={mode === 'match' ? 'active' : ''}
+          onClick={() => setMode('match')}
+        >
+          Par match
+        </button>
+        <button
+          role="tab"
+          aria-selected={mode === 'day'}
+          className={mode === 'day' ? 'active' : ''}
+          onClick={() => setMode('day')}
+        >
+          Par jour
+        </button>
+      </div>
+      <div className="rl-nivo" role="img" aria-label="Évolution de la note">
+        <ResponsiveLine
+          data={data}
+          margin={{ top: 10, right: 16, bottom: 28, left: 44 }}
+          xScale={{ type: 'linear', min: 0, max: Math.max(1, shown.length - 1) }}
+          yScale={{ type: 'linear', min: dom.min, max: dom.max }}
+          curve="monotoneX"
+          axisBottom={{
+            tickSize: 0,
+            tickPadding: 10,
+            tickValues: labelIndices(shown.length),
+            format: (i) => ptLabel(shown[Number(i)]?.at ?? null),
+          }}
+          axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: ticks }}
+          gridYValues={ticks}
+          enableGridX={false}
+          colors={[color]}
+          lineWidth={2.5}
+          enablePoints={shown.length === 1}
+          pointSize={9}
+          enableArea
+          defs={[
+            linearGradientDef('rlFill', [
+              { offset: 0, color, opacity: 0.28 },
+              { offset: 100, color, opacity: 0.02 },
+            ]),
+          ]}
+          fill={[{ match: '*', id: 'rlFill' }]}
+          useMesh
+          enableCrosshair
+          crosshairType="x"
+          animate={false}
+          tooltip={({ point }) => {
+            const i = Number(point.data.x)
+            const delta =
+              i > 0 ? Math.round(shown[i].rating) - Math.round(shown[i - 1].rating) : null
+            return (
+              <div className="rl-tip">
+                <span className="rl-tip-date">{ptLabel(shown[i].at)}</span>
+                <span className="rl-tip-rating">{Math.round(shown[i].rating)}</span>
+                {delta !== null && delta !== 0 && (
+                  <span className={`rt-trend ${delta > 0 ? 'up' : 'down'}`}>
+                    {delta > 0 ? '▲' : '▼'} {Math.abs(delta)}
+                  </span>
+                )}
+              </div>
+            )
+          }}
+          theme={nivoTheme(cssVars)}
+        />
+      </div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { playerHistory } from './playerHistory'
+import { perDayPoints, playerHistory } from './playerHistory'
 import type { RatingEvent, RatingRow } from './rating'
 
 const event = (over: Partial<RatingEvent> = {}): RatingEvent => ({
@@ -85,16 +85,34 @@ describe('playerHistory', () => {
     expect(h?.winRate).toBe(0.75)
   })
 
-  it('reads peak, rank and total from the ranked rows', () => {
+  it('reads rank and total from the ranked rows', () => {
     const rows = [
       row({ key: 'bob', name: 'Bob', rank: 1 }),
-      row({ rank: 2, peak: 1540 }),
+      row({ rank: 2 }),
       row({ key: 'carol', name: 'Carol', rank: 3 }),
     ]
     const h = playerHistory([event()], rows, 'alice')
-    expect(h?.peak).toBe(1540)
     expect(h?.rank).toBe(2)
     expect(h?.total).toBe(3)
+  })
+
+  it('reports peak as the best rating reached in play, ignoring the row peak', () => {
+    const events = [
+      event({ matchId: 'm1', ratingAfter: 1522 }),
+      event({ matchId: 'm2', ratingAfter: 1563 }),
+      event({ matchId: 'm3', ratingAfter: 1548, won: false }),
+    ]
+    const h = playerHistory(events, [row({ peak: 9999 })], 'alice')
+    expect(h?.peak).toBe(1563)
+  })
+
+  it('never anchors peak at the free 1500 start for a player who only declined', () => {
+    const events = [
+      event({ matchId: 'm1', ratingAfter: 1478, won: false }),
+      event({ matchId: 'm2', ratingAfter: 1461, won: false }),
+    ]
+    const h = playerHistory(events, [row()], 'alice')
+    expect(h?.peak).toBe(1478)
   })
 
   it('gives the leader percentile 1 and the last place percentile 0', () => {
@@ -120,5 +138,46 @@ describe('playerHistory', () => {
 
   it('gives a lone ranked player percentile 1', () => {
     expect(playerHistory([event()], [row()], 'alice')?.percentile).toBe(1)
+  })
+})
+
+describe('perDayPoints', () => {
+  it('keeps the null anchor and collapses same-day matches to the end-of-day rating', () => {
+    const points = [
+      { at: null, rating: 1500 },
+      { at: '2026-07-01T09:00:00Z', rating: 1512 },
+      { at: '2026-07-01T15:00:00Z', rating: 1505 },
+      { at: '2026-07-01T20:00:00Z', rating: 1523 },
+    ]
+    expect(perDayPoints(points)).toEqual([
+      { at: null, rating: 1500 },
+      { at: '2026-07-01T20:00:00Z', rating: 1523 },
+    ])
+  })
+
+  it('keeps one end-of-day point per day, in chronological order', () => {
+    const points = [
+      { at: null, rating: 1500 },
+      { at: '2026-07-01T09:00:00Z', rating: 1512 },
+      { at: '2026-07-01T20:00:00Z', rating: 1520 },
+      { at: '2026-07-02T10:00:00Z', rating: 1498 },
+      { at: '2026-07-03T10:00:00Z', rating: 1533 },
+      { at: '2026-07-03T18:00:00Z', rating: 1541 },
+    ]
+    expect(perDayPoints(points)).toEqual([
+      { at: null, rating: 1500 },
+      { at: '2026-07-01T20:00:00Z', rating: 1520 },
+      { at: '2026-07-02T10:00:00Z', rating: 1498 },
+      { at: '2026-07-03T18:00:00Z', rating: 1541 },
+    ])
+  })
+
+  it('leaves an already one-per-day history unchanged', () => {
+    const points = [
+      { at: null, rating: 1500 },
+      { at: '2026-07-01T10:00:00Z', rating: 1512 },
+      { at: '2026-07-02T10:00:00Z', rating: 1498 },
+    ]
+    expect(perDayPoints(points)).toEqual(points)
   })
 })

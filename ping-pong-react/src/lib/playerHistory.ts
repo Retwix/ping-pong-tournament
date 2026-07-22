@@ -20,6 +20,21 @@ export interface PlayerHistory {
 }
 
 /**
+ * Collapse a per-match trajectory to one point per day, keeping each day's
+ * end-of-day rating (the last match played that day). The leading `at: null`
+ * anchor is preserved so the line still starts at R0. Points are assumed
+ * chronological, so the last match seen for a day is the end-of-day one.
+ */
+export function perDayPoints(points: PlayerHistoryPoint[]): PlayerHistoryPoint[] {
+  const byDay = new Map<string, PlayerHistoryPoint>()
+  for (const p of points) {
+    const day = p.at ? p.at.slice(0, 10) : `anchor:${byDay.size}`
+    byDay.set(day, p)
+  }
+  return [...byDay.values()]
+}
+
+/**
  * Derive a player's chart points and headline stats from the replayed rating
  * events and ranked rows. Events are assumed chronological (replay order).
  * Returns null when the player has no rated matches or no ranked row —
@@ -37,12 +52,16 @@ export function playerHistory(
   const wins = mine.filter((e) => e.won).length
   const games = mine.length
   const total = rows.length
+  // Best rating reached *through play* — the free R0 start everyone is handed is
+  // deliberately excluded, so a player who only ever declined shows their real
+  // high-water mark rather than a meaningless 1500.
+  const peak = Math.max(...mine.map((e) => e.ratingAfter))
   return {
     points: [
       { at: null, rating: RATING.R0 },
       ...mine.map((e) => ({ at: e.at, rating: e.ratingAfter })),
     ],
-    peak: rated.peak,
+    peak,
     rank: rated.rank,
     total,
     percentile: total === 1 ? 1 : (total - rated.rank) / (total - 1),
