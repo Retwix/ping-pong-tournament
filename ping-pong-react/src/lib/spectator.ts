@@ -28,6 +28,22 @@ export function crowdSplit(
   return { aPercent, bPercent: 100 - aPercent }
 }
 
+/**
+ * A player's photo from the ladder rows, for the TV avatars. Matched by the
+ * same stable identity the rating engine uses (player id, `name:<name>` for
+ * legacy matches), with a display-name fallback for surfaces that only know
+ * names (the podium). Null = show the monogram.
+ */
+export function ladderAvatar(
+  rows: Pick<RatingRow, 'key' | 'name' | 'avatar_url'>[],
+  playerId: string | null,
+  name: string
+): string | null {
+  const row =
+    rows.find((r) => r.key === sideKey(playerId, name)) ?? rows.find((r) => r.name === name)
+  return row?.avatar_url ?? null
+}
+
 /** Two-letter avatar monogram: "Léo" → "LÉ", "Jean Marc" → "JM". */
 export function initials(name: string): string {
   const words = name.split(/\s+/).filter(Boolean)
