@@ -2,21 +2,11 @@ import { useMemo, useState } from 'react'
 import { IconArrowLeft, IconRefresh } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING } from '../lib/rating'
-import { teamColor } from '../lib/teams'
 import TopBack from './TopBack'
 import ThemeToggle from './ThemeToggle'
 import { playerHistory } from '../lib/playerHistory'
+import Avatar from './Avatar'
 import PlayerModal from './PlayerModal'
-
-function Avatar({ name, team }: { name: string; team: string | null }) {
-  const color = teamColor(team ?? '')
-  const initial = (name.trim()[0] ?? '?').toUpperCase()
-  return (
-    <span className="avatar sm" style={{ background: `${color}24`, color }}>
-      {initial}
-    </span>
-  )
-}
 
 function Trend({ delta }: { delta: number }) {
   const v = Math.round(delta)
@@ -253,7 +243,7 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
                       <td className="left">
                         <span className="rank">{r.rank}</span>
                         <span className="lb-player">
-                          <Avatar name={r.name} team={r.team} />
+                          <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
                           {r.name}
                           {r.provisional && <span className="rt-prov">provisoire</span>}
                         </span>

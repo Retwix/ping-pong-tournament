@@ -36,6 +36,7 @@ const row = (over: Partial<RatingRow> = {}): RatingRow => ({
   rank: 1,
   provisional: true,
   team: 'tech',
+  avatar_url: null,
   trend: 12,
   ...over,
 })

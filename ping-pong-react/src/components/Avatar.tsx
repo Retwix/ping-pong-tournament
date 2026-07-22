@@ -3,7 +3,7 @@ import { teamColor } from "../lib/teams";
 
 interface Props {
 	name: string;
-	team: string;
+	team: string | null;
 	url: string | null;
 	className?: string;
 }
@@ -15,7 +15,7 @@ interface Props {
  */
 export default function Avatar({ name, team, url, className }: Props) {
 	const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-	const color = teamColor(team);
+	const color = teamColor(team ?? "");
 	const showPhoto = url !== null && url !== brokenUrl;
 	const initial = (name.trim()[0] ?? "?").toUpperCase();
 	return (

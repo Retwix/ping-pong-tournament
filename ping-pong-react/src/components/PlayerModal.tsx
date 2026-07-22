@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import type { RatingRow } from '../hooks/useRatings'
 import type { PlayerHistory } from '../lib/playerHistory'
 import { teamColor, teamLabel } from '../lib/teams'
+import Avatar from './Avatar'
 import { RatingLine } from './Charts'
 
 const pct = (v: number): string => `${Math.round(v * 100)} %`
@@ -34,7 +35,6 @@ export default function PlayerModal({
   }, [onClose])
 
   const color = teamColor(row.team ?? '')
-  const initial = (row.name.trim()[0] ?? '?').toUpperCase()
 
   return (
     <div
@@ -49,9 +49,7 @@ export default function PlayerModal({
         </button>
 
         <div className="pd-head">
-          <span className="avatar" style={{ background: `${color}24`, color }}>
-            {initial}
-          </span>
+          <Avatar name={row.name} team={row.team} url={row.avatar_url} />
           <div>
             <h2 style={{ marginBottom: 2 }}>{row.name}</h2>
             <div className="modal-hint" style={{ marginBottom: 0 }}>
