@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { playerInitials } from "../lib/avatar";
 import { teamColor } from "../lib/teams";
 
 interface Props {
@@ -10,14 +11,14 @@ interface Props {
 
 /**
  * Player avatar: the uploaded photo when available, otherwise the colored
- * initial. A photo that fails to load silently falls back to the initial
- * (brokenUrl resets by itself when the url changes).
+ * two-letter initials. A photo that fails to load silently falls back to the
+ * initials (brokenUrl resets by itself when the url changes).
  */
 export default function Avatar({ name, team, url, className }: Props) {
 	const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
 	const color = teamColor(team ?? "");
 	const showPhoto = url !== null && url !== brokenUrl;
-	const initial = (name.trim()[0] ?? "?").toUpperCase();
+	const initials = playerInitials(name);
 	return (
 		<span
 			className={`avatar${className ? ` ${className}` : ""}`}
@@ -26,7 +27,7 @@ export default function Avatar({ name, team, url, className }: Props) {
 			{showPhoto ? (
 				<img src={url} alt="" onError={() => setBrokenUrl(url)} />
 			) : (
-				initial
+				initials
 			)}
 		</span>
 	);
