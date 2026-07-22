@@ -11,6 +11,7 @@ import { processAvatarFile, validateAvatarFile } from "../lib/avatar";
 import {
 	createPlayer,
 	deletePlayer,
+	removePlayerAvatar,
 	updatePlayer,
 	uploadPlayerAvatar,
 } from "../lib/db";
@@ -68,6 +69,15 @@ export default function Players({ onBack }: Props) {
 			const blob = await processAvatarFile(file);
 			const url = await uploadPlayerAvatar(id, blob);
 			await updatePlayer(id, { avatar_url: url });
+			refresh();
+		} catch (err) {
+			setFormError(err instanceof Error ? err.message : String(err));
+		}
+	};
+
+	const dropAvatar = async (id: string) => {
+		try {
+			await removePlayerAvatar(id);
 			refresh();
 		} catch (err) {
 			setFormError(err instanceof Error ? err.message : String(err));
@@ -258,6 +268,14 @@ export default function Players({ onBack }: Props) {
 											>
 												✓
 											</button>
+											{p.avatar_url && (
+												<button
+													className="link-btn"
+													onClick={() => dropAvatar(p.id)}
+												>
+													Retirer la photo
+												</button>
+											)}
 										</div>
 									) : (
 										<div className="player-dept">
