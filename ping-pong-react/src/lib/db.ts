@@ -3,6 +3,7 @@ import { generateSchedule, shuffle } from './roundRobin'
 import { buildDoubleElim } from './doubleElim'
 import { RATING, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
+import { withCacheBuster } from './avatar'
 import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -33,15 +34,30 @@ export async function createPlayer(
   return data as Player
 }
 
-/** Update a player's name and/or team. */
+/** Update a player's name, team and/or avatar. */
 export async function updatePlayer(
   id: string,
-  patch: { name?: string; team?: string; slack_user_id?: string | null }
+  patch: { name?: string; team?: string; slack_user_id?: string | null; avatar_url?: string | null }
 ): Promise<void> {
   // Strip slack_user_id until the column exists in the DB schema.
   const { slack_user_id: _ignored, ...dbPatch } = patch
   const { error } = await supabase.from('players').update(dbPatch).eq('id', id)
   if (error) throw error
+}
+
+/**
+ * Upload a player's processed avatar to the public `avatars` bucket at a stable
+ * path (overwrites any previous photo) and return the public URL to store on
+ * the player row.
+ */
+export async function uploadPlayerAvatar(id: string, blob: Blob): Promise<string> {
+  const path = `players/${id}.webp`
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, blob, { upsert: true, contentType: 'image/webp' })
+  if (error) throw error
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  return withCacheBuster(data.publicUrl, Date.now())
 }
 
 /**

@@ -1,13 +1,21 @@
 import {
 	IconArrowLeft,
+	IconCamera,
 	IconPencil,
 	IconPlus,
 	IconTrash,
 } from "@tabler/icons-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { usePlayers } from "../hooks/usePlayers";
-import { createPlayer, deletePlayer, updatePlayer } from "../lib/db";
+import { processAvatarFile, validateAvatarFile } from "../lib/avatar";
+import {
+	createPlayer,
+	deletePlayer,
+	updatePlayer,
+	uploadPlayerAvatar,
+} from "../lib/db";
 import { TEAMS, type TeamKey, teamColor, teamLabel } from "../lib/teams";
+import Avatar from "./Avatar";
 import ThemeToggle from "./ThemeToggle";
 import TopBack from "./TopBack";
 
@@ -44,6 +52,26 @@ export default function Players({ onBack }: Props) {
 		}
 		setSlackDraft(currentSlack ?? "");
 		setEditingId(id);
+	};
+
+	const pickAvatar = async (id: string, e: ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		e.target.value = "";
+		if (!file) return;
+		const check = validateAvatarFile(file);
+		if (!check.ok) {
+			setFormError(check.error);
+			return;
+		}
+		setFormError(null);
+		try {
+			const blob = await processAvatarFile(file);
+			const url = await uploadPlayerAvatar(id, blob);
+			await updatePlayer(id, { avatar_url: url });
+			refresh();
+		} catch (err) {
+			setFormError(err instanceof Error ? err.message : String(err));
+		}
 	};
 
 	const saveSlack = async (id: string) => {
@@ -130,6 +158,9 @@ export default function Players({ onBack }: Props) {
 			</header>
 
 			{error && <div className="error-banner">Erreur : {error}</div>}
+			{formError && !adding && (
+				<div className="error-banner">{formError}</div>
+			)}
 
 			<section>
 				<div className="home-top">
@@ -157,7 +188,6 @@ export default function Players({ onBack }: Props) {
 				) : (
 					sorted.map((p, i) => {
 						const color = teamColor(p.team);
-						const initial = (p.name.trim()[0] ?? "?").toUpperCase();
 						const isLeaving = leaving.has(p.id);
 						return (
 							<div
@@ -170,12 +200,22 @@ export default function Players({ onBack }: Props) {
 										: `${Math.min(i, 12) * 35}ms`,
 								}}
 							>
-								<div
-									className="avatar"
-									style={{ background: `${color}24`, color }}
-								>
-									{initial}
-								</div>
+								{editingId === p.id ? (
+									<label className="avatar-upload" title="Changer la photo">
+										<Avatar name={p.name} team={p.team} url={p.avatar_url} />
+										<span className="avatar-cam">
+											<IconCamera size={13} stroke={2} />
+										</span>
+										<input
+											type="file"
+											accept="image/*"
+											hidden
+											onChange={(e) => pickAvatar(p.id, e)}
+										/>
+									</label>
+								) : (
+									<Avatar name={p.name} team={p.team} url={p.avatar_url} />
+								)}
 								<div className="player-block">
 									<div className="t-name">{p.name}</div>
 									{editingId === p.id ? (
