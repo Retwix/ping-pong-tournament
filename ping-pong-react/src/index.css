@@ -1187,6 +1187,10 @@ td.elo.neg { color: var(--coral); }
   min-width: 48px; min-height: 48px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: max(17px, calc(38 * var(--u)));
+  overflow: hidden;
+}
+.tv-avatar img, .tv-step-avatar img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block;
 }
 .tv-avatar--a {
   background: var(--purple); color: #fff;
@@ -1317,7 +1321,7 @@ td.elo.neg { color: var(--coral); }
 .tv-step { flex: 1; max-width: 130px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .tv-step-crown { color: #f0c84b; margin-bottom: -4px; }
 .tv-step-avatar {
-  width: 56px; height: 56px; border-radius: 50%;
+  width: 56px; height: 56px; border-radius: 50%; overflow: hidden;
   background: #fff; color: var(--purple);
   display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 20px;

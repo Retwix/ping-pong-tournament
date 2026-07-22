@@ -13,7 +13,7 @@ import {
 } from "../lib/pingpong";
 import type { RatingRow } from "../lib/rating";
 import { sideElos } from "../lib/scorerElo";
-import { crowdSplit, initials, matchStakes } from "../lib/spectator";
+import { crowdSplit, initials, ladderAvatar, matchStakes } from "../lib/spectator";
 import type { Match, MatchSide, Tournament } from "../types";
 import ThemeToggle from "./ThemeToggle";
 
@@ -34,6 +34,33 @@ interface Props {
 /** Signed Elo with a real minus sign, e.g. +18 / −15. */
 function signed(n: number): string {
 	return n < 0 ? `−${Math.abs(n)}` : `+${n}`;
+}
+
+/**
+ * TV avatar: the player's photo when the ladder has one, otherwise the
+ * monogram — keeping the side's gradient look. Broken images fall back to
+ * the monogram (brokenUrl resets by itself when the url changes).
+ */
+function TvAvatar({
+	className,
+	name,
+	url,
+}: {
+	className: string;
+	name: string;
+	url: string | null;
+}) {
+	const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+	const showPhoto = url !== null && url !== brokenUrl;
+	return (
+		<div className={className}>
+			{showPhoto ? (
+				<img src={url} alt="" onError={() => setBrokenUrl(url)} />
+			) : (
+				initials(name)
+			)}
+		</div>
+	);
 }
 
 /**
@@ -112,7 +139,11 @@ export default function SpectatorView({
 							{p.rank === 1 && (
 								<IconCrown className="tv-step-crown" size={30} stroke={1.6} />
 							)}
-							<div className="tv-step-avatar">{initials(p.name)}</div>
+							<TvAvatar
+								className="tv-step-avatar"
+								name={p.name}
+								url={ladderAvatar(rows, null, p.name)}
+							/>
 							<div className="tv-step-name">{p.name}</div>
 							{p.elo !== null && <div className="tv-step-elo">{p.elo} Elo</div>}
 							<div className="tv-step-bar">{p.rank}</div>
@@ -156,9 +187,11 @@ export default function SpectatorView({
 								<div className="tv-next-label">Prochain match · À suivre</div>
 								<div className="tv-next-players">
 									<div className="tv-next-player">
-										<div className="tv-avatar tv-avatar--a">
-											{initials(next.player_a)}
-										</div>
+										<TvAvatar
+											className="tv-avatar tv-avatar--a"
+											name={next.player_a}
+											url={ladderAvatar(rows, next.player_a_id, next.player_a)}
+										/>
 										<div className="tv-next-name">{next.player_a}</div>
 										{nextElos?.a != null && (
 											<div className="tv-next-elo">{nextElos.a} Elo</div>
@@ -166,9 +199,11 @@ export default function SpectatorView({
 									</div>
 									<div className="tv-next-vs">VS</div>
 									<div className="tv-next-player">
-										<div className="tv-avatar tv-avatar--b">
-											{initials(next.player_b)}
-										</div>
+										<TvAvatar
+											className="tv-avatar tv-avatar--b"
+											name={next.player_b}
+											url={ladderAvatar(rows, next.player_b_id, next.player_b)}
+										/>
 										<div className="tv-next-name">{next.player_b}</div>
 										{nextElos?.b != null && (
 											<div className="tv-next-elo">{nextElos.b} Elo</div>
@@ -263,7 +298,15 @@ export default function SpectatorView({
 				) : (
 					<div className="tv-pill-spacer" />
 				)}
-				<div className={`tv-avatar tv-avatar--${side}`}>{initials(d.name)}</div>
+				<TvAvatar
+					className={`tv-avatar tv-avatar--${side}`}
+					name={d.name}
+					url={ladderAvatar(
+						rows,
+						side === "a" ? m.player_a_id : m.player_b_id,
+						d.name,
+					)}
+				/>
 				<div className="tv-name">{d.name}</div>
 				<div className="tv-meta">
 					{elo !== null && <span>{elo} Elo</span>}

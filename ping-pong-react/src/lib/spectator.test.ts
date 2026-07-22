@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { RatingRow } from './rating'
-import { crowdSplit, initials, liveStakes, matchStakes, type StakeSide } from './spectator'
+import {
+  crowdSplit,
+  initials,
+  ladderAvatar,
+  liveStakes,
+  matchStakes,
+  type StakeSide,
+} from './spectator'
 
 function makeBet(overrides: Partial<Parameters<typeof crowdSplit>[0][number]> = {}) {
   return {
@@ -245,6 +252,69 @@ describe('liveStakes', () => {
       b: makeStakeSide(),
     })
     expect(stakes).toBeNull()
+  })
+})
+
+describe('ladderAvatar', () => {
+  it('finds the photo by the stable match identity (player id)', () => {
+    const rows = [
+      makeLadderRow({
+        key: 'p1',
+        name: 'Léo Martin',
+        rating: 1500,
+        avatar_url: 'https://cdn/avatars/p1.webp?v=1',
+      }),
+    ]
+    expect(ladderAvatar(rows, 'p1', 'Léo')).toBe('https://cdn/avatars/p1.webp?v=1')
+  })
+
+  it('finds the photo for legacy name-keyed rows', () => {
+    const rows = [
+      makeLadderRow({
+        key: 'name:Léo',
+        name: 'Léo',
+        rating: 1500,
+        avatar_url: 'https://cdn/avatars/leo.webp?v=1',
+      }),
+    ]
+    expect(ladderAvatar(rows, null, 'Léo')).toBe('https://cdn/avatars/leo.webp?v=1')
+  })
+
+  it('falls back to the display name when only a name is known (podium)', () => {
+    const rows = [
+      makeLadderRow({
+        key: 'p1',
+        name: 'Léo',
+        rating: 1500,
+        avatar_url: 'https://cdn/avatars/p1.webp?v=1',
+      }),
+    ]
+    expect(ladderAvatar(rows, null, 'Léo')).toBe('https://cdn/avatars/p1.webp?v=1')
+  })
+
+  it('returns null for unknown players or players without a photo', () => {
+    const rows = [makeLadderRow({ key: 'p1', name: 'Léo', rating: 1500 })]
+    expect(ladderAvatar(rows, 'p1', 'Léo')).toBeNull()
+    expect(ladderAvatar(rows, null, 'Inconnu')).toBeNull()
+  })
+
+  it('picks the right player out of a multi-row ladder', () => {
+    const rows = [
+      makeLadderRow({
+        key: 'p1',
+        name: 'Ana',
+        rating: 1600,
+        avatar_url: 'https://cdn/avatars/ana.webp?v=1',
+      }),
+      makeLadderRow({
+        key: 'p2',
+        name: 'Léo',
+        rating: 1500,
+        avatar_url: 'https://cdn/avatars/leo.webp?v=1',
+      }),
+    ]
+    expect(ladderAvatar(rows, 'p2', 'Léo')).toBe('https://cdn/avatars/leo.webp?v=1')
+    expect(ladderAvatar(rows, null, 'Léo')).toBe('https://cdn/avatars/leo.webp?v=1')
   })
 })
 
