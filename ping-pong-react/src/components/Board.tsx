@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useBettorName } from "../hooks/useBettorName";
+import { usePlayers } from "../hooks/usePlayers";
 import { useRatingDeltas } from "../hooks/useRatingDeltas";
 import { useTournament } from "../hooks/useTournament";
 import { createTournament } from "../lib/db";
 import { chaosSettingsFromTournament } from "../lib/chaos";
+import { playerLookup } from "../lib/playerLookup";
 import { navigate } from "../lib/router";
 import { isCapot } from "../lib/stats";
 import type { Match } from "../types";
@@ -28,11 +30,13 @@ interface Props {
 export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	const { name: bettorName, setName: setBettorName } = useBettorName();
+	const { players: registry } = usePlayers();
 	const {
 		forMatch: ratingsForMatch,
 		forTournament: ratingsForTournament,
 		elosFor,
 	} = useRatingDeltas();
+	const look = playerLookup(registry);
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
 	const [capotMatch, setCapotMatch] = useState<Match | null>(null);
@@ -247,6 +251,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 					tournament={tournament}
 					matches={matches}
 					ratings={ratingsForTournament(matches)}
+					look={look}
 					onClose={() => setDismissedChampion(true)}
 					onNew={onNew}
 				/>

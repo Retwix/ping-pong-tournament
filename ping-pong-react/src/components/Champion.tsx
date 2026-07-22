@@ -1,100 +1,120 @@
-import { bracketPodium } from "../lib/doubleElim";
-import { computeStandings } from "../lib/pingpong";
+import { finalStandings, type FinalStandingRow } from "../lib/finalStandings";
+import type { LookUpPlayer } from "../lib/playerLookup";
 import type { TournamentRating } from "../hooks/useRatingDeltas";
 import type { Match, Tournament } from "../types";
-import Celebration from "./Celebration";
+import Avatar from "./Avatar";
+import Confetti from "./Confetti";
+import FinalStandingsCard from "./FinalStandingsCard";
 
 interface Props {
 	tournament: Tournament;
 	matches: Match[];
 	/** Net rating change per player over this tournament. */
 	ratings?: TournamentRating[];
+	look: LookUpPlayer;
 	onClose: () => void;
 	onNew: () => void;
 }
 
-const MEDALS = ["🥇", "🥈", "🥉"];
+/** Podium steps, tallest in the middle: silver, gold, bronze. */
+const PODIUM_ORDER = [1, 0, 2];
 
-/** A compact "+34" net-Élo tag for a podium row. */
-function PodiumElo({ net }: { net: number }) {
-	const v = Math.round(net);
-	const dir = v > 0 ? "up" : v < 0 ? "down" : "flat";
-	const txt = v === 0 ? "±0" : `${v > 0 ? "+" : "−"}${Math.abs(v)}`;
-	return <span className={`pelo ${dir}`}>{txt}</span>;
+function Podium({ rows, look }: { rows: FinalStandingRow[]; look: LookUpPlayer }) {
+	// Only ever as many steps as there are players — never an empty placeholder.
+	const steps = PODIUM_ORDER.filter((i) => i < rows.length);
+	return (
+		<div className="tk-podium">
+			{steps.map((i) => {
+				const row = rows[i];
+				if (row === undefined) return null;
+				const { team, url } = look(row.name);
+				return (
+					<div key={row.name} className={`pod pod--${row.place}`}>
+						<Avatar
+							name={row.name}
+							team={team}
+							url={url}
+							className={`pod-av pod-av--${row.place}`}
+							fill={row.place === 1 ? "hero" : "solid"}
+						/>
+						<div className="pod-bar">{row.place}</div>
+					</div>
+				);
+			})}
+		</div>
+	);
 }
 
-export default function Champion({
-	tournament,
-	matches,
-	ratings,
-	onClose,
-	onNew,
-}: Props) {
-	const isDouble = tournament.format === "double_elim";
-	const netByName = new Map((ratings ?? []).map((r) => [r.name, r.netDelta]));
+/**
+ * End of a tournament: the champion, the podium, and the full final classement so
+ * everyone can see where they finished. Rendered as a fixed dark takeover in both
+ * themes — a celebratory interruption rather than part of the themed UI.
+ */
+export default function Champion({ tournament, matches, ratings, look, onClose, onNew }: Props) {
+	const rows = finalStandings({
+		players: tournament.players,
+		matches,
+		format: tournament.format,
+		ratings,
+	});
+	const champ = rows[0];
+	if (champ === undefined) return null;
 
-	// Double elimination: rank from the bracket result. Round-robin: from standings.
-	const podium = isDouble
-		? bracketPodium(matches).map((r) => ({
-				name: r.name,
-				sub: r.rank === 1 ? "Vainqueur" : "",
-			}))
-		: computeStandings(tournament.players, matches)
-				.slice(0, 3)
-				.map((s) => ({ name: s.name, sub: `${s.wins} V` }));
-
-	const champ =
-		podium[0] ??
-		(tournament.champion ? { name: tournament.champion, sub: "" } : null);
-	if (!champ) return null;
-
-	const standings = isDouble
-		? null
-		: computeStandings(tournament.players, matches)[0];
+	const { team, url } = look(champ.name);
+	const record = `${champ.wins} victoire${champ.wins > 1 ? "s" : ""}, ${champ.losses} défaite${
+		champ.losses > 1 ? "s" : ""
+	}`;
+	const delta = champ.eloDelta;
 
 	return (
-		<Celebration
-			headline="Tournoi terminé"
-			winnerName={champ.name}
-			subtitle={
-				isDouble ? (
-					"Champion · double élimination"
-				) : standings ? (
-					<>
-						<b>{standings.wins}</b> victoires · différence{" "}
-						<b>
-							{standings.diff >= 0 ? "+" : ""}
-							{standings.diff}
-						</b>
-					</>
-				) : null
-			}
-			actions={
-				<>
-					<button className="ghost" onClick={onClose}>
-						Revoir les résultats
-					</button>
-					<button className="solid" onClick={onNew}>
-						Nouveau tournoi
-					</button>
-				</>
-			}
-		>
-			<div className="champ-podium">
-				{podium.slice(0, 3).map((s, i) => {
-					const net = netByName.get(s.name);
-					return (
-						<div key={s.name} className={`prow p${i + 1}`}>
-							<span className="who">
-								<span className="medal">{MEDALS[i]}</span>
-								{s.name}
-							</span>
-							<span className="pwins">{s.sub}</span>
-							{net != null && <PodiumElo net={net} />}
+		<div className="takeover takeover--purple">
+			<Confetti />
+			<div className="tk-inner tk-inner--split">
+				<div className="tk-hero">
+					<div className="tk-eyebrow">{tournament.name} · terminé</div>
+					<div className="tk-trophy">🏆</div>
+					<Avatar name={champ.name} team={team} url={url} className="tk-winner-av" fill="hero" />
+					<div className="tk-winner-name">{champ.name}</div>
+					<div className="tk-subline">
+						{champ.losses === 0 ? "invaincu" : "remporte le tournoi"} · {record}
+					</div>
+					{champ.elo !== null && (
+						<div className="tk-pill">
+							<div className="tk-stat">
+								<div className="tk-stat-value">{Math.round(champ.elo)}</div>
+								<div className="tk-stat-label">Élo final</div>
+							</div>
+							<div className="tk-pill-sep" />
+							<div className="tk-stat">
+								<div className="tk-stat-value tk-stat-value--up">
+									{delta !== null && delta > 0 ? "+" : ""}
+									{Math.round(delta ?? 0)}
+								</div>
+								<div className="tk-stat-label">Sur le tournoi</div>
+							</div>
 						</div>
-					);
-				})}
+					)}
+					<Podium rows={rows} look={look} />
+				</div>
+
+				<div className="tk-side">
+					<FinalStandingsCard
+						rows={rows}
+						format={tournament.format}
+						look={look}
+						actions={
+							<>
+								<button className="tk-btn tk-btn--ghost" onClick={onClose}>
+									Revoir les résultats
+								</button>
+								<button className="tk-btn tk-btn--primary" onClick={onNew}>
+									Nouveau tournoi
+								</button>
+							</>
+						}
+					/>
+				</div>
 			</div>
-		</Celebration>
+		</div>
 	);
 }

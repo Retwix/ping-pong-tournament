@@ -1418,3 +1418,183 @@ td.elo.neg { color: var(--coral); }
   .tv-next-vs { font-size: 30px; }
   .tv-podium { width: 100%; min-height: 0; }
 }
+
+/* ===== celebration takeovers (5a / 6a / 4b) =====
+   Deliberately theme-independent: these stay fixed-dark in both light and dark
+   mode. They are celebratory interruptions, not part of the themed UI, so they
+   read from literal design tokens rather than the theme variables. */
+@keyframes rvglow { 0%, 100% { box-shadow: 0 0 40px rgba(240, 200, 75, 0.5); } 50% { box-shadow: 0 0 70px rgba(240, 200, 75, 0.85); } }
+@keyframes rvbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes rvshake { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes tk-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+.takeover {
+  position: fixed; inset: 0; z-index: 70; overflow-y: auto; overflow-x: hidden;
+  display: flex; padding: 0;
+}
+.takeover--purple {
+  background: radial-gradient(120% 120% at 30% -10%, #6e4cdb 0%, transparent 55%),
+    linear-gradient(165deg, #4a2aa4 0%, #3a2183 55%, #200a42 100%);
+}
+.takeover--coral {
+  background: radial-gradient(120% 120% at 50% -10%, #e45463 0%, transparent 50%),
+    linear-gradient(165deg, #b8323f 0%, #8e2533 55%, #4a0f17 100%);
+}
+.takeover .confetti-canvas { position: fixed; }
+.tk-inner {
+  position: relative; z-index: 2; width: 100%; max-width: 1180px; margin: 0 auto;
+  animation: tk-rise 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.tk-inner--split { display: flex; align-items: stretch; gap: 0; }
+.tk-hero {
+  width: 560px; flex: none; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 36px; text-align: center;
+}
+.tk-side { flex: 1; min-width: 0; box-sizing: border-box; padding: 40px 40px 40px 8px; display: flex; }
+
+.tk-eyebrow {
+  font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 0.28em;
+  text-transform: uppercase; color: #f0c84b;
+}
+.tk-trophy { font-size: 50px; margin-top: 8px; animation: rvbob 2.6s infinite; }
+.avatar.tk-winner-av {
+  width: 118px; height: 118px; margin-top: 4px; border: 4px solid #f0c84b;
+  font-size: 40px; animation: rvglow 2.4s infinite;
+}
+.tk-winner-name {
+  font-family: var(--font-display); font-weight: 900; font-size: clamp(38px, 5.4vw, 58px);
+  line-height: 1; letter-spacing: -0.02em; color: #fff; margin-top: 14px;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.3); max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tk-subline {
+  font-family: var(--font-body); font-weight: 700; font-size: 14px;
+  color: rgba(255, 255, 255, 0.8); margin-top: 6px;
+}
+.tk-pill {
+  display: inline-flex; align-items: center; gap: 14px; margin-top: 20px;
+  padding: 12px 22px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.tk-pill-sep { width: 1px; height: 30px; background: rgba(255, 255, 255, 0.25); }
+.tk-stat-value { font-family: var(--font-display); font-weight: 900; font-size: 24px; color: #fff; }
+.tk-stat-value--up { color: #4ade9b; }
+.tk-stat-label {
+  font-family: var(--font-display); font-weight: 700; font-size: 9px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.65);
+}
+
+/* --- podium --- */
+.tk-podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin-top: 30px; }
+.pod { text-align: center; }
+.avatar.pod-av { margin: 0 auto 6px; width: 52px; height: 52px; font-size: 18px; }
+.avatar.pod-av--1 { width: 60px; height: 60px; font-size: 20px; border: 3px solid #f0c84b; }
+.avatar.pod-av--2 { border: 2px solid #c0c7d1; }
+.avatar.pod-av--3 { border: 2px solid #e0a46a; }
+.pod-bar {
+  border-radius: 8px 8px 0 0; display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 8px; font-family: var(--font-display); font-weight: 900; color: #fff;
+}
+.pod--1 .pod-bar { width: 82px; height: 92px; font-size: 26px; background: linear-gradient(180deg, rgba(240, 200, 75, 0.75), rgba(240, 200, 75, 0.15)); }
+.pod--2 .pod-bar { width: 74px; height: 64px; font-size: 22px; background: linear-gradient(180deg, rgba(192, 199, 209, 0.55), rgba(192, 199, 209, 0.12)); }
+.pod--3 .pod-bar { width: 74px; height: 48px; font-size: 20px; background: linear-gradient(180deg, rgba(224, 164, 106, 0.55), rgba(224, 164, 106, 0.12)); }
+
+/* --- final standings card --- */
+.fs-card {
+  display: flex; flex-direction: column; width: 100%; box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px; backdrop-filter: blur(8px); padding: 22px 24px;
+}
+.fs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fs-title { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: #fff; }
+.fs-meta { display: flex; align-items: center; gap: 8px; flex: none; }
+.fs-format {
+  font-family: var(--font-display); font-weight: 700; font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; border-radius: 6px; padding: 3px 7px; white-space: nowrap;
+}
+.fs-format--double_elim { background: #f0c84b; color: #4a2aa4; }
+.fs-format--round_robin { background: #2ba572; color: #fff; }
+.fs-count {
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.55); white-space: nowrap;
+}
+.fs-row {
+  display: grid; grid-template-columns: 30px 1fr 52px 54px 52px 48px; gap: 0 8px;
+  align-items: center; padding: 8px 4px; border-radius: 10px; border: 1px solid transparent;
+}
+.fs-row--head {
+  margin-top: 14px; padding: 0 4px 8px; border-radius: 0; border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: var(--font-display); font-weight: 700; font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.5);
+}
+.fs-rows { display: flex; flex-direction: column; margin-top: 4px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 2px; }
+.fs-row--champ { background: rgba(240, 200, 75, 0.14); border-color: rgba(240, 200, 75, 0.3); }
+.fs-row--champ .fs-place { color: #f0c84b; }
+.fs-tied { background: rgba(255, 255, 255, 0.05); }
+.fs-tied--top { border-radius: 10px 10px 0 0; }
+.fs-tied--bottom { border-radius: 0 0 10px 10px; }
+.fs-place { font-family: var(--font-display); font-weight: 900; font-size: 15px; color: rgba(255, 255, 255, 0.8); }
+.fs-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.avatar.fs-av { width: 28px; height: 28px; font-size: 11px; flex: none; }
+.fs-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; color: rgba(255, 255, 255, 0.92);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.fs-row--champ .fs-name { font-weight: 800; color: #fff; }
+.fs-exaequo {
+  font-family: var(--font-display); font-weight: 700; font-size: 8px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #f0c84b; border: 1px solid rgba(240, 200, 75, 0.5);
+  border-radius: 5px; padding: 1px 5px; flex: none;
+}
+.fs-wl, .fs-diff { text-align: right; font-family: var(--font-display); font-weight: 700; font-size: 12px; color: rgba(255, 255, 255, 0.7); }
+.fs-elo { text-align: right; font-family: var(--font-display); font-weight: 800; font-size: 13px; color: #fff; }
+.fs-prov { color: rgba(255, 255, 255, 0.45); }
+.fs-delta { text-align: right; font-family: var(--font-display); font-weight: 800; font-size: 12px; }
+.fs-delta--up { color: #4ade9b; }
+.fs-delta--down { color: #f19a9a; }
+.fs-delta--flat { color: rgba(255, 255, 255, 0.55); }
+.fs-more {
+  margin: 6px 4px 0; padding: 8px; border-radius: 10px; cursor: pointer;
+  background: transparent; border: 1px dashed rgba(255, 255, 255, 0.3);
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.7); transition: all var(--dur) var(--ease);
+}
+.fs-more:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.fs-note { font-family: var(--font-body); font-weight: 600; font-size: 10px; line-height: 1.4; color: rgba(255, 255, 255, 0.5); padding: 6px 4px 0; margin: 0; }
+.fs-actions { display: flex; gap: 12px; margin-top: auto; padding-top: 12px; }
+
+/* --- takeover buttons (layout slot; the app supplies the labels) --- */
+.tk-btn {
+  flex: 1; text-align: center; padding: 13px; border-radius: 12px; cursor: pointer;
+  font-family: var(--font-display); font-size: 14px; transition: all var(--dur) var(--ease);
+}
+.tk-btn--primary { font-weight: 800; color: #4a2aa4; background: #fff; border: none; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25); }
+.tk-btn--ghost { font-weight: 700; color: #fff; background: rgba(255, 255, 255, 0.14); border: 1.5px solid rgba(255, 255, 255, 0.4); }
+.tk-btn:hover { transform: translateY(-1px); }
+.tk-btn:active { transform: scale(0.98); }
+
+/* --- phone portrait: one column, the page scrolls as one --- */
+@media (max-width: 719px) {
+  .takeover { display: block; }
+  .tk-inner--split { flex-direction: column; }
+  .tk-hero { width: 100%; padding: 40px 20px 24px; }
+  .tk-side { padding: 0 16px 28px; }
+  .avatar.tk-winner-av { width: 104px; height: 104px; font-size: 34px; }
+  .tk-trophy { font-size: 42px; }
+  .tk-podium { margin-top: 24px; }
+  .pod--1 .pod-bar { height: 74px; }
+  .pod--2 .pod-bar { height: 52px; }
+  .pod--3 .pod-bar { height: 40px; }
+  .fs-card { padding: 18px 16px; }
+  .fs-rows { overflow: visible; }
+  .fs-row { grid-template-columns: 22px 1fr 42px 40px; padding: 7px 4px; border-radius: 9px; }
+  .fs-diff, .fs-elo { display: none; }
+  .fs-exaequo { font-size: 0; padding: 1px 4px; }
+  .fs-exaequo::before { content: "="; font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .takeover, .takeover * { animation: none !important; }
+}
