@@ -23,19 +23,6 @@ export interface MatchRatings {
   b: SideRating | null
 }
 
-/**
- * The winning and losing side of a finished match, picked out of its two rating
- * moves. Either can be null until the rating replay has caught up with the result.
- */
-export function winnerLoserRatings(rd: MatchRatings): {
-  winner: SideRating | null
-  loser: SideRating | null
-} {
-  const winner = rd.a?.won ? rd.a : rd.b?.won ? rd.b : null
-  const loser = rd.a && !rd.a.won ? rd.a : rd.b && !rd.b.won ? rd.b : null
-  return { winner, loser }
-}
-
 /** A player's net rating change across a whole tournament. */
 export interface TournamentRating {
   key: string

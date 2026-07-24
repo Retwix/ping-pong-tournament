@@ -1,5 +1,6 @@
 import type { Match } from "../types";
-import { winnerLoserRatings, type MatchRatings, type SideRating } from "../hooks/useRatingDeltas";
+import type { MatchRatings, SideRating } from "../hooks/useRatingDeltas";
+import { winnerLoserRatings } from "../lib/ratingSides";
 import type { LookUpPlayer } from "../lib/playerLookup";
 import { signed } from "../lib/format";
 import { isCapot, winnerLoser } from "../lib/stats";

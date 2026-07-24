@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { winnerLoserRatings, type SideRating } from './useRatingDeltas'
+import type { SideRating } from '../hooks/useRatingDeltas'
+import { winnerLoserRatings } from './ratingSides'
 
 function side(overrides: Partial<SideRating> & Pick<SideRating, 'name' | 'won'>): SideRating {
 	return {

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTournament } from "../hooks/useTournament";
 import { chaosSettingsFromTournament } from "../lib/chaos";
-import { useRatingDeltas, winnerLoserRatings } from "../hooks/useRatingDeltas";
+import { useRatingDeltas } from "../hooks/useRatingDeltas";
+import { winnerLoserRatings } from "../lib/ratingSides";
 import { computeStandings } from "../lib/pingpong";
 import { navigate } from "../lib/router";
 import { isPlayable } from "../lib/doubleElim";
