@@ -1,4 +1,5 @@
 import { finalStandings, type FinalStandingRow } from "../lib/finalStandings";
+import { signed } from "../lib/format";
 import type { LookUpPlayer } from "../lib/playerLookup";
 import type { TournamentRating } from "../hooks/useRatingDeltas";
 import type { Match, Tournament } from "../types";
@@ -87,8 +88,7 @@ export default function Champion({ tournament, matches, ratings, look, onClose, 
 							<div className="tk-pill-sep" />
 							<div className="tk-stat">
 								<div className="tk-stat-value tk-stat-value--up">
-									{delta !== null && delta > 0 ? "+" : ""}
-									{Math.round(delta ?? 0)}
+									{signed(delta ?? 0)}
 								</div>
 								<div className="tk-stat-label">Sur le tournoi</div>
 							</div>

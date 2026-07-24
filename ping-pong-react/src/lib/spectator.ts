@@ -59,14 +59,6 @@ export function ladderAvatar(
   return row?.avatar_url ?? null
 }
 
-/** Two-letter avatar monogram: "Léo" → "LÉ", "Jean Marc" → "JM". */
-export function initials(name: string): string {
-  const words = name.split(/\s+/).filter(Boolean)
-  if (words.length === 0) return '?'
-  const raw = words.length >= 2 ? words[0][0] + words[1][0] : words[0].slice(0, 2)
-  return raw.toUpperCase()
-}
-
 export type StakeSide = RatingNumbers
 
 export interface LiveStakesInput {

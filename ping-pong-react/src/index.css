@@ -144,26 +144,26 @@ section { margin-top: 32px; }
 .section-title .count { font-size: 11px; color: var(--accent); letter-spacing: 0.12em; }
 
 /* ===== buttons ===== */
-.btn-primary, .generate, .ov-controls .primary, .champ-actions .solid {
+.btn-primary, .generate, .ov-controls .primary {
   font-family: var(--font-display); font-weight: 600; font-size: 15px;
   border-radius: 12px; padding: 11px 18px; border: none; cursor: pointer;
   background: var(--primary); color: #fff; box-shadow: 0 8px 22px var(--primary-glow);
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
   transition: all var(--dur) var(--ease);
 }
-.btn-primary:hover, .generate:hover, .ov-controls .primary:hover, .champ-actions .solid:hover {
+.btn-primary:hover, .generate:hover, .ov-controls .primary:hover {
   background: var(--primary-deep); transform: translateY(-1px); box-shadow: 0 12px 28px var(--primary-glow);
 }
-.btn-primary:active, .generate:active, .champ-actions .solid:active { transform: scale(0.98); }
+.btn-primary:active, .generate:active { transform: scale(0.98); }
 .btn-primary:disabled, .generate:disabled, .ov-controls .primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
 
-.link-btn, .reset, .champ-actions .ghost {
+.link-btn, .reset {
   font-family: var(--font-display); font-weight: 600; font-size: 14px;
   background: transparent; border: 1px solid var(--ghost-border); color: var(--fg-2);
   padding: 10px 16px; border-radius: 12px; cursor: pointer;
   display: inline-flex; align-items: center; gap: 8px; transition: all var(--dur) var(--ease);
 }
-.link-btn:hover, .reset:hover, .champ-actions .ghost:hover { background: var(--ghost-hover); color: var(--fg-1); }
+.link-btn:hover, .reset:hover { background: var(--ghost-hover); color: var(--fg-1); }
 
 .error-banner {
   background: rgba(215, 66, 81, 0.1); border: 1px solid rgba(215, 66, 81, 0.4);

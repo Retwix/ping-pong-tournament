@@ -1,7 +1,8 @@
 import type { Match } from "../types";
-import type { MatchRatings, SideRating } from "../hooks/useRatingDeltas";
+import { winnerLoserRatings, type MatchRatings, type SideRating } from "../hooks/useRatingDeltas";
 import type { LookUpPlayer } from "../lib/playerLookup";
-import { isCapot } from "../lib/stats";
+import { signed } from "../lib/format";
+import { isCapot, winnerLoser } from "../lib/stats";
 import Avatar from "./Avatar";
 import CapotScreen from "./CapotScreen";
 import Confetti from "./Confetti";
@@ -16,12 +17,9 @@ interface Props {
 }
 
 function EloStat({ side, tone }: { side: SideRating; tone: "up" | "down" }) {
-	const v = Math.round(side.delta);
 	return (
 		<div className="tk-stat">
-			<div className={`tk-stat-value tk-stat-value--${tone}`}>
-				{v === 0 ? "±0" : `${v > 0 ? "+" : "−"}${Math.abs(v)}`}
-			</div>
+			<div className={`tk-stat-value tk-stat-value--${tone}`}>{signed(side.delta)}</div>
 			<div className="tk-stat-label">
 				{side.name} · Élo {Math.round(side.ratingAfter)}
 			</div>
@@ -34,11 +32,7 @@ function EloStat({ side, tone }: { side: SideRating; tone: "up" | "down" }) {
  * A shutout hands over to the capot screen instead.
  */
 export default function GameResult({ match, onReplay, onHome, ratings, look }: Props) {
-	const aWin = match.score_a > match.score_b;
-	const winner = aWin ? match.player_a : match.player_b;
-	const loser = aWin ? match.player_b : match.player_a;
-	const winnerScore = aWin ? match.score_a : match.score_b;
-	const loserScore = aWin ? match.score_b : match.score_a;
+	const { winner, loser, ws: winnerScore, ls: loserScore } = winnerLoser(match);
 
 	// 0-point loss → the office "sous la table" humiliation.
 	if (isCapot(match)) {
@@ -54,9 +48,7 @@ export default function GameResult({ match, onReplay, onHome, ratings, look }: P
 		);
 	}
 
-	const rd = ratings ?? { a: null, b: null };
-	const rdWinner = rd.a?.won ? rd.a : rd.b?.won ? rd.b : null;
-	const rdLoser = rd.a && !rd.a.won ? rd.a : rd.b && !rd.b.won ? rd.b : null;
+	const { winner: rdWinner, loser: rdLoser } = winnerLoserRatings(ratings ?? { a: null, b: null });
 	const winnerLook = look(winner);
 	const loserLook = look(loser);
 

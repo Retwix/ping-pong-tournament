@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import type { FinalStandingRow } from "../lib/finalStandings";
+import { signed } from "../lib/format";
 import type { LookUpPlayer } from "../lib/playerLookup";
 import type { TournamentFormat } from "../types";
 import Avatar from "./Avatar";
@@ -24,10 +25,6 @@ const FORMAT_LABEL: Record<TournamentFormat, string> = {
 	double_elim: "Double élim.",
 	round_robin: "Round robin",
 };
-
-function signed(value: number): string {
-	return value > 0 ? `+${value}` : `${value}`;
-}
 
 /** Gains read green and real losses red; a scratch loss stays quiet. */
 function deltaTone(delta: number): string {
@@ -78,7 +75,7 @@ function StandingsRow({ row, look, joined }: RowProps) {
 				{row.provisional && <span className="fs-prov">*</span>}
 			</div>
 			<div className={`fs-delta fs-delta--${delta === null ? "flat" : deltaTone(delta)}`}>
-				{delta === null ? "—" : signed(Math.round(delta))}
+				{delta === null ? "—" : signed(delta)}
 			</div>
 		</div>
 	);

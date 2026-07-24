@@ -7,7 +7,7 @@ import { createTournament } from "../lib/db";
 import { chaosSettingsFromTournament } from "../lib/chaos";
 import { playerLookup } from "../lib/playerLookup";
 import { navigate } from "../lib/router";
-import { isCapot } from "../lib/stats";
+import { isCapot, winnerLoser } from "../lib/stats";
 import type { Match } from "../types";
 import CapotScreen from "./CapotScreen";
 import Champion from "./Champion";
@@ -112,6 +112,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 
 	const isDouble = tournament.format === "double_elim";
 	const openMatch = matches.find((m) => m.id === openId) ?? null;
+	const capot = capotMatch ? winnerLoser(capotMatch) : null;
 	// Capot celebration takes precedence over the champion screen, so they don't stack.
 	const showChampion =
 		tournament.status === "done" && !dismissedChampion && !capotMatch;
@@ -227,19 +228,11 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 				/>
 			)}
 
-			{capotMatch && (
+			{capot && (
 				<CapotScreen
-					winner={
-						capotMatch.score_a > capotMatch.score_b
-							? capotMatch.player_a
-							: capotMatch.player_b
-					}
-					loser={
-						capotMatch.score_a > capotMatch.score_b
-							? capotMatch.player_b
-							: capotMatch.player_a
-					}
-					winnerScore={Math.max(capotMatch.score_a, capotMatch.score_b)}
+					winner={capot.winner}
+					loser={capot.loser}
+					winnerScore={capot.ws}
 					look={look}
 				>
 					<button className="tk-btn tk-btn--primary" onClick={() => setCapotMatch(null)}>

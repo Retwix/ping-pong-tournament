@@ -13,7 +13,8 @@ import {
 } from "../lib/pingpong";
 import type { RatingRow } from "../lib/rating";
 import { sideElos } from "../lib/scorerElo";
-import { crowdSplit, initials, ladderAvatar, matchStakes, showsLiveBoard } from "../lib/spectator";
+import { playerInitials } from "../lib/avatar";
+import { crowdSplit, ladderAvatar, matchStakes, showsLiveBoard } from "../lib/spectator";
 import type { Match, MatchSide, Tournament } from "../types";
 import ThemeToggle from "./ThemeToggle";
 
@@ -60,7 +61,7 @@ function TvAvatar({
 			{showPhoto ? (
 				<img src={url} alt="" onError={() => setBrokenUrl(url)} />
 			) : (
-				initials(name)
+				playerInitials(name)
 			)}
 		</div>
 	);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTournament } from "../hooks/useTournament";
 import { chaosSettingsFromTournament } from "../lib/chaos";
-import { useRatingDeltas } from "../hooks/useRatingDeltas";
+import { useRatingDeltas, winnerLoserRatings } from "../hooks/useRatingDeltas";
 import { computeStandings } from "../lib/pingpong";
 import { navigate } from "../lib/router";
 import { isPlayable } from "../lib/doubleElim";
@@ -201,9 +201,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
 				: finished.player_b
 			: null;
 		// Winner first, loser second — null until the rating replay catches up.
-		const rd = ratingsFor(finished);
-		const rdWinner = rd.a?.won ? rd.a : rd.b?.won ? rd.b : null;
-		const rdLoser = rd.a && !rd.a.won ? rd.a : rd.b && !rd.b.won ? rd.b : null;
+		const { winner: rdWinner, loser: rdLoser } = winnerLoserRatings(ratingsFor(finished));
 		return (
 			<div className="wrap up-next">
 				<header>

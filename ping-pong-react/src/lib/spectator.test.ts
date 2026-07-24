@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { RatingRow } from './rating'
 import {
   crowdSplit,
-  initials,
   ladderAvatar,
   liveStakes,
   matchStakes,
@@ -96,33 +95,6 @@ describe('showsLiveBoard', () => {
 
   it('ignores a reveal that was armed for a different match', () => {
     expect(showsLiveBoard(makeBoardMatch({ id: 'm7' }), 'm3')).toBe(false)
-  })
-})
-
-describe('initials', () => {
-  it('takes the first two letters of a single name', () => {
-    expect(initials('Thibault')).toBe('TH')
-  })
-
-  it('keeps accents and uppercases them', () => {
-    expect(initials('Léo')).toBe('LÉ')
-  })
-
-  it('uses the first letter of each word for compound names', () => {
-    expect(initials('Jean Marc')).toBe('JM')
-  })
-
-  it('uppercases lowercase names', () => {
-    expect(initials('candice')).toBe('CA')
-  })
-
-  it('handles a one-letter name', () => {
-    expect(initials('x')).toBe('X')
-  })
-
-  it('falls back to ? for an empty name', () => {
-    expect(initials('')).toBe('?')
-    expect(initials('   ')).toBe('?')
   })
 })
 
