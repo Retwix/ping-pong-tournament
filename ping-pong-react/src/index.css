@@ -144,26 +144,26 @@ section { margin-top: 32px; }
 .section-title .count { font-size: 11px; color: var(--accent); letter-spacing: 0.12em; }
 
 /* ===== buttons ===== */
-.btn-primary, .generate, .ov-controls .primary, .champ-actions .solid {
+.btn-primary, .generate, .ov-controls .primary {
   font-family: var(--font-display); font-weight: 600; font-size: 15px;
   border-radius: 12px; padding: 11px 18px; border: none; cursor: pointer;
   background: var(--primary); color: #fff; box-shadow: 0 8px 22px var(--primary-glow);
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
   transition: all var(--dur) var(--ease);
 }
-.btn-primary:hover, .generate:hover, .ov-controls .primary:hover, .champ-actions .solid:hover {
+.btn-primary:hover, .generate:hover, .ov-controls .primary:hover {
   background: var(--primary-deep); transform: translateY(-1px); box-shadow: 0 12px 28px var(--primary-glow);
 }
-.btn-primary:active, .generate:active, .champ-actions .solid:active { transform: scale(0.98); }
+.btn-primary:active, .generate:active { transform: scale(0.98); }
 .btn-primary:disabled, .generate:disabled, .ov-controls .primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
 
-.link-btn, .reset, .champ-actions .ghost {
+.link-btn, .reset {
   font-family: var(--font-display); font-weight: 600; font-size: 14px;
   background: transparent; border: 1px solid var(--ghost-border); color: var(--fg-2);
   padding: 10px 16px; border-radius: 12px; cursor: pointer;
   display: inline-flex; align-items: center; gap: 8px; transition: all var(--dur) var(--ease);
 }
-.link-btn:hover, .reset:hover, .champ-actions .ghost:hover { background: var(--ghost-hover); color: var(--fg-1); }
+.link-btn:hover, .reset:hover { background: var(--ghost-hover); color: var(--fg-1); }
 
 .error-banner {
   background: rgba(215, 66, 81, 0.1); border: 1px solid rgba(215, 66, 81, 0.4);
@@ -306,7 +306,7 @@ thead th.left { text-align: left; }
 tbody td { padding: 14px 6px; text-align: center; border-bottom: 1px solid var(--border); font-size: 15px; }
 tbody td.left { text-align: left; font-weight: 600; }
 tbody tr:last-child td { border-bottom: none; }
-.rank { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg); font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-right: 10px; }
+.rank { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg); font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-right: 10px; vertical-align: middle; }
 tr.r1 .rank { background: var(--orange); color: #2a1300; }
 tr.r2 .rank { background: #c7ccd4; color: #16181c; }
 tr.r3 .rank { background: #d08a4a; color: #1a1002; }
@@ -373,43 +373,8 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 .up-next-match .vs { color: var(--fg-3); font-weight: 600; }
 .up-next-start { width: 100%; margin-top: 30px; padding: 18px; font-size: 17px; }
 
-/* ===== champion / game result ===== */
-.champion { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 22px; text-align: center; overflow: hidden; }
+/* The confetti canvas is shared by every celebration takeover. */
 .confetti-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.champ-inner { position: relative; z-index: 2; animation: champ-rise 0.6s var(--ease) both; max-width: 480px; }
-@keyframes champ-rise { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: none; } }
-.champ-kicker { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 14px; }
-.champ-trophy { font-size: 64px; margin-bottom: 6px; filter: drop-shadow(0 6px 18px rgba(240, 145, 58, 0.35)); }
-.champ-name { font-family: var(--font-display); font-weight: 800; font-size: clamp(46px, 13vw, 96px); line-height: 0.92; letter-spacing: -0.025em; color: var(--primary); margin: 4px 0 8px; }
-.champ-sub { color: var(--fg-1); font-size: 15px; margin-bottom: 26px; }
-.champ-sub b { color: var(--green); }
-.champ-podium { display: flex; flex-direction: column; gap: 8px; margin: 0 auto 28px; max-width: 360px; }
-.champ-podium .prow { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow-card); }
-.champ-podium .prow .who { display: flex; align-items: center; gap: 12px; font-family: var(--font-display); font-weight: 600; }
-.champ-podium .prow .medal { font-size: 18px; }
-.champ-podium .prow.p1 { border-color: rgba(240, 145, 58, 0.5); }
-.champ-podium .prow.p2 { border-color: rgba(199, 204, 212, 0.4); }
-.champ-podium .prow.p3 { border-color: rgba(208, 138, 74, 0.45); }
-.champ-podium .prow .pwins { font-family: var(--font-display); font-weight: 700; color: var(--green); font-size: 16px; }
-.champ-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-.champ-actions button { padding: 13px 22px; }
-
-/* ===== capot ("sous la table") ===== */
-.champ-kicker.capot-kick { color: var(--coral); letter-spacing: 0.22em; }
-.champ-name.capot-title { color: var(--coral); animation: capot-wobble 2.6s var(--ease) infinite; }
-@keyframes capot-wobble { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
-.capot-loser { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--fg-2); margin: 4px 0 18px; }
-.capot-loser .under {
-  display: inline-block; font-weight: 800; color: var(--coral);
-  animation: dunk 2.2s var(--ease) infinite;
-}
-@keyframes dunk {
-  0%, 100% { transform: translateY(0) rotate(0); opacity: 1; }
-  50% { transform: translateY(34px) rotate(-6deg); opacity: 0.35; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .champ-name.capot-title, .capot-loser .under { animation: none; }
-}
 
 /* ===== modal ===== */
 .scrim { position: fixed; inset: 0; background: var(--scrim); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 24px; z-index: 60; animation: fade 0.18s var(--ease); }
@@ -433,7 +398,7 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 .t-card.leaving { animation: collapse 0.28s var(--ease) forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-card.enter, .t-card.leaving, .champ-inner, .scrim, .modal { animation: none !important; }
+  .t-card.enter, .t-card.leaving, .scrim, .modal { animation: none !important; }
   * { transition-duration: 0.01ms !important; }
 }
 
@@ -444,7 +409,12 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 .kpi .lbl { color: var(--fg-3); font-size: 12.5px; margin-top: 6px; }
 
 .avatar.sm { width: 30px; height: 30px; font-size: 13px; }
-.lb-player { display: inline-flex; align-items: center; gap: 10px; }
+/* `vertical-align: middle` is load-bearing: as a baseline-aligned inline box, this
+   wrapper takes its baseline from the avatar. Initials give a text baseline, but a
+   photo (a block <img> in a grid box) has none, so the baseline is synthesized from
+   the box bottom — which sits the whole avatar above the baseline and makes rows
+   with a photo ~8px taller than rows with initials. Middle alignment sidesteps it. */
+.lb-player { display: inline-flex; align-items: center; gap: 10px; vertical-align: middle; }
 table.leaderboard tbody td.left { font-family: var(--font-display); }
 table.leaderboard tbody tr { cursor: pointer; }
 table.leaderboard tbody tr:hover td { background: var(--ghost-hover); }
@@ -624,21 +594,6 @@ table.h2h td.neg { background: rgba(215, 66, 81, 0.14); color: var(--coral); }
 .rd-chip.up .rd-chip-delta { color: var(--green); }
 .rd-chip.down .rd-chip-delta { color: var(--coral); }
 .rd-chip.flat .rd-chip-delta { color: var(--fg-4); }
-
-/* --- Rating gain/loss: compact tags on the single-game result --- */
-.champ-elo { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin: 2px 0 20px; }
-.ce-item { display: inline-flex; align-items: baseline; gap: 7px; font-family: var(--font-display); }
-.ce-name { color: var(--fg-2); font-weight: 600; font-size: 14px; }
-.ce-delta { font-weight: 800; font-size: 16px; }
-.ce-item.up .ce-delta { color: var(--green); }
-.ce-item.down .ce-delta { color: var(--coral); }
-.ce-item.flat .ce-delta { color: var(--fg-4); }
-
-/* Net-Élo tag on each podium row of the tournament celebration. */
-.pelo { font-family: var(--font-display); font-weight: 800; font-size: 14px; margin-left: 10px; }
-.pelo.up { color: var(--green); }
-.pelo.down { color: var(--coral); }
-.pelo.flat { color: var(--fg-4); }
 
 /* --- Rating gain/loss: Élo column in the standings table --- */
 td.elo { font-family: var(--font-display); font-weight: 700; white-space: nowrap; color: var(--fg-4); }
@@ -1298,7 +1253,12 @@ td.elo.neg { color: var(--coral); }
   font-weight: 700; font-size: 10px; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--tv-label); margin-top: 2px;
 }
-.tv-next-foot { font-family: var(--font-body); font-weight: 600; font-size: 13px; color: var(--tv-muted); }
+.tv-next-countdown { font-family: var(--font-body); font-weight: 600; font-size: 15px; color: var(--tv-muted); margin-top: 20px; }
+.tv-next-count {
+  font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--accent);
+  font-variant-numeric: tabular-nums; margin: 0 2px;
+}
+.tv-next-foot { font-family: var(--font-body); font-weight: 600; font-size: 13px; color: var(--tv-muted); margin-top: 12px; }
 
 .tv-podium {
   width: min(440px, 100%); min-height: min(520px, 74vh);
@@ -1412,4 +1372,228 @@ td.elo.neg { color: var(--coral); }
   .tv-next-name { font-size: 21px; }
   .tv-next-vs { font-size: 30px; }
   .tv-podium { width: 100%; min-height: 0; }
+}
+
+/* ===== celebration takeovers (5a / 6a / 4b) =====
+   Deliberately theme-independent: these stay fixed-dark in both light and dark
+   mode. They are celebratory interruptions, not part of the themed UI, so they
+   read from literal design tokens rather than the theme variables. */
+@keyframes rvglow { 0%, 100% { box-shadow: 0 0 40px rgba(240, 200, 75, 0.5); } 50% { box-shadow: 0 0 70px rgba(240, 200, 75, 0.85); } }
+@keyframes rvbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes rvshake { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes tk-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+.takeover {
+  position: fixed; inset: 0; z-index: 70; overflow-y: auto; overflow-x: hidden;
+  display: flex; padding: 0;
+}
+.takeover--purple {
+  background: radial-gradient(120% 120% at 30% -10%, #6e4cdb 0%, transparent 55%),
+    linear-gradient(165deg, #4a2aa4 0%, #3a2183 55%, #200a42 100%);
+}
+.takeover--coral {
+  background: radial-gradient(120% 120% at 50% -10%, #e45463 0%, transparent 50%),
+    linear-gradient(165deg, #b8323f 0%, #8e2533 55%, #4a0f17 100%);
+}
+.takeover .confetti-canvas { position: fixed; }
+.tk-inner {
+  position: relative; z-index: 2; width: 100%; max-width: 1180px; margin: 0 auto;
+  animation: tk-rise 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.tk-inner--split { display: flex; align-items: stretch; gap: 0; }
+.tk-hero {
+  width: 560px; flex: none; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 36px; text-align: center;
+}
+.tk-side { flex: 1; min-width: 0; box-sizing: border-box; padding: 40px 40px 40px 8px; display: flex; }
+
+.tk-eyebrow {
+  font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 0.28em;
+  text-transform: uppercase; color: #f0c84b;
+}
+.tk-trophy { font-size: 50px; margin-top: 8px; animation: rvbob 2.6s infinite; }
+.avatar.tk-winner-av {
+  width: 118px; height: 118px; margin-top: 4px; border: 4px solid #f0c84b;
+  font-size: 40px; animation: rvglow 2.4s infinite;
+}
+.tk-winner-name {
+  font-family: var(--font-display); font-weight: 900; font-size: clamp(38px, 5.4vw, 58px);
+  line-height: 1; letter-spacing: -0.02em; color: #fff; margin-top: 14px;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.3); max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tk-subline {
+  font-family: var(--font-body); font-weight: 700; font-size: 14px;
+  color: rgba(255, 255, 255, 0.8); margin-top: 6px;
+}
+.tk-pill {
+  display: inline-flex; align-items: center; gap: 14px; margin-top: 20px;
+  padding: 12px 22px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.tk-pill-sep { width: 1px; height: 30px; background: rgba(255, 255, 255, 0.25); }
+.tk-stat-value { font-family: var(--font-display); font-weight: 900; font-size: 24px; color: #fff; }
+.tk-stat-value--up { color: #4ade9b; }
+.tk-stat-label {
+  font-family: var(--font-display); font-weight: 700; font-size: 9px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.65);
+}
+
+/* --- podium --- */
+.tk-podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin-top: 30px; }
+.pod { text-align: center; }
+.avatar.pod-av { margin: 0 auto 6px; width: 52px; height: 52px; font-size: 18px; }
+.avatar.pod-av--1 { width: 60px; height: 60px; font-size: 20px; border: 3px solid #f0c84b; }
+.avatar.pod-av--2 { border: 2px solid #c0c7d1; }
+.avatar.pod-av--3 { border: 2px solid #e0a46a; }
+.pod-bar {
+  border-radius: 8px 8px 0 0; display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 8px; font-family: var(--font-display); font-weight: 900; color: #fff;
+}
+.pod--1 .pod-bar { width: 82px; height: 92px; font-size: 26px; background: linear-gradient(180deg, rgba(240, 200, 75, 0.75), rgba(240, 200, 75, 0.15)); }
+.pod--2 .pod-bar { width: 74px; height: 64px; font-size: 22px; background: linear-gradient(180deg, rgba(192, 199, 209, 0.55), rgba(192, 199, 209, 0.12)); }
+.pod--3 .pod-bar { width: 74px; height: 48px; font-size: 20px; background: linear-gradient(180deg, rgba(224, 164, 106, 0.55), rgba(224, 164, 106, 0.12)); }
+
+/* --- final standings card --- */
+.fs-card {
+  display: flex; flex-direction: column; width: 100%; box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px; backdrop-filter: blur(8px); padding: 22px 24px;
+}
+.fs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fs-title { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: #fff; }
+.fs-meta { display: flex; align-items: center; gap: 8px; flex: none; }
+.fs-format {
+  font-family: var(--font-display); font-weight: 700; font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; border-radius: 6px; padding: 3px 7px; white-space: nowrap;
+}
+.fs-format--double_elim { background: #f0c84b; color: #4a2aa4; }
+.fs-format--round_robin { background: #2ba572; color: #fff; }
+.fs-count {
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.55); white-space: nowrap;
+}
+.fs-row {
+  display: grid; grid-template-columns: 30px 1fr 52px 54px 52px 48px; gap: 0 8px;
+  align-items: center; padding: 8px 4px; border-radius: 10px; border: 1px solid transparent;
+}
+.fs-row--head {
+  margin-top: 14px; padding: 0 4px 8px; border-radius: 0; border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: var(--font-display); font-weight: 700; font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.5);
+}
+.fs-rows { display: flex; flex-direction: column; margin-top: 4px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 2px; }
+.fs-row--champ { background: rgba(240, 200, 75, 0.14); border-color: rgba(240, 200, 75, 0.3); }
+.fs-row--champ .fs-place { color: #f0c84b; }
+.fs-tied { background: rgba(255, 255, 255, 0.05); }
+.fs-tied--top { border-radius: 10px 10px 0 0; }
+.fs-tied--middle { border-radius: 0; }
+.fs-tied--bottom { border-radius: 0 0 10px 10px; }
+.fs-place { font-family: var(--font-display); font-weight: 900; font-size: 15px; color: rgba(255, 255, 255, 0.8); }
+.fs-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.avatar.fs-av { width: 28px; height: 28px; font-size: 11px; flex: none; }
+.fs-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; color: rgba(255, 255, 255, 0.92);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.fs-row--champ .fs-name { font-weight: 800; color: #fff; }
+.fs-exaequo {
+  font-family: var(--font-display); font-weight: 700; font-size: 8px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #f0c84b; border: 1px solid rgba(240, 200, 75, 0.5);
+  border-radius: 5px; padding: 1px 5px; flex: none;
+}
+.fs-wl, .fs-diff { text-align: right; font-family: var(--font-display); font-weight: 700; font-size: 12px; color: rgba(255, 255, 255, 0.7); }
+.fs-elo { text-align: right; font-family: var(--font-display); font-weight: 800; font-size: 13px; color: #fff; }
+.fs-prov { color: rgba(255, 255, 255, 0.45); }
+.fs-delta { text-align: right; font-family: var(--font-display); font-weight: 800; font-size: 12px; }
+.fs-delta--up { color: #4ade9b; }
+.fs-delta--down { color: #f19a9a; }
+.fs-delta--flat { color: rgba(255, 255, 255, 0.55); }
+.fs-more {
+  margin: 6px 4px 0; padding: 8px; border-radius: 10px; cursor: pointer;
+  background: transparent; border: 1px dashed rgba(255, 255, 255, 0.3);
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.7); transition: all var(--dur) var(--ease);
+}
+.fs-more:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.fs-note { font-family: var(--font-body); font-weight: 600; font-size: 10px; line-height: 1.4; color: rgba(255, 255, 255, 0.5); padding: 6px 4px 0; margin: 0; }
+.fs-actions { display: flex; gap: 12px; margin-top: auto; padding-top: 12px; }
+
+/* --- takeover buttons (layout slot; the app supplies the labels) --- */
+.tk-btn {
+  flex: 1; text-align: center; padding: 13px; border-radius: 12px; cursor: pointer;
+  font-family: var(--font-display); font-size: 14px; transition: all var(--dur) var(--ease);
+}
+.tk-btn--primary { font-weight: 800; color: #4a2aa4; background: #fff; border: none; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25); }
+.tk-btn--ghost { font-weight: 700; color: #fff; background: rgba(255, 255, 255, 0.14); border: 1.5px solid rgba(255, 255, 255, 0.4); }
+.tk-btn:hover { transform: translateY(-1px); }
+.tk-btn:active { transform: scale(0.98); }
+
+/* --- phone portrait: one column, the page scrolls as one --- */
+@media (max-width: 719px) {
+  .takeover { display: block; }
+  .tk-inner--split { flex-direction: column; }
+  .tk-hero { width: 100%; padding: 40px 20px 24px; }
+  .tk-side { padding: 0 16px 28px; }
+  .avatar.tk-winner-av { width: 104px; height: 104px; font-size: 34px; }
+  .tk-trophy { font-size: 42px; }
+  .tk-podium { margin-top: 24px; }
+  .pod--1 .pod-bar { height: 74px; }
+  .pod--2 .pod-bar { height: 52px; }
+  .pod--3 .pod-bar { height: 40px; }
+  .fs-card { padding: 18px 16px; }
+  .fs-rows { overflow: visible; }
+  .fs-row { grid-template-columns: 22px 1fr 42px 40px; padding: 7px 4px; border-radius: 9px; }
+  .fs-diff, .fs-elo { display: none; }
+  .fs-exaequo { font-size: 0; padding: 1px 4px; }
+  .fs-exaequo::before { content: "="; font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .takeover, .takeover * { animation: none !important; }
+}
+
+/* --- 6a / 4b: single centred column --- */
+.tk-inner--solo {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; box-sizing: border-box; padding: 40px 24px; text-align: center;
+}
+.tk-scoreline { display: flex; align-items: center; justify-content: center; gap: 26px; margin-top: 26px; }
+.tk-face-col--loser { opacity: 0.9; }
+.avatar.tk-face { width: 60px; height: 60px; font-size: 22px; margin: 0 auto; border: 2px solid rgba(255, 255, 255, 0.5); }
+.avatar.tk-face--zero { border: 2px dashed rgba(255, 255, 255, 0.6); }
+.tk-face-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: #fff; margin-top: 8px; }
+.tk-score {
+  font-family: var(--font-display); font-weight: 900; font-size: clamp(52px, 9vw, 84px);
+  line-height: 1; color: #fff; text-shadow: 0 8px 40px rgba(0, 0, 0, 0.3); white-space: nowrap;
+}
+.tk-score-dash { color: rgba(255, 255, 255, 0.5); margin: 0 10px; }
+.tk-actions { display: flex; gap: 12px; margin-top: 28px; width: 100%; max-width: 420px; justify-content: center; }
+.tk-actions .tk-btn { flex: 0 1 auto; padding: 14px 30px; font-size: 15px; border-radius: 14px; }
+
+.tk-skull { font-size: 70px; animation: rvshake 0.4s infinite; }
+.tk-capot-title {
+  font-family: var(--font-display); font-weight: 900; font-size: clamp(46px, 8.5vw, 88px);
+  line-height: 0.9; letter-spacing: -0.02em; color: #fff; text-transform: uppercase;
+  margin-top: 10px; text-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+}
+.tk-capot-line {
+  font-family: var(--font-body); font-weight: 600; font-size: 16px; line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85); max-width: 560px; margin: 22px auto 0;
+}
+
+@media (max-width: 719px) {
+  .tk-inner--solo { padding: 48px 20px 32px; }
+  .tk-scoreline { gap: 16px; margin-top: 22px; }
+  .avatar.tk-face { width: 46px; height: 46px; font-size: 17px; }
+  .tk-face-name { font-size: 12px; margin-top: 6px; }
+  .tk-score-dash { margin: 0 4px; }
+  .tk-actions { flex-direction: column; margin-top: 24px; }
+  .tk-actions .tk-btn { flex: none; width: 100%; padding: 15px; }
+  .tk-skull { font-size: 48px; }
+  /* Two deliberate lines on a phone: "BALLA DI" / "CAPOT". */
+  .tk-capot-title { line-height: 0.92; max-width: 6ch; }
+  .tk-capot-line { font-size: 14px; margin-top: 18px; }
 }

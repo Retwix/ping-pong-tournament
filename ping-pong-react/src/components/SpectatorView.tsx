@@ -13,7 +13,8 @@ import {
 } from "../lib/pingpong";
 import type { RatingRow } from "../lib/rating";
 import { sideElos } from "../lib/scorerElo";
-import { crowdSplit, initials, ladderAvatar, matchStakes } from "../lib/spectator";
+import { playerInitials } from "../lib/avatar";
+import { crowdSplit, ladderAvatar, matchStakes, showsLiveBoard } from "../lib/spectator";
 import type { Match, MatchSide, Tournament } from "../types";
 import ThemeToggle from "./ThemeToggle";
 
@@ -30,6 +31,9 @@ interface Props {
 	onRef?: () => void;
 	error?: string | null;
 }
+
+// How long the "next up" card is shown before the board is revealed anyway.
+const REVEAL_SECONDS = 5;
 
 /** Signed Elo with a real minus sign, e.g. +18 / −15. */
 function signed(n: number): string {
@@ -57,7 +61,7 @@ function TvAvatar({
 			{showPhoto ? (
 				<img src={url} alt="" onError={() => setBrokenUrl(url)} />
 			) : (
-				initials(name)
+				playerInitials(name)
 			)}
 		</div>
 	);
@@ -82,11 +86,33 @@ export default function SpectatorView({
 	const { predictions } = useTournamentPredictions(tournament.id);
 	// Tick state purely to re-render the running clock.
 	const [, forceTick] = useState(0);
+	// The board is a passive mirror, so a fresh 0–0 match would otherwise sit on
+	// the "next up" card forever. After a short countdown we reveal its board
+	// anyway — the house always opens with a serve-deciding point regardless.
+	const [revealedId, setRevealedId] = useState<string | null>(null);
+	const [secondsLeft, setSecondsLeft] = useState(REVEAL_SECONDS);
 
 	const target = tournament.target;
-	const showLive =
-		!!match && (match.done || match.score_a + match.score_b > 0 || !!match.started_at);
 	const over = tournament.status === "done";
+	const showLive = showsLiveBoard(match, revealedId);
+	// Arm the reveal only while a followed match is still waiting to be shown.
+	const armId = !showLive && !over && match ? match.id : null;
+
+	useEffect(() => {
+		if (armId === null) return;
+		setSecondsLeft(REVEAL_SECONDS);
+		const start = Date.now();
+		const timer = setInterval(() => {
+			const left = REVEAL_SECONDS - Math.floor((Date.now() - start) / 1000);
+			if (left <= 0) {
+				setRevealedId(armId);
+				clearInterval(timer);
+			} else {
+				setSecondsLeft(left);
+			}
+		}, 250);
+		return () => clearInterval(timer);
+	}, [armId]);
 
 	useEffect(() => {
 		if (!showLive || match?.done) return;
@@ -224,6 +250,11 @@ export default function SpectatorView({
 										<div className="tv-next-stat-label">Format</div>
 									</div>
 								</div>
+								{armId && (
+									<div className="tv-next-countdown">
+										Le match commence dans <span className="tv-next-count">{secondsLeft}</span> s
+									</div>
+								)}
 								<div className="tv-next-foot">
 									{tournament.name} · {formatLabel}
 								</div>

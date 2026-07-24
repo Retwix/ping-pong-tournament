@@ -38,6 +38,19 @@ export function withCacheBuster(url: string, version: number): string {
 }
 
 /**
+ * Two-letter fallback shown when a player has no photo: one letter per word for a
+ * compound name, otherwise the first two letters. Hyphens separate words like
+ * spaces do, so "Jean-Baptiste" reads JB rather than JE.
+ */
+export function playerInitials(name: string): string {
+	const words = name.split(/[\s-]/).filter((w) => w.length > 0)
+	const [first, second] = words
+	if (first === undefined) return '?'
+	const letters = second === undefined ? first.slice(0, 2) : first.slice(0, 1) + second.slice(0, 1)
+	return letters.toUpperCase()
+}
+
+/**
  * Decode, center-crop and downscale the picked file to a 256px WebP blob.
  * Browser-only (canvas); the pure geometry lives in coverCrop above.
  */

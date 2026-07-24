@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useBettorName } from "../hooks/useBettorName";
+import { usePlayers } from "../hooks/usePlayers";
 import { useRatingDeltas } from "../hooks/useRatingDeltas";
 import { useTournament } from "../hooks/useTournament";
 import { createTournament } from "../lib/db";
 import { chaosSettingsFromTournament } from "../lib/chaos";
+import { playerLookup } from "../lib/playerLookup";
 import { navigate } from "../lib/router";
-import { isCapot } from "../lib/stats";
+import { isCapot, winnerLoser } from "../lib/stats";
 import type { Match } from "../types";
 import CapotScreen from "./CapotScreen";
 import Champion from "./Champion";
@@ -28,11 +30,13 @@ interface Props {
 export default function Board({ id, onBack, onNew, onOpen }: Props) {
 	const { tournament, matches, loading, error, patchMatch } = useTournament(id);
 	const { name: bettorName, setName: setBettorName } = useBettorName();
+	const { players: registry } = usePlayers();
 	const {
 		forMatch: ratingsForMatch,
 		forTournament: ratingsForTournament,
 		elosFor,
 	} = useRatingDeltas();
+	const look = useMemo(() => playerLookup(registry), [registry]);
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [dismissedChampion, setDismissedChampion] = useState(false);
 	const [capotMatch, setCapotMatch] = useState<Match | null>(null);
@@ -84,6 +88,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 					onReplay={rematch}
 					onHome={onBack}
 					ratings={ratingsForMatch(match)}
+					look={look}
 				/>
 			);
 		}
@@ -107,6 +112,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 
 	const isDouble = tournament.format === "double_elim";
 	const openMatch = matches.find((m) => m.id === openId) ?? null;
+	const capot = capotMatch ? winnerLoser(capotMatch) : null;
 	// Capot celebration takes precedence over the champion screen, so they don't stack.
 	const showChampion =
 		tournament.status === "done" && !dismissedChampion && !capotMatch;
@@ -222,21 +228,14 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 				/>
 			)}
 
-			{capotMatch && (
+			{capot && (
 				<CapotScreen
-					winner={
-						capotMatch.score_a > capotMatch.score_b
-							? capotMatch.player_a
-							: capotMatch.player_b
-					}
-					loser={
-						capotMatch.score_a > capotMatch.score_b
-							? capotMatch.player_b
-							: capotMatch.player_a
-					}
-					winnerScore={Math.max(capotMatch.score_a, capotMatch.score_b)}
+					winner={capot.winner}
+					loser={capot.loser}
+					winnerScore={capot.ws}
+					look={look}
 				>
-					<button className="solid" onClick={() => setCapotMatch(null)}>
+					<button className="tk-btn tk-btn--primary" onClick={() => setCapotMatch(null)}>
 						Continuer
 					</button>
 				</CapotScreen>
@@ -247,6 +246,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
 					tournament={tournament}
 					matches={matches}
 					ratings={ratingsForTournament(matches)}
+					look={look}
 					onClose={() => setDismissedChampion(true)}
 					onNew={onNew}
 				/>
