@@ -6,8 +6,14 @@ import {
   ladderAvatar,
   liveStakes,
   matchStakes,
+  showsLiveBoard,
+  type BoardMatch,
   type StakeSide,
 } from './spectator'
+
+function makeBoardMatch(overrides: Partial<BoardMatch> = {}): BoardMatch {
+  return { id: 'm1', score_a: 0, score_b: 0, done: false, started_at: null, ...overrides }
+}
 
 function makeBet(overrides: Partial<Parameters<typeof crowdSplit>[0][number]> = {}) {
   return {
@@ -59,6 +65,37 @@ describe('crowdSplit', () => {
 
   it('ignores winner bets naming someone not in the match', () => {
     expect(crowdSplit([makeBet({ target: 'Candice' })], matchSides)).toBeNull()
+  })
+})
+
+describe('showsLiveBoard', () => {
+  it('shows nothing when no match is followed', () => {
+    expect(showsLiveBoard(null, null)).toBe(false)
+  })
+
+  it('holds on the "next up" card for a fresh 0–0 match', () => {
+    expect(showsLiveBoard(makeBoardMatch(), null)).toBe(false)
+  })
+
+  it('shows the board once a point has been scored', () => {
+    expect(showsLiveBoard(makeBoardMatch({ score_a: 1 }), null)).toBe(true)
+    expect(showsLiveBoard(makeBoardMatch({ score_b: 1 }), null)).toBe(true)
+  })
+
+  it('shows the board once the match has been marked started', () => {
+    expect(showsLiveBoard(makeBoardMatch({ started_at: '2026-07-24T10:00:00Z' }), null)).toBe(true)
+  })
+
+  it('keeps a finished match on the board (its result lingers)', () => {
+    expect(showsLiveBoard(makeBoardMatch({ done: true }), null)).toBe(true)
+  })
+
+  it('reveals the board for a 0–0 match once its reveal timer has fired', () => {
+    expect(showsLiveBoard(makeBoardMatch({ id: 'm7' }), 'm7')).toBe(true)
+  })
+
+  it('ignores a reveal that was armed for a different match', () => {
+    expect(showsLiveBoard(makeBoardMatch({ id: 'm7' }), 'm3')).toBe(false)
   })
 })
 

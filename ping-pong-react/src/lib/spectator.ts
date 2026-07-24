@@ -9,6 +9,21 @@ export interface CrowdSplit {
   bPercent: number
 }
 
+export type BoardMatch = Pick<Match, 'id' | 'score_a' | 'score_b' | 'done' | 'started_at'>
+
+/**
+ * Whether the spectator shows the live scoreboard rather than the "next up" card.
+ * True as soon as the match is genuinely under way — a point scored, an explicit
+ * start, or already finished — but also once its reveal timer has fired, so a
+ * fresh 0–0 match (which the house always opens with a serve-deciding point) does
+ * not sit on the "next up" card waiting for the first tap to sync.
+ */
+export function showsLiveBoard(match: BoardMatch | null, revealedId: string | null): boolean {
+  if (!match) return false
+  if (match.done || match.score_a + match.score_b > 0 || !!match.started_at) return true
+  return match.id === revealedId
+}
+
 type WinnerBet = Pick<Prediction, 'match_id' | 'bet_type' | 'target'>
 
 /**
