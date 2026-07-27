@@ -5,6 +5,7 @@ import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
 import NewMenu from './NewMenu'
+import RecentResults from './RecentResults'
 import TournamentCard from './TournamentCard'
 
 interface Props {
@@ -73,8 +74,7 @@ export default function Home({
             </div>
           )}
 
-          {/* Recent results land in a later task. */}
-          <div className="rv-recent-slot" />
+          <RecentResults onOpenTournament={onOpen} />
         </div>
 
         <div className="rv-side">

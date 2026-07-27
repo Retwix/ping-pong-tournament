@@ -1676,16 +1676,14 @@ td.elo.neg { color: var(--coral); }
   padding: 18px; box-shadow: var(--shadow-card);
 }
 
-/* Placeholder slots for blocks landing in later tasks (recent results, top players,
+/* Placeholder slots for blocks landing in later tasks (top players,
    streaks & records) — kept visually reserved so the grid doesn't jump later. */
-.rv-recent-slot, .rv-top-slot, .rv-records-slot {
+.rv-top-slot, .rv-records-slot {
   border: 1.5px dashed var(--border-strong); border-radius: 18px;
   background: rgba(255, 255, 255, 0.4);
 }
-[data-theme='dark'] .rv-recent-slot,
 [data-theme='dark'] .rv-top-slot,
 [data-theme='dark'] .rv-records-slot { background: rgba(255, 255, 255, 0.03); }
-.rv-recent-slot { min-height: 160px; }
 .rv-top-slot { min-height: 220px; }
 .rv-records-slot { min-height: 140px; }
 
@@ -1898,3 +1896,29 @@ td.elo.neg { color: var(--coral); }
   .rv-hero-live-dot { animation: none !important; }
   .rv-hero-btn-primary:hover { transform: none !important; }
 }
+
+/* ===== recent results ("Résultats récents") ===== */
+.rv-card-title {
+  font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--fg-1);
+  margin-bottom: 14px;
+}
+
+.rv-recent-list { display: flex; flex-direction: column; gap: 2px; }
+
+.rvrow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 8px; border-radius: 12px; cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+.rvrow:hover { background: #f2effb; }
+[data-theme='dark'] .rvrow:hover { background: rgba(255, 255, 255, 0.05); }
+
+.rvrow-text {
+  flex: 1; min-width: 0;
+  font-family: var(--font-body); font-size: 13.5px; color: var(--fg-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rvrow-winner { font-weight: 700; color: var(--fg-1); }
+.rvrow-score { font-weight: 700; color: var(--fg-1); }
+.rvrow-time { flex: none; font-family: var(--font-body); font-size: 12px; color: var(--fg-3); }
+.rvrow-chevron { flex: none; color: var(--fg-3); }
