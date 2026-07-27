@@ -1676,15 +1676,13 @@ td.elo.neg { color: var(--coral); }
   padding: 18px; box-shadow: var(--shadow-card);
 }
 
-/* Placeholder slots for blocks landing in later tasks (top players,
-   streaks & records) — kept visually reserved so the grid doesn't jump later. */
-.rv-top-slot, .rv-records-slot {
+/* Placeholder slot for the block landing in a later task (streaks &
+   records) — kept visually reserved so the grid doesn't jump later. */
+.rv-records-slot {
   border: 1.5px dashed var(--border-strong); border-radius: 18px;
   background: rgba(255, 255, 255, 0.4);
 }
-[data-theme='dark'] .rv-top-slot,
 [data-theme='dark'] .rv-records-slot { background: rgba(255, 255, 255, 0.03); }
-.rv-top-slot { min-height: 220px; }
 .rv-records-slot { min-height: 140px; }
 
 /* ===== tournament / game cards ===== */
@@ -1922,3 +1920,39 @@ td.elo.neg { color: var(--coral); }
 .rvrow-score { font-weight: 700; color: var(--fg-1); }
 .rvrow-time { flex: none; font-family: var(--font-body); font-size: 12px; color: var(--fg-3); }
 .rvrow-chevron { flex: none; color: var(--fg-3); }
+
+/* ===== top players ("Top joueurs") ===== */
+.rv-top-card { cursor: pointer; }
+
+.rv-top-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.rv-top-header .rv-card-title { margin-bottom: 0; }
+.rv-top-link { font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--accent); flex: none; }
+
+.rv-top-list { display: flex; flex-direction: column; gap: 10px; }
+
+.rv-top-row { display: flex; align-items: center; gap: 10px; }
+
+.rv-top-rank {
+  width: 18px; flex: none; text-align: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 13px; color: #847e96;
+}
+.rv-top-rank-1 { color: #e8b53a; }
+.rv-top-rank-2 { color: #aeb6c0; }
+.rv-top-rank-3 { color: #cb8e5e; }
+
+.avatar.rv-top-av { width: 34px; height: 34px; font-size: 13px; }
+
+.rv-top-name {
+  flex: 1; min-width: 0;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--fg-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.rv-top-rating { flex: none; font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--fg-1); }
+.rv-top-rating-1 { color: var(--primary); }
+
+.rv-top-trend { flex: none; font-family: var(--font-body); font-weight: 700; font-size: 12px; white-space: nowrap; }
+.rv-top-trend.up { color: #2ba572; }
+.rv-top-trend.down { color: #e54c4c; }
+[data-theme='dark'] .rv-top-trend.up { color: #4ed9a0; }
+[data-theme='dark'] .rv-top-trend.down { color: #ff7a7a; }

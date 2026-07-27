@@ -6,6 +6,7 @@ import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
 import NewMenu from './NewMenu'
 import RecentResults from './RecentResults'
+import TopPlayers from './TopPlayers'
 import TournamentCard from './TournamentCard'
 
 interface Props {
@@ -78,8 +79,7 @@ export default function Home({
         </div>
 
         <div className="rv-side">
-          {/* Top players lands in a later task. */}
-          <div className="rv-top-slot" />
+          <TopPlayers onOpenClassement={onClassement} />
           {/* Streaks & records lands in a later task. */}
           <div className="rv-records-slot" />
         </div>
