@@ -6,6 +6,7 @@ import { winnerLoserRatings } from '../lib/ratingSides'
 import { computeStandings } from '../lib/pingpong'
 import { navigate } from '../lib/router'
 import { isPlayable } from '../lib/doubleElim'
+import { isLive } from '../lib/liveHero'
 import type { Match } from '../types'
 import LiveScorer from './LiveScorer'
 import { RatingMoveRow } from './RatingDelta'
@@ -27,11 +28,6 @@ interface Props {
 
 // How long a finished match stays on screen before the view advances to the next.
 const HOLD_MS = 6000
-
-/** A match is "live" once it has been started or has at least one point. */
-function isLive(m: Match): boolean {
-  return !m.done && (m.score_a + m.score_b > 0 || !!m.started_at)
-}
 
 /**
  * Auto-follows whatever match is currently being played — no tapping required —
