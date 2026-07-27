@@ -59,29 +59,37 @@ export default function Home({
 
       <div className="rv-grid">
         <div className="rv-main">
-          <div className="section-title">Tes tournois &amp; parties</div>
+          <div className="rv-slot-tournaments">
+            <div className="section-title">Tes tournois &amp; parties</div>
 
-          {loading ? (
-            <div className="empty">Chargement…</div>
-          ) : tournaments.length === 0 ? (
-            <div className="empty">Aucun tournoi pour l'instant. Crée le premier !</div>
-          ) : (
-            <div className="rv-t-grid">
-              {tournaments.map((t) => (
-                <TournamentCard key={t.id} tournament={t} onOpen={onOpen} onDelete={onDelete} />
-              ))}
-              <div className="rvcard rv-t-new">
-                <NewMenu onNew={onNew} onNewGame={onNewGame} />
+            {loading ? (
+              <div className="empty">Chargement…</div>
+            ) : tournaments.length === 0 ? (
+              <div className="empty">Aucun tournoi pour l'instant. Crée le premier !</div>
+            ) : (
+              <div className="rv-t-grid">
+                {tournaments.map((t) => (
+                  <TournamentCard key={t.id} tournament={t} onOpen={onOpen} onDelete={onDelete} />
+                ))}
+                <div className="rvcard rv-t-new">
+                  <NewMenu onNew={onNew} onNewGame={onNewGame} />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          <RecentResults onOpenTournament={onOpen} />
+          <div className="rv-slot-recent">
+            <RecentResults onOpenTournament={onOpen} />
+          </div>
         </div>
 
         <div className="rv-side">
-          <TopPlayers onOpenClassement={onClassement} />
-          <RecordsCard />
+          <div className="rv-slot-top">
+            <TopPlayers onOpenClassement={onClassement} />
+          </div>
+          <div className="rv-slot-records">
+            <RecordsCard />
+          </div>
         </div>
       </div>
 

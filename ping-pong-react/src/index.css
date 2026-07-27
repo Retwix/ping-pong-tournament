@@ -1675,6 +1675,7 @@ td.elo.neg { color: var(--coral); }
   background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
   padding: 18px; box-shadow: var(--shadow-card);
 }
+[data-theme='dark'] .rv-card { background: #1e1138; border-color: rgba(255, 255, 255, 0.09); }
 
 /* ===== tournament / game cards ===== */
 .rv-t-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
@@ -1706,6 +1707,7 @@ td.elo.neg { color: var(--coral); }
 .rv-t-winner { color: var(--green); font-weight: 700; }
 .rv-t-meta { color: var(--fg-3); font-size: 12.5px; }
 .rv-t-winner-line { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--green); }
+[data-theme='dark'] .rv-t-winner, [data-theme='dark'] .rv-t-winner-line { color: #4ed9a0; }
 
 .rv-t-card .rvtrash { flex: none; }
 .rvtrash {
@@ -1759,18 +1761,48 @@ td.elo.neg { color: var(--coral); }
   background: transparent; color: #fff; display: flex; align-items: center; justify-content: center;
 }
 
+/* ===== mobile stack-order slots =====
+   These wrappers exist only so the mobile breakpoint can reorder the four
+   dashboard blocks independently of their desktop 2-column grouping (rv-main
+   / rv-side). At desktop they are `display: contents` — invisible, no box,
+   no effect on the 2fr/1fr grid below. Only the mobile media query gives
+   them a real box + `order`. */
+.rv-slot-tournaments, .rv-slot-recent, .rv-slot-top, .rv-slot-records {
+  display: contents;
+}
+
 /* ===== responsive breakpoint: collapse to one column, swap nav for tab bar ===== */
 @media (max-width: 820px) {
   .rv-nav { display: none; }
   .rv-tabbar { display: flex; }
-  .rv-grid { grid-template-columns: 1fr; }
   .rv-page { padding: 52px 14px 96px; }
+
+  /* Natural DOM order is hero -> tournaments -> recent results -> top players
+     -> records (rv-main holds tournaments+recent, rv-side holds top+records).
+     The spec order is hero -> tournaments -> top players -> recent results ->
+     records, i.e. top players and recent results swap. Flattening rv-main/
+     rv-side with `display: contents` lets the four slot wrappers become
+     siblings in one flex flow so `order` can resequence them without
+     touching the desktop grid above. */
+  .rv-grid { display: flex; flex-direction: column; gap: 20px; }
+  .rv-main, .rv-side { display: contents; }
+
+  .rv-slot-tournaments, .rv-slot-recent, .rv-slot-top, .rv-slot-records {
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .rv-slot-tournaments { order: 1; }
+  .rv-slot-top { order: 2; }
+  .rv-slot-recent { order: 3; }
+  .rv-slot-records { order: 4; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rvcard, .rvcard:hover, .rv-nav-link, .rv-tab, .rv-t-card, .rvtrash { transition: none !important; }
-  .rvcard:hover { transform: none !important; }
-  .rv-t-dot { animation: none !important; }
+  .rvcard, .rvcard:hover, .rv-nav-link, .rv-tab, .rv-t-card, .rvtrash,
+  .rv-hero-btn-primary, .rv-hero-btn-secondary, .rv-hero-live-dot, .rv-t-dot {
+    transition: none !important;
+  }
+  .rvcard:hover, .rv-hero-btn-primary:hover { transform: none !important; }
+  .rv-t-dot, .rv-hero-live-dot { animation: none !important; }
 }
 
 /* ===== live hero — ACTIVE (coral) ===== */
@@ -1881,11 +1913,6 @@ td.elo.neg { color: var(--coral); }
   .rv-hero-idle-actions { justify-content: space-between; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .rv-hero-live-dot { animation: none !important; }
-  .rv-hero-btn-primary:hover { transform: none !important; }
-}
-
 /* ===== recent results ("Résultats récents") ===== */
 .rv-card-title {
   font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--fg-1);
@@ -1907,6 +1934,7 @@ td.elo.neg { color: var(--coral); }
   font-family: var(--font-body); font-size: 13.5px; color: var(--fg-2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+[data-theme='dark'] .rvrow-text { color: #a99fc4; }
 .rvrow-winner { font-weight: 700; color: var(--fg-1); }
 .rvrow-score { font-weight: 700; color: var(--fg-1); }
 .rvrow-time { flex: none; font-family: var(--font-body); font-size: 12px; color: var(--fg-3); }
