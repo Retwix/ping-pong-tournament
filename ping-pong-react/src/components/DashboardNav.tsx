@@ -1,3 +1,4 @@
+import { IconPingPong } from '@tabler/icons-react'
 import NewMenu from './NewMenu'
 import ThemeToggle from './ThemeToggle'
 
@@ -22,7 +23,9 @@ export default function DashboardNav({
   return (
     <nav className="rv-nav">
       <div className="rv-nav-brand">
-        <span className="rv-nav-tile">🏓</span>
+        <span className="rv-nav-tile">
+          <IconPingPong size={20} stroke={2.2} color="#fff" />
+        </span>
         <span className="rv-nav-word">
           Tournoi <span className="em">ping-pong</span>
         </span>
