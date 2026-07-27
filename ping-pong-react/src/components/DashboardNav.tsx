@@ -1,0 +1,51 @@
+import NewMenu from './NewMenu'
+import ThemeToggle from './ThemeToggle'
+
+interface Props {
+  onClassement: () => void
+  onPronos: () => void
+  onStats: () => void
+  onPlayers: () => void
+  onNew: () => void
+  onNewGame: () => void
+}
+
+/** Desktop glass top bar: brand, nav links (Accueil active), theme toggle, "+ Nouveau" CTA. */
+export default function DashboardNav({
+  onClassement,
+  onPronos,
+  onStats,
+  onPlayers,
+  onNew,
+  onNewGame,
+}: Props) {
+  return (
+    <nav className="rv-nav">
+      <div className="rv-nav-brand">
+        <span className="rv-nav-tile">🏓</span>
+        <span className="rv-nav-word">
+          Tournoi <span className="em">ping-pong</span>
+        </span>
+      </div>
+      <div className="rv-nav-links">
+        <span className="rv-nav-link active">Accueil</span>
+        <button className="rv-nav-link" onClick={onClassement}>
+          Classement
+        </button>
+        <button className="rv-nav-link" onClick={onPronos}>
+          Pronos
+        </button>
+        <button className="rv-nav-link" onClick={onStats}>
+          Stats
+        </button>
+        <button className="rv-nav-link" onClick={onPlayers}>
+          Joueurs
+        </button>
+      </div>
+      <div className="rv-nav-actions">
+        <ThemeToggle />
+        <NewMenu onNew={onNew} onNewGame={onNewGame} />
+      </div>
+    </nav>
+  )
+}
