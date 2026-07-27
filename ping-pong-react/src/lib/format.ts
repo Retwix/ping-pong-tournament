@@ -5,9 +5,9 @@
  * never shows a stray minus.
  */
 export function signed(value: number): string {
-  const v = Math.round(value);
-  if (v === 0) return "±0";
-  return v > 0 ? `+${v}` : `−${Math.abs(v)}`;
+  const v = Math.round(value)
+  if (v === 0) return '±0'
+  return v > 0 ? `+${v}` : `−${Math.abs(v)}`
 }
 
 /**
@@ -16,18 +16,18 @@ export function signed(value: number): string {
  * short localized date. `now` is injected so the formatting is pure/testable.
  */
 export function relativeTime(iso: string | null, now: Date): string {
-  if (!iso) return "";
-  const then = new Date(iso).getTime();
-  const secs = Math.max(0, Math.floor((now.getTime() - then) / 1000));
-  if (secs < 60) return "à l'instant";
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `il y a ${mins} min`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `il y a ${hours} h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `il y a ${days} j`;
-  return new Date(iso).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-  });
+  if (!iso) return ''
+  const then = new Date(iso).getTime()
+  const secs = Math.max(0, Math.floor((now.getTime() - then) / 1000))
+  if (secs < 60) return 'à l\'instant'
+  const mins = Math.floor(secs / 60)
+  if (mins < 60) return `il y a ${mins} min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `il y a ${hours} h`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `il y a ${days} j`
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+  })
 }
