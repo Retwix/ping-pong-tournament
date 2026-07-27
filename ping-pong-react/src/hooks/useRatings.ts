@@ -64,6 +64,8 @@ export function useRatings() {
   return {
     rows,
     events,
+    matches,
+    players,
     matchCount: matches.length,
     loading,
     error,
