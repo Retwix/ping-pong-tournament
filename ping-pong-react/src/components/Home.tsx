@@ -3,6 +3,7 @@ import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
+import LiveHero from './LiveHero'
 import NewMenu from './NewMenu'
 import TournamentCard from './TournamentCard'
 
@@ -18,9 +19,6 @@ interface Props {
   onRef: () => void
 }
 
-// `onLive`/`onRef` stay part of `Props` (the live hero in a later task wires them to
-// "Regarder"/"Arbitrer" — contextual actions that only surface from that hero), so they
-// are intentionally not destructured here yet.
 export default function Home({
   onOpen,
   onNew,
@@ -29,6 +27,8 @@ export default function Home({
   onStats,
   onClassement,
   onPronos,
+  onLive,
+  onRef,
 }: Props) {
   const { tournaments, loading, error } = useTournaments()
 
@@ -50,8 +50,7 @@ export default function Home({
         onNewGame={onNewGame}
       />
 
-      {/* Live hero lands in a later task — this placeholder keeps the layout stable. */}
-      <div className="rv-hero-slot" />
+      <LiveHero onWatch={onLive} onRef={onRef} onNew={onNew} />
 
       {error && <div className="error-banner">Erreur : {error}</div>}
 

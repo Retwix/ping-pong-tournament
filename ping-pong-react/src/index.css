@@ -1676,17 +1676,15 @@ td.elo.neg { color: var(--coral); }
   padding: 18px; box-shadow: var(--shadow-card);
 }
 
-/* Placeholder slots for blocks landing in later tasks (live hero, recent results, top
-   players, streaks & records) — kept visually reserved so the grid doesn't jump later. */
-.rv-hero-slot, .rv-recent-slot, .rv-top-slot, .rv-records-slot {
+/* Placeholder slots for blocks landing in later tasks (recent results, top players,
+   streaks & records) — kept visually reserved so the grid doesn't jump later. */
+.rv-recent-slot, .rv-top-slot, .rv-records-slot {
   border: 1.5px dashed var(--border-strong); border-radius: 18px;
   background: rgba(255, 255, 255, 0.4);
 }
-[data-theme='dark'] .rv-hero-slot,
 [data-theme='dark'] .rv-recent-slot,
 [data-theme='dark'] .rv-top-slot,
 [data-theme='dark'] .rv-records-slot { background: rgba(255, 255, 255, 0.03); }
-.rv-hero-slot { min-height: 132px; border-radius: 22px; }
 .rv-recent-slot { min-height: 160px; }
 .rv-top-slot { min-height: 220px; }
 .rv-records-slot { min-height: 140px; }
@@ -1786,4 +1784,117 @@ td.elo.neg { color: var(--coral); }
   .rvcard, .rvcard:hover, .rv-nav-link, .rv-tab, .rv-t-card, .rvtrash { transition: none !important; }
   .rvcard:hover { transform: none !important; }
   .rv-t-dot { animation: none !important; }
+}
+
+/* ===== live hero — ACTIVE (coral) ===== */
+.rv-hero-live {
+  position: relative; overflow: hidden;
+  border-radius: 22px; padding: 22px 26px;
+  color: #fff;
+  background: linear-gradient(105deg, #d74251 0%, #be3341 55%, #93283a 100%);
+  box-shadow: 0 22px 50px rgba(215, 66, 81, 0.32);
+  display: flex; flex-direction: column; gap: 16px;
+}
+.rv-hero-live::before {
+  content: ''; position: absolute; top: -45%; right: -12%; width: 60%; height: 150%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.rv-hero-live-meta {
+  position: relative; z-index: 1; display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+.rv-hero-live-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #fff; flex: none;
+  animation: rvpulse 1.6s infinite;
+}
+.rv-hero-live-label { font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 0.16em; }
+.rv-hero-live-meta-sep { opacity: 0.6; }
+
+.rv-hero-matchup {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center; gap: 24px;
+}
+.rv-hero-player { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.rv-hero-player-b { flex-direction: row-reverse; }
+.rv-hero-player-info { min-width: 0; }
+.rv-hero-player-info-b { text-align: right; }
+.rv-hero-player-name {
+  font-family: var(--font-display); font-weight: 800; font-size: 22px; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rv-hero-player-sub { font-family: var(--font-body); font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+
+.rv-hero-av {
+  width: 60px; height: 60px; font-size: 20px; flex: none;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.rv-hero-score {
+  font-family: var(--font-display); font-weight: 900; font-size: 56px; letter-spacing: -0.02em;
+  color: #fff; flex: none;
+}
+
+.rv-hero-actions { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.rv-hero-btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #fff; color: #be3341; border: none; border-radius: 12px;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  padding: 10px 20px; cursor: pointer;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.rv-hero-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16); }
+.rv-hero-btn-secondary {
+  background: rgba(255, 255, 255, 0.14); color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.55); border-radius: 12px;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  padding: 10px 20px; cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+.rv-hero-btn-secondary:hover { background: rgba(255, 255, 255, 0.22); }
+
+/* ===== live hero — IDLE (slim glass band) ===== */
+.rv-hero-idle {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: rgba(255, 255, 255, 0.66); border-radius: 18px; padding: 16px 20px;
+}
+[data-theme='dark'] .rv-hero-idle { background: rgba(255, 255, 255, 0.04); }
+.rv-hero-idle-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.rv-hero-idle-icon {
+  width: 44px; height: 44px; border-radius: 14px; flex: none;
+  display: grid; place-items: center; background: #f0ecfb; color: #4a2aa4;
+}
+[data-theme='dark'] .rv-hero-idle-icon { background: rgba(255, 255, 255, 0.09); color: #c9b8ff; }
+.rv-hero-idle-text { min-width: 0; }
+.rv-hero-idle-title { font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--fg-1); }
+.rv-hero-idle-sub { font-family: var(--font-body); font-size: 13px; color: var(--fg-3); margin-top: 2px; }
+.rv-hero-idle-actions { display: flex; align-items: center; gap: 14px; flex: none; }
+.rv-hero-ghost {
+  background: none; border: none; color: var(--fg-3); cursor: pointer; padding: 8px 2px;
+  font-family: var(--font-display); font-weight: 600; font-size: 13.5px;
+  transition: color var(--dur) var(--ease);
+}
+.rv-hero-ghost:hover { color: var(--fg-1); }
+
+@media (max-width: 820px) {
+  .rv-hero-live {
+    border-radius: 18px; padding: 18px 18px;
+    background: linear-gradient(120deg, #d74251, #a82b38);
+  }
+  .rv-hero-matchup { gap: 12px; }
+  .rv-hero-av { width: 48px; height: 48px; font-size: 16px; }
+  .rv-hero-player-name { font-size: 16px; }
+  .rv-hero-player-sub { font-size: 11.5px; }
+  .rv-hero-score { font-size: 42px; }
+  .rv-hero-actions { flex-wrap: wrap; }
+  .rv-hero-idle { flex-direction: column; align-items: stretch; gap: 14px; }
+  .rv-hero-idle-actions { justify-content: space-between; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-hero-live-dot { animation: none !important; }
+  .rv-hero-btn-primary:hover { transform: none !important; }
 }
