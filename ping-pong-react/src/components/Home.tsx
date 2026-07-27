@@ -6,6 +6,7 @@ import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
 import NewMenu from './NewMenu'
 import RecentResults from './RecentResults'
+import RecordsCard from './RecordsCard'
 import TopPlayers from './TopPlayers'
 import TournamentCard from './TournamentCard'
 
@@ -80,8 +81,7 @@ export default function Home({
 
         <div className="rv-side">
           <TopPlayers onOpenClassement={onClassement} />
-          {/* Streaks & records lands in a later task. */}
-          <div className="rv-records-slot" />
+          <RecordsCard />
         </div>
       </div>
 

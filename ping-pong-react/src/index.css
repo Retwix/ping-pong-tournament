@@ -1676,15 +1676,6 @@ td.elo.neg { color: var(--coral); }
   padding: 18px; box-shadow: var(--shadow-card);
 }
 
-/* Placeholder slot for the block landing in a later task (streaks &
-   records) — kept visually reserved so the grid doesn't jump later. */
-.rv-records-slot {
-  border: 1.5px dashed var(--border-strong); border-radius: 18px;
-  background: rgba(255, 255, 255, 0.4);
-}
-[data-theme='dark'] .rv-records-slot { background: rgba(255, 255, 255, 0.03); }
-.rv-records-slot { min-height: 140px; }
-
 /* ===== tournament / game cards ===== */
 .rv-t-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
 
@@ -1956,3 +1947,34 @@ td.elo.neg { color: var(--coral); }
 .rv-top-trend.down { color: #e54c4c; }
 [data-theme='dark'] .rv-top-trend.up { color: #4ed9a0; }
 [data-theme='dark'] .rv-top-trend.down { color: #ff7a7a; }
+
+/* ===== streaks & records ("Séries & records") ===== */
+.rv-records-list { display: flex; flex-direction: column; gap: 10px; }
+
+.rv-record-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 14px;
+  font-family: var(--font-body); font-weight: 600; font-size: 13px; color: var(--fg-1);
+}
+.rv-record-chip-flame { background: linear-gradient(100deg, #fff3e9, #fde9ee); }
+.rv-record-chip-flame svg { color: #d74251; flex: none; }
+.rv-record-chip-trend { background: #f7f5fd; }
+.rv-record-chip-trend svg { color: #4a2aa4; flex: none; }
+[data-theme='dark'] .rv-record-chip-flame { background: rgba(255, 122, 122, 0.12); }
+[data-theme='dark'] .rv-record-chip-flame svg { color: #ff7a7a; }
+[data-theme='dark'] .rv-record-chip-trend { background: rgba(255, 255, 255, 0.05); }
+[data-theme='dark'] .rv-record-chip-trend svg { color: #c9b8ff; }
+
+.rv-record-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.rv-record-tile {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; border-radius: 14px; background: #f7f5fd;
+}
+[data-theme='dark'] .rv-record-tile { background: rgba(255, 255, 255, 0.05); }
+
+.rv-record-tile-value {
+  font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--fg-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rv-record-tile-label { font-family: var(--font-body); font-size: 12px; color: var(--fg-3); }
