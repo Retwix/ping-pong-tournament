@@ -7,6 +7,7 @@ import {
   type Prediction,
 } from '../lib/predictions'
 import { supabase } from '../lib/supabase'
+import { uniqueChannelName } from '../lib/realtimeChannel'
 
 /**
  * Live list of every prediction for one tournament (match bets + champion futures),
@@ -50,7 +51,7 @@ export function useTournamentPredictions(tournamentId: string | null) {
     })()
 
     const channel = supabase
-      .channel(`predictions-${tournamentId}`)
+      .channel(uniqueChannelName(`predictions-${tournamentId}`))
       .on(
         'postgres_changes',
         {
@@ -59,7 +60,7 @@ export function useTournamentPredictions(tournamentId: string | null) {
           table: 'predictions',
           filter: `tournament_id=eq.${tournamentId}`,
         },
-        () => reload()
+        () => reload(),
       )
       .subscribe()
 
@@ -74,7 +75,7 @@ export function useTournamentPredictions(tournamentId: string | null) {
       await placePrediction(input)
       await reload()
     },
-    [reload]
+    [reload],
   )
 
   return { predictions, loading, error, place, reload }

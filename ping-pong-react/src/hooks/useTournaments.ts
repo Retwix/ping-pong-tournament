@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listTournaments } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { uniqueChannelName } from '../lib/realtimeChannel'
 import type { Tournament } from '../types'
 
 /** List of all tournaments, kept fresh via realtime on the tournaments table. */
@@ -23,7 +24,7 @@ export function useTournaments() {
   useEffect(() => {
     refresh()
     const channel = supabase
-      .channel('tournaments-list')
+      .channel(uniqueChannelName('tournaments-list'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () => {
         refresh()
       })

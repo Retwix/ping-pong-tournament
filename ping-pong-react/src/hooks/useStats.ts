@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listAllDoneMatches, listPlayers } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { uniqueChannelName } from '../lib/realtimeChannel'
 import type { Match, Player } from '../types'
 
 /** Loads all finished matches + the player registry, kept live via realtime. */
@@ -26,7 +27,7 @@ export function useStats() {
   useEffect(() => {
     refresh()
     const channel = supabase
-      .channel('stats-live')
+      .channel(uniqueChannelName('stats-live'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => refresh())
       .subscribe()

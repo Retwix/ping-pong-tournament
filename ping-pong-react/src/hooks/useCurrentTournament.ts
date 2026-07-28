@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getActiveTournament } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { uniqueChannelName } from '../lib/realtimeChannel'
 
 /**
  * Resolves the id of the tournament currently on the table (is_active = true) and
@@ -32,11 +33,9 @@ export function useCurrentTournament() {
     resolve()
 
     const channel = supabase
-      .channel('current-tournament')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tournaments' },
-        () => resolve()
+      .channel(uniqueChannelName('current-tournament'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () =>
+        resolve(),
       )
       .subscribe()
 
