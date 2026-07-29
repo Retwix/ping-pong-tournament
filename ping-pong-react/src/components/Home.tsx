@@ -1,14 +1,23 @@
 import type { MouseEvent } from 'react'
 import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
+import { recentTournaments } from '../lib/recentTournaments'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
-import NewMenu from './NewMenu'
 import RecentResults from './RecentResults'
 import RecordsCard from './RecordsCard'
 import TopPlayers from './TopPlayers'
 import TournamentCard from './TournamentCard'
+
+/**
+ * The tournaments grid shows a fixed two rows on desktop, filled with the most
+ * recent tournaments/games (`COLUMNS * ROWS` slots). Keep DASHBOARD_COLUMNS in
+ * sync with the desktop `grid-template-columns` count on `.rv-t-grid` in
+ * index.css.
+ */
+const DASHBOARD_COLUMNS = 4
+const DASHBOARD_ROWS = 2
 
 interface Props {
   onOpen: (id: string) => void
@@ -68,12 +77,9 @@ export default function Home({
               <div className="empty">Aucun tournoi pour l'instant. Crée le premier !</div>
             ) : (
               <div className="rv-t-grid">
-                {tournaments.map((t) => (
+                {recentTournaments(tournaments, DASHBOARD_COLUMNS * DASHBOARD_ROWS).map((t) => (
                   <TournamentCard key={t.id} tournament={t} onOpen={onOpen} onDelete={onDelete} />
                 ))}
-                <div className="rvcard rv-t-new">
-                  <NewMenu onNew={onNew} onNewGame={onNewGame} />
-                </div>
               </div>
             )}
           </div>

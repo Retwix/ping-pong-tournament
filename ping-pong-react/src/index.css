@@ -1607,14 +1607,13 @@ td.elo.neg { color: var(--coral); }
 .rv-page {
   position: relative;
   width: 100%;
-  max-width: 1180px;
   margin: 0 auto;
   padding: 22px 24px 110px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   min-height: 100vh;
-  border-radius: 28px;
+  border-radius: 0;
   background:
     radial-gradient(120% 90% at 0% 0%, #e8e1fa 0%, transparent 46%),
     radial-gradient(120% 90% at 100% 0%, #fde7ee 0%, transparent 46%),
@@ -1678,7 +1677,10 @@ td.elo.neg { color: var(--coral); }
 [data-theme='dark'] .rv-card { background: #1e1138; border-color: rgba(255, 255, 255, 0.09); }
 
 /* ===== tournament / game cards ===== */
-.rv-t-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.rv-t-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1180px) { .rv-t-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 820px) { .rv-t-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .rv-t-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .rvcard { cursor: pointer; transition: transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 160ms cubic-bezier(0.2, 0.7, 0.2, 1); }
 .rvcard:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(32, 10, 66, 0.15); }
@@ -1718,14 +1720,6 @@ td.elo.neg { color: var(--coral); }
 .rv-t-card:hover .rvtrash { opacity: 1; }
 .rvtrash:hover { color: #d74251; background: rgba(215, 66, 81, 0.12); }
 [data-theme='dark'] .rvtrash:hover { color: var(--coral-bright); }
-
-.rv-t-new {
-  border: 1.5px dashed #cdbdf0; background: rgba(255, 255, 255, 0.5);
-  border-radius: 16px; padding: 16px; min-height: 96px;
-  display: flex; align-items: center; justify-content: center;
-}
-[data-theme='dark'] .rv-t-new { background: rgba(255, 255, 255, 0.03); border-color: rgba(205, 189, 240, 0.35); }
-.rv-t-new:hover { transform: none; box-shadow: none; }
 
 /* ===== bottom tab bar (mobile) ===== */
 .rv-tabbar {
@@ -1784,7 +1778,7 @@ td.elo.neg { color: var(--coral); }
      rv-side with `display: contents` lets the four slot wrappers become
      siblings in one flex flow so `order` can resequence them without
      touching the desktop grid above. */
-  .rv-grid { display: flex; flex-direction: column; gap: 20px; }
+  .rv-grid { display: flex; flex-direction: column; gap: 20px; align-items: stretch; }
   .rv-main, .rv-side { display: contents; }
 
   .rv-slot-tournaments, .rv-slot-recent, .rv-slot-top, .rv-slot-records {
