@@ -120,18 +120,6 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
   const progs = useMemo(() => topProgressions(events, rows, new Date()), [events, rows])
   const example = useMemo(() => latestRatingExample(events), [events])
 
-  // Highlights drawn from the rating history.
-  const { biggestWin, biggestFinal } = useMemo(() => {
-    let biggestWin: RatingEvent | null = null
-    let biggestFinal: RatingEvent | null = null
-    for (const e of events) {
-      if (e.delta > 0 && (!biggestWin || e.delta > biggestWin.delta)) biggestWin = e
-      if (e.stakes !== 'normal' && e.delta > 0 && (!biggestFinal || e.delta > biggestFinal.delta))
-        biggestFinal = e
-    }
-    return { biggestWin, biggestFinal }
-  }, [events])
-
   // Group the two events of each match into one log entry, newest first.
   const logEntries = useMemo(() => {
     const byMatch = new Map<
@@ -497,32 +485,6 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
               </div>
             </aside>
           </div>
-
-          {(biggestWin || biggestFinal) && (
-            <section>
-              <div className="section-title">Faits marquants</div>
-              <div className="super-grid">
-                {biggestWin && (
-                  <div className="super-card">
-                    <div className="sc-label">Plus gros gain</div>
-                    <div className="sc-value">+{Math.round(biggestWin.delta)}</div>
-                    <div className="sc-sub">
-                      {biggestWin.name} bat {biggestWin.opponentName}
-                    </div>
-                  </div>
-                )}
-                {biggestFinal && (
-                  <div className="super-card">
-                    <div className="sc-label">Plus gros gain en finale 🏆</div>
-                    <div className="sc-value">+{Math.round(biggestFinal.delta)}</div>
-                    <div className="sc-sub">
-                      {biggestFinal.name} vs {biggestFinal.opponentName}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
 
           <div className="footer-row">
             <span className="hint">Notes Glicko-2 · parties rapides et tournois confondus.</span>
