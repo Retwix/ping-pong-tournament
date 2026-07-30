@@ -9,7 +9,7 @@ interface Props {
   onNewGame: () => void
 }
 
-/** Mobile fixed bottom tab bar: Accueil · Classement · (+) · Stats · Joueurs. Pronos folds into Classement. */
+/** Mobile fixed bottom tab bar: Accueil · Classement · (+) · Stats · Joueurs. */
 export default function DashboardTabBar({
   onClassement,
   onStats,
