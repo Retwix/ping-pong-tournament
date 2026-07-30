@@ -52,9 +52,9 @@ function TournoisTable({
           <span />
           <span>Tournoi</span>
           <span>Vainqueur</span>
-          <span>Finaliste</span>
-          <span className="pt-th-r">Format</span>
-          <span className="pt-th-r">Fin</span>
+          <span className="pt-col-sec">Finaliste</span>
+          <span className="pt-th-r pt-col-sec">Format</span>
+          <span className="pt-th-r pt-col-sec">Fin</span>
           <span />
         </div>
         {rows.length === 0 ? (
@@ -91,9 +91,11 @@ function TournoisTable({
                   </>
                 )}
               </div>
-              <div className="pt-finalist">{row.finalist ?? '—'}</div>
-              <div className="pt-cell-r">{row.formatLabel}</div>
-              <div className="pt-cell-r">{row.endedAt === null ? '—' : finDate(row.endedAt)}</div>
+              <div className="pt-finalist pt-col-sec">{row.finalist ?? '—'}</div>
+              <div className="pt-cell-r pt-col-sec">{row.formatLabel}</div>
+              <div className="pt-cell-r pt-col-sec">
+                {row.endedAt === null ? '—' : finDate(row.endedAt)}
+              </div>
               <IconChevronRight size={15} stroke={1.75} className="pt-chevron" />
             </div>
           ))
@@ -205,8 +207,8 @@ function MatchesTable({
           <span>Match</span>
           <span className="pt-th-c">Score</span>
           <span className="pt-th-r">Elo</span>
-          <span className="pt-th-r">Compétition</span>
-          <span className="pt-th-r">Date</span>
+          <span className="pt-th-r pt-col-sec">Compétition</span>
+          <span className="pt-th-r pt-col-sec">Date</span>
           <span />
         </div>
         {rows.length === 0 ? (
@@ -235,8 +237,10 @@ function MatchesTable({
               <div className="pt-delta">
                 {row.eloDelta === null ? <span className="pt-dash">—</span> : signed(row.eloDelta)}
               </div>
-              <div className="pt-cell-r pt-ellip">{row.competition}</div>
-              <div className="pt-cell-r">{row.endedAt === null ? '—' : finDate(row.endedAt)}</div>
+              <div className="pt-cell-r pt-ellip pt-col-sec">{row.competition}</div>
+              <div className="pt-cell-r pt-col-sec">
+                {row.endedAt === null ? '—' : finDate(row.endedAt)}
+              </div>
               <IconChevronRight size={15} stroke={1.75} className="pt-chevron" />
             </div>
           ))
