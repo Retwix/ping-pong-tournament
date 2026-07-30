@@ -2,7 +2,14 @@ import { useMemo, useState } from 'react'
 import { IconArrowLeft, IconRefresh } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING } from '../lib/rating'
-import { lastRatedAt } from '../lib/classement'
+import {
+  STREAK_BADGE_MIN,
+  lastFive,
+  lastRatedAt,
+  recordOf,
+  weeklyDelta,
+  winStreak,
+} from '../lib/classement'
 import { relativeTime } from '../lib/format'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
@@ -69,6 +76,17 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
   const leader = rows.find((r) => !r.provisional) ?? rows[0]
   const ranked = rows.filter((r) => !r.provisional)
   const updatedAt = lastRatedAt(events)
+
+  const tableRows = useMemo(() => {
+    const now = new Date()
+    return rows.map((r) => ({
+      ...r,
+      record: recordOf(events, r.key),
+      form: lastFive(events, r.key),
+      streak: winStreak(events, r.key),
+      delta7: weeklyDelta(events, r.key, now),
+    }))
+  }, [rows, events])
 
   // Highlights drawn from the rating history.
   const { biggestWin, biggestFinal } = useMemo(() => {
@@ -229,9 +247,9 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
           </div>
 
           <section>
-            <div className="section-title with-toggle">
-              Notes Elo
-              <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 12 }}>
+            <div className="cl-sec-head">
+              <div className="cl-sec-title">Tous les joueurs</div>
+              <div className="cl-sec-actions">
                 <button
                   className="link-btn"
                   onClick={() => setMode('log')}
@@ -243,65 +261,83 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
                   className="link-btn"
                   onClick={recompute}
                   title="Recalculer et enregistrer les notes"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
                   <IconRefresh size={15} stroke={1.8} /> Recalculer
                 </button>
               </div>
             </div>
-            <div className="panel">
-              <table className="leaderboard rating-board">
-                <thead>
-                  <tr>
-                    <th className="left">Joueur</th>
-                    <th>Elo</th>
-                    <th>Fiabilité</th>
-                    <th>Tendance</th>
-                    <th>J</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr
-                      key={r.key}
-                      className={`rt-row${r.provisional ? '' : ` r${r.rank}`}`}
-                      onClick={() => setSelectedKey(r.key)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          setSelectedKey(r.key)
-                        }
-                      }}
-                      tabIndex={0}
-                      aria-label={`Voir l'historique de ${r.name}`}
-                    >
-                      <td className="left">
-                        <span className="rank">{r.rank}</span>
-                        <span className="lb-player">
-                          <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
-                          {r.name}
-                          {r.provisional && <span className="rt-prov">provisoire</span>}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="rt-rating">{Math.round(r.rating)}</span>
-                      </td>
-                      <td>
-                        <span className="rt-rd">± {Math.round(r.rd)}</span>
-                      </td>
-                      <td>
-                        <Trend delta={r.trend} />
-                      </td>
-                      <td>{r.games}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="cl-table">
+              <div className="cl-tr cl-thead">
+                <span className="cl-c-rank">#</span>
+                <span className="cl-c-avatar" />
+                <span className="cl-c-name">Joueur</span>
+                <span className="cl-c-form">Forme</span>
+                <span className="cl-c-rec">V–D</span>
+                <span className="cl-c-games">Matchs</span>
+                <span className="cl-c-elo">Elo</span>
+                <span className="cl-c-delta">7 j</span>
+              </div>
+              {tableRows.map((r) => (
+                <div
+                  key={r.key}
+                  className="cl-tr cl-row"
+                  onClick={() => setSelectedKey(r.key)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSelectedKey(r.key)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Voir l'historique de ${r.name}`}
+                >
+                  <span
+                    className={`cl-c-rank${
+                      r.provisional ? ' prov' : r.rank <= 3 ? ` p${r.rank}` : ''
+                    }`}
+                  >
+                    {r.provisional ? '—' : r.rank}
+                  </span>
+                  <span className="cl-c-avatar">
+                    <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
+                  </span>
+                  <span className="cl-c-name">
+                    <span className="cl-name-text">{r.name}</span>
+                    {!r.provisional && r.streak >= STREAK_BADGE_MIN && (
+                      <span className="cl-badge cl-badge-streak">{r.streak} victoires</span>
+                    )}
+                    {r.provisional && <span className="cl-badge cl-badge-prov">Provisoire</span>}
+                  </span>
+                  <span className="cl-c-form">
+                    {r.provisional ? (
+                      <span className="cl-form-count">
+                        {r.games} / {RATING.provisionalGames} matchs
+                      </span>
+                    ) : (
+                      r.form.map((won, i) => <i key={i} className={`cl-dot ${won ? 'w' : 'l'}`} />)
+                    )}
+                  </span>
+                  <span className="cl-c-rec">
+                    {r.record.wins}–{r.record.losses}
+                  </span>
+                  <span className="cl-c-games">{r.games}</span>
+                  <span
+                    className={`cl-c-elo${
+                      r.provisional ? ' prov' : r.key === leader?.key ? ' lead' : ''
+                    }`}
+                  >
+                    {r.provisional ? `~${Math.round(r.rating)}` : Math.round(r.rating)}
+                  </span>
+                  <span className="cl-c-delta">
+                    <Trend delta={r.delta7} />
+                  </span>
+                </div>
+              ))}
             </div>
-            <p className="setup-hint" style={{ textAlign: 'left' }}>
-              « Fiabilité » est la marge d'incertitude (± points) : elle se resserre avec les
-              matchs. Un joueur reste « provisoire » sous {RATING.provisionalGames} matchs ou tant
-              que sa marge dépasse {RATING.provisionalRd}.
+            <p className="cl-note">
+              Un joueur entre au classement après {RATING.provisionalGames} matchs. Avant cela, son
+              Elo provisoire s'affiche en gris.
             </p>
           </section>
 
