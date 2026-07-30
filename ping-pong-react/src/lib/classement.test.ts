@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { RatingEvent, RatingRow } from './rating'
-import { lastFive, lastRatedAt, podium, recordOf, weeklyDelta, winStreak } from './classement'
+import {
+  filterRatingRows,
+  lastFive,
+  lastRatedAt,
+  podium,
+  recordOf,
+  weeklyDelta,
+  winStreak,
+} from './classement'
 
 const getMockEvent = (overrides?: Partial<RatingEvent>): RatingEvent => ({
   matchId: 'm1',
@@ -250,5 +258,35 @@ describe('podium', () => {
       getMockEvent({ key: 'p:candice', won: false }),
     ]
     expect(podium(rows, events, now)?.third.note).toBe('1–1 · à 100 points du titre')
+  })
+})
+
+describe('filterRatingRows', () => {
+  const roster = [
+    getMockRow({ key: 'p:leo', name: 'Léo', team: 'Tech' }),
+    getMockRow({ key: 'p:emilie', name: 'Émilie', team: 'Design' }),
+    getMockRow({ key: 'p:sarah', name: 'Sarah', team: null }),
+  ]
+
+  it('returns every row for an empty or whitespace query', () => {
+    expect(filterRatingRows(roster, '')).toEqual(roster)
+    expect(filterRatingRows(roster, '   ')).toEqual(roster)
+  })
+
+  it('matches names ignoring case and accents', () => {
+    expect(filterRatingRows(roster, 'LEO').map((r) => r.name)).toEqual(['Léo'])
+    expect(filterRatingRows(roster, 'emilie').map((r) => r.name)).toEqual(['Émilie'])
+  })
+
+  it('matches the team as well as the name', () => {
+    expect(filterRatingRows(roster, 'design').map((r) => r.name)).toEqual(['Émilie'])
+  })
+
+  it('trims the query before matching', () => {
+    expect(filterRatingRows(roster, '  sarah ').map((r) => r.name)).toEqual(['Sarah'])
+  })
+
+  it('returns nothing when neither name nor team matches', () => {
+    expect(filterRatingRows(roster, 'nicolas')).toEqual([])
   })
 })

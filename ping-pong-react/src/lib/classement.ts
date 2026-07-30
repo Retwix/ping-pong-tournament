@@ -96,6 +96,16 @@ export function podium(rows: RatingRow[], events: RatingEvent[], now: Date): Pod
   }
 }
 
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+/** Case- and accent-insensitive search over player names and teams. Empty query → all rows. */
+export function filterRatingRows(rows: RatingRow[], query: string): RatingRow[] {
+  const q = fold(query.trim())
+  return rows.filter(
+    (r) => fold(r.name).includes(q) || (r.team !== null && fold(r.team).includes(q)),
+  )
+}
+
 /** ISO timestamp of the most recently rated match, or null when nothing is rated yet. */
 export function lastRatedAt(events: RatingEvent[]): string | null {
   let latest: string | null = null

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
-import { IconArrowLeft, IconRefresh } from '@tabler/icons-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { IconArrowLeft, IconRefresh, IconSearch } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING } from '../lib/rating'
 import {
   STREAK_BADGE_MIN,
+  filterRatingRows,
   lastFive,
   lastRatedAt,
   podium,
@@ -80,6 +81,19 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
   const { rows, events, matchCount, loading, error, recompute } = useRatings()
   const [mode, setMode] = useState<'board' | 'log'>('board')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const leader = rows.find((r) => !r.provisional) ?? rows[0]
   const ranked = rows.filter((r) => !r.provisional)
@@ -87,14 +101,14 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
 
   const tableRows = useMemo(() => {
     const now = new Date()
-    return rows.map((r) => ({
+    return filterRatingRows(rows, query).map((r) => ({
       ...r,
       record: recordOf(events, r.key),
       form: lastFive(events, r.key),
       streak: winStreak(events, r.key),
       delta7: weeklyDelta(events, r.key, now),
     }))
-  }, [rows, events])
+  }, [rows, events, query])
 
   const pod = useMemo(() => podium(rows, events, new Date()), [rows, events])
 
@@ -177,11 +191,26 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
       {error && <div className="error-banner">Erreur : {error}</div>}
 
       <div className="cl-head">
-        <h1 className="cl-title">Classement Elo</h1>
-        <p className="cl-sub">
-          Classement général
-          {updatedAt && ` · dernière mise à jour ${relativeTime(updatedAt, new Date())}`}
-        </p>
+        <div className="cl-head-text">
+          <h1 className="cl-title">Classement Elo</h1>
+          <p className="cl-sub">
+            Classement général
+            {updatedAt && ` · dernière mise à jour ${relativeTime(updatedAt, new Date())}`}
+          </p>
+        </div>
+        {rows.length > 0 && (
+          <label className="cl-search">
+            <IconSearch size={17} stroke={2} />
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Chercher un joueur…"
+              aria-label="Chercher un joueur"
+            />
+            <kbd>⌘K</kbd>
+          </label>
+        )}
       </div>
 
       {rows.length === 0 ? (
@@ -391,6 +420,11 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
                   </span>
                 </div>
               ))}
+              {tableRows.length === 0 && (
+                <div className="cl-empty-row">
+                  Aucun joueur trouvé. Essaie un autre nom ou une autre équipe.
+                </div>
+              )}
             </div>
             <p className="cl-note">
               Un joueur entre au classement après {RATING.provisionalGames} matchs. Avant cela, son
