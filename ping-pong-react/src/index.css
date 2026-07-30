@@ -2489,6 +2489,62 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 .pt-dash { color: #cbc3dd; }
 .pt-chevron { color: #cbc3dd; }
 
+/* ===== parties — live block ===== */
+.pt-live-pill {
+  font-family: var(--font-display); font-weight: 700; font-size: 11px; color: #d74251;
+  background: #fee7ee; border-radius: 999px; padding: 4px 10px;
+}
+[data-theme='dark'] .pt-live-pill { color: #ff8a8e; background: rgba(255, 122, 122, 0.14); }
+.pt-live-card {
+  display: flex; align-items: center; gap: 20px;
+  background: #fff; border: 1px solid #fbd4d9; border-radius: 18px;
+  padding: 18px 22px; box-shadow: 0 3px 12px rgba(32, 10, 66, 0.05);
+}
+[data-theme='dark'] .pt-live-card { background: #1e1138; border-color: rgba(255, 122, 122, 0.35); }
+.pt-live-meta { width: 132px; flex: none; }
+.pt-live-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-display); font-weight: 800; font-size: 11px;
+  letter-spacing: 0.14em; color: #d74251;
+}
+[data-theme='dark'] .pt-live-badge { color: #ff8a8e; }
+.pt-live-target { font-family: var(--font-body); font-weight: 600; font-size: 12px; color: #847e96; margin-top: 5px; }
+.pt-live-matchup { flex: 1; display: flex; align-items: center; justify-content: center; gap: 22px; min-width: 0; }
+.pt-live-player { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.avatar.pt-live-av { width: 44px; height: 44px; font-size: 15px; flex: none; }
+.pt-live-name {
+  font-family: var(--font-display); font-weight: 800; font-size: 17px; color: var(--fg-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pt-live-score {
+  font-family: var(--font-display); font-weight: 900; font-size: 34px; line-height: 0.9;
+  letter-spacing: -0.02em; color: var(--fg-1); white-space: nowrap;
+}
+.pt-live-dash { font-weight: 800; font-size: 18px; color: #cbc3dd; }
+.pt-live-actions { display: flex; flex-direction: column; gap: 8px; width: 132px; flex: none; }
+.pt-live-watch {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: var(--font-display); font-weight: 800; font-size: 14px; color: #fff;
+  background: #d74251; border: 0; border-radius: 12px; padding: 11px 14px; cursor: pointer;
+  box-shadow: 0 8px 20px rgba(215, 66, 81, 0.26);
+  transition: background 160ms var(--ease);
+}
+.pt-live-watch:hover { background: #be3341; }
+.pt-live-ref {
+  font-family: var(--font-display); font-weight: 700; font-size: 13.5px; color: #4a2aa4;
+  background: #f0ecfb; border: 0; border-radius: 12px; padding: 10px 14px; cursor: pointer;
+  transition: background 160ms var(--ease);
+}
+.pt-live-ref:hover { background: #e6dff8; }
+[data-theme='dark'] .pt-live-ref { background: rgba(255, 255, 255, 0.08); color: #c9b8ff; }
+
+@media (max-width: 820px) {
+  .pt-live-card { flex-direction: column; align-items: stretch; gap: 14px; }
+  .pt-live-meta, .pt-live-actions { width: auto; }
+  .pt-live-actions { flex-direction: row; }
+  .pt-live-actions > * { flex: 1; }
+}
+
 /* ===== parties — matches table ===== */
 .pt-matchrow {
   display: grid; grid-template-columns: 30px 1fr 70px 74px 120px 84px 15px;

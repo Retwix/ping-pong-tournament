@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { IconChevronRight, IconSearch, IconTrophy } from '@tabler/icons-react'
+import { IconChevronRight, IconPlayerPlay, IconSearch, IconTrophy } from '@tabler/icons-react'
+import { useCurrentTournament } from '../hooks/useCurrentTournament'
 import { useRatings } from '../hooks/useRatings'
+import { useTournament } from '../hooks/useTournament'
+import { pickLiveMatch } from '../lib/liveHero'
 import { signed } from '../lib/format'
 import {
   MATCHES_PAGE_INITIAL,
@@ -11,6 +14,7 @@ import {
   historySubtitle,
   loadMoreLabel,
   matchRows,
+  showLiveBlock,
   sortLabel,
   tournamentRows,
   visibleBlocks,
@@ -20,6 +24,7 @@ import {
   type TournamentRow,
 } from '../lib/parties'
 import { playerLookup, type LookUpPlayer } from '../lib/playerLookup'
+import type { Match } from '../types'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
@@ -108,6 +113,70 @@ interface Props {
   onNewGame: () => void
   onOpenTournament: (id: string) => void
   onFilterChange: (filter: PartiesFilter) => void
+  onLive: () => void
+  onRef: () => void
+}
+
+function LiveCard({
+  live,
+  target,
+  look,
+  onWatch,
+  onRef,
+}: {
+  live: Match
+  target: number
+  look: LookUpPlayer
+  onWatch: () => void
+  onRef: () => void
+}) {
+  return (
+    <section className="pt-section">
+      <div className="pt-sec-title">
+        En direct
+        <span className="pt-live-pill">1 table occupée</span>
+      </div>
+      <div className="pt-live-card">
+        <div className="pt-live-meta">
+          <div className="pt-live-badge">
+            <span className="rv-t-dot" /> EN DIRECT
+          </div>
+          <div className="pt-live-target">Jeu en {target}</div>
+        </div>
+        <div className="pt-live-matchup">
+          <div className="pt-live-player">
+            <Avatar
+              name={live.player_a}
+              team={look(live.player_a).team}
+              url={look(live.player_a).url}
+              className="pt-live-av"
+            />
+            <span className="pt-live-name">{live.player_a}</span>
+          </div>
+          <div className="pt-live-score">
+            {live.score_a} <span className="pt-live-dash">–</span> {live.score_b}
+          </div>
+          <div className="pt-live-player">
+            <span className="pt-live-name">{live.player_b}</span>
+            <Avatar
+              name={live.player_b}
+              team={look(live.player_b).team}
+              url={look(live.player_b).url}
+              className="pt-live-av"
+            />
+          </div>
+        </div>
+        <div className="pt-live-actions">
+          <button className="pt-live-watch" onClick={onWatch}>
+            <IconPlayerPlay size={15} stroke={2} /> Regarder
+          </button>
+          <button className="pt-live-ref" onClick={onRef}>
+            Arbitrer
+          </button>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 /** « Tournois & parties » — the full history page, reached from the Accueil links (not a tab). */
@@ -192,8 +261,13 @@ export default function Parties({
   onNewGame,
   onOpenTournament,
   onFilterChange,
+  onLive,
+  onRef,
 }: Props) {
   const { matches, tournaments, players, events, loading, error } = useRatings()
+  const { id: currentId } = useCurrentTournament()
+  const { tournament: currentTournament, matches: currentMatches } = useTournament(currentId)
+  const live = pickLiveMatch(currentMatches)
   const [query, setQuery] = useState('')
   const [shown, setShown] = useState(MATCHES_PAGE_INITIAL)
   const [dir, setDir] = useState<SortDir>('recent')
@@ -308,6 +382,16 @@ export default function Parties({
           {sortLabel(dir)}
         </button>
       </div>
+
+      {currentTournament !== null && live !== null && showLiveBlock(filter, live) && (
+        <LiveCard
+          live={live}
+          target={currentTournament.target}
+          look={look}
+          onWatch={onLive}
+          onRef={onRef}
+        />
+      )}
 
       {blocks.tournois && (
         <TournoisTable

@@ -9,6 +9,7 @@ import {
   loadMoreLabel,
   matchRows,
   parseFilter,
+  showLiveBlock,
   sortLabel,
   tournamentRows,
   visibleBlocks,
@@ -457,6 +458,26 @@ describe('visibleBlocks', () => {
 
   it('keeps only the tournaments table on « Tournois »', () => {
     expect(visibleBlocks('tour')).toEqual({ tournois: true, parties: false })
+  })
+})
+
+describe('showLiveBlock', () => {
+  const live = getMockMatch({ done: false, score_a: 4, score_b: 2 })
+
+  it('shows the live card on « Tout » when a match is on the table', () => {
+    expect(showLiveBlock('all', live)).toBe(true)
+  })
+
+  it('shows it on the « Parties » filter too', () => {
+    expect(showLiveBlock('match', live)).toBe(true)
+  })
+
+  it('hides it on the « Tournois » filter', () => {
+    expect(showLiveBlock('tour', live)).toBe(false)
+  })
+
+  it('hides it when nothing is live', () => {
+    expect(showLiveBlock('all', null)).toBe(false)
   })
 })
 

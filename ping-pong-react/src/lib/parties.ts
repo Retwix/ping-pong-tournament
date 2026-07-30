@@ -161,6 +161,11 @@ export function visibleBlocks(filter: PartiesFilter): { tournois: boolean; parti
   return { tournois: filter !== 'match', parties: filter !== 'tour' }
 }
 
+/** The « En direct » card shows unless the user filtered down to tournaments only. */
+export function showLiveBlock(filter: PartiesFilter, live: Match | null): boolean {
+  return filter !== 'tour' && live !== null
+}
+
 export const MATCHES_PAGE_INITIAL = 10
 export const MATCHES_PAGE_STEP = 20
 
