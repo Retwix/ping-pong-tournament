@@ -105,6 +105,14 @@ Per [[slice-commit-cadence]]: auto-commit each green slice; review happens at PR
 **GREEN**: CSS + minor markup.
 **Done when**: Thibault validates light/dark + mobile; acceptance criteria all checked.
 
+## Mutation notes
+
+Equivalent survivors in `latestEnd` (documented, not killable with realistic data):
+- the two `null` guards: `new Date(null)` coerces to epoch 1970, so skipping either
+  guard changes nothing for post-1970 ISO timestamps;
+- `>` → `>=` on the date compare: only distinguishable when two matches end at the
+  exact same instant, where both branches return an identical string.
+
 ## Pre-PR Quality Gate
 
 1. Stryker run on `src/lib/parties.ts` — survivors addressed or documented as equivalent

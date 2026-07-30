@@ -84,6 +84,7 @@ function renderRoute(route: Route) {
           onPlayers={() => navigate('/players')}
           onNew={() => navigate('/new')}
           onNewGame={() => navigate('/game')}
+          onOpenTournament={(id) => navigate(`/t/${id}`)}
         />
       )
     case 'players':

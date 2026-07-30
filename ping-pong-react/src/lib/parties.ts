@@ -1,6 +1,7 @@
 // Pure selectors for the « Tournois & parties » page (/parties).
 
 import type { Match, Tournament } from '../types'
+import { finalStandings } from './finalStandings'
 
 export type PartiesFilter = 'all' | 'match' | 'tour'
 
@@ -17,4 +18,59 @@ export function historySubtitle(matches: Match[], tournaments: Tournament[]): st
   const done = matches.filter((m) => m.done).length
   const tours = tournaments.filter((t) => t.kind === 'tournament' && t.status === 'done').length
   return `${label(done, 'match noté', 'matchs notés')} · ${label(tours, 'tournoi terminé', 'tournois terminés')}`
+}
+
+export interface TournamentRow {
+  id: string
+  name: string
+  playersCount: number
+  formatLabel: string
+  active: boolean
+  champion: string | null
+  finalist: string | null
+  /** When the last match ended — null while nothing finished (FIN column shows « — »). */
+  endedAt: string | null
+}
+
+const latestEnd = (matches: Match[]): string | null =>
+  matches.reduce<string | null>((latest, m) => {
+    if (m.ended_at === null) return latest
+    if (latest === null || new Date(m.ended_at).getTime() > new Date(latest).getTime())
+      return m.ended_at
+    return latest
+  }, null)
+
+/**
+ * The « Tournois » table: real tournaments only (quick games live in the
+ * Parties table), active ones first, then the most recently finished. The
+ * finalist is the runner-up of the final standings.
+ */
+export function tournamentRows(tournaments: Tournament[], matches: Match[]): TournamentRow[] {
+  return tournaments
+    .filter((t) => t.kind === 'tournament')
+    .map((t) => {
+      const own = matches.filter((m) => m.tournament_id === t.id)
+      const active = t.status === 'active'
+      const endedAt = latestEnd(own)
+      return {
+        id: t.id,
+        name: t.name,
+        playersCount: t.players.length,
+        formatLabel: t.format === 'double_elim' ? 'Double élimination' : 'Round robin',
+        active,
+        champion: active ? null : t.champion,
+        finalist:
+          active || own.length === 0
+            ? null
+            : (finalStandings({ players: t.players, matches: own, format: t.format })[1]?.name ??
+              null),
+        endedAt,
+        sortAt: endedAt ?? t.created_at,
+      }
+    })
+    .sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1
+      return new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime()
+    })
+    .map(({ sortAt: _, ...row }) => row)
 }
