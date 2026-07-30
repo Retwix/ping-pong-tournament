@@ -96,6 +96,46 @@ export function podium(rows: RatingRow[], events: RatingEvent[], now: Date): Pod
   }
 }
 
+export interface RatingGap {
+  above: RatingRow
+  below: RatingRow
+  gap: number
+}
+
+/**
+ * The three smallest gaps between ranked neighbours, tightest first — the
+ * places that can flip on the next match. Gaps use displayed (rounded) values
+ * so the pill never contradicts the table.
+ */
+export function tightestGaps(rows: RatingRow[]): RatingGap[] {
+  const ranked = rows.filter((r) => !r.provisional)
+  const gaps = ranked.slice(1).map((below, i) => ({
+    above: ranked[i],
+    below,
+    gap: Math.round(ranked[i].rating) - Math.round(below.rating),
+  }))
+  return gaps.sort((a, b) => a.gap - b.gap).slice(0, 3)
+}
+
+export interface Progression {
+  row: RatingRow
+  delta7: number
+}
+
+/** The three ranked players who gained the most points over the trailing week. */
+export function topProgressions(
+  events: RatingEvent[],
+  rows: RatingRow[],
+  now: Date,
+): Progression[] {
+  return rows
+    .filter((r) => !r.provisional)
+    .map((row) => ({ row, delta7: weeklyDelta(events, row.key, now) }))
+    .filter((p) => p.delta7 > 0)
+    .sort((a, b) => b.delta7 - a.delta7)
+    .slice(0, 3)
+}
+
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 /** Case- and accent-insensitive search over player names and teams. Empty query → all rows. */

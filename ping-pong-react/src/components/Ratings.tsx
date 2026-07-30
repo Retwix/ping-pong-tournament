@@ -9,6 +9,8 @@ import {
   lastRatedAt,
   podium,
   recordOf,
+  tightestGaps,
+  topProgressions,
   weeklyDelta,
   winStreak,
 } from '../lib/classement'
@@ -111,6 +113,8 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
   }, [rows, events, query])
 
   const pod = useMemo(() => podium(rows, events, new Date()), [rows, events])
+  const gaps = useMemo(() => tightestGaps(rows), [rows])
+  const progs = useMemo(() => topProgressions(events, rows, new Date()), [events, rows])
 
   // Highlights drawn from the rating history.
   const { biggestWin, biggestFinal } = useMemo(() => {
@@ -332,105 +336,152 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
             </div>
           )}
 
-          <section>
-            <div className="cl-sec-head">
-              <div className="cl-sec-title">Tous les joueurs</div>
-              <div className="cl-sec-actions">
-                <button
-                  className="link-btn"
-                  onClick={() => setMode('log')}
-                  title="Voir comment chaque match a fait évoluer les notes"
-                >
-                  Journal des calculs →
-                </button>
-                <button
-                  className="link-btn"
-                  onClick={recompute}
-                  title="Recalculer et enregistrer les notes"
-                >
-                  <IconRefresh size={15} stroke={1.8} /> Recalculer
-                </button>
-              </div>
-            </div>
-            <div className="cl-table">
-              <div className="cl-tr cl-thead">
-                <span className="cl-c-rank">#</span>
-                <span className="cl-c-avatar" />
-                <span className="cl-c-name">Joueur</span>
-                <span className="cl-c-form">Forme</span>
-                <span className="cl-c-rec">V–D</span>
-                <span className="cl-c-games">Matchs</span>
-                <span className="cl-c-elo">Elo</span>
-                <span className="cl-c-delta">7 j</span>
-              </div>
-              {tableRows.map((r) => (
-                <div
-                  key={r.key}
-                  className="cl-tr cl-row"
-                  onClick={() => setSelectedKey(r.key)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      setSelectedKey(r.key)
-                    }
-                  }}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Voir l'historique de ${r.name}`}
-                >
-                  <span
-                    className={`cl-c-rank${
-                      r.provisional ? ' prov' : r.rank <= 3 ? ` p${r.rank}` : ''
-                    }`}
-                  >
-                    {r.provisional ? '—' : r.rank}
-                  </span>
-                  <span className="cl-c-avatar">
-                    <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
-                  </span>
-                  <span className="cl-c-name">
-                    <span className="cl-name-text">{r.name}</span>
-                    {!r.provisional && r.streak >= STREAK_BADGE_MIN && (
-                      <span className="cl-badge cl-badge-streak">{r.streak} victoires</span>
-                    )}
-                    {r.provisional && <span className="cl-badge cl-badge-prov">Provisoire</span>}
-                  </span>
-                  <span className="cl-c-form">
-                    {r.provisional ? (
-                      <span className="cl-form-count">
-                        {r.games} / {RATING.provisionalGames} matchs
-                      </span>
-                    ) : (
-                      r.form.map((won, i) => <i key={i} className={`cl-dot ${won ? 'w' : 'l'}`} />)
-                    )}
-                  </span>
-                  <span className="cl-c-rec">
-                    {r.record.wins}–{r.record.losses}
-                  </span>
-                  <span className="cl-c-games">{r.games}</span>
-                  <span
-                    className={`cl-c-elo${
-                      r.provisional ? ' prov' : r.key === leader?.key ? ' lead' : ''
-                    }`}
-                  >
-                    {r.provisional ? `~${Math.round(r.rating)}` : Math.round(r.rating)}
-                  </span>
-                  <span className="cl-c-delta">
-                    <Trend delta={r.delta7} />
-                  </span>
+          <div className="cl-body">
+            <div className="cl-main">
+              <section>
+                <div className="cl-sec-head">
+                  <div className="cl-sec-title">Tous les joueurs</div>
+                  <div className="cl-sec-actions">
+                    <button
+                      className="link-btn"
+                      onClick={() => setMode('log')}
+                      title="Voir comment chaque match a fait évoluer les notes"
+                    >
+                      Journal des calculs →
+                    </button>
+                    <button
+                      className="link-btn"
+                      onClick={recompute}
+                      title="Recalculer et enregistrer les notes"
+                    >
+                      <IconRefresh size={15} stroke={1.8} /> Recalculer
+                    </button>
+                  </div>
                 </div>
-              ))}
-              {tableRows.length === 0 && (
-                <div className="cl-empty-row">
-                  Aucun joueur trouvé. Essaie un autre nom ou une autre équipe.
+                <div className="cl-table">
+                  <div className="cl-tr cl-thead">
+                    <span className="cl-c-rank">#</span>
+                    <span className="cl-c-avatar" />
+                    <span className="cl-c-name">Joueur</span>
+                    <span className="cl-c-form">Forme</span>
+                    <span className="cl-c-rec">V–D</span>
+                    <span className="cl-c-games">Matchs</span>
+                    <span className="cl-c-elo">Elo</span>
+                    <span className="cl-c-delta">7 j</span>
+                  </div>
+                  {tableRows.map((r) => (
+                    <div
+                      key={r.key}
+                      className="cl-tr cl-row"
+                      onClick={() => setSelectedKey(r.key)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setSelectedKey(r.key)
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Voir l'historique de ${r.name}`}
+                    >
+                      <span
+                        className={`cl-c-rank${
+                          r.provisional ? ' prov' : r.rank <= 3 ? ` p${r.rank}` : ''
+                        }`}
+                      >
+                        {r.provisional ? '—' : r.rank}
+                      </span>
+                      <span className="cl-c-avatar">
+                        <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
+                      </span>
+                      <span className="cl-c-name">
+                        <span className="cl-name-text">{r.name}</span>
+                        {!r.provisional && r.streak >= STREAK_BADGE_MIN && (
+                          <span className="cl-badge cl-badge-streak">{r.streak} victoires</span>
+                        )}
+                        {r.provisional && (
+                          <span className="cl-badge cl-badge-prov">Provisoire</span>
+                        )}
+                      </span>
+                      <span className="cl-c-form">
+                        {r.provisional ? (
+                          <span className="cl-form-count">
+                            {r.games} / {RATING.provisionalGames} matchs
+                          </span>
+                        ) : (
+                          r.form.map((won, i) => (
+                            <i key={i} className={`cl-dot ${won ? 'w' : 'l'}`} />
+                          ))
+                        )}
+                      </span>
+                      <span className="cl-c-rec">
+                        {r.record.wins}–{r.record.losses}
+                      </span>
+                      <span className="cl-c-games">{r.games}</span>
+                      <span
+                        className={`cl-c-elo${
+                          r.provisional ? ' prov' : r.key === leader?.key ? ' lead' : ''
+                        }`}
+                      >
+                        {r.provisional ? `~${Math.round(r.rating)}` : Math.round(r.rating)}
+                      </span>
+                      <span className="cl-c-delta">
+                        <Trend delta={r.delta7} />
+                      </span>
+                    </div>
+                  ))}
+                  {tableRows.length === 0 && (
+                    <div className="cl-empty-row">
+                      Aucun joueur trouvé. Essaie un autre nom ou une autre équipe.
+                    </div>
+                  )}
+                </div>
+                <p className="cl-note">
+                  Un joueur entre au classement après {RATING.provisionalGames} matchs. Avant cela,
+                  son Elo provisoire s'affiche en gris.
+                </p>
+              </section>
+            </div>
+
+            <aside className="cl-rail">
+              {gaps.length > 0 && (
+                <div className="cl-rail-card">
+                  <div className="cl-rail-title">Écarts les plus serrés</div>
+                  <p className="cl-rail-explain">
+                    Les places qui peuvent basculer au prochain match.
+                  </p>
+                  {gaps.map((g) => (
+                    <div className="cl-gap-row" key={`${g.above.key}·${g.below.key}`}>
+                      <span className="cl-gap-name">{g.above.name}</span>
+                      <span className="cl-gap-pill">{g.gap} pts</span>
+                      <span className="cl-gap-name right">{g.below.name}</span>
+                    </div>
+                  ))}
                 </div>
               )}
-            </div>
-            <p className="cl-note">
-              Un joueur entre au classement après {RATING.provisionalGames} matchs. Avant cela, son
-              Elo provisoire s'affiche en gris.
-            </p>
-          </section>
+              {progs.length > 0 && (
+                <div className="cl-rail-card">
+                  <div className="cl-rail-head">
+                    <span className="cl-rail-title">Plus fortes progressions</span>
+                    <span className="cl-rail-tag">7 jours</span>
+                  </div>
+                  {progs.map((p) => (
+                    <div className="cl-prog-row" key={p.row.key}>
+                      <span className="cl-prog-rank">{p.row.rank}</span>
+                      <Avatar
+                        name={p.row.name}
+                        team={p.row.team}
+                        url={p.row.avatar_url}
+                        className="sm"
+                      />
+                      <span className="cl-prog-name">{p.row.name}</span>
+                      <span className="cl-prog-delta">▲ {Math.round(p.delta7)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </aside>
+          </div>
 
           {(biggestWin || biggestFinal) && (
             <section>

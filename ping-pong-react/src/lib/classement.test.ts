@@ -6,6 +6,8 @@ import {
   lastRatedAt,
   podium,
   recordOf,
+  tightestGaps,
+  topProgressions,
   weeklyDelta,
   winStreak,
 } from './classement'
@@ -288,5 +290,79 @@ describe('filterRatingRows', () => {
 
   it('returns nothing when neither name nor team matches', () => {
     expect(filterRatingRows(roster, 'nicolas')).toEqual([])
+  })
+})
+
+describe('tightestGaps', () => {
+  it('returns the three smallest adjacent gaps, tightest first, using displayed values', () => {
+    const rows = [
+      getMockRow({ key: 'p:a', name: 'Léo', rank: 1, rating: 1500 }),
+      getMockRow({ key: 'p:b', name: 'Thibault', rank: 2, rating: 1487.4 }),
+      getMockRow({ key: 'p:c', name: 'Candice', rank: 3, rating: 1442.6 }),
+      getMockRow({ key: 'p:d', name: 'Maxime', rank: 4, rating: 1440 }),
+      getMockRow({ key: 'p:e', name: 'Sarah', rank: 5, rating: 1300 }),
+    ]
+    const gaps = tightestGaps(rows)
+    expect(gaps.map((g) => [g.above.name, g.below.name, g.gap])).toEqual([
+      ['Candice', 'Maxime', 3],
+      ['Léo', 'Thibault', 13],
+      ['Thibault', 'Candice', 44],
+    ])
+  })
+
+  it('pairs ranked neighbours across an interleaved provisional row', () => {
+    const rows = [
+      getMockRow({ key: 'p:a', name: 'Léo', rank: 1, rating: 1500 }),
+      getMockRow({ key: 'p:b', name: 'Maxime', rank: 2, rating: 1490, provisional: true }),
+      getMockRow({ key: 'p:c', name: 'Candice', rank: 3, rating: 1480 }),
+    ]
+    expect(tightestGaps(rows).map((g) => [g.above.name, g.below.name, g.gap])).toEqual([
+      ['Léo', 'Candice', 20],
+    ])
+  })
+
+  it('is empty with fewer than two ranked players', () => {
+    expect(tightestGaps([getMockRow()])).toEqual([])
+    expect(tightestGaps([])).toEqual([])
+  })
+})
+
+describe('topProgressions', () => {
+  const now = new Date('2026-07-30T12:00:00.000Z')
+  const rows = [
+    getMockRow({ key: 'p:a', name: 'Léo', rank: 1 }),
+    getMockRow({ key: 'p:b', name: 'Thibault', rank: 2 }),
+    getMockRow({ key: 'p:c', name: 'Candice', rank: 3 }),
+    getMockRow({ key: 'p:d', name: 'Maxime', rank: 4 }),
+    getMockRow({ key: 'p:e', name: 'Sarah', rank: 5, provisional: true }),
+  ]
+  const at = '2026-07-29T10:00:00.000Z'
+
+  it('ranks the three best positive weekly climbers, biggest first', () => {
+    const events = [
+      getMockEvent({ key: 'p:a', delta: 6, at }),
+      getMockEvent({ key: 'p:b', delta: 18, at }),
+      getMockEvent({ key: 'p:c', delta: 11, at }),
+      getMockEvent({ key: 'p:d', delta: 9, at }),
+    ]
+    expect(topProgressions(events, rows, now).map((p) => [p.row.name, p.delta7])).toEqual([
+      ['Thibault', 18],
+      ['Candice', 11],
+      ['Maxime', 9],
+    ])
+  })
+
+  it('keeps only players who actually gained points this week', () => {
+    const events = [
+      getMockEvent({ key: 'p:a', delta: -7, at }),
+      getMockEvent({ key: 'p:b', delta: 0, at }),
+      getMockEvent({ key: 'p:c', delta: 4, at }),
+    ]
+    expect(topProgressions(events, rows, now).map((p) => p.row.name)).toEqual(['Candice'])
+  })
+
+  it('ignores provisional players', () => {
+    const events = [getMockEvent({ key: 'p:e', delta: 30, at })]
+    expect(topProgressions(events, rows, now)).toEqual([])
   })
 })
