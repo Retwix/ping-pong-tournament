@@ -26,7 +26,6 @@ interface Props {
   onPlayers: () => void
   onStats: () => void
   onClassement: () => void
-  onPronos: () => void
   onLive: () => void
   onRef: () => void
 }
@@ -38,7 +37,6 @@ export default function Home({
   onPlayers,
   onStats,
   onClassement,
-  onPronos,
   onLive,
   onRef,
 }: Props) {
@@ -55,7 +53,6 @@ export default function Home({
     <div className="rv-page">
       <DashboardNav
         onClassement={onClassement}
-        onPronos={onPronos}
         onStats={onStats}
         onPlayers={onPlayers}
         onNew={onNew}

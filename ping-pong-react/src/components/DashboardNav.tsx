@@ -4,7 +4,6 @@ import ThemeToggle from './ThemeToggle'
 
 interface Props {
   onClassement: () => void
-  onPronos: () => void
   onStats: () => void
   onPlayers: () => void
   onNew: () => void
@@ -14,7 +13,6 @@ interface Props {
 /** Desktop glass top bar: brand, nav links (Accueil active), theme toggle, "+ Nouveau" CTA. */
 export default function DashboardNav({
   onClassement,
-  onPronos,
   onStats,
   onPlayers,
   onNew,
@@ -34,9 +32,6 @@ export default function DashboardNav({
         <span className="rv-nav-link active">Accueil</span>
         <button className="rv-nav-link" onClick={onClassement}>
           Classement
-        </button>
-        <button className="rv-nav-link" onClick={onPronos}>
-          Pronos
         </button>
         <button className="rv-nav-link" onClick={onStats}>
           Stats
