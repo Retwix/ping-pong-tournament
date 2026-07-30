@@ -3,10 +3,12 @@ import Board from './components/Board'
 import CurrentView from './components/CurrentView'
 import Home from './components/Home'
 import LiveView from './components/LiveView'
+import Parties from './components/Parties'
 import Players from './components/Players'
 import Ratings from './components/Ratings'
 import Setup from './components/Setup'
 import Stats from './components/Stats'
+import { parseFilter, type PartiesFilter } from './lib/parties'
 import { currentPath, navigate } from './lib/router'
 import { hasSupabaseConfig } from './lib/supabase'
 
@@ -14,6 +16,7 @@ type Route =
   | { name: 'home' }
   | { name: 'new' }
   | { name: 'game' }
+  | { name: 'parties'; filter: PartiesFilter }
   | { name: 'players' }
   | { name: 'stats' }
   | { name: 'classement' }
@@ -26,6 +29,7 @@ function parseRoute(): Route {
   const p = currentPath()
   if (p === '/new') return { name: 'new' }
   if (p === '/game') return { name: 'game' }
+  if (p === '/parties') return { name: 'parties', filter: parseFilter(window.location.search) }
   if (p === '/players') return { name: 'players' }
   if (p === '/stats') return { name: 'stats' }
   if (p === '/classement') return { name: 'classement' }
@@ -70,6 +74,18 @@ function renderRoute(route: Route) {
           onCancel={() => navigate('/')}
         />
       )
+    case 'parties':
+      return (
+        <Parties
+          filter={route.filter}
+          onHome={() => navigate('/')}
+          onClassement={() => navigate('/classement')}
+          onStats={() => navigate('/stats')}
+          onPlayers={() => navigate('/players')}
+          onNew={() => navigate('/new')}
+          onNewGame={() => navigate('/game')}
+        />
+      )
     case 'players':
       return <Players onBack={() => navigate('/')} />
     case 'stats':
@@ -108,6 +124,7 @@ function renderRoute(route: Route) {
           onPlayers={() => navigate('/players')}
           onStats={() => navigate('/stats')}
           onClassement={() => navigate('/classement')}
+          onParties={(f) => navigate(f === 'match' ? '/parties?f=match' : '/parties')}
           onLive={() => navigate('/live')}
           onRef={() => navigate('/ref')}
         />

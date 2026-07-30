@@ -26,6 +26,7 @@ interface Props {
   onPlayers: () => void
   onStats: () => void
   onClassement: () => void
+  onParties: (filter: 'all' | 'match') => void
   onLive: () => void
   onRef: () => void
 }
@@ -37,6 +38,7 @@ export default function Home({
   onPlayers,
   onStats,
   onClassement,
+  onParties,
   onLive,
   onRef,
 }: Props) {
@@ -67,7 +69,12 @@ export default function Home({
       <div className="rv-grid">
         <div className="rv-main">
           <div className="rv-slot-tournaments">
-            <div className="section-title">Tes tournois &amp; parties</div>
+            <div className="rv-sec-head">
+              <div className="section-title">Tes tournois &amp; parties</div>
+              <button className="rv-top-link" onClick={() => onParties('all')}>
+                Tout voir →
+              </button>
+            </div>
 
             {loading ? (
               <div className="empty">Chargement…</div>
@@ -83,7 +90,7 @@ export default function Home({
           </div>
 
           <div className="rv-slot-recent">
-            <RecentResults onOpenTournament={onOpen} />
+            <RecentResults onOpenTournament={onOpen} onHistory={() => onParties('match')} />
           </div>
         </div>
 

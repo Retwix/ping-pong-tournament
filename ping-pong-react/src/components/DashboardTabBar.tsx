@@ -3,7 +3,8 @@ import type { DashboardPage } from './DashboardNav'
 import NewMenu from './NewMenu'
 
 interface Props {
-  active: DashboardPage
+  /** Highlighted tab; omit on pages reached via links (e.g. /parties) where no tab is current. */
+  active?: DashboardPage
   onHome?: () => void
   onClassement?: () => void
   onStats?: () => void
