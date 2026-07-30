@@ -1,7 +1,10 @@
 # Plan: Classement Elo page revamp
 
 **Branch**: `classement-revamp` (off `dashboard-revamp`, PR back into `dashboard-revamp`)
-**Status**: Active — approved 2026-07-30
+**Status**: Slices 1–8 implemented (2026-07-30) — PR open, awaiting Thibault's visual validation
+**Mutation report**: `src/lib/classement.ts` 95.65% (132 killed / 6 survived — all documented
+equivalent mutants: Date-null epoch coercion ×2, tie-identical ISO strings ×2, symmetric-fold
+toUpperCase, loop-bound `>=0`→`>0` unreachable-seed)
 **Design source**: `~/Downloads/design_handoff_app_complete/` (README §Page 3, `DESIGN-SYSTEM.md`, `RESPONSIVE.md`) — first of four page revamps (Classement → Parties → Stats → Joueurs).
 
 > **Slicing note**: per product decision, one PR covers the whole page. The slices below are
