@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { IconArrowLeft, IconRefresh } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING } from '../lib/rating'
+import { lastRatedAt } from '../lib/classement'
+import { relativeTime } from '../lib/format'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import { playerHistory } from '../lib/playerHistory'
@@ -65,6 +67,8 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
 
   const leader = rows.find((r) => !r.provisional) ?? rows[0]
+  const ranked = rows.filter((r) => !r.provisional)
+  const updatedAt = lastRatedAt(events)
 
   // Highlights drawn from the rating history.
   const { biggestWin, biggestFinal } = useMemo(() => {
@@ -144,6 +148,14 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
 
       {error && <div className="error-banner">Erreur : {error}</div>}
 
+      <div className="cl-head">
+        <h1 className="cl-title">Classement Elo</h1>
+        <p className="cl-sub">
+          Classement général
+          {updatedAt && ` · dernière mise à jour ${relativeTime(updatedAt, new Date())}`}
+        </p>
+      </div>
+
       {rows.length === 0 ? (
         <section>
           <div className="empty">
@@ -201,22 +213,20 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
         </>
       ) : (
         <>
-          <section>
-            <div className="kpi-strip">
-              <div className="kpi">
-                <div className="num">{rows.length}</div>
-                <div className="lbl">Joueurs classés</div>
-              </div>
-              <div className="kpi">
-                <div className="num">{matchCount}</div>
-                <div className="lbl">Matchs notés</div>
-              </div>
-              <div className="kpi">
-                <div className="num">{leader ? Math.round(leader.rating) : '—'}</div>
-                <div className="lbl">{leader ? `Meneur · ${leader.name}` : 'Meneur'}</div>
-              </div>
+          <div className="cl-tiles">
+            <div className="cl-tile">
+              <div className="cl-tile-num">{ranked.length}</div>
+              <div className="cl-tile-lbl">Joueurs classés</div>
             </div>
-          </section>
+            <div className="cl-tile">
+              <div className="cl-tile-num">{matchCount}</div>
+              <div className="cl-tile-lbl">Matchs notés</div>
+            </div>
+            <div className="cl-tile">
+              <div className="cl-tile-num">{leader ? Math.round(leader.rating) : '—'}</div>
+              <div className="cl-tile-lbl">{leader ? `Meneur · ${leader.name}` : 'Meneur'}</div>
+            </div>
+          </div>
 
           <section>
             <div className="section-title with-toggle">
