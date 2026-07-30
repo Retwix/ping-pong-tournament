@@ -2291,17 +2291,22 @@ td.elo.neg { color: var(--coral); }
 .cl-elo-formula p { font-family: var(--font-body); font-weight: 600; font-size: 13px; line-height: 1.6; color: #4a4458; margin: 8px 0 0; }
 [data-theme='dark'] .cl-elo-formula p { color: #a99fc4; }
 .cl-elo-steps { list-style: none; counter-reset: elo-step; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
-.cl-elo-steps li { counter-increment: elo-step; display: grid; grid-template-columns: 26px 1fr; gap: 14px; }
+.cl-elo-steps li {
+  counter-increment: elo-step;
+  display: grid; grid-template-columns: 26px 1fr; column-gap: 14px; row-gap: 3px;
+  align-items: start;
+}
 .cl-elo-steps li::before {
   content: counter(elo-step);
+  grid-column: 1; grid-row: 1 / span 2;
   width: 26px; height: 26px; border-radius: 9px;
   display: grid; place-items: center;
   background: #f0ecfb; color: #4a2aa4;
   font-family: var(--font-display); font-weight: 800; font-size: 12px;
 }
 [data-theme='dark'] .cl-elo-steps li::before { background: rgba(255, 255, 255, 0.08); color: #c9b8ff; }
-.cl-elo-steps b { display: block; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--fg-1); }
-.cl-elo-steps span { display: block; font-family: var(--font-body); font-weight: 600; font-size: 13px; line-height: 1.55; color: #4a4458; margin-top: 3px; }
+.cl-elo-steps b { grid-column: 2; grid-row: 1; align-self: center; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--fg-1); }
+.cl-elo-steps span { grid-column: 2; grid-row: 2; font-family: var(--font-body); font-weight: 600; font-size: 13px; line-height: 1.55; color: #4a4458; }
 [data-theme='dark'] .cl-elo-steps span { color: #a99fc4; }
 .cl-elo-example { border-top: 1px solid #ece8f6; margin-top: 22px; padding-top: 18px; }
 [data-theme='dark'] .cl-elo-example { border-color: rgba(255, 255, 255, 0.08); }
