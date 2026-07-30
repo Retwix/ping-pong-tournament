@@ -2,6 +2,7 @@
 
 import type { Match, Tournament } from '../types'
 import { finalStandings } from './finalStandings'
+import { fold } from './fold'
 import type { RatingEvent } from './rating'
 import { winnerLoser } from './stats'
 
@@ -128,8 +129,6 @@ export function matchRows(
       }
     })
 }
-
-const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 /** Case- and accent-insensitive search over players and competition. Empty query → all rows. */
 export function filterMatchRows(rows: MatchRow[], query: string): MatchRow[] {

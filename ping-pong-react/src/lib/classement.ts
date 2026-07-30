@@ -1,6 +1,7 @@
 // Pure selectors for the Classement Elo page. All derive display data from the
 // rating rows/events produced by the Glicko-2 replay (see rating.ts).
 
+import { fold } from './fold'
 import type { RatingEvent, RatingRow } from './rating'
 
 // Events arrive in replay order (oldest first) — the same order the rating
@@ -135,8 +136,6 @@ export function topProgressions(
     .sort((a, b) => b.delta7 - a.delta7)
     .slice(0, 3)
 }
-
-const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 /** Case- and accent-insensitive search over player names and teams. Empty query → all rows. */
 export function filterRatingRows(rows: RatingRow[], query: string): RatingRow[] {
