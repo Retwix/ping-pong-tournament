@@ -2,22 +2,42 @@ import { IconPingPong } from '@tabler/icons-react'
 import NewMenu from './NewMenu'
 import ThemeToggle from './ThemeToggle'
 
+export type DashboardPage = 'home' | 'classement' | 'stats' | 'players'
+
 interface Props {
-  onClassement: () => void
-  onStats: () => void
-  onPlayers: () => void
+  active: DashboardPage
+  onHome?: () => void
+  onClassement?: () => void
+  onStats?: () => void
+  onPlayers?: () => void
   onNew: () => void
   onNewGame: () => void
 }
 
-/** Desktop glass top bar: brand, nav links (Accueil active), theme toggle, "+ Nouveau" CTA. */
+const TAB_LABELS: Record<DashboardPage, string> = {
+  home: 'Accueil',
+  classement: 'Classement',
+  stats: 'Stats',
+  players: 'Joueurs',
+}
+
+/** Desktop glass top bar: brand, nav links (current page active), theme toggle, "+ Nouveau" CTA. */
 export default function DashboardNav({
+  active,
+  onHome,
   onClassement,
   onStats,
   onPlayers,
   onNew,
   onNewGame,
 }: Props) {
+  const tabs: Array<{ id: DashboardPage; onClick?: () => void }> = [
+    { id: 'home', onClick: onHome },
+    { id: 'classement', onClick: onClassement },
+    { id: 'stats', onClick: onStats },
+    { id: 'players', onClick: onPlayers },
+  ]
+
   return (
     <nav className="rv-nav">
       <div className="rv-nav-brand">
@@ -29,16 +49,17 @@ export default function DashboardNav({
         </span>
       </div>
       <div className="rv-nav-links">
-        <span className="rv-nav-link active">Accueil</span>
-        <button className="rv-nav-link" onClick={onClassement}>
-          Classement
-        </button>
-        <button className="rv-nav-link" onClick={onStats}>
-          Stats
-        </button>
-        <button className="rv-nav-link" onClick={onPlayers}>
-          Joueurs
-        </button>
+        {tabs.map((tab) =>
+          tab.id === active ? (
+            <span key={tab.id} className="rv-nav-link active">
+              {TAB_LABELS[tab.id]}
+            </span>
+          ) : (
+            <button key={tab.id} className="rv-nav-link" onClick={tab.onClick}>
+              {TAB_LABELS[tab.id]}
+            </button>
+          ),
+        )}
       </div>
       <div className="rv-nav-actions">
         <ThemeToggle />

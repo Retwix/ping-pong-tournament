@@ -52,6 +52,7 @@ export default function Home({
   return (
     <div className="rv-page">
       <DashboardNav
+        active="home"
         onClassement={onClassement}
         onStats={onStats}
         onPlayers={onPlayers}
@@ -97,6 +98,7 @@ export default function Home({
       </div>
 
       <DashboardTabBar
+        active="home"
         onClassement={onClassement}
         onStats={onStats}
         onPlayers={onPlayers}

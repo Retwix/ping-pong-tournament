@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { IconArrowLeft, IconRefresh } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING } from '../lib/rating'
-import TopBack from './TopBack'
-import ThemeToggle from './ThemeToggle'
+import DashboardNav from './DashboardNav'
+import DashboardTabBar from './DashboardTabBar'
 import { playerHistory } from '../lib/playerHistory'
 import Avatar from './Avatar'
 import PlayerModal from './PlayerModal'
@@ -28,8 +28,11 @@ const STAKES_LABEL: Record<RatingEvent['stakes'], string | null> = {
 function fmtDate(at: string | null): string {
   if (!at) return '—'
   const d = new Date(at)
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) +
-    ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  return (
+    d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) +
+    ' · ' +
+    d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  )
 }
 
 /** One line of a log entry: a player's score and rating move for that match. */
@@ -48,7 +51,15 @@ function LogLine({ e, win }: { e: RatingEvent; win: boolean }) {
   )
 }
 
-export default function Ratings({ onBack }: { onBack: () => void }) {
+interface Props {
+  onHome: () => void
+  onStats: () => void
+  onPlayers: () => void
+  onNew: () => void
+  onNewGame: () => void
+}
+
+export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }: Props) {
   const { rows, events, matchCount, loading, error, recompute } = useRatings()
   const [mode, setMode] = useState<'board' | 'log'>('board')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
@@ -71,7 +82,13 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
   const logEntries = useMemo(() => {
     const byMatch = new Map<
       string,
-      { at: string | null; stakes: RatingEvent['stakes']; weight: number; winner?: RatingEvent; loser?: RatingEvent }
+      {
+        at: string | null
+        stakes: RatingEvent['stakes']
+        weight: number
+        winner?: RatingEvent
+        loser?: RatingEvent
+      }
     >()
     const order: string[] = []
     for (const e of events) {
@@ -90,35 +107,40 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
       .reverse()
   }, [events])
 
-  const header = (
-    <>
-      <TopBack onClick={onBack} label="Accueil" />
-      <header>
-        <ThemeToggle className="header-toggle" />
-        <div className="eyebrow">Classement Elo</div>
-        <h1>
-          Le <span className="em">classement</span>
-        </h1>
-        <p className="subtitle">
-          Force réelle de chaque joueur, calculée avec le système Glicko-2. L'écart du score
-          (et les finales) pèse plus lourd. Le rang combine la note et sa fiabilité.
-        </p>
-      </header>
-    </>
+  const nav = (
+    <DashboardNav
+      active="classement"
+      onHome={onHome}
+      onStats={onStats}
+      onPlayers={onPlayers}
+      onNew={onNew}
+      onNewGame={onNewGame}
+    />
+  )
+  const tabbar = (
+    <DashboardTabBar
+      active="classement"
+      onHome={onHome}
+      onStats={onStats}
+      onPlayers={onPlayers}
+      onNew={onNew}
+      onNewGame={onNewGame}
+    />
   )
 
   if (loading) {
     return (
-      <div className="wrap">
-        {header}
+      <div className="rv-page">
+        {nav}
         <p className="empty">Chargement…</p>
+        {tabbar}
       </div>
     )
   }
 
   return (
-    <div className="wrap">
-      {header}
+    <div className="rv-page">
+      {nav}
 
       {error && <div className="error-banner">Erreur : {error}</div>}
 
@@ -129,7 +151,7 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
           </div>
           <div className="footer-row">
             <span />
-            <button className="link-btn" onClick={onBack}>
+            <button className="link-btn" onClick={onHome}>
               <IconArrowLeft size={16} stroke={1.8} /> Accueil
             </button>
           </div>
@@ -155,7 +177,10 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
                     <div className="rt-log-head">
                       <span className="rt-log-date">{fmtDate(g.at)}</span>
                       {label && <span className={`rt-stakes ${g.stakes}`}>{label}</span>}
-                      <span className="rt-log-weight" title="Poids du match : marge au score × enjeu">
+                      <span
+                        className="rt-log-weight"
+                        title="Poids du match : marge au score × enjeu"
+                      >
                         poids ×{g.weight.toFixed(2)}
                       </span>
                     </div>
@@ -314,23 +339,24 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
                 note est <b>provisoire</b>.
               </p>
               <p>
-                Une <b>longue absence ne fait pas baisser ta note</b>, mais élargit ton «&nbsp;±&nbsp;».
-                Comme le classement tient compte de cette fiabilité, ton <b>rang peut reculer</b>
+                Une <b>longue absence ne fait pas baisser ta note</b>, mais élargit ton
+                «&nbsp;±&nbsp;». Comme le classement tient compte de cette fiabilité, ton{' '}
+                <b>rang peut reculer</b>
                 malgré une note inchangée — et après quelques semaines sans jouer tu repasses
                 «&nbsp;provisoire&nbsp;». À ton retour, cette marge plus large fait que tes premiers
                 matchs comptent davantage et la note retrouve vite son niveau.
               </p>
               <p>
                 Le <b>rang</b> combine la note et sa fiabilité, pour qu'une note vite acquise ne
-                double pas une note bien établie. Le tout repose sur le système <b>Glicko-2</b>.
-                Le <b>journal des calculs</b> détaille chaque match, un par un.
+                double pas une note bien établie. Le tout repose sur le système <b>Glicko-2</b>. Le{' '}
+                <b>journal des calculs</b> détaille chaque match, un par un.
               </p>
             </div>
           </section>
 
           <div className="footer-row">
             <span className="hint">Notes Glicko-2 · parties rapides et tournois confondus.</span>
-            <button className="link-btn" onClick={onBack}>
+            <button className="link-btn" onClick={onHome}>
               <IconArrowLeft size={16} stroke={1.8} /> Accueil
             </button>
           </div>
@@ -348,6 +374,7 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
           />
         )
       })()}
+      {tabbar}
     </div>
   )
 }
