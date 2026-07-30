@@ -4,6 +4,7 @@ import {
   filterRatingRows,
   lastFive,
   lastRatedAt,
+  latestRatingExample,
   podium,
   recordOf,
   tightestGaps,
@@ -364,5 +365,35 @@ describe('topProgressions', () => {
   it('ignores provisional players', () => {
     const events = [getMockEvent({ key: 'p:e', delta: 30, at })]
     expect(topProgressions(events, rows, now)).toEqual([])
+  })
+})
+
+describe('latestRatingExample', () => {
+  it('pairs the winner and loser of the most recent match', () => {
+    const events = [
+      getMockEvent({ matchId: 'm1', key: 'p:leo', won: true }),
+      getMockEvent({ matchId: 'm1', key: 'p:thibault', won: false }),
+      getMockEvent({ matchId: 'm2', key: 'p:candice', name: 'Candice', won: true, delta: 16 }),
+      getMockEvent({ matchId: 'm2', key: 'p:leo', name: 'Léo', won: false, delta: -16 }),
+    ]
+    const ex = latestRatingExample(events)
+    expect(ex?.winner.key).toBe('p:candice')
+    expect(ex?.winner.matchId).toBe('m2')
+    expect(ex?.loser.key).toBe('p:leo')
+  })
+
+  it('falls back to the previous match when the newest has no complete pair', () => {
+    const events = [
+      getMockEvent({ matchId: 'm1', key: 'p:leo', won: true }),
+      getMockEvent({ matchId: 'm1', key: 'p:thibault', won: false }),
+      getMockEvent({ matchId: 'm2', key: 'p:candice', won: true }),
+    ]
+    const ex = latestRatingExample(events)
+    expect(ex?.winner.matchId).toBe('m1')
+    expect(ex?.loser.key).toBe('p:thibault')
+  })
+
+  it('is null when nothing has been rated', () => {
+    expect(latestRatingExample([])).toBeNull()
   })
 })

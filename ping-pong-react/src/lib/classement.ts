@@ -146,6 +146,27 @@ export function filterRatingRows(rows: RatingRow[], query: string): RatingRow[] 
   )
 }
 
+export interface RatingExample {
+  winner: RatingEvent
+  loser: RatingEvent
+}
+
+/**
+ * The most recent rated match as a winner/loser pair — feeds the « EXEMPLE »
+ * block of the Elo modal with real numbers instead of seeds. Walks backward
+ * until it finds a match with both sides (a lone event can't illustrate the
+ * transfer), null when nothing qualifies.
+ */
+export function latestRatingExample(events: RatingEvent[]): RatingExample | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const pair = events.filter((e) => e.matchId === events[i].matchId)
+    const winner = pair.find((e) => e.won)
+    const loser = pair.find((e) => !e.won)
+    if (winner && loser) return { winner, loser }
+  }
+  return null
+}
+
 /** ISO timestamp of the most recently rated match, or null when nothing is rated yet. */
 export function lastRatedAt(events: RatingEvent[]): string | null {
   let latest: string | null = null

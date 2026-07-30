@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { IconArrowLeft, IconRefresh, IconSearch } from '@tabler/icons-react'
+import { IconArrowLeft, IconInfoCircle, IconRefresh, IconSearch } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING } from '../lib/rating'
 import {
@@ -7,6 +7,7 @@ import {
   filterRatingRows,
   lastFive,
   lastRatedAt,
+  latestRatingExample,
   podium,
   recordOf,
   tightestGaps,
@@ -17,6 +18,7 @@ import {
 import { relativeTime } from '../lib/format'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
+import EloModal from './EloModal'
 import { playerHistory } from '../lib/playerHistory'
 import Avatar from './Avatar'
 import PlayerModal from './PlayerModal'
@@ -84,6 +86,7 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
   const [mode, setMode] = useState<'board' | 'log'>('board')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [eloOpen, setEloOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -115,6 +118,7 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
   const pod = useMemo(() => podium(rows, events, new Date()), [rows, events])
   const gaps = useMemo(() => tightestGaps(rows), [rows])
   const progs = useMemo(() => topProgressions(events, rows, new Date()), [events, rows])
+  const example = useMemo(() => latestRatingExample(events), [events])
 
   // Highlights drawn from the rating history.
   const { biggestWin, biggestFinal } = useMemo(() => {
@@ -341,22 +345,6 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
               <section>
                 <div className="cl-sec-head">
                   <div className="cl-sec-title">Tous les joueurs</div>
-                  <div className="cl-sec-actions">
-                    <button
-                      className="link-btn"
-                      onClick={() => setMode('log')}
-                      title="Voir comment chaque match a fait évoluer les notes"
-                    >
-                      Journal des calculs →
-                    </button>
-                    <button
-                      className="link-btn"
-                      onClick={recompute}
-                      title="Recalculer et enregistrer les notes"
-                    >
-                      <IconRefresh size={15} stroke={1.8} /> Recalculer
-                    </button>
-                  </div>
                 </div>
                 <div className="cl-table">
                   <div className="cl-tr cl-thead">
@@ -480,6 +468,33 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
                   ))}
                 </div>
               )}
+              <div className="cl-rail-card">
+                <div className="cl-explain-head">
+                  <span className="cl-explain-ico">
+                    <IconInfoCircle size={17} stroke={2} />
+                  </span>
+                  <span className="cl-rail-title">Comment marche l'Elo</span>
+                </div>
+                <p className="cl-rail-explain">
+                  Le vainqueur prend des points au perdant. L'écart au score, l'enjeu et la
+                  fiabilité « ± » de chaque note font varier le transfert — c'est le système
+                  Glicko-2.
+                </p>
+                <div className="cl-explain-row">
+                  <b>×{RATING.marginCap}</b>
+                  <span>poids maximal d'une grosse victoire</span>
+                </div>
+                <div className="cl-explain-row">
+                  <b>×{RATING.wGrandFinal}</b>
+                  <span>poids d'une grande finale</span>
+                </div>
+                <button className="cl-explain-link" onClick={() => setEloOpen(true)}>
+                  Voir le détail du calcul →
+                </button>
+                <button className="cl-explain-link sub" onClick={() => setMode('log')}>
+                  Journal des calculs →
+                </button>
+              </div>
             </aside>
           </div>
 
@@ -509,47 +524,25 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
             </section>
           )}
 
-          <section>
-            <div className="section-title">Comment ça marche ?</div>
-            <div className="panel rt-explain">
-              <p>
-                Chaque joueur démarre à <b>1500</b>. Après un match, le vainqueur prend des points
-                au perdant : battre un joueur mieux classé en rapporte beaucoup, battre un joueur
-                moins bien classé très peu.
-              </p>
-              <p>
-                L'<b>écart au score</b> compte — un 11–2 fait bouger les notes plus qu'un 11–9 — et
-                les <b>finales</b> de tournoi pèsent encore plus lourd, surtout la grande finale 🏆.
-              </p>
-              <p>
-                Le <b>«&nbsp;±&nbsp;»</b> est la marge d'incertitude : elle se resserre au fil des
-                matchs. Tant qu'elle reste élevée (ou sous {RATING.provisionalGames} matchs), la
-                note est <b>provisoire</b>.
-              </p>
-              <p>
-                Une <b>longue absence ne fait pas baisser ta note</b>, mais élargit ton
-                «&nbsp;±&nbsp;». Comme le classement tient compte de cette fiabilité, ton{' '}
-                <b>rang peut reculer</b>
-                malgré une note inchangée — et après quelques semaines sans jouer tu repasses
-                «&nbsp;provisoire&nbsp;». À ton retour, cette marge plus large fait que tes premiers
-                matchs comptent davantage et la note retrouve vite son niveau.
-              </p>
-              <p>
-                Le <b>rang</b> combine la note et sa fiabilité, pour qu'une note vite acquise ne
-                double pas une note bien établie. Le tout repose sur le système <b>Glicko-2</b>. Le{' '}
-                <b>journal des calculs</b> détaille chaque match, un par un.
-              </p>
-            </div>
-          </section>
-
           <div className="footer-row">
             <span className="hint">Notes Glicko-2 · parties rapides et tournois confondus.</span>
-            <button className="link-btn" onClick={onHome}>
-              <IconArrowLeft size={16} stroke={1.8} /> Accueil
-            </button>
+            <span className="cl-footer-actions">
+              <button
+                className="link-btn"
+                onClick={recompute}
+                title="Recalculer et enregistrer les notes"
+              >
+                <IconRefresh size={15} stroke={1.8} /> Recalculer
+              </button>
+              <button className="link-btn" onClick={onHome}>
+                <IconArrowLeft size={16} stroke={1.8} /> Accueil
+              </button>
+            </span>
           </div>
         </>
       )}
+
+      {eloOpen && <EloModal example={example} onClose={() => setEloOpen(false)} />}
 
       {(() => {
         const selected = selectedKey ? rows.find((r) => r.key === selectedKey) : undefined
