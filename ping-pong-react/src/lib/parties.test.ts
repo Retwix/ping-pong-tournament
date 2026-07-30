@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import type { RatingEvent } from './rating'
 import type { Match, Tournament } from '../types'
-import { historySubtitle, parseFilter, tournamentRows } from './parties'
+import { historySubtitle, loadMoreLabel, matchRows, parseFilter, tournamentRows } from './parties'
 
 const getMockMatch = (overrides?: Partial<Match>): Match => ({
   id: 'm1',
@@ -47,6 +48,27 @@ const getMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
   chaos_interval: 5,
   chaos_intensity: 'mild',
   chaos_legendary: false,
+  ...overrides,
+})
+
+const getMockEvent = (overrides?: Partial<RatingEvent>): RatingEvent => ({
+  matchId: 'm1',
+  key: 'p:leo',
+  playerId: 'p1',
+  name: 'Léo',
+  opponentKey: 'p:thibault',
+  opponentName: 'Thibault',
+  scoreFor: 11,
+  scoreAgainst: 9,
+  ratingBefore: 1500,
+  ratingAfter: 1512,
+  rdBefore: 200,
+  rdAfter: 180,
+  delta: 12,
+  weight: 1,
+  stakes: 'normal',
+  won: true,
+  at: '2026-07-30T10:00:00.000Z',
   ...overrides,
 })
 
@@ -188,6 +210,121 @@ describe('tournamentRows', () => {
     expect(rows.map((r) => r.id)).toEqual(['late', 'early'])
     expect(rows[0].endedAt).toBeNull()
     expect(rows[0].finalist).toBeNull()
+  })
+})
+
+describe('matchRows', () => {
+  it('flattens a finished match: winner first, competition name, winner delta, end date', () => {
+    const rows = matchRows(
+      [
+        getMockMatch({
+          id: 'm1',
+          tournament_id: 't1',
+          player_a: 'Léo',
+          player_b: 'Thibault',
+          score_a: 7,
+          score_b: 11,
+        }),
+      ],
+      [
+        getMockEvent({ matchId: 'm1', name: 'Thibault', won: true, delta: 12 }),
+        getMockEvent({ matchId: 'm1', name: 'Léo', won: false, delta: -12 }),
+      ],
+      [getMockTournament({ id: 't1', name: 'Tournoi de juillet' })],
+    )
+    expect(rows).toEqual([
+      {
+        id: 'm1',
+        tournamentId: 't1',
+        winner: 'Thibault',
+        loser: 'Léo',
+        winnerScore: 11,
+        loserScore: 7,
+        eloDelta: 12,
+        competition: 'Tournoi de juillet',
+        endedAt: '2026-07-30T10:00:00.000Z',
+      },
+    ])
+  })
+
+  it('orders rows newest first whatever the input order', () => {
+    const rows = matchRows(
+      [
+        getMockMatch({ id: 'old', ended_at: '2026-07-01T10:00:00.000Z' }),
+        getMockMatch({ id: 'new', ended_at: '2026-07-20T10:00:00.000Z' }),
+        getMockMatch({ id: 'mid', ended_at: '2026-07-10T10:00:00.000Z' }),
+      ],
+      [],
+      [getMockTournament({ id: 't1' })],
+    )
+    expect(rows.map((r) => r.id)).toEqual(['new', 'mid', 'old'])
+  })
+
+  it('sorts a match with no timestamps last', () => {
+    const rows = matchRows(
+      [
+        getMockMatch({ id: 'ghost', ended_at: null, started_at: null }),
+        getMockMatch({ id: 'real', ended_at: '2026-07-20T10:00:00.000Z' }),
+      ],
+      [],
+      [getMockTournament({ id: 't1' })],
+    )
+    expect(rows.map((r) => r.id)).toEqual(['real', 'ghost'])
+  })
+
+  it('excludes byes and unfinished matches', () => {
+    const rows = matchRows(
+      [
+        getMockMatch({ id: 'real' }),
+        getMockMatch({ id: 'bye', bye: true }),
+        getMockMatch({ id: 'running', done: false }),
+      ],
+      [],
+      [getMockTournament({ id: 't1' })],
+    )
+    expect(rows.map((r) => r.id)).toEqual(['real'])
+  })
+
+  it('labels quick games « Partie rapide »', () => {
+    const rows = matchRows(
+      [getMockMatch({ id: 'm1', tournament_id: 'g1' })],
+      [],
+      [getMockTournament({ id: 'g1', kind: 'game', name: 'Léo vs Thibault' })],
+    )
+    expect(rows[0].competition).toBe('Partie rapide')
+  })
+
+  it('shows a dash when the tournament no longer exists', () => {
+    const rows = matchRows([getMockMatch({ id: 'm1', tournament_id: 'gone' })], [], [])
+    expect(rows[0].competition).toBe('—')
+  })
+
+  it('has no Elo delta for an unrated match', () => {
+    const rows = matchRows(
+      [getMockMatch({ id: 'm1' })],
+      [getMockEvent({ matchId: 'other', won: true, delta: 9 })],
+      [getMockTournament({ id: 't1' })],
+    )
+    expect(rows[0].eloDelta).toBeNull()
+  })
+})
+
+describe('loadMoreLabel', () => {
+  it('is hidden when everything is shown', () => {
+    expect(loadMoreLabel(0)).toBeNull()
+  })
+
+  it('caps the announced batch at the page size', () => {
+    expect(loadMoreLabel(62)).toBe('Charger 20 matchs de plus')
+    expect(loadMoreLabel(20)).toBe('Charger 20 matchs de plus')
+  })
+
+  it('announces the exact remainder under one page', () => {
+    expect(loadMoreLabel(5)).toBe('Charger 5 matchs de plus')
+  })
+
+  it('uses the singular for a single remaining match', () => {
+    expect(loadMoreLabel(1)).toBe('Charger 1 match de plus')
   })
 })
 

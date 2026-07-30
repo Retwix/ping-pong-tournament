@@ -2469,3 +2469,29 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 [data-theme='dark'] .pt-cell-r { color: #a99fc4; }
 .pt-dash { color: #cbc3dd; }
 .pt-chevron { color: #cbc3dd; }
+
+/* ===== parties — matches table ===== */
+.pt-matchrow {
+  display: grid; grid-template-columns: 30px 1fr 70px 74px 120px 84px 15px;
+  gap: 13px; align-items: center;
+}
+.pt-th-c { text-align: center; }
+.avatar.pt-av-sm { width: 30px; height: 30px; font-size: 12px; flex: none; }
+.pt-match-phrase {
+  font-family: var(--font-body); font-weight: 600; font-size: 14px; color: var(--fg-2);
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pt-match-winner { font-family: var(--font-display); font-weight: 800; font-size: 14px; color: var(--fg-1); }
+.pt-match-verb { color: #a49eb3; }
+.pt-score { font-family: var(--font-display); font-weight: 800; font-size: 14px; color: var(--fg-1); text-align: center; }
+.pt-delta { font-family: var(--font-body); font-weight: 700; font-size: 13px; color: var(--green); text-align: right; }
+[data-theme='dark'] .pt-delta { color: #5fd99f; }
+.pt-ellip { overflow: hidden; text-overflow: ellipsis; }
+.pt-more {
+  display: block; margin: 12px auto 0; padding: 10px 20px;
+  font-family: var(--font-display); font-weight: 700; font-size: 13px; color: #4a2aa4;
+  background: #f7f5fd; border: 1px solid #ece8f6; border-radius: 11px; cursor: pointer;
+  transition: background 160ms var(--ease);
+}
+.pt-more:hover { background: #f0ecfb; }
+[data-theme='dark'] .pt-more { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.1); color: #c9b8ff; }

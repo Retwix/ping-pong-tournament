@@ -1,9 +1,15 @@
 import { useMemo, useState } from 'react'
 import { IconChevronRight, IconSearch, IconTrophy } from '@tabler/icons-react'
 import { useRatings } from '../hooks/useRatings'
+import { signed } from '../lib/format'
 import {
+  MATCHES_PAGE_INITIAL,
+  MATCHES_PAGE_STEP,
   historySubtitle,
+  loadMoreLabel,
+  matchRows,
   tournamentRows,
+  type MatchRow,
   type PartiesFilter,
   type TournamentRow,
 } from '../lib/parties'
@@ -96,6 +102,75 @@ interface Props {
 }
 
 /** « Tournois & parties » — the full history page, reached from the Accueil links (not a tab). */
+function MatchesTable({
+  rows,
+  total,
+  look,
+  onOpen,
+  onMore,
+}: {
+  rows: MatchRow[]
+  total: number
+  look: LookUpPlayer
+  onOpen: (id: string) => void
+  onMore: () => void
+}) {
+  const more = loadMoreLabel(total - rows.length)
+  return (
+    <section className="pt-section">
+      <div className="pt-sec-title">Parties</div>
+      <div className="pt-table">
+        <div className="pt-matchrow pt-thead">
+          <span />
+          <span>Match</span>
+          <span className="pt-th-c">Score</span>
+          <span className="pt-th-r">Elo</span>
+          <span className="pt-th-r">Compétition</span>
+          <span className="pt-th-r">Date</span>
+          <span />
+        </div>
+        {rows.length === 0 ? (
+          <div className="pt-empty-row">Aucun match terminé pour l'instant.</div>
+        ) : (
+          rows.map((row) => (
+            <div
+              key={row.id}
+              className="pt-matchrow pt-row"
+              onClick={() => onOpen(row.tournamentId)}
+            >
+              <Avatar
+                name={row.winner}
+                team={look(row.winner).team}
+                url={look(row.winner).url}
+                className="pt-av-sm"
+              />
+              <div className="pt-match-phrase">
+                <span className="pt-match-winner">{row.winner}</span>
+                <span className="pt-match-verb"> bat </span>
+                {row.loser}
+              </div>
+              <div className="pt-score">
+                {row.winnerScore}–{row.loserScore}
+              </div>
+              <div className="pt-delta">
+                {row.eloDelta === null ? <span className="pt-dash">—</span> : signed(row.eloDelta)}
+              </div>
+              <div className="pt-cell-r pt-ellip">{row.competition}</div>
+              <div className="pt-cell-r">{row.endedAt === null ? '—' : finDate(row.endedAt)}</div>
+              <IconChevronRight size={15} stroke={1.75} className="pt-chevron" />
+            </div>
+          ))
+        )}
+      </div>
+      {more !== null && (
+        <button className="pt-more" onClick={onMore}>
+          {more}
+        </button>
+      )}
+    </section>
+  )
+}
+
 export default function Parties({
   onHome,
   onClassement,
@@ -105,11 +180,16 @@ export default function Parties({
   onNewGame,
   onOpenTournament,
 }: Props) {
-  const { matches, tournaments, players, loading, error } = useRatings()
+  const { matches, tournaments, players, events, loading, error } = useRatings()
   const [query, setQuery] = useState('')
+  const [shown, setShown] = useState(MATCHES_PAGE_INITIAL)
 
   const look = useMemo(() => playerLookup(players), [players])
   const tourRows = useMemo(() => tournamentRows(tournaments, matches), [tournaments, matches])
+  const allMatchRows = useMemo(
+    () => matchRows(matches, events, tournaments),
+    [matches, events, tournaments],
+  )
 
   const nav = (
     <DashboardNav
@@ -172,6 +252,14 @@ export default function Parties({
       </div>
 
       <TournoisTable rows={tourRows} look={look} onOpen={onOpenTournament} />
+
+      <MatchesTable
+        rows={allMatchRows.slice(0, shown)}
+        total={allMatchRows.length}
+        look={look}
+        onOpen={onOpenTournament}
+        onMore={() => setShown((s) => s + MATCHES_PAGE_STEP)}
+      />
 
       {tabbar}
     </div>

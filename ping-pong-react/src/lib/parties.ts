@@ -2,6 +2,8 @@
 
 import type { Match, Tournament } from '../types'
 import { finalStandings } from './finalStandings'
+import type { RatingEvent } from './rating'
+import { winnerLoser } from './stats'
 
 export type PartiesFilter = 'all' | 'match' | 'tour'
 
@@ -73,4 +75,66 @@ export function tournamentRows(tournaments: Tournament[], matches: Match[]): Tou
       return new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime()
     })
     .map(({ sortAt: _, ...row }) => row)
+}
+
+export interface MatchRow {
+  id: string
+  tournamentId: string
+  winner: string
+  loser: string
+  winnerScore: number
+  loserScore: number
+  /** The winner's rating gain — null when the match never got rated (e.g. missing replay data). */
+  eloDelta: number | null
+  competition: string
+  endedAt: string | null
+}
+
+const timeKey = (m: Match): string => m.ended_at ?? m.started_at ?? ''
+
+/**
+ * The « Parties » table: every finished match (byes aren't real results),
+ * newest first, with the winner's Elo move and its competition label.
+ */
+export function matchRows(
+  matches: Match[],
+  events: RatingEvent[],
+  tournaments: Tournament[],
+): MatchRow[] {
+  const tournamentById = new Map(tournaments.map((t) => [t.id, t]))
+  const winnerDeltaByMatch = new Map(events.filter((e) => e.won).map((e) => [e.matchId, e.delta]))
+
+  return matches
+    .filter((m) => m.done && !m.bye)
+    .sort((a, b) => timeKey(b).localeCompare(timeKey(a)))
+    .map((m) => {
+      const { winner, loser, ws, ls } = winnerLoser(m)
+      const tournament = tournamentById.get(m.tournament_id)
+      return {
+        id: m.id,
+        tournamentId: m.tournament_id,
+        winner,
+        loser,
+        winnerScore: ws,
+        loserScore: ls,
+        eloDelta: winnerDeltaByMatch.get(m.id) ?? null,
+        competition:
+          tournament === undefined
+            ? '—'
+            : tournament.kind === 'game'
+              ? 'Partie rapide'
+              : tournament.name,
+        endedAt: m.ended_at,
+      }
+    })
+}
+
+export const MATCHES_PAGE_INITIAL = 10
+export const MATCHES_PAGE_STEP = 20
+
+/** « Charger N matchs de plus » — N capped at one page; null once everything is shown. */
+export function loadMoreLabel(remaining: number): string | null {
+  if (remaining <= 0) return null
+  const n = Math.min(MATCHES_PAGE_STEP, remaining)
+  return `Charger ${label(n, 'match de plus', 'matchs de plus')}`
 }
