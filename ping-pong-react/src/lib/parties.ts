@@ -129,6 +129,38 @@ export function matchRows(
     })
 }
 
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+/** Case- and accent-insensitive search over players and competition. Empty query → all rows. */
+export function filterMatchRows(rows: MatchRow[], query: string): MatchRow[] {
+  const q = fold(query.trim())
+  return rows.filter((r) => [r.winner, r.loser, r.competition].some((v) => fold(v).includes(q)))
+}
+
+/** Same search over tournament name, champion and finalist (absent on active tournaments). */
+export function filterTournamentRows(rows: TournamentRow[], query: string): TournamentRow[] {
+  const q = fold(query.trim())
+  return rows.filter((r) =>
+    [r.name, r.champion, r.finalist].some((v) => v !== null && fold(v).includes(q)),
+  )
+}
+
+export type SortDir = 'recent' | 'oldest'
+
+/** Row selectors produce newest-first; « Plus ancien » simply reads them the other way. */
+export function applySort<T>(rows: T[], dir: SortDir): T[] {
+  return dir === 'recent' ? rows : [...rows].reverse()
+}
+
+export function sortLabel(dir: SortDir): string {
+  return dir === 'recent' ? 'Plus récent ▾' : 'Plus ancien ▴'
+}
+
+/** Which tables the filter chips leave on screen. */
+export function visibleBlocks(filter: PartiesFilter): { tournois: boolean; parties: boolean } {
+  return { tournois: filter !== 'match', parties: filter !== 'tour' }
+}
+
 export const MATCHES_PAGE_INITIAL = 10
 export const MATCHES_PAGE_STEP = 20
 

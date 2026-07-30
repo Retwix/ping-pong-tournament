@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type { RatingEvent } from './rating'
 import type { Match, Tournament } from '../types'
-import { historySubtitle, loadMoreLabel, matchRows, parseFilter, tournamentRows } from './parties'
+import {
+  applySort,
+  filterMatchRows,
+  filterTournamentRows,
+  historySubtitle,
+  loadMoreLabel,
+  matchRows,
+  parseFilter,
+  sortLabel,
+  tournamentRows,
+  visibleBlocks,
+  type MatchRow,
+  type TournamentRow,
+} from './parties'
 
 const getMockMatch = (overrides?: Partial<Match>): Match => ({
   id: 'm1',
@@ -325,6 +338,125 @@ describe('loadMoreLabel', () => {
 
   it('uses the singular for a single remaining match', () => {
     expect(loadMoreLabel(1)).toBe('Charger 1 match de plus')
+  })
+})
+
+const getMatchRow = (overrides?: Partial<MatchRow>): MatchRow => ({
+  id: 'm1',
+  tournamentId: 't1',
+  winner: 'Léo',
+  loser: 'Thibault',
+  winnerScore: 11,
+  loserScore: 9,
+  eloDelta: 12,
+  competition: 'Tournoi de juillet',
+  endedAt: '2026-07-30T10:00:00.000Z',
+  ...overrides,
+})
+
+const getTourRow = (overrides?: Partial<TournamentRow>): TournamentRow => ({
+  id: 't1',
+  name: 'Tournoi de juillet',
+  playersCount: 3,
+  formatLabel: 'Round robin',
+  active: false,
+  champion: 'Léo',
+  finalist: 'Bo',
+  endedAt: '2026-07-10T12:00:00.000Z',
+  ...overrides,
+})
+
+describe('filterMatchRows', () => {
+  it('returns everything for an empty query', () => {
+    const rows = [getMatchRow({ id: 'a' }), getMatchRow({ id: 'b' })]
+    expect(filterMatchRows(rows, '')).toEqual(rows)
+  })
+
+  it('matches winner names ignoring case and accents', () => {
+    const rows = [getMatchRow({ id: 'a', winner: 'Léo' }), getMatchRow({ id: 'b', winner: 'Bo' })]
+    expect(filterMatchRows(rows, 'leo').map((r) => r.id)).toEqual(['a'])
+  })
+
+  it('matches loser names too', () => {
+    const rows = [
+      getMatchRow({ id: 'a', loser: 'Thibault' }),
+      getMatchRow({ id: 'b', loser: 'Bo' }),
+    ]
+    expect(filterMatchRows(rows, 'THIBAULT').map((r) => r.id)).toEqual(['a'])
+  })
+
+  it('matches the competition name', () => {
+    const rows = [
+      getMatchRow({ id: 'a', competition: 'Tournoi de juillet' }),
+      getMatchRow({ id: 'b', competition: 'Partie rapide' }),
+    ]
+    expect(filterMatchRows(rows, 'juillet').map((r) => r.id)).toEqual(['a'])
+  })
+
+  it('trims the query before matching', () => {
+    expect(filterMatchRows([getMatchRow()], '  léo  ')).toHaveLength(1)
+  })
+
+  it('finds nothing for an unknown term', () => {
+    expect(filterMatchRows([getMatchRow()], 'zzz')).toEqual([])
+  })
+})
+
+describe('filterTournamentRows', () => {
+  it('matches name, champion and finalist ignoring case and accents', () => {
+    const rows = [
+      getTourRow({ id: 'byName', name: 'Tournoi d’été', champion: 'X', finalist: 'Y' }),
+      getTourRow({ id: 'byChampion', name: 'A', champion: 'Léo', finalist: 'Y' }),
+      getTourRow({ id: 'byFinalist', name: 'B', champion: 'X', finalist: 'Léa' }),
+      getTourRow({ id: 'none', name: 'C', champion: 'X', finalist: 'Y' }),
+    ]
+    expect(filterTournamentRows(rows, 'ete').map((r) => r.id)).toEqual(['byName'])
+    expect(filterTournamentRows(rows, 'leo').map((r) => r.id)).toEqual(['byChampion'])
+    expect(filterTournamentRows(rows, 'lea').map((r) => r.id)).toEqual(['byFinalist'])
+  })
+
+  it('trims the query before matching', () => {
+    expect(filterTournamentRows([getTourRow()], '  léo  ')).toHaveLength(1)
+  })
+
+  it('handles active tournaments without champion or finalist', () => {
+    const rows = [getTourRow({ id: 'a', active: true, champion: null, finalist: null })]
+    expect(filterTournamentRows(rows, 'léo')).toEqual([])
+    expect(filterTournamentRows(rows, '')).toEqual(rows)
+  })
+})
+
+describe('applySort', () => {
+  it('keeps the newest-first order on « Plus récent »', () => {
+    const rows = [getMatchRow({ id: 'new' }), getMatchRow({ id: 'old' })]
+    expect(applySort(rows, 'recent').map((r) => r.id)).toEqual(['new', 'old'])
+  })
+
+  it('reverses on « Plus ancien » without mutating the source', () => {
+    const rows = [getMatchRow({ id: 'new' }), getMatchRow({ id: 'old' })]
+    expect(applySort(rows, 'oldest').map((r) => r.id)).toEqual(['old', 'new'])
+    expect(rows.map((r) => r.id)).toEqual(['new', 'old'])
+  })
+})
+
+describe('sortLabel', () => {
+  it('labels both directions', () => {
+    expect(sortLabel('recent')).toBe('Plus récent ▾')
+    expect(sortLabel('oldest')).toBe('Plus ancien ▴')
+  })
+})
+
+describe('visibleBlocks', () => {
+  it('shows both tables on « Tout »', () => {
+    expect(visibleBlocks('all')).toEqual({ tournois: true, parties: true })
+  })
+
+  it('keeps only the matches table on « Parties »', () => {
+    expect(visibleBlocks('match')).toEqual({ tournois: false, parties: true })
+  })
+
+  it('keeps only the tournaments table on « Tournois »', () => {
+    expect(visibleBlocks('tour')).toEqual({ tournois: true, parties: false })
   })
 })
 

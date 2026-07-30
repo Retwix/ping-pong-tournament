@@ -2401,6 +2401,25 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
   .pt-search { flex: 1; width: auto; }
 }
 
+/* ===== parties — filter chips + sort ===== */
+.pt-filters {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-top: 20px; flex-wrap: wrap;
+}
+.pt-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.pt-chip {
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  padding: 9px 15px; border-radius: 11px; cursor: pointer;
+  background: #fff; color: #6b6480; border: 1px solid #e8e4f2;
+  transition: color 160ms var(--ease), border-color 160ms var(--ease), background 160ms var(--ease);
+}
+.pt-chip:hover { color: #4a2aa4; border-color: #d0c3f3; }
+.pt-chip.active { background: #4a2aa4; color: #fff; border-color: #4a2aa4; }
+.pt-chip.active:hover { color: #fff; }
+[data-theme='dark'] .pt-chip { background: rgba(255, 255, 255, 0.05); color: #a99fc4; border-color: rgba(255, 255, 255, 0.09); }
+[data-theme='dark'] .pt-chip:hover { color: #c9b8ff; border-color: rgba(255, 255, 255, 0.2); }
+[data-theme='dark'] .pt-chip.active { background: #5b36c4; color: #fff; border-color: #5b36c4; }
+
 /* ===== parties — section + tables ===== */
 .pt-section { margin-top: 26px; }
 .pt-sec-title {

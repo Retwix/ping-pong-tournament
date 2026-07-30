@@ -112,6 +112,9 @@ Equivalent survivors in `latestEnd` (documented, not killable with realistic dat
   guard changes nothing for post-1970 ISO timestamps;
 - `>` → `>=` on the date compare: only distinguishable when two matches end at the
   exact same instant, where both branches return an identical string.
+- `toLowerCase` → `toUpperCase` in `fold`: query and haystack pass through the same
+  fold, so the transform is symmetric — only exotic case-pairs (ß→SS) could differ,
+  none of which occur in French names.
 
 ## Pre-PR Quality Gate
 

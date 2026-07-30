@@ -1,16 +1,22 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { IconChevronRight, IconSearch, IconTrophy } from '@tabler/icons-react'
 import { useRatings } from '../hooks/useRatings'
 import { signed } from '../lib/format'
 import {
   MATCHES_PAGE_INITIAL,
   MATCHES_PAGE_STEP,
+  applySort,
+  filterMatchRows,
+  filterTournamentRows,
   historySubtitle,
   loadMoreLabel,
   matchRows,
+  sortLabel,
   tournamentRows,
+  visibleBlocks,
   type MatchRow,
   type PartiesFilter,
+  type SortDir,
   type TournamentRow,
 } from '../lib/parties'
 import { playerLookup, type LookUpPlayer } from '../lib/playerLookup'
@@ -26,10 +32,12 @@ function TournoisTable({
   rows,
   look,
   onOpen,
+  empty,
 }: {
   rows: TournamentRow[]
   look: LookUpPlayer
   onOpen: (id: string) => void
+  empty: string
 }) {
   return (
     <section className="pt-section">
@@ -45,7 +53,7 @@ function TournoisTable({
           <span />
         </div>
         {rows.length === 0 ? (
-          <div className="pt-empty-row">Aucun tournoi pour l'instant.</div>
+          <div className="pt-empty-row">{empty}</div>
         ) : (
           rows.map((row) => (
             <div key={row.id} className="pt-tourrow pt-row" onClick={() => onOpen(row.id)}>
@@ -99,6 +107,7 @@ interface Props {
   onNew: () => void
   onNewGame: () => void
   onOpenTournament: (id: string) => void
+  onFilterChange: (filter: PartiesFilter) => void
 }
 
 /** « Tournois & parties » — the full history page, reached from the Accueil links (not a tab). */
@@ -108,12 +117,14 @@ function MatchesTable({
   look,
   onOpen,
   onMore,
+  empty,
 }: {
   rows: MatchRow[]
   total: number
   look: LookUpPlayer
   onOpen: (id: string) => void
   onMore: () => void
+  empty: string
 }) {
   const more = loadMoreLabel(total - rows.length)
   return (
@@ -130,7 +141,7 @@ function MatchesTable({
           <span />
         </div>
         {rows.length === 0 ? (
-          <div className="pt-empty-row">Aucun match terminé pour l'instant.</div>
+          <div className="pt-empty-row">{empty}</div>
         ) : (
           rows.map((row) => (
             <div
@@ -172,6 +183,7 @@ function MatchesTable({
 }
 
 export default function Parties({
+  filter,
   onHome,
   onClassement,
   onStats,
@@ -179,10 +191,16 @@ export default function Parties({
   onNew,
   onNewGame,
   onOpenTournament,
+  onFilterChange,
 }: Props) {
   const { matches, tournaments, players, events, loading, error } = useRatings()
   const [query, setQuery] = useState('')
   const [shown, setShown] = useState(MATCHES_PAGE_INITIAL)
+  const [dir, setDir] = useState<SortDir>('recent')
+
+  useEffect(() => {
+    setShown(MATCHES_PAGE_INITIAL)
+  }, [query, filter])
 
   const look = useMemo(() => playerLookup(players), [players])
   const tourRows = useMemo(() => tournamentRows(tournaments, matches), [tournaments, matches])
@@ -190,6 +208,17 @@ export default function Parties({
     () => matchRows(matches, events, tournaments),
     [matches, events, tournaments],
   )
+  const shownTourRows = useMemo(
+    () => applySort(filterTournamentRows(tourRows, query), dir),
+    [tourRows, query, dir],
+  )
+  const filteredMatchRows = useMemo(
+    () => applySort(filterMatchRows(allMatchRows, query), dir),
+    [allMatchRows, query, dir],
+  )
+
+  const blocks = visibleBlocks(filter)
+  const searching = query.trim() !== ''
 
   const nav = (
     <DashboardNav
@@ -251,15 +280,62 @@ export default function Parties({
         </div>
       </div>
 
-      <TournoisTable rows={tourRows} look={look} onOpen={onOpenTournament} />
+      <div className="pt-filters">
+        <div className="pt-chips">
+          <button
+            className={`pt-chip${filter === 'all' ? ' active' : ''}`}
+            onClick={() => onFilterChange('all')}
+          >
+            Tout
+          </button>
+          <button
+            className={`pt-chip${filter === 'match' ? ' active' : ''}`}
+            onClick={() => onFilterChange('match')}
+          >
+            Parties · {allMatchRows.length}
+          </button>
+          <button
+            className={`pt-chip${filter === 'tour' ? ' active' : ''}`}
+            onClick={() => onFilterChange('tour')}
+          >
+            Tournois · {tourRows.length}
+          </button>
+        </div>
+        <button
+          className="pt-chip"
+          onClick={() => setDir((d) => (d === 'recent' ? 'oldest' : 'recent'))}
+        >
+          {sortLabel(dir)}
+        </button>
+      </div>
 
-      <MatchesTable
-        rows={allMatchRows.slice(0, shown)}
-        total={allMatchRows.length}
-        look={look}
-        onOpen={onOpenTournament}
-        onMore={() => setShown((s) => s + MATCHES_PAGE_STEP)}
-      />
+      {blocks.tournois && (
+        <TournoisTable
+          rows={shownTourRows}
+          look={look}
+          onOpen={onOpenTournament}
+          empty={
+            searching
+              ? 'Aucun tournoi ne correspond à cette recherche.'
+              : "Aucun tournoi pour l'instant."
+          }
+        />
+      )}
+
+      {blocks.parties && (
+        <MatchesTable
+          rows={filteredMatchRows.slice(0, shown)}
+          total={filteredMatchRows.length}
+          look={look}
+          onOpen={onOpenTournament}
+          onMore={() => setShown((s) => s + MATCHES_PAGE_STEP)}
+          empty={
+            searching
+              ? 'Aucun match ne correspond à cette recherche.'
+              : "Aucun match terminé pour l'instant."
+          }
+        />
+      )}
 
       {tabbar}
     </div>

@@ -85,6 +85,7 @@ function renderRoute(route: Route) {
           onNew={() => navigate('/new')}
           onNewGame={() => navigate('/game')}
           onOpenTournament={(id) => navigate(`/t/${id}`)}
+          onFilterChange={(f) => navigate(f === 'all' ? '/parties' : `/parties?f=${f}`)}
         />
       )
     case 'players':
