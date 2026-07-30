@@ -2032,7 +2032,16 @@ td.elo.neg { color: var(--coral); }
 
 /* ===== classement — section header ===== */
 .cl-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.cl-sec-title { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--fg-1); }
+.cl-sec-title { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--fg-1); }
+.cl-refresh {
+  width: 28px; height: 28px; border-radius: 9px; border: 0; cursor: pointer;
+  display: grid; place-items: center;
+  background: none; color: #a49eb3;
+  transition: background 160ms var(--ease), color 160ms var(--ease);
+}
+.cl-refresh:hover { background: #f0ecfb; color: #4a2aa4; }
+[data-theme='dark'] .cl-refresh { color: #8b82a8; }
+[data-theme='dark'] .cl-refresh:hover { background: rgba(255, 255, 255, 0.08); color: #c9b8ff; }
 .cl-sec-actions { display: inline-flex; align-items: center; gap: 12px; }
 .cl-sec-actions .link-btn { display: inline-flex; align-items: center; gap: 6px; }
 
@@ -2333,8 +2342,6 @@ td.elo.neg { color: var(--coral); }
 }
 .cl-elo-ok:hover { background: #3c2088; }
 [data-theme='dark'] .cl-elo-ok { background: #5b36c4; }
-.cl-footer-actions { display: inline-flex; align-items: center; gap: 14px; }
-.cl-footer-actions .link-btn { display: inline-flex; align-items: center; gap: 6px; }
 
 @media (max-width: 820px) {
   .cl-elo-modal { border-radius: 18px; padding: 22px 18px 24px; }

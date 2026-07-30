@@ -332,7 +332,17 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
             <div className="cl-main">
               <section>
                 <div className="cl-sec-head">
-                  <div className="cl-sec-title">Tous les joueurs</div>
+                  <div className="cl-sec-title">
+                    Tous les joueurs
+                    <button
+                      className="cl-refresh"
+                      onClick={recompute}
+                      title="Recalculer et enregistrer les notes"
+                      aria-label="Recalculer les notes"
+                    >
+                      <IconRefresh size={15} stroke={2} />
+                    </button>
+                  </div>
                 </div>
                 <div className="cl-table">
                   <div className="cl-tr cl-thead">
@@ -488,18 +498,6 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
 
           <div className="footer-row">
             <span className="hint">Notes Glicko-2 · parties rapides et tournois confondus.</span>
-            <span className="cl-footer-actions">
-              <button
-                className="link-btn"
-                onClick={recompute}
-                title="Recalculer et enregistrer les notes"
-              >
-                <IconRefresh size={15} stroke={1.8} /> Recalculer
-              </button>
-              <button className="link-btn" onClick={onHome}>
-                <IconArrowLeft size={16} stroke={1.8} /> Accueil
-              </button>
-            </span>
           </div>
         </>
       )}
