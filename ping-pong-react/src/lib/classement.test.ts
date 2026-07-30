@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { RatingEvent } from './rating'
-import { lastFive, lastRatedAt, recordOf, weeklyDelta, winStreak } from './classement'
+import type { RatingEvent, RatingRow } from './rating'
+import { lastFive, lastRatedAt, podium, recordOf, weeklyDelta, winStreak } from './classement'
 
 const getMockEvent = (overrides?: Partial<RatingEvent>): RatingEvent => ({
   matchId: 'm1',
@@ -149,5 +149,106 @@ describe('weeklyDelta', () => {
 
   it('is zero when the player played nothing this week', () => {
     expect(weeklyDelta([], 'p:leo', now)).toBe(0)
+  })
+})
+
+const getMockRow = (overrides?: Partial<RatingRow>): RatingRow => ({
+  key: 'p:leo',
+  playerId: 'p1',
+  name: 'Léo',
+  rating: 1500,
+  rd: 80,
+  vol: 0.06,
+  games: 10,
+  peak: 1520,
+  lastPlayedAt: '2026-07-30T10:00:00.000Z',
+  rank: 1,
+  provisional: false,
+  team: 'Tech',
+  avatar_url: null,
+  trend: 0,
+  ...overrides,
+})
+
+describe('podium', () => {
+  const now = new Date('2026-07-30T12:00:00.000Z')
+
+  it('returns null when fewer than three players are ranked', () => {
+    const rows = [
+      getMockRow(),
+      getMockRow({ key: 'p:thibault', name: 'Thibault', rank: 2, rating: 1450 }),
+      getMockRow({ key: 'p:max', name: 'Maxime', rank: 3, rating: 1400, provisional: true }),
+    ]
+    expect(podium(rows, [], now)).toBeNull()
+  })
+
+  it('crowns the top three ranked players, skipping provisional rows', () => {
+    const rows = [
+      getMockRow({ rating: 1500 }),
+      getMockRow({ key: 'p:max', name: 'Maxime', rank: 2, rating: 1490, provisional: true }),
+      getMockRow({ key: 'p:thibault', name: 'Thibault', rank: 3, rating: 1450 }),
+      getMockRow({ key: 'p:candice', name: 'Candice', rank: 4, rating: 1400 }),
+    ]
+    const pod = podium(rows, [], now)
+    expect(pod?.first.row.name).toBe('Léo')
+    expect(pod?.second.row.name).toBe('Thibault')
+    expect(pod?.third.row.name).toBe('Candice')
+  })
+
+  it('gives the leader its record and weekly delta, without a note', () => {
+    const rows = [
+      getMockRow({ rating: 1500 }),
+      getMockRow({ key: 'p:thibault', name: 'Thibault', rank: 2, rating: 1450 }),
+      getMockRow({ key: 'p:candice', name: 'Candice', rank: 3, rating: 1400 }),
+    ]
+    const events = [
+      getMockEvent({ key: 'p:leo', won: true, delta: 12, at: '2026-07-29T10:00:00.000Z' }),
+      getMockEvent({ key: 'p:leo', won: false, delta: -4, at: '2026-07-29T11:00:00.000Z' }),
+      getMockEvent({ key: 'p:leo', won: true, delta: 9, at: '2026-06-01T10:00:00.000Z' }),
+    ]
+    const pod = podium(rows, events, now)
+    expect(pod?.first.record).toEqual({ wins: 2, losses: 1 })
+    expect(pod?.first.delta7).toBe(8)
+    expect(pod?.first.note).toBeNull()
+  })
+
+  it('describes the runner-up by its record and displayed gap to the title', () => {
+    const rows = [
+      getMockRow({ rating: 1487.4 }),
+      getMockRow({ key: 'p:thibault', name: 'Thibault', rank: 2, rating: 1442.6 }),
+      getMockRow({ key: 'p:candice', name: 'Candice', rank: 3, rating: 1400 }),
+    ]
+    const events = [
+      getMockEvent({ key: 'p:thibault', won: true }),
+      getMockEvent({ key: 'p:thibault', won: true }),
+      getMockEvent({ key: 'p:thibault', won: false }),
+    ]
+    expect(podium(rows, events, now)?.second.note).toBe('2–1 · à 44 points du titre')
+  })
+
+  it('describes the third by its current win streak when on a run', () => {
+    const rows = [
+      getMockRow({ rating: 1500 }),
+      getMockRow({ key: 'p:thibault', name: 'Thibault', rank: 2, rating: 1450 }),
+      getMockRow({ key: 'p:candice', name: 'Candice', rank: 3, rating: 1400 }),
+    ]
+    const events = [
+      getMockEvent({ key: 'p:candice', won: true }),
+      getMockEvent({ key: 'p:candice', won: true }),
+    ]
+    expect(podium(rows, events, now)?.third.note).toBe("2–0 · 2 victoires d'affilée")
+  })
+
+  it('falls back to the title gap when the third has no streak going', () => {
+    const rows = [
+      getMockRow({ rating: 1500 }),
+      getMockRow({ key: 'p:thibault', name: 'Thibault', rank: 2, rating: 1450 }),
+      getMockRow({ key: 'p:candice', name: 'Candice', rank: 3, rating: 1400 }),
+    ]
+    const events = [
+      getMockEvent({ key: 'p:candice', won: true }),
+      getMockEvent({ key: 'p:candice', won: false }),
+    ]
+    expect(podium(rows, events, now)?.third.note).toBe('1–1 · à 100 points du titre')
   })
 })

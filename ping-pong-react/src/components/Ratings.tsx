@@ -6,6 +6,7 @@ import {
   STREAK_BADGE_MIN,
   lastFive,
   lastRatedAt,
+  podium,
   recordOf,
   weeklyDelta,
   winStreak,
@@ -32,6 +33,13 @@ const STAKES_LABEL: Record<RatingEvent['stakes'], string | null> = {
   normal: null,
   final: 'Finale',
   grand_final: 'Grande finale 🏆',
+}
+
+/** « ▲12 » / « ▼5 » / « ±0 » — the leader card's weekly move, white-on-violet. */
+function weekLabel(delta: number): string {
+  const v = Math.round(delta)
+  if (v === 0) return '±0'
+  return v > 0 ? `▲${v}` : `▼${Math.abs(v)}`
 }
 
 function fmtDate(at: string | null): string {
@@ -87,6 +95,8 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
       delta7: weeklyDelta(events, r.key, now),
     }))
   }, [rows, events])
+
+  const pod = useMemo(() => podium(rows, events, new Date()), [rows, events])
 
   // Highlights drawn from the rating history.
   const { biggestWin, biggestFinal } = useMemo(() => {
@@ -245,6 +255,53 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
               <div className="cl-tile-lbl">{leader ? `Meneur · ${leader.name}` : 'Meneur'}</div>
             </div>
           </div>
+
+          {pod && (
+            <div className="cl-podium">
+              <div className="cl-pod-1">
+                <div className="cl-pod-1-top">
+                  <Avatar
+                    name={pod.first.row.name}
+                    team={pod.first.row.team}
+                    url={pod.first.row.avatar_url}
+                    className="cl-ava-60"
+                    fill="hero"
+                  />
+                  <span className="cl-pod-badge1">1er · Leader</span>
+                </div>
+                <div className="cl-pod-1-name">{pod.first.row.name}</div>
+                <div className="cl-pod-1-elo">
+                  {Math.round(pod.first.row.rating)}
+                  <span className="cl-pod-1-week">{weekLabel(pod.first.delta7)} cette semaine</span>
+                </div>
+                <div className="cl-pod-1-tiles">
+                  <div className="cl-pod-1-tile">
+                    <b>
+                      {pod.first.record.wins}–{pod.first.record.losses}
+                    </b>
+                    <span>bilan total</span>
+                  </div>
+                  <div className="cl-pod-1-tile">
+                    <b>{pod.first.row.games}</b>
+                    <span>matchs joués</span>
+                  </div>
+                </div>
+              </div>
+              {[pod.second, pod.third].map((p, i) => (
+                <div className="cl-pod-r" key={p.row.key}>
+                  <div className="cl-pod-r-top">
+                    <Avatar name={p.row.name} team={p.row.team} url={p.row.avatar_url} />
+                    <span className={`cl-pod-rank cl-pod-rank-${i + 2}`}>{i + 2}e</span>
+                  </div>
+                  <div className="cl-pod-r-name">{p.row.name}</div>
+                  <div className="cl-pod-r-elo">
+                    {Math.round(p.row.rating)} <Trend delta={p.delta7} />
+                  </div>
+                  <div className="cl-pod-r-note">{p.note}</div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <section>
             <div className="cl-sec-head">
