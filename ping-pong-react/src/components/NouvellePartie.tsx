@@ -8,19 +8,20 @@ import {
   IconInfoCircle,
   IconPlus,
   IconSearch,
+  IconSparkles,
   IconTournament,
   IconTrophy,
   IconX,
 } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRatings } from '../hooks/useRatings'
-import { DEFAULT_CHAOS_SETTINGS } from '../lib/chaos'
-import { createTournament } from '../lib/db'
+import { DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from '../lib/chaos'
+import { createPlayer, createTournament } from '../lib/db'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { joueurRows, type JoueurRow } from '../lib/joueurs'
-import { filterJoueurs, pointsCible, recapitulatif } from '../lib/nouvellePartie'
+import { estDoublon, filterJoueurs, pointsCible, recapitulatif } from '../lib/nouvellePartie'
 import { inviteToSlack } from '../lib/slack'
-import { teamBadgeStyle, teamLabel } from '../lib/teams'
+import { TEAMS, teamBadgeStyle, teamColor, teamLabel, type TeamKey } from '../lib/teams'
 import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
 import type { TournamentFormat } from '../types'
 import Avatar from './Avatar'
@@ -62,7 +63,7 @@ export default function NouvellePartie({
   onNewGame,
 }: Props) {
   const isGame = variant === 'game'
-  const { rows, events, players, loading, error } = useRatings()
+  const { rows, events, players, loading, error, reload } = useRatings()
 
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
@@ -74,6 +75,13 @@ export default function NouvellePartie({
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [posterBusy, setPosterBusy] = useState(false)
+  const [newOpen, setNewOpen] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newTeam, setNewTeam] = useState<TeamKey>('guests')
+  const [dup, setDup] = useState(false)
+  const [savingPlayer, setSavingPlayer] = useState(false)
+  const [chaos, setChaos] = useState<ChaosSettings>(DEFAULT_CHAOS_SETTINGS)
+  const [chaosOpen, setChaosOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -117,6 +125,29 @@ export default function NouvellePartie({
   }
   const remove = (id: string) => setSelected((s) => s.filter((x) => x !== id))
 
+  const addNewPlayer = async () => {
+    const nm = newName.trim()
+    if (!nm || savingPlayer) return
+    if (estDoublon(players, nm)) {
+      setDup(true)
+      return
+    }
+    setSavingPlayer(true)
+    try {
+      const p = await createPlayer(nm, newTeam)
+      await reload()
+      if (!gameFull) setSelected((s) => [...s, p.id])
+      setNewOpen(false)
+      setNewName('')
+      setNewTeam('guests')
+      setDup(false)
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingPlayer(false)
+    }
+  }
+
   const create = async () => {
     if (!recap.valid || creating) return
     setCreating(true)
@@ -128,7 +159,7 @@ export default function NouvellePartie({
         target,
         isGame ? 'game' : 'tournament',
         isGame ? 'round_robin' : format,
-        DEFAULT_CHAOS_SETTINGS,
+        chaos,
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
       void inviteToSlack(id)
@@ -203,16 +234,6 @@ export default function NouvellePartie({
       onNewGame={onNewGame}
     />
   )
-
-  if (loading) {
-    return (
-      <div className="rv-page">
-        {nav}
-        <p className="empty">Chargement…</p>
-        {tabbar}
-      </div>
-    )
-  }
 
   return (
     <div className="rv-page">
@@ -368,31 +389,126 @@ export default function NouvellePartie({
               </div>
             ) : (
               <div className="np-picker">
-                <label className="np-search">
-                  <IconSearch size={17} stroke={2.1} />
-                  <input
-                    ref={searchRef}
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Chercher un joueur ou un pôle…"
-                    aria-label="Chercher un joueur ou un pôle"
-                  />
-                </label>
-                <div className="np-reg">
-                  {visible.map((r) => (
-                    <button className="np-reg-row" key={r.id} onClick={() => add(r.id)}>
-                      <Avatar className="np-av" name={r.name} team={r.team} url={r.avatarUrl} />
-                      <span className="np-reg-name">{r.name}</span>
-                      <span className="np-poletag" style={teamBadgeStyle(r.team)}>
-                        {teamLabel(r.team)}
-                      </span>
-                      <span className="np-elo">{r.elo}</span>
-                      <span className="np-reg-add">
-                        <IconPlus size={15} stroke={2.4} />
-                      </span>
-                    </button>
-                  ))}
+                <div className="np-picker-top">
+                  <label className="np-search">
+                    <IconSearch size={17} stroke={2.1} />
+                    <input
+                      ref={searchRef}
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Chercher un joueur ou un pôle…"
+                      aria-label="Chercher un joueur ou un pôle"
+                    />
+                  </label>
+                  <button
+                    className="np-new-btn"
+                    onClick={() => {
+                      setNewOpen((o) => !o)
+                      setNewName('')
+                      setDup(false)
+                    }}
+                  >
+                    <IconPlus size={16} stroke={2.4} />
+                    Nouveau joueur
+                  </button>
                 </div>
+
+                {newOpen && (
+                  <div className="np-new">
+                    <div className="np-label">Nouveau joueur</div>
+                    <div className="np-new-row">
+                      <label className="np-field">
+                        <input
+                          value={newName}
+                          autoFocus
+                          maxLength={20}
+                          placeholder="Prénom ou pseudo"
+                          onChange={(e) => {
+                            setNewName(e.target.value)
+                            setDup(false)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') void addNewPlayer()
+                          }}
+                          aria-label="Nom du nouveau joueur"
+                        />
+                      </label>
+                      <button
+                        className="np-add-btn"
+                        disabled={!newName.trim() || savingPlayer}
+                        onClick={() => void addNewPlayer()}
+                      >
+                        {savingPlayer ? 'Ajout…' : 'Ajouter'}
+                      </button>
+                      <button className="np-cancel-btn" onClick={() => setNewOpen(false)}>
+                        Annuler
+                      </button>
+                    </div>
+                    <div className="np-new-chips">
+                      {TEAMS.map((t) => (
+                        <button
+                          key={t.key}
+                          className={`np-new-chip${newTeam === t.key ? ' active' : ''}`}
+                          style={
+                            newTeam === t.key
+                              ? { ...teamBadgeStyle(t.key), borderColor: teamColor(t.key) }
+                              : undefined
+                          }
+                          onClick={() => setNewTeam(t.key)}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    {dup && (
+                      <div className="np-dup">
+                        <IconAlertCircle size={15} stroke={2.2} />
+                        Ce joueur existe déjà — choisis-le dans la liste.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {loading ? (
+                  <div className="np-skel">
+                    {[120, 86, 104].map((w) => (
+                      <div className="np-skel-row" key={w}>
+                        <span className="np-skel-av" />
+                        <span className="np-skel-line" style={{ width: w }} />
+                      </div>
+                    ))}
+                    <div className="np-skel-note">Chargement…</div>
+                  </div>
+                ) : annuaire.length === 0 ? (
+                  <div className="np-reg-empty">
+                    <div className="np-reg-empty-title">Aucun joueur disponible</div>
+                    <div className="np-reg-empty-sub">ajoute-en un pour commencer.</div>
+                  </div>
+                ) : (
+                  <div className="np-reg">
+                    {visible.map((r) => (
+                      <button className="np-reg-row" key={r.id} onClick={() => add(r.id)}>
+                        <Avatar className="np-av" name={r.name} team={r.team} url={r.avatarUrl} />
+                        <span className="np-reg-name">{r.name}</span>
+                        <span className="np-poletag" style={teamBadgeStyle(r.team)}>
+                          {teamLabel(r.team)}
+                        </span>
+                        <span className="np-elo">{r.elo}</span>
+                        <span className="np-reg-add">
+                          <IconPlus size={15} stroke={2.4} />
+                        </span>
+                      </button>
+                    ))}
+                    {visible.length === 0 && (
+                      <div className="np-noresults">
+                        <div className="np-noresults-title">Aucun joueur trouvé</div>
+                        <div className="np-noresults-sub">
+                          Essaie un autre nom, ou crée le joueur.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -428,6 +544,98 @@ export default function NouvellePartie({
                 </label>
               </div>
             </div>
+          </section>
+
+          <section className="np-card">
+            <div className="np-chaos-head">
+              <span className="np-icon-tile">
+                <IconSparkles size={18} stroke={2} />
+              </span>
+              <div className="np-chaos-text">
+                <h2 className="np-card-title">Mode chaos</h2>
+                <p className="np-card-desc">
+                  Des modificateurs tirés au sort pendant la partie — le fun avant la compétition.
+                </p>
+              </div>
+              {chaos.enabled && (
+                <button className="np-cfg" onClick={() => setChaosOpen((o) => !o)}>
+                  {chaosOpen ? 'Masquer' : 'Configurer'}
+                </button>
+              )}
+              <button
+                role="switch"
+                aria-checked={chaos.enabled}
+                aria-label="Activer le mode chaos"
+                className={`np-sw${chaos.enabled ? ' on' : ''}`}
+                onClick={() => {
+                  setChaosOpen(!chaos.enabled)
+                  setChaos((c) => ({ ...c, enabled: !c.enabled }))
+                }}
+              >
+                <span className="np-sw-knob" />
+              </button>
+            </div>
+
+            {chaos.enabled && chaosOpen && (
+              <div className="np-chaos-body">
+                <div className="np-chaos-row">
+                  <span className="np-chaos-lbl">Fréquence des tirages</span>
+                  <div className="np-chaos-chips">
+                    {(
+                      [
+                        [1, 'Chaque point'],
+                        [2, 'Tous les 2'],
+                        [3, 'Tous les 3'],
+                      ] as const
+                    ).map(([v, label]) => (
+                      <button
+                        key={v}
+                        className={`np-chip-sm${chaos.interval === v ? ' active' : ''}`}
+                        onClick={() => setChaos((c) => ({ ...c, interval: v }))}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="np-chaos-lbl">Intensité</span>
+                  <div className="np-inten">
+                    <button
+                      className={`np-inten-card${chaos.intensity === 'mild' ? ' active' : ''}`}
+                      onClick={() => setChaos((c) => ({ ...c, intensity: 'mild' }))}
+                    >
+                      <span className="np-inten-title">Modéré</span>
+                      <span className="np-inten-desc">
+                        Que des bonus. Rien de méchant, juste rigolo.
+                      </span>
+                    </button>
+                    <button
+                      className={`np-inten-card${chaos.intensity === 'full' ? ' active' : ''}`}
+                      onClick={() => setChaos((c) => ({ ...c, intensity: 'full' }))}
+                    >
+                      <span className="np-inten-title">Chaos total</span>
+                      <span className="np-inten-desc">Bonus et malus. Tout peut arriver.</span>
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  className="np-legend"
+                  aria-pressed={chaos.legendary}
+                  onClick={() => setChaos((c) => ({ ...c, legendary: !c.legendary }))}
+                >
+                  <span className="np-legend-text">
+                    <span className="np-legend-title">Modificateurs légendaires</span>
+                    <span className="np-legend-desc">Rares, spectaculaires.</span>
+                  </span>
+                  <span className={`np-sw np-sw-sm${chaos.legendary ? ' on' : ''}`}>
+                    <span className="np-sw-knob" />
+                  </span>
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="np-card np-heure">

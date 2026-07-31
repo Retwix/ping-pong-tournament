@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { filterJoueurs, pointsCible, recapitulatif, type CreationState } from './nouvellePartie'
+import {
+  estDoublon,
+  filterJoueurs,
+  pointsCible,
+  recapitulatif,
+  type CreationState,
+} from './nouvellePartie'
 
 const getState = (overrides?: Partial<CreationState>): CreationState => ({
   variant: 'game',
@@ -116,6 +122,30 @@ describe('récapitulatif — tournoi élimination directe', () => {
   it('counts matches for a larger bracket', () => {
     const result = recapitulatif(elim({ selected: ['A', 'B', 'C', 'D', 'E', 'F'] }))
     expect(result.hint).toBe('6 joueurs · 10 matchs · 2 défaites = éliminé')
+  })
+})
+
+describe('estDoublon', () => {
+  const registry = [getJoueur({ name: 'Léo' }), getJoueur({ name: 'Thibault' })]
+
+  it('flags an exact existing name', () => {
+    expect(estDoublon(registry, 'Léo')).toBe(true)
+  })
+
+  it('flags a case-insensitive match', () => {
+    expect(estDoublon(registry, 'THIBAULT')).toBe(true)
+  })
+
+  it('flags an accent-insensitive match', () => {
+    expect(estDoublon(registry, 'Leo')).toBe(true)
+  })
+
+  it('ignores surrounding whitespace', () => {
+    expect(estDoublon(registry, '  Léo  ')).toBe(true)
+  })
+
+  it('lets a genuinely new name through', () => {
+    expect(estDoublon(registry, 'Inès')).toBe(false)
   })
 })
 

@@ -61,6 +61,12 @@ export function recapitulatif(state: CreationState): Recapitulatif {
   }
 }
 
+/** Accent- and case-insensitive duplicate check against the registry (« Leo » = « Léo »). */
+export function estDoublon(players: { name: string }[], name: string): boolean {
+  const n = fold(name.trim())
+  return players.some((p) => fold(p.name) === n)
+}
+
 /** Effective points target: a valid « autre » entry (1–99) wins over the preset chip. */
 export function pointsCible(preset: number, autre: string): number {
   const v = parseInt(autre, 10)
