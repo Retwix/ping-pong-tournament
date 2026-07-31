@@ -1,7 +1,6 @@
-import { fold } from './fold'
+import { fold, matchesJoueur } from './fold'
 import { doubleElimMatchCount, MIN_DE_PLAYERS } from './doubleElim'
 import { matchCount, roundCount } from './roundRobin'
-import { teamLabel } from './teams'
 import type { TournamentFormat } from '../types'
 
 /** Everything the recap rail needs to know about the form, independent of the UI. */
@@ -69,5 +68,5 @@ export function filterJoueurs<P extends { name: string; team: string }>(
 ): P[] {
   const q = fold(query.trim())
   if (!q) return players
-  return players.filter((p) => fold(p.name).includes(q) || fold(teamLabel(p.team)).includes(q))
+  return players.filter((p) => matchesJoueur(p, q))
 }
