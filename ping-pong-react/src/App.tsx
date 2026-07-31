@@ -6,7 +6,7 @@ import LiveView from './components/LiveView'
 import Parties from './components/Parties'
 import Players from './components/Players'
 import Ratings from './components/Ratings'
-import Setup from './components/Setup'
+import NouvellePartie from './components/NouvellePartie'
 import Stats from './components/Stats'
 import { parseFilter, type PartiesFilter } from './lib/parties'
 import { parseStatsFilters, statsSearch, type StatsFilters } from './lib/statsPage'
@@ -66,13 +66,17 @@ function renderRoute(route: Route) {
   if (!hasSupabaseConfig) return <ConfigError />
   switch (route.name) {
     case 'new':
-      return <Setup onCreated={(id) => navigate(`/t/${id}`)} onCancel={() => navigate('/')} />
     case 'game':
       return (
-        <Setup
-          mode="game"
+        <NouvellePartie
+          variant={route.name === 'game' ? 'game' : 'tournament'}
           onCreated={(id) => navigate(`/t/${id}`)}
-          onCancel={() => navigate('/')}
+          onHome={() => navigate('/')}
+          onClassement={() => navigate('/classement')}
+          onStats={() => navigate('/stats')}
+          onPlayers={() => navigate('/players')}
+          onNew={() => navigate('/new')}
+          onNewGame={() => navigate('/game')}
         />
       )
     case 'parties':

@@ -1,7 +1,7 @@
 # Plan: Creation flow revamp (« Nouvelle partie » / « Nouveau tournoi »)
 
 **Branches**: `creation-flow` (PR 1, active) → `unranked-mode` (PR 2) → `doubles-2v2` (PR 3), all into `main`
-**Status**: Active — PR 1, slice 1
+**Status**: Active — PR 1, slice 2 (slice 1 done: `a078161`, Stryker 100 %)
 **Design source of truth**: `~/Downloads/design_handoff_creation_flow/` (README.md, DESIGN-SYSTEM.md — tokens already in `index.css` from the app revamp; prototype `Nouvelle partie.dc.html` is reference only)
 
 ## Goal
@@ -19,6 +19,11 @@ Replace the last old-design screen — `Setup.tsx` at `/new` and `/game` — wit
 - Double-elim match count: `doubleElimMatchCount(n)` from the codebase is authoritative (the prototype's `2N−2` is indicative — handoff open question #1 resolved our way).
 - CSS appended to `index.css` with the `np-` prefix; single 820px breakpoint (house convention); mobile gets the sticky bottom glass CTA bar.
 - Commit cadence: green slices auto-commit on this branch; review happens at PR time.
+
+## Documented equivalent mutants
+
+- `fold.ts` `.toLowerCase()` → `.toUpperCase()`: equivalent in-app — every caller folds both
+  sides of the comparison (query and candidate), so the case direction is unobservable.
 
 ## Open questions (flagged, with plan defaults)
 

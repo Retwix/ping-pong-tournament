@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterJoueurs, recapitulatif, type CreationState } from './nouvellePartie'
+import { filterJoueurs, pointsCible, recapitulatif, type CreationState } from './nouvellePartie'
 
 const getState = (overrides?: Partial<CreationState>): CreationState => ({
   variant: 'game',
@@ -116,6 +116,34 @@ describe('récapitulatif — tournoi élimination directe', () => {
   it('counts matches for a larger bracket', () => {
     const result = recapitulatif(elim({ selected: ['A', 'B', 'C', 'D', 'E', 'F'] }))
     expect(result.hint).toBe('6 joueurs · 10 matchs · 2 défaites = éliminé')
+  })
+})
+
+describe('pointsCible', () => {
+  it('uses the preset while « autre » is empty', () => {
+    expect(pointsCible(11, '')).toBe(11)
+  })
+
+  it('prefers a valid « autre » value over the preset', () => {
+    expect(pointsCible(11, '15')).toBe(15)
+  })
+
+  it('accepts the 1 and 99 boundaries', () => {
+    expect(pointsCible(11, '1')).toBe(1)
+    expect(pointsCible(11, '99')).toBe(99)
+  })
+
+  it('falls back to the preset outside 1–99', () => {
+    expect(pointsCible(11, '0')).toBe(11)
+    expect(pointsCible(21, '100')).toBe(21)
+  })
+
+  it('falls back to the preset for non-numeric input', () => {
+    expect(pointsCible(21, 'abc')).toBe(21)
+  })
+
+  it('tolerates surrounding whitespace', () => {
+    expect(pointsCible(11, ' 21 ')).toBe(21)
   })
 })
 

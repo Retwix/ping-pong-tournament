@@ -61,6 +61,12 @@ export function recapitulatif(state: CreationState): Recapitulatif {
   }
 }
 
+/** Effective points target: a valid « autre » entry (1–99) wins over the preset chip. */
+export function pointsCible(preset: number, autre: string): number {
+  const v = parseInt(autre, 10)
+  return Number.isInteger(v) && v >= 1 && v <= 99 ? v : preset
+}
+
 /** Accent- and case-insensitive registry search on player name and pôle label. */
 export function filterJoueurs<P extends { name: string; team: string }>(
   players: P[],

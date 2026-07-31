@@ -1,0 +1,494 @@
+import {
+  IconAlertCircle,
+  IconBolt,
+  IconCheck,
+  IconCirclePlus,
+  IconClock,
+  IconDownload,
+  IconInfoCircle,
+  IconPlus,
+  IconSearch,
+  IconTournament,
+  IconTrophy,
+  IconX,
+} from '@tabler/icons-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRatings } from '../hooks/useRatings'
+import { DEFAULT_CHAOS_SETTINGS } from '../lib/chaos'
+import { createTournament } from '../lib/db'
+import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
+import { joueurRows, type JoueurRow } from '../lib/joueurs'
+import { filterJoueurs, pointsCible, recapitulatif } from '../lib/nouvellePartie'
+import { inviteToSlack } from '../lib/slack'
+import { teamBadgeStyle, teamLabel } from '../lib/teams'
+import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
+import type { TournamentFormat } from '../types'
+import Avatar from './Avatar'
+import DashboardNav from './DashboardNav'
+import DashboardTabBar from './DashboardTabBar'
+
+function slugify(s: string, fallback: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || fallback
+  )
+}
+
+const PRESETS = [11, 21, 15]
+
+interface Props {
+  variant: 'game' | 'tournament'
+  onCreated: (id: string) => void
+  onHome: () => void
+  onClassement: () => void
+  onStats: () => void
+  onPlayers: () => void
+  onNew: () => void
+  onNewGame: () => void
+}
+
+export default function NouvellePartie({
+  variant,
+  onCreated,
+  onHome,
+  onClassement,
+  onStats,
+  onPlayers,
+  onNew,
+  onNewGame,
+}: Props) {
+  const isGame = variant === 'game'
+  const { rows, events, players, loading, error } = useRatings()
+
+  const [name, setName] = useState('')
+  const [format, setFormat] = useState<TournamentFormat>('round_robin')
+  const [selected, setSelected] = useState<string[]>([])
+  const [query, setQuery] = useState('')
+  const [preset, setPreset] = useState(11)
+  const [autre, setAutre] = useState('')
+  const [time, setTime] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [posterBusy, setPosterBusy] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const annuaire = useMemo(() => joueurRows(players, rows, events), [players, rows, events])
+  const selRows = useMemo(
+    () =>
+      selected
+        .map((id) => annuaire.find((r) => r.id === id))
+        .filter((r): r is JoueurRow => r !== undefined),
+    [selected, annuaire],
+  )
+  const available = useMemo(
+    () => annuaire.filter((r) => !selected.includes(r.id)),
+    [annuaire, selected],
+  )
+  const visible = useMemo(() => filterJoueurs(available, query), [available, query])
+
+  const gameFull = isGame && selRows.length >= 2
+  const target = pointsCible(preset, autre)
+  const recap = recapitulatif({
+    variant,
+    format,
+    selected: selRows.map((r) => r.name),
+    name,
+    target,
+  })
+
+  const add = (id: string) => {
+    if (gameFull) return
+    setSelected((s) => [...s, id])
+  }
+  const remove = (id: string) => setSelected((s) => s.filter((x) => x !== id))
+
+  const create = async () => {
+    if (!recap.valid || creating) return
+    setCreating(true)
+    setCreateError(null)
+    try {
+      const id = await createTournament(
+        recap.autoName,
+        selRows.map((r) => r.name),
+        target,
+        isGame ? 'game' : 'tournament',
+        isGame ? 'round_robin' : format,
+        DEFAULT_CHAOS_SETTINGS,
+      )
+      // Fire the Slack invitation (no-op unless configured); never blocks navigation.
+      void inviteToSlack(id)
+      onCreated(id)
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : String(e))
+      setCreating(false)
+    }
+  }
+
+  const canPoster = isGame ? recap.valid : true
+
+  const downloadPoster = async () => {
+    if (!canPoster || posterBusy) return
+    setPosterBusy(true)
+    try {
+      const fontCss = await getEmbeddedFontCss()
+      const { svg, width, height, filename } = isGame
+        ? {
+            ...buildChallengePosterSvg(
+              { playerA: selRows[0].name, playerB: selRows[1].name, target, time },
+              fontCss,
+            ),
+            filename: `challenge-${slugify(`${selRows[0].name}-vs-${selRows[1].name}`, 'challenge')}.png`,
+          }
+        : {
+            ...buildTournamentPosterSvg({ name: name.trim(), target, time }, fontCss),
+            filename: `tournament-${slugify(name, 'poster')}-poster.png`,
+          }
+      const blob = await svgToPngBlob(svg, width, height, 2)
+      downloadBlob(blob, filename)
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setPosterBusy(false)
+    }
+  }
+
+  const kicker = isGame
+    ? 'Partie rapide'
+    : format === 'round_robin'
+      ? 'Round-robin · nouveau tournoi'
+      : 'Élimination directe · nouveau tournoi'
+  const countPill = isGame
+    ? `${selRows.length} / 2`
+    : selRows.length === 1
+      ? '1 joueur'
+      : `${selRows.length} joueurs`
+  const ruleHint = isGame
+    ? 'Premier à atteindre le score, avec 2 points d’écart.'
+    : format === 'round_robin'
+      ? 'Départage : victoires, puis différence de points.'
+      : 'Tableau à double élimination : il faut perdre 2 fois pour être éliminé.'
+
+  const nav = (
+    <DashboardNav
+      onHome={onHome}
+      onClassement={onClassement}
+      onStats={onStats}
+      onPlayers={onPlayers}
+      onNew={onNew}
+      onNewGame={onNewGame}
+    />
+  )
+  const tabbar = (
+    <DashboardTabBar
+      onHome={onHome}
+      onClassement={onClassement}
+      onStats={onStats}
+      onPlayers={onPlayers}
+      onNew={onNew}
+      onNewGame={onNewGame}
+    />
+  )
+
+  if (loading) {
+    return (
+      <div className="rv-page">
+        {nav}
+        <p className="empty">Chargement…</p>
+        {tabbar}
+      </div>
+    )
+  }
+
+  return (
+    <div className="rv-page">
+      {nav}
+
+      {error && <div className="error-banner">Erreur : {error}</div>}
+
+      <div>
+        <button className="np-crumb" onClick={onHome}>
+          ‹ Accueil
+        </button>
+        <div className="np-head">
+          <div className="np-head-text">
+            <div className="np-kicker">{kicker}</div>
+            <h1 className="np-title">{isGame ? 'Nouvelle partie' : 'Nouveau tournoi'}</h1>
+            <p className="np-sub">
+              {isGame
+                ? 'Deux joueurs, un score, et le bureau est prévenu sur Slack.'
+                : 'Choisis un format, ajoute les joueurs, le tableau se génère.'}
+            </p>
+          </div>
+          <div className="np-seg">
+            <button
+              className={`np-seg-btn${isGame ? ' active' : ''}`}
+              onClick={isGame ? undefined : onNewGame}
+            >
+              <IconBolt size={15} stroke={2} />
+              Partie rapide
+            </button>
+            <button
+              className={`np-seg-btn${isGame ? '' : ' active'}`}
+              onClick={isGame ? onNew : undefined}
+            >
+              <IconTrophy size={15} stroke={2} />
+              Tournoi
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {createError && (
+        <div className="np-error">
+          <IconAlertCircle size={19} stroke={2.1} className="np-error-icon" />
+          <div className="np-error-text">
+            <div className="np-error-title">La création a échoué</div>
+            <div className="np-error-desc">{createError}</div>
+          </div>
+          <button className="np-retry" onClick={create}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      <div className="np-grid">
+        <div className="np-form">
+          {!isGame && (
+            <>
+              <section className="np-card">
+                <div className="np-label">Nom du tournoi</div>
+                <label className="np-field">
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Tournoi du bureau"
+                    maxLength={40}
+                  />
+                  <span className="np-count">{name.length}/40</span>
+                </label>
+                <p className="np-note">Laisse vide et il s’appellera « Tournoi ».</p>
+              </section>
+
+              <section>
+                <h2 className="np-sec-title">Format</h2>
+                <div className="np-format">
+                  <button
+                    className={`np-format-card${format === 'round_robin' ? ' active' : ''}`}
+                    onClick={() => setFormat('round_robin')}
+                  >
+                    <span className="np-fc-top">
+                      <span className="np-icon-tile">
+                        <IconCirclePlus size={18} stroke={2} />
+                      </span>
+                      <span className="np-radio">
+                        <span className="np-radio-dot" />
+                      </span>
+                    </span>
+                    <span className="np-fc-title">Round-robin</span>
+                    <span className="np-fc-desc">
+                      Chacun affronte tout le monde. Le plus équitable.
+                    </span>
+                  </button>
+                  <button
+                    className={`np-format-card${format === 'double_elim' ? ' active' : ''}`}
+                    onClick={() => setFormat('double_elim')}
+                  >
+                    <span className="np-fc-top">
+                      <span className="np-icon-tile">
+                        <IconTournament size={18} stroke={2} />
+                      </span>
+                      <span className="np-radio">
+                        <span className="np-radio-dot" />
+                      </span>
+                    </span>
+                    <span className="np-fc-title">Élimination directe</span>
+                    <span className="np-fc-desc">
+                      Tableau à double élimination. 2 défaites = éliminé. Plus rapide.
+                    </span>
+                  </button>
+                </div>
+              </section>
+            </>
+          )}
+
+          <section className="np-card">
+            <div className="np-players-head">
+              <h2 className="np-sec-title">Joueurs</h2>
+              <span className="np-count-pill">{countPill}</span>
+            </div>
+
+            <div className="np-sel">
+              {selRows.map((r, i) => (
+                <div className="np-sel-row" key={r.id}>
+                  <span className="np-idx">{i + 1}</span>
+                  <Avatar className="np-av" name={r.name} team={r.team} url={r.avatarUrl} />
+                  <span className="np-sel-name">{r.name}</span>
+                  <span className="np-poletag" style={teamBadgeStyle(r.team)}>
+                    {teamLabel(r.team)}
+                  </span>
+                  <span className="np-elo">{r.elo}</span>
+                  <button className="np-x" onClick={() => remove(r.id)} title="Retirer">
+                    <IconX size={16} stroke={2.2} />
+                  </button>
+                </div>
+              ))}
+              {selRows.length === 0 && (
+                <div className="np-empty-sel">
+                  {isGame
+                    ? 'Aucun joueur — choisis-en 2 ci-dessous.'
+                    : 'Aucun joueur — choisis-les ci-dessous.'}
+                </div>
+              )}
+            </div>
+
+            {gameFull ? (
+              <div className="np-full">
+                <IconCheck size={17} stroke={2.2} className="np-full-check" />
+                <span className="np-full-text">
+                  2 joueurs sélectionnés — la sélection est complète.
+                </span>
+                <button className="np-clear" onClick={() => setSelected([])}>
+                  Tout retirer
+                </button>
+              </div>
+            ) : (
+              <div className="np-picker">
+                <label className="np-search">
+                  <IconSearch size={17} stroke={2.1} />
+                  <input
+                    ref={searchRef}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Chercher un joueur ou un pôle…"
+                    aria-label="Chercher un joueur ou un pôle"
+                  />
+                </label>
+                <div className="np-reg">
+                  {visible.map((r) => (
+                    <button className="np-reg-row" key={r.id} onClick={() => add(r.id)}>
+                      <Avatar className="np-av" name={r.name} team={r.team} url={r.avatarUrl} />
+                      <span className="np-reg-name">{r.name}</span>
+                      <span className="np-poletag" style={teamBadgeStyle(r.team)}>
+                        {teamLabel(r.team)}
+                      </span>
+                      <span className="np-elo">{r.elo}</span>
+                      <span className="np-reg-add">
+                        <IconPlus size={15} stroke={2.4} />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="np-card">
+            <div className="np-points">
+              <div>
+                <h2 className="np-card-title">Points par jeu</h2>
+                <p className="np-card-desc">Le score à atteindre pour gagner un jeu.</p>
+              </div>
+              <div className="np-pts-controls">
+                {PRESETS.map((v) => (
+                  <button
+                    key={v}
+                    className={`np-pts-chip${autre === '' && preset === v ? ' active' : ''}`}
+                    onClick={() => {
+                      setPreset(v)
+                      setAutre('')
+                    }}
+                  >
+                    {v}
+                  </button>
+                ))}
+                <label className={`np-autre${autre !== '' ? ' active' : ''}`}>
+                  <span>autre</span>
+                  <input
+                    value={autre}
+                    inputMode="numeric"
+                    placeholder="—"
+                    onChange={(e) => setAutre(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                    aria-label="Autre score cible"
+                  />
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section className="np-card np-heure">
+            <span className="np-icon-tile">
+              <IconClock size={18} stroke={2} />
+            </span>
+            <div className="np-heure-text">
+              <h2 className="np-card-title">
+                Heure <span className="np-opt">optionnel · pour l’invitation</span>
+              </h2>
+              <p className="np-card-desc">
+                L’invitation Slack part à la création ; l’heure s’affiche aussi sur l’affiche.
+              </p>
+            </div>
+            <label className="np-field np-time">
+              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            </label>
+          </section>
+        </div>
+
+        <div className="np-rail">
+          <div className="np-recap">
+            <div className="np-label">Récapitulatif</div>
+            <div className="np-recap-name">{recap.autoName}</div>
+            <div className="np-hint-pill">
+              {recap.valid ? (
+                <IconCheck size={15} stroke={2.2} className="np-hint-ok" />
+              ) : (
+                <IconInfoCircle size={15} stroke={2.2} className="np-hint-info" />
+              )}
+              <span>{recap.hint}</span>
+            </div>
+
+            <div className="np-actions">
+              <button
+                className={`np-cta${creating ? ' busy' : recap.valid ? '' : ' off'}`}
+                title={recap.valid ? undefined : recap.hint}
+                onClick={create}
+              >
+                {creating ? 'Création…' : isGame ? 'Lancer la partie' : 'Générer le tournoi'}
+              </button>
+              <button
+                className={`np-poster${posterBusy ? ' busy' : canPoster ? '' : ' off'}`}
+                title={canPoster ? undefined : 'Choisis d’abord les joueurs'}
+                onClick={downloadPoster}
+              >
+                {!posterBusy && <IconDownload size={16} stroke={2.1} />}
+                {posterBusy
+                  ? 'Génération…'
+                  : isGame
+                    ? 'Télécharger le défi (PNG)'
+                    : 'Télécharger l’affiche (PNG)'}
+              </button>
+            </div>
+
+            <div className="np-rule">{ruleHint}</div>
+          </div>
+        </div>
+      </div>
+
+      {tabbar}
+    </div>
+  )
+}
