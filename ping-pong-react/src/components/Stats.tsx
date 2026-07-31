@@ -5,12 +5,9 @@ import {
   computeHeadToHead,
   computePlayerStats,
   computeRivalries,
-  computeSuperlatives,
   computeTeamStats,
   h2hWins,
   rivalryBalance,
-  winnerLoser,
-  type MatchHighlight,
   type PlayerStat,
   type Rivalry,
 } from '../lib/stats'
@@ -21,9 +18,13 @@ import {
   activityDays,
   chartRangeLabel,
   filterPillLabel,
+  finalsByPlayer,
   isFiltered,
   leaderboardRows,
+  matchRecords,
   playerCard,
+  playerRecords,
+  remontadasByName,
   scopeLabel,
   scopeMatches,
   sortLeaderboard,
@@ -35,10 +36,10 @@ import {
   type LeaderboardSort,
   type LeaderboardSortKey,
   type PlayerTitles,
+  type RecordCard as RecordCardData,
   type StatsFilters,
 } from '../lib/statsPage'
 import { signed } from '../lib/format'
-import { formatDuration } from '../lib/pingpong'
 import { teamColor, teamLabel } from '../lib/teams'
 import type { Match } from '../types'
 import Avatar from './Avatar'
@@ -46,11 +47,6 @@ import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 
 const pct = (r: number) => `${Math.round(r * 100)}%`
-
-function matchLabel(m: MatchHighlight['match']) {
-  const { winner, loser, ws, ls } = winnerLoser(m)
-  return `${winner} ${ws}–${ls} ${loser}`
-}
 
 interface Props {
   filters: StatsFilters
@@ -85,7 +81,6 @@ export default function Stats({
   const playerStats = useMemo(() => computePlayerStats(scoped, players), [scoped, players])
   const teamStats = useMemo(() => computeTeamStats(scoped, players), [scoped, players])
   const h2h = useMemo(() => computeHeadToHead(scoped), [scoped])
-  const supers = useMemo(() => computeSuperlatives(scoped), [scoped])
 
   const titles = useMemo(() => titlesByName(tournaments, matches), [tournaments, matches])
   const sortedRows = useMemo(
@@ -119,30 +114,17 @@ export default function Stats({
   )
 
   const kpis = useMemo(() => statsKpis(scoped, filters, now), [scoped, filters, now])
-  const mostActive = playerStats.reduce<PlayerStat | null>(
-    (best, s) => (!best || s.played > best.played ? s : best),
-    null,
+  const recPlayers = useMemo(
+    () =>
+      playerRecords(
+        playerStats,
+        titles,
+        finalsByPlayer(scoped),
+        remontadasByName(tournaments, matches),
+      ),
+    [playerStats, titles, scoped, tournaments, matches],
   )
-  const streakHolder = playerStats.reduce<PlayerStat | null>(
-    (best, s) => (!best || s.longestStreak > best.longestStreak ? s : best),
-    null,
-  )
-  const bourreau = playerStats.reduce<PlayerStat | null>(
-    (best, s) => (!best || s.capotsDealt > best.capotsDealt ? s : best),
-    null,
-  )
-  const roiTable = playerStats.reduce<PlayerStat | null>(
-    (best, s) => (!best || s.capotsTaken > best.capotsTaken ? s : best),
-    null,
-  )
-  const clutch = playerStats.reduce<PlayerStat | null>(
-    (best, s) => (!best || s.matchBallsSaved > best.matchBallsSaved ? s : best),
-    null,
-  )
-  const cardiaque = playerStats.reduce<PlayerStat | null>(
-    (best, s) => (!best || s.matchBallsWasted > best.matchBallsWasted ? s : best),
-    null,
-  )
+  const recMatches = useMemo(() => matchRecords(scoped), [scoped])
 
   const nav = (
     <DashboardNav
@@ -521,82 +503,30 @@ export default function Stats({
             </div>
           )}
 
-          {/* Superlatives */}
-          <section>
-            <div className="section-title">Records</div>
-            <div className="super-grid">
-              {supers.longestMatch && (
-                <SuperCard
-                  label="Plus long match"
-                  value={formatDuration(supers.longestMatch.value)}
-                  sub={matchLabel(supers.longestMatch.match)}
-                />
-              )}
-              {supers.shortestMatch && (
-                <SuperCard
-                  label="Plus court match"
-                  value={formatDuration(supers.shortestMatch.value)}
-                  sub={matchLabel(supers.shortestMatch.match)}
-                />
-              )}
-              {supers.biggestBlowout && (
-                <SuperCard
-                  label="Plus gros écart"
-                  value={`+${supers.biggestBlowout.value}`}
-                  sub={matchLabel(supers.biggestBlowout.match)}
-                />
-              )}
-              {supers.closestGame && (
-                <SuperCard
-                  label="Match le plus serré"
-                  value={`${Math.max(supers.closestGame.match.score_a, supers.closestGame.match.score_b)}–${Math.min(supers.closestGame.match.score_a, supers.closestGame.match.score_b)}`}
-                  sub={matchLabel(supers.closestGame.match)}
-                />
-              )}
-              {mostActive && mostActive.played > 0 && (
-                <SuperCard
-                  label="Plus actif"
-                  value={mostActive.name}
-                  sub={`${mostActive.played} matchs`}
-                />
-              )}
-              {streakHolder && streakHolder.longestStreak >= 2 && (
-                <SuperCard
-                  label="Plus longue série"
-                  value={streakHolder.name}
-                  sub={`${streakHolder.longestStreak} victoires d'affilée`}
-                />
-              )}
-              {bourreau && bourreau.capotsDealt > 0 && (
-                <SuperCard
-                  label="Bourreau 🪑"
-                  value={bourreau.name}
-                  sub={`${bourreau.capotsDealt} capot${bourreau.capotsDealt > 1 ? 's' : ''} infligé${bourreau.capotsDealt > 1 ? 's' : ''}`}
-                />
-              )}
-              {roiTable && roiTable.capotsTaken > 0 && (
-                <SuperCard
-                  label="Roi de la table 🙈"
-                  value={roiTable.name}
-                  sub={`${roiTable.capotsTaken} passage${roiTable.capotsTaken > 1 ? 's' : ''} sous la table`}
-                />
-              )}
-              {clutch && clutch.matchBallsSaved > 0 && (
-                <SuperCard
-                  label="Sang-froid 🧊"
-                  value={clutch.name}
-                  sub={`${clutch.matchBallsSaved} balle${clutch.matchBallsSaved > 1 ? 's' : ''} de match sauvée${clutch.matchBallsSaved > 1 ? 's' : ''}`}
-                />
-              )}
-              {cardiaque && cardiaque.matchBallsWasted > 0 && (
-                <SuperCard
-                  label="Cardiaque 😰"
-                  value={cardiaque.name}
-                  sub={`${cardiaque.matchBallsWasted} balle${cardiaque.matchBallsWasted > 1 ? 's' : ''} de match gâchée${cardiaque.matchBallsWasted > 1 ? 's' : ''}`}
-                />
-              )}
-            </div>
-          </section>
+          {/* Records */}
+          <div>
+            <SectionHead title="Records" hint="les moments légendaires" />
+            {recPlayers.length > 0 && (
+              <>
+                <div className="st-rec-group">Joueurs</div>
+                <div className="st-rec-grid">
+                  {recPlayers.map((r) => (
+                    <RecordCard key={r.label} r={r} />
+                  ))}
+                </div>
+              </>
+            )}
+            {recMatches.length > 0 && (
+              <>
+                <div className="st-rec-group">Matchs</div>
+                <div className="st-rec-grid">
+                  {recMatches.map((r) => (
+                    <RecordCard key={r.label} r={r} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Head-to-head matrix */}
           {matrixPlayers.length > 1 && (
@@ -688,12 +618,17 @@ export default function Stats({
   )
 }
 
-function SuperCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+function RecordCard({ r }: { r: RecordCardData }) {
   return (
-    <div className="super-card">
-      <div className="sc-label">{label}</div>
-      <div className="sc-value">{value}</div>
-      <div className="sc-sub">{sub}</div>
+    <div className="st-rec-card">
+      <div className="st-rec-head">
+        <span className="st-rec-icon" aria-hidden>
+          {r.icon}
+        </span>
+        <span className="st-rec-label">{r.label}</span>
+      </div>
+      <div className="st-rec-value">{r.value}</div>
+      <div className="st-rec-sub">{r.sub}</div>
     </div>
   )
 }

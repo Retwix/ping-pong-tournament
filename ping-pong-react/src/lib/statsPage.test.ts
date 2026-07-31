@@ -7,11 +7,15 @@ import {
   activityDays,
   chartRangeLabel,
   filterPillLabel,
+  finalsByPlayer,
   fmtPlayTime,
   isFiltered,
+  matchRecords,
   leaderboardRows,
   parseStatsFilters,
   playerCard,
+  playerRecords,
+  remontadasByName,
   scopeLabel,
   scopeMatches,
   sortLeaderboard,
@@ -718,6 +722,164 @@ describe('team standings point diff', () => {
     const sales = teams.find((t) => t.team === 'sales')
     expect(tech).toMatchObject({ played: 1, wins: 1, diff: 8 })
     expect(sales).toMatchObject({ played: 1, wins: 0, diff: -8 })
+  })
+})
+
+describe('finals record', () => {
+  it('counts grand finals and the two feeding finals, with wins', () => {
+    const grandFinal = getMockMatch({
+      id: 'gf',
+      match_key: 'GF',
+      bracket: 'GF',
+      score_a: 11,
+      score_b: 7,
+    })
+    const winnersFinal = getMockMatch({
+      id: 'wf',
+      match_key: 'W3-0',
+      win_to: 'GF',
+      bracket: 'W',
+      score_a: 9,
+      score_b: 11,
+    })
+    const regular = getMockMatch({ id: 'rr' })
+    const finals = finalsByPlayer([grandFinal, winnersFinal, regular])
+    expect(finals.get('pa')).toEqual({ name: 'Léo', played: 2, won: 1 })
+    expect(finals.get('pb')).toEqual({ name: 'Thibault', played: 2, won: 1 })
+  })
+
+  it('is empty without bracket finals', () => {
+    expect(finalsByPlayer([getMockMatch()]).size).toBe(0)
+  })
+})
+
+describe('remontadas', () => {
+  const doubleElim = (overrides?: Partial<Tournament>) =>
+    getMockTournament({ id: 'de', format: 'double_elim', champion: 'Léo', ...overrides })
+
+  it('spots a double-elim champion who passed through the loser bracket', () => {
+    const loserBracketWin = getMockMatch({ id: 'lb', tournament_id: 'de', bracket: 'L' })
+    expect(remontadasByName([doubleElim()], [loserBracketWin]).get('Léo')).toBe(1)
+  })
+
+  it('ignores champions who never dropped, other formats and running tournaments', () => {
+    const winnersOnly = getMockMatch({ id: 'w', tournament_id: 'de', bracket: 'W' })
+    expect(remontadasByName([doubleElim()], [winnersOnly]).size).toBe(0)
+    const lb = getMockMatch({ id: 'lb', tournament_id: 'de', bracket: 'L' })
+    expect(remontadasByName([doubleElim({ format: 'round_robin' })], [lb]).size).toBe(0)
+    expect(remontadasByName([doubleElim({ status: 'active' })], [lb]).size).toBe(0)
+    const lbOther = getMockMatch({
+      id: 'lb2',
+      tournament_id: 'de',
+      bracket: 'L',
+      player_a: 'Maxime',
+      player_b: 'Sarah',
+    })
+    expect(remontadasByName([doubleElim()], [lbOther]).size).toBe(0)
+  })
+})
+
+describe('records assembly', () => {
+  it('shows nothing for an empty scope', () => {
+    expect(playerRecords([], new Map(), new Map(), new Map())).toEqual([])
+    expect(matchRecords([])).toEqual([])
+  })
+
+  it('crowns the serial winner, marathonien and homme des finales', () => {
+    const matches = [
+      getMockMatch({
+        id: 'm1',
+        ended_at: '2026-07-10T10:00:00.000Z',
+        started_at: '2026-07-10T09:20:00.000Z',
+        score_a: 11,
+        score_b: 5,
+      }),
+    ]
+    const stats = computePlayerStats(matches, [])
+    const titles = titlesByName(
+      [
+        getMockTournament({ id: 't1', name: 'A', champion: 'Léo' }),
+        getMockTournament({ id: 't2', name: 'B', champion: 'Léo' }),
+      ],
+      [],
+    )
+    const finals = finalsByPlayer([
+      getMockMatch({ id: 'gf', match_key: 'GF', score_a: 11, score_b: 7 }),
+    ])
+    const remontadas = remontadasByName(
+      [getMockTournament({ id: 'de', format: 'double_elim', champion: 'Léo' })],
+      [getMockMatch({ id: 'lb', tournament_id: 'de', bracket: 'L' })],
+    )
+    const cards = playerRecords(stats, titles, finals, remontadas)
+    const byLabel = new Map(cards.map((c) => [c.label, c]))
+    expect(byLabel.get('Serial winner')).toMatchObject({
+      icon: '🏆',
+      value: 'Léo',
+      sub: '2 tournois gagnés',
+    })
+    expect(byLabel.get('Marathonien')).toMatchObject({
+      value: 'Léo',
+      sub: '40 min de jeu cumulées',
+    })
+    expect(byLabel.get('Homme des finales')).toMatchObject({
+      value: 'Léo',
+      sub: '1 finale jouée · 1 gagnée',
+    })
+    expect(byLabel.get('Remontada')).toMatchObject({
+      value: 'Léo',
+      sub: 'titre décroché depuis le loser bracket',
+    })
+    expect(byLabel.get('Plus actif')).toMatchObject({ value: 'Léo', sub: '1 match joué' })
+  })
+
+  it('hides player records whose condition never happened', () => {
+    const matches = [getMockMatch({ id: 'm1', score_a: 11, score_b: 5 })]
+    const stats = computePlayerStats(matches, [])
+    const labels = playerRecords(stats, new Map(), new Map(), new Map()).map((c) => c.label)
+    expect(labels).toContain('Plus actif')
+    expect(labels).not.toContain('Serial winner')
+    expect(labels).not.toContain('Marathonien')
+    expect(labels).not.toContain('Homme des finales')
+    expect(labels).not.toContain('Remontada')
+    expect(labels).not.toContain('Bourreau')
+    expect(labels).not.toContain('Plus longue série')
+  })
+
+  it('summarises the four match records without « Plus de points »', () => {
+    const long = getMockMatch({
+      id: 'long',
+      started_at: '2026-07-10T09:00:00.000Z',
+      ended_at: '2026-07-10T09:38:00.000Z',
+      score_a: 16,
+      score_b: 14,
+    })
+    const short = getMockMatch({
+      id: 'short',
+      started_at: '2026-07-11T09:00:00.000Z',
+      ended_at: '2026-07-11T09:04:00.000Z',
+      score_a: 11,
+      score_b: 0,
+    })
+    const cards = matchRecords([long, short])
+    expect(cards.map((c) => c.label)).toEqual([
+      'Plus long match',
+      'Plus court match',
+      'Plus gros écart',
+      'Match le plus serré',
+    ])
+    const byLabel = new Map(cards.map((c) => [c.label, c]))
+    expect(byLabel.get('Plus long match')).toMatchObject({
+      value: '38 min',
+      sub: 'Léo 16 — 14 Thibault',
+    })
+    expect(byLabel.get('Plus court match')?.value).toBe('4 min')
+    expect(byLabel.get('Plus gros écart')?.value).toBe('+11')
+    expect(byLabel.get('Match le plus serré')?.value).toBe('16 — 14')
+  })
+
+  it('skips duration records when no match is timed', () => {
+    const cards = matchRecords([getMockMatch({ id: 'a', score_a: 11, score_b: 8 })])
+    expect(cards.map((c) => c.label)).toEqual(['Plus gros écart', 'Match le plus serré'])
   })
 })
 

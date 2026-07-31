@@ -3,7 +3,16 @@
 import type { Match, Tournament } from '../types'
 import { relativeTime, signed } from './format'
 import { matchDuration } from './pingpong'
-import { matchesByDay, opponentRecords, recentMatchesFor, sideKey, type PlayerStat } from './stats'
+import { stakesOf } from './rating'
+import {
+  computeSuperlatives,
+  matchesByDay,
+  opponentRecords,
+  recentMatchesFor,
+  sideKey,
+  winnerLoser,
+  type PlayerStat,
+} from './stats'
 
 export type StatsPeriod = 'tout' | 'mois' | 'semaine'
 export type StatsType = 'tout' | 'tournois' | 'rapides'
@@ -306,6 +315,213 @@ export function sortLeaderboard(rows: LeaderboardRow[], sort: LeaderboardSort): 
 export function streakLabel(streak: number): string {
   if (streak >= 2) return `🔥 ${streak}V`
   return streak === 1 ? '1V' : '—'
+}
+
+export interface FinalsRecord {
+  name: string
+  played: number
+  won: number
+}
+
+/** Finals appearances (grand final + the two matches feeding it) per player key. */
+export function finalsByPlayer(matches: Match[]): Map<string, FinalsRecord> {
+  const out = new Map<string, FinalsRecord>()
+  for (const m of matches) {
+    if (stakesOf(m) === 'normal') continue
+    const aWin = m.score_a > m.score_b
+    const sides = [
+      { key: sideKey(m.player_a_id, m.player_a), name: m.player_a, won: aWin },
+      { key: sideKey(m.player_b_id, m.player_b), name: m.player_b, won: !aWin },
+    ]
+    for (const side of sides) {
+      const r = out.get(side.key) ?? { name: side.name, played: 0, won: 0 }
+      r.played++
+      if (side.won) r.won++
+      out.set(side.key, r)
+    }
+  }
+  return out
+}
+
+/** Double-elim titles won after dropping into the loser bracket, per champion name. */
+export function remontadasByName(tournaments: Tournament[], matches: Match[]): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const t of tournaments) {
+    if (t.format !== 'double_elim' || t.status !== 'done' || t.champion === null) continue
+    const dropped = matches.some(
+      (m) =>
+        m.tournament_id === t.id &&
+        m.bracket === 'L' &&
+        (m.player_a === t.champion || m.player_b === t.champion),
+    )
+    if (dropped) out.set(t.champion, (out.get(t.champion) ?? 0) + 1)
+  }
+  return out
+}
+
+export interface RecordCard {
+  icon: string
+  label: string
+  value: string
+  sub: string
+}
+
+const plural = (n: number, one: string, many: string): string => `${n} ${n >= 2 ? many : one}`
+
+/** The holder of the highest strictly-positive value, or null when nobody scores. */
+function maxBy<T>(items: T[], value: (item: T) => number): T | null {
+  let best: T | null = null
+  for (const item of items) {
+    if (value(item) <= 0) continue
+    if (best === null || value(item) > value(best)) best = item
+  }
+  return best
+}
+
+/** The « Joueurs » record cards — each hidden until its feat has happened once. */
+export function playerRecords(
+  stats: PlayerStat[],
+  titles: Map<string, PlayerTitles>,
+  finals: Map<string, FinalsRecord>,
+  remontadas: Map<string, number>,
+): RecordCard[] {
+  const cards: RecordCard[] = []
+
+  const serial = [...titles.entries()].sort((a, b) => b[1].count - a[1].count)[0]
+  if (serial !== undefined)
+    cards.push({
+      icon: '🏆',
+      label: 'Serial winner',
+      value: serial[0],
+      sub: plural(serial[1].count, 'tournoi gagné', 'tournois gagnés'),
+    })
+
+  const streak = maxBy(stats, (s) => s.longestStreak)
+  if (streak !== null && streak.longestStreak >= 2)
+    cards.push({
+      icon: '🔥',
+      label: 'Plus longue série',
+      value: streak.name,
+      sub: `${streak.longestStreak} victoires d'affilée`,
+    })
+
+  const active = maxBy(stats, (s) => s.played)
+  if (active !== null)
+    cards.push({
+      icon: '📈',
+      label: 'Plus actif',
+      value: active.name,
+      sub: plural(active.played, 'match joué', 'matchs joués'),
+    })
+
+  const marathon = maxBy(stats, (s) => s.playTimeMs)
+  if (marathon !== null)
+    cards.push({
+      icon: '⏱️',
+      label: 'Marathonien',
+      value: marathon.name,
+      sub: `${fmtPlayTime(marathon.playTimeMs)} de jeu cumulées`,
+    })
+
+  const finalist = [...finals.values()].sort((a, b) => b.played - a.played || b.won - a.won)[0]
+  if (finalist !== undefined)
+    cards.push({
+      icon: '🎯',
+      label: 'Homme des finales',
+      value: finalist.name,
+      sub: `${plural(finalist.played, 'finale jouée', 'finales jouées')} · ${plural(finalist.won, 'gagnée', 'gagnées')}`,
+    })
+
+  const remontada = [...remontadas.entries()].sort((a, b) => b[1] - a[1])[0]
+  if (remontada !== undefined)
+    cards.push({
+      icon: '🧗',
+      label: 'Remontada',
+      value: remontada[0],
+      sub:
+        remontada[1] >= 2
+          ? `${remontada[1]} titres décrochés depuis le loser bracket`
+          : 'titre décroché depuis le loser bracket',
+    })
+
+  const bourreau = maxBy(stats, (s) => s.capotsDealt)
+  if (bourreau !== null)
+    cards.push({
+      icon: '🪑',
+      label: 'Bourreau',
+      value: bourreau.name,
+      sub: plural(bourreau.capotsDealt, 'capot infligé', 'capots infligés'),
+    })
+
+  const roi = maxBy(stats, (s) => s.capotsTaken)
+  if (roi !== null)
+    cards.push({
+      icon: '🙈',
+      label: 'Roi de la table',
+      value: roi.name,
+      sub: plural(roi.capotsTaken, 'passage sous la table', 'passages sous la table'),
+    })
+
+  const sangFroid = maxBy(stats, (s) => s.matchBallsSaved)
+  if (sangFroid !== null)
+    cards.push({
+      icon: '🧊',
+      label: 'Sang-froid',
+      value: sangFroid.name,
+      sub: plural(sangFroid.matchBallsSaved, 'balle de match sauvée', 'balles de match sauvées'),
+    })
+
+  const cardiaque = maxBy(stats, (s) => s.matchBallsWasted)
+  if (cardiaque !== null)
+    cards.push({
+      icon: '😰',
+      label: 'Cardiaque',
+      value: cardiaque.name,
+      sub: plural(cardiaque.matchBallsWasted, 'balle de match gâchée', 'balles de match gâchées'),
+    })
+
+  return cards
+}
+
+/** The « Matchs » record cards. « Plus de points » was retired (redundant with the closest game). */
+export function matchRecords(matches: Match[]): RecordCard[] {
+  const supers = computeSuperlatives(matches)
+  const line = (m: Match): string => {
+    const { winner, loser, ws, ls } = winnerLoser(m)
+    return `${winner} ${ws} — ${ls} ${loser}`
+  }
+  const cards: RecordCard[] = []
+  if (supers.longestMatch !== undefined)
+    cards.push({
+      icon: '⌛',
+      label: 'Plus long match',
+      value: fmtPlayTime(supers.longestMatch.value),
+      sub: line(supers.longestMatch.match),
+    })
+  if (supers.shortestMatch !== undefined)
+    cards.push({
+      icon: '⚡',
+      label: 'Plus court match',
+      value: fmtPlayTime(supers.shortestMatch.value),
+      sub: line(supers.shortestMatch.match),
+    })
+  if (supers.biggestBlowout !== undefined)
+    cards.push({
+      icon: '📏',
+      label: 'Plus gros écart',
+      value: `+${supers.biggestBlowout.value}`,
+      sub: line(supers.biggestBlowout.match),
+    })
+  if (supers.closestGame !== undefined) {
+    const m = supers.closestGame.match
+    cards.push({
+      icon: '😬',
+      label: 'Match le plus serré',
+      value: `${Math.max(m.score_a, m.score_b)} — ${Math.min(m.score_a, m.score_b)}`,
+      sub: line(m),
+    })
+  }
+  return cards
 }
 
 export interface PlayerCardKpi {
