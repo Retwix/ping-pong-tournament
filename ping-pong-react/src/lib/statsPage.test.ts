@@ -1,17 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import type { Match, Tournament } from '../types'
+import { computePlayerStats } from './stats'
 import {
+  DEFAULT_LEADERBOARD_SORT,
   activityDays,
   chartRangeLabel,
   filterPillLabel,
   fmtPlayTime,
   isFiltered,
+  leaderboardRows,
   parseStatsFilters,
   scopeLabel,
   scopeMatches,
+  sortLeaderboard,
   statsKpis,
   statsSearch,
+  streakLabel,
+  titlesByName,
+  toggleSort,
   weekdayProfile,
+  type LeaderboardRow,
   type StatsFilters,
 } from './statsPage'
 
@@ -366,6 +374,200 @@ describe('chart range label', () => {
   it('counts the days of activity shown', () => {
     expect(chartRangeLabel(22)).toBe("22 jours d'activité")
     expect(chartRangeLabel(1)).toBe("1 jour d'activité")
+  })
+})
+
+describe('player form, play time and last-seen (computePlayerStats extensions)', () => {
+  const vs = (
+    id: string,
+    endedAt: string,
+    scoreA: number,
+    scoreB: number,
+    minutes?: number,
+  ): Match =>
+    getMockMatch({
+      id,
+      ended_at: endedAt,
+      started_at:
+        minutes === undefined
+          ? null
+          : new Date(new Date(endedAt).getTime() - minutes * 60_000).toISOString(),
+      score_a: scoreA,
+      score_b: scoreB,
+    })
+
+  it('records the last five results, most recent last', () => {
+    const matches = [
+      vs('m1', '2026-07-01T10:00:00.000Z', 11, 3),
+      vs('m2', '2026-07-02T10:00:00.000Z', 5, 11),
+      vs('m3', '2026-07-03T10:00:00.000Z', 11, 7),
+      vs('m4', '2026-07-04T10:00:00.000Z', 11, 9),
+      vs('m5', '2026-07-05T10:00:00.000Z', 2, 11),
+      vs('m6', '2026-07-06T10:00:00.000Z', 11, 8),
+    ]
+    const leo = computePlayerStats(matches, []).find((s) => s.name === 'Léo')
+    expect(leo?.form).toEqual([false, true, true, false, true])
+  })
+
+  it('keeps a short history short', () => {
+    const matches = [vs('m1', '2026-07-01T10:00:00.000Z', 11, 3)]
+    const thibault = computePlayerStats(matches, []).find((s) => s.name === 'Thibault')
+    expect(thibault?.form).toEqual([false])
+  })
+
+  it('sums each player’s recorded play time and remembers the last outing', () => {
+    const matches = [
+      vs('m1', '2026-07-01T10:00:00.000Z', 11, 3, 20),
+      vs('m2', '2026-07-04T10:00:00.000Z', 5, 11, 30),
+      vs('m3', '2026-07-02T10:00:00.000Z', 11, 7),
+    ]
+    const leo = computePlayerStats(matches, []).find((s) => s.name === 'Léo')
+    expect(leo?.playTimeMs).toBe(50 * 60_000)
+    expect(leo?.lastPlayedAt).toBe('2026-07-04T10:00:00.000Z')
+  })
+})
+
+describe('tournament titles', () => {
+  const doneTournament = (
+    id: string,
+    name: string,
+    champion: string,
+    overrides?: Partial<Tournament>,
+  ) => getMockTournament({ id, name, champion, ...overrides })
+
+  it('counts titles per champion with the tournament name and month', () => {
+    const tournaments = [
+      doneTournament('t1', 'Tournoi de printemps', 'Léo'),
+      doneTournament('t2', 'Coupe du vendredi', 'Léo'),
+      doneTournament('t3', 'Open de juillet', 'Candice'),
+    ]
+    const matches = [
+      getMockMatch({ id: 'a', tournament_id: 't1', ended_at: '2026-04-10T10:00:00.000Z' }),
+      getMockMatch({ id: 'b', tournament_id: 't1', ended_at: '2026-04-12T10:00:00.000Z' }),
+      getMockMatch({ id: 'c', tournament_id: 't2', ended_at: '2026-06-05T10:00:00.000Z' }),
+    ]
+    const titles = titlesByName(tournaments, matches)
+    expect(titles.get('Léo')?.count).toBe(2)
+    expect(titles.get('Léo')?.titles).toEqual([
+      { name: 'Tournoi de printemps', date: 'avr. 2026' },
+      { name: 'Coupe du vendredi', date: 'juin 2026' },
+    ])
+    expect(titles.get('Candice')?.count).toBe(1)
+  })
+
+  it('falls back to the creation month when no match is timed', () => {
+    const tournaments = [
+      doneTournament('t1', 'Coupe éclair', 'Léo', { created_at: '2026-03-02T09:00:00.000Z' }),
+    ]
+    expect(titlesByName(tournaments, []).get('Léo')?.titles).toEqual([
+      { name: 'Coupe éclair', date: 'mars 2026' },
+    ])
+  })
+
+  it('ignores quick games, running tournaments and missing champions', () => {
+    const tournaments = [
+      doneTournament('t1', 'Partie', 'Léo', { kind: 'game' }),
+      doneTournament('t2', 'En cours', 'Léo', { status: 'active' }),
+      doneTournament('t3', 'Sans vainqueur', 'x', { champion: null }),
+    ]
+    expect(titlesByName(tournaments, []).size).toBe(0)
+  })
+})
+
+describe('leaderboard rows and sorting', () => {
+  const row = (overrides: Partial<LeaderboardRow>): LeaderboardRow => ({
+    key: 'k',
+    name: 'X',
+    team: null,
+    avatar_url: null,
+    played: 10,
+    wins: 5,
+    losses: 5,
+    pointsFor: 100,
+    pointsAgainst: 100,
+    diff: 0,
+    winRate: 0.5,
+    currentStreak: 0,
+    longestStreak: 2,
+    capotsDealt: 0,
+    capotsTaken: 0,
+    matchBallsSaved: 0,
+    matchBallsWasted: 0,
+    form: [true],
+    playTimeMs: 0,
+    lastPlayedAt: null,
+    titles: 0,
+    ...overrides,
+  })
+
+  it('joins titles onto player stats by name', () => {
+    const matches = [
+      getMockMatch({ id: 'a', score_a: 11, score_b: 4, ended_at: '2026-07-01T10:00:00.000Z' }),
+    ]
+    const stats = computePlayerStats(matches, [])
+    const titles = titlesByName(
+      [getMockTournament({ id: 't9', champion: 'Léo', name: 'Open' })],
+      [],
+    )
+    const rows = leaderboardRows(stats, titles)
+    expect(rows.find((r) => r.name === 'Léo')?.titles).toBe(1)
+    expect(rows.find((r) => r.name === 'Thibault')?.titles).toBe(0)
+  })
+
+  it('sorts by wins descending by default, diff as tie-break', () => {
+    const rows = [
+      row({ key: 'a', name: 'A', wins: 3, diff: 5 }),
+      row({ key: 'b', name: 'B', wins: 8 }),
+      row({ key: 'c', name: 'C', wins: 3, diff: 9 }),
+    ]
+    expect(sortLeaderboard(rows, DEFAULT_LEADERBOARD_SORT).map((r) => r.key)).toEqual([
+      'b',
+      'c',
+      'a',
+    ])
+  })
+
+  it('sorts names alphabetically ascending and flips on demand', () => {
+    const rows = [
+      row({ key: 'z', name: 'Zoé' }),
+      row({ key: 'e', name: 'Émile' }),
+      row({ key: 'a', name: 'Anna' }),
+    ]
+    const asc = sortLeaderboard(rows, { key: 'name', dir: 'asc' })
+    expect(asc.map((r) => r.key)).toEqual(['a', 'e', 'z'])
+    const desc = sortLeaderboard(rows, { key: 'name', dir: 'desc' })
+    expect(desc.map((r) => r.key)).toEqual(['z', 'e', 'a'])
+  })
+
+  it('sorts every numeric column, wins then name breaking ties', () => {
+    const rows = [
+      row({ key: 'a', name: 'A', titles: 1, wins: 2 }),
+      row({ key: 'b', name: 'B', titles: 3, wins: 1 }),
+      row({ key: 'c', name: 'C', titles: 1, wins: 2 }),
+    ]
+    expect(sortLeaderboard(rows, { key: 'titles', dir: 'desc' }).map((r) => r.key)).toEqual([
+      'b',
+      'a',
+      'c',
+    ])
+    const byPct = [row({ key: 'lo', winRate: 0.2 }), row({ key: 'hi', winRate: 0.9 })]
+    expect(sortLeaderboard(byPct, { key: 'pct', dir: 'asc' }).map((r) => r.key)).toEqual([
+      'lo',
+      'hi',
+    ])
+  })
+
+  it('toggles direction on the active column, resets to descending elsewhere', () => {
+    expect(toggleSort({ key: 'wins', dir: 'desc' }, 'wins')).toEqual({ key: 'wins', dir: 'asc' })
+    expect(toggleSort({ key: 'wins', dir: 'asc' }, 'wins')).toEqual({ key: 'wins', dir: 'desc' })
+    expect(toggleSort({ key: 'wins', dir: 'asc' }, 'diff')).toEqual({ key: 'diff', dir: 'desc' })
+    expect(toggleSort({ key: 'diff', dir: 'desc' }, 'name')).toEqual({ key: 'name', dir: 'asc' })
+  })
+
+  it('labels the current streak', () => {
+    expect(streakLabel(0)).toBe('—')
+    expect(streakLabel(1)).toBe('1V')
+    expect(streakLabel(4)).toBe('🔥 4V')
   })
 })
 

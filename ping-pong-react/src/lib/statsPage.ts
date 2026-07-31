@@ -2,7 +2,7 @@
 
 import type { Match, Tournament } from '../types'
 import { matchDuration } from './pingpong'
-import { matchesByDay, sideKey } from './stats'
+import { matchesByDay, sideKey, type PlayerStat } from './stats'
 
 export type StatsPeriod = 'tout' | 'mois' | 'semaine'
 export type StatsType = 'tout' | 'tournois' | 'rapides'
@@ -201,6 +201,110 @@ export function weekdayProfile(scoped: Match[]): WeekdayCount[] {
     pct: Math.round((counts[i] / max) * 100),
     top: counts[i] === max,
   })).filter((w, i) => i < 5 || w.count > 0)
+}
+
+/** « juil. 2026 » from an ISO timestamp. */
+const monthYear = (iso: string): string => {
+  const d = new Date(iso)
+  return `${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`
+}
+
+export interface PlayerTitles {
+  count: number
+  titles: Array<{ name: string; date: string }>
+}
+
+/**
+ * Champions of finished real tournaments, keyed by champion name. The date is
+ * the month the tournament ended (its latest match), or its creation month.
+ */
+export function titlesByName(
+  tournaments: Tournament[],
+  matches: Match[],
+): Map<string, PlayerTitles> {
+  const out = new Map<string, PlayerTitles>()
+  for (const t of tournaments) {
+    if (t.kind !== 'tournament' || t.status !== 'done' || t.champion === null) continue
+    let endedAt: string | null = null
+    for (const m of matches) {
+      if (m.tournament_id !== t.id || m.ended_at === null) continue
+      if (endedAt === null || m.ended_at > endedAt) endedAt = m.ended_at
+    }
+    const entry = out.get(t.champion) ?? { count: 0, titles: [] }
+    entry.count++
+    entry.titles.push({ name: t.name, date: monthYear(endedAt ?? t.created_at) })
+    out.set(t.champion, entry)
+  }
+  return out
+}
+
+export interface LeaderboardRow extends PlayerStat {
+  titles: number
+}
+
+/** Player stats + title counts (titles are recorded by champion name). */
+export function leaderboardRows(
+  stats: PlayerStat[],
+  titles: Map<string, PlayerTitles>,
+): LeaderboardRow[] {
+  return stats.map((s) => ({ ...s, titles: titles.get(s.name)?.count ?? 0 }))
+}
+
+export type LeaderboardSortKey =
+  | 'name'
+  | 'played'
+  | 'wins'
+  | 'losses'
+  | 'pct'
+  | 'diff'
+  | 'streak'
+  | 'titles'
+  | 'mbSaved'
+  | 'mbWasted'
+
+export interface LeaderboardSort {
+  key: LeaderboardSortKey
+  dir: 'asc' | 'desc'
+}
+
+export const DEFAULT_LEADERBOARD_SORT: LeaderboardSort = { key: 'wins', dir: 'desc' }
+
+/** Same column → flip direction; a fresh column → descending (names read A→Z). */
+export function toggleSort(sort: LeaderboardSort, key: LeaderboardSortKey): LeaderboardSort {
+  if (sort.key === key) return { key, dir: sort.dir === 'desc' ? 'asc' : 'desc' }
+  return { key, dir: key === 'name' ? 'asc' : 'desc' }
+}
+
+const SORT_VALUE: Record<Exclude<LeaderboardSortKey, 'name'>, (r: LeaderboardRow) => number> = {
+  played: (r) => r.played,
+  wins: (r) => r.wins,
+  losses: (r) => r.losses,
+  pct: (r) => r.winRate,
+  diff: (r) => r.diff,
+  streak: (r) => r.currentStreak,
+  titles: (r) => r.titles,
+  mbSaved: (r) => r.matchBallsSaved,
+  mbWasted: (r) => r.matchBallsWasted,
+}
+
+/** Ties break on point diff when sorting by wins, on wins otherwise, then name. */
+export function sortLeaderboard(rows: LeaderboardRow[], sort: LeaderboardSort): LeaderboardRow[] {
+  const dir = sort.dir === 'asc' ? 1 : -1
+  if (sort.key === 'name') return [...rows].sort((a, b) => a.name.localeCompare(b.name, 'fr') * dir)
+  const value = SORT_VALUE[sort.key]
+  const tie =
+    sort.key === 'wins'
+      ? (a: LeaderboardRow, b: LeaderboardRow) => b.diff - a.diff
+      : (a: LeaderboardRow, b: LeaderboardRow) => b.wins - a.wins
+  return [...rows].sort(
+    (a, b) => (value(a) - value(b)) * dir || tie(a, b) || a.name.localeCompare(b.name, 'fr'),
+  )
+}
+
+/** « 🔥 4V » from 2 straight wins, plain « 1V », em-dash when the last match was lost. */
+export function streakLabel(streak: number): string {
+  if (streak >= 2) return `🔥 ${streak}V`
+  return streak === 1 ? '1V' : '—'
 }
 
 export interface StatsKpi {

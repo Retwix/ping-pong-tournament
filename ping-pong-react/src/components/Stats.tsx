@@ -17,26 +17,33 @@ import {
   type Rivalry,
 } from '../lib/stats'
 import {
+  DEFAULT_LEADERBOARD_SORT,
   PERIOD_OPTIONS,
   TYPE_OPTIONS,
   activityDays,
   chartRangeLabel,
   filterPillLabel,
   isFiltered,
+  leaderboardRows,
   scopeLabel,
   scopeMatches,
+  sortLeaderboard,
   statsKpis,
+  streakLabel,
+  titlesByName,
+  toggleSort,
   weekdayProfile,
+  type LeaderboardSort,
+  type LeaderboardSortKey,
   type StatsFilters,
 } from '../lib/statsPage'
+import { signed } from '../lib/format'
 import { formatDuration } from '../lib/pingpong'
 import { teamColor, teamLabel } from '../lib/teams'
 import type { Match } from '../types'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
-
-type SortKey = 'wins' | 'winRate' | 'diff' | 'played' | 'mbSaved' | 'mbWasted'
 
 const pct = (r: number) => `${Math.round(r * 100)}%`
 
@@ -65,7 +72,7 @@ export default function Stats({
   onNewGame,
 }: Props) {
   const { matches, players, tournaments, loading, error } = useStats()
-  const [sortKey, setSortKey] = useState<SortKey>('wins')
+  const [sort, setSort] = useState<LeaderboardSort>(DEFAULT_LEADERBOARD_SORT)
   const [selected, setSelected] = useState<string | null>(null)
   const [tip, setTip] = useState<number | null>(null)
 
@@ -80,17 +87,11 @@ export default function Stats({
   const h2h = useMemo(() => computeHeadToHead(scoped), [scoped])
   const supers = useMemo(() => computeSuperlatives(scoped), [scoped])
 
-  const sortedPlayers = useMemo(() => {
-    const cmp: Record<SortKey, (a: PlayerStat, b: PlayerStat) => number> = {
-      wins: (a, b) => b.wins - a.wins || b.diff - a.diff,
-      winRate: (a, b) => b.winRate - a.winRate || b.wins - a.wins,
-      diff: (a, b) => b.diff - a.diff || b.wins - a.wins,
-      played: (a, b) => b.played - a.played || b.wins - a.wins,
-      mbSaved: (a, b) => b.matchBallsSaved - a.matchBallsSaved || b.wins - a.wins,
-      mbWasted: (a, b) => b.matchBallsWasted - a.matchBallsWasted || b.wins - a.wins,
-    }
-    return [...playerStats].sort(cmp[sortKey])
-  }, [playerStats, sortKey])
+  const titles = useMemo(() => titlesByName(tournaments, matches), [tournaments, matches])
+  const sortedRows = useMemo(
+    () => sortLeaderboard(leaderboardRows(playerStats, titles), sort),
+    [playerStats, titles, sort],
+  )
 
   const matrixPlayers = useMemo(
     () => [...playerStats].sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name, 'fr')),
@@ -174,15 +175,33 @@ export default function Stats({
     )
   }
 
-  const Th = ({ k, children, title }: { k: SortKey; children: ReactNode; title?: string }) => (
-    <th
-      className={`sortable${sortKey === k ? ' active' : ''}`}
-      onClick={() => setSortKey(k)}
+  const Th = ({
+    k,
+    children,
+    title,
+    className,
+  }: {
+    k: LeaderboardSortKey
+    children: ReactNode
+    title?: string
+    className?: string
+  }) => (
+    <button
+      className={`st-th${sort.key === k ? ' active' : ''}${className ? ` ${className}` : ''}`}
+      onClick={() => setSort(toggleSort(sort, k))}
       title={title}
     >
       {children}
-      {sortKey === k ? ' ↓' : ''}
-    </th>
+      {sort.key === k ? (sort.dir === 'desc' ? ' ▼' : ' ▲') : ''}
+    </button>
+  )
+
+  const SectionHead = ({ title, hint }: { title: string; hint?: string }) => (
+    <div className="st-sec-head">
+      <span className="st-sec-title">{title}</span>
+      {hint !== undefined && <span className="st-sec-hint">{hint}</span>}
+      <span className="st-sec-rule" />
+    </div>
   )
 
   const filtered = isFiltered(filters)
@@ -350,58 +369,111 @@ export default function Stats({
           )}
 
           {/* Player leaderboard */}
-          <section>
-            <div className="section-title">Classement des joueurs</div>
-            <div className="panel">
-              <table className="leaderboard">
-                <thead>
-                  <tr>
-                    <th className="left">Joueur</th>
-                    <Th k="played">J</Th>
-                    <Th k="wins">V</Th>
-                    <th>D</th>
-                    <Th k="winRate">%</Th>
-                    <Th k="diff">Diff</Th>
-                    <th>Série</th>
-                    <Th k="mbSaved" title="Balles de match sauvées (un point de la défaite)">
-                      BM ✓
-                    </Th>
-                    <Th k="mbWasted" title="Balles de match gâchées (point de match non converti)">
-                      BM ✗
-                    </Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedPlayers.map((s, i) => (
-                    <tr key={s.key} className={`r${i + 1}`} onClick={() => setSelected(s.key)}>
-                      <td className="left">
-                        <span className="rank">{i + 1}</span>
-                        <span className="lb-player">
-                          <Avatar name={s.name} team={s.team} url={s.avatar_url} className="sm" />
-                          {s.name}
-                        </span>
-                      </td>
-                      <td>{s.played}</td>
-                      <td className="wins">{s.wins}</td>
-                      <td>{s.losses}</td>
-                      <td>{pct(s.winRate)}</td>
-                      <td className={`diff ${s.diff > 0 ? 'pos' : s.diff < 0 ? 'neg' : ''}`}>
-                        {s.diff > 0 ? '+' : ''}
-                        {s.diff}
-                      </td>
-                      <td>{s.currentStreak >= 2 ? `🔥${s.currentStreak}` : s.currentStreak}</td>
-                      <td>{s.matchBallsSaved}</td>
-                      <td>{s.matchBallsWasted}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div>
+            <SectionHead
+              title="Classement des joueurs"
+              hint="clique une ligne pour la fiche joueur"
+            />
+            <div className="st-lb">
+              <div className="st-lb-inner">
+                <div className="st-lbgrid st-lbhead">
+                  <span className="st-th-static">#</span>
+                  <Th k="name" className="left">
+                    Joueur
+                  </Th>
+                  <Th k="played" title="Matchs joués">
+                    J
+                  </Th>
+                  <Th k="wins" title="Victoires">
+                    V
+                  </Th>
+                  <Th k="losses" title="Défaites" className="st-col-sec">
+                    D
+                  </Th>
+                  <Th k="pct" title="Taux de victoire">
+                    %
+                  </Th>
+                  <Th k="diff" title="Différence de points" className="st-col-sec">
+                    Diff
+                  </Th>
+                  <Th k="streak" title="Série de victoires en cours">
+                    Série
+                  </Th>
+                  <span
+                    className="st-th-static right st-col-sec"
+                    title="5 derniers résultats, le plus récent à droite"
+                  >
+                    Forme
+                  </span>
+                  <Th k="titles" title="Tournois gagnés">
+                    🏆
+                  </Th>
+                  <Th
+                    k="mbSaved"
+                    title="Balles de match sauvées (un point de la défaite)"
+                    className="st-col-sec"
+                  >
+                    BM ✓
+                  </Th>
+                  <Th
+                    k="mbWasted"
+                    title="Balles de match gâchées (point de match non converti)"
+                    className="st-col-sec"
+                  >
+                    BM ✗
+                  </Th>
+                </div>
+                {sortedRows.map((r, i) => (
+                  <div
+                    key={r.key}
+                    className="st-lbgrid st-lbrow"
+                    onClick={() => setSelected(r.key)}
+                  >
+                    <span className={`st-rank${i === 0 ? ' first' : ''}`}>{i + 1}</span>
+                    <span className="st-player">
+                      <Avatar name={r.name} team={r.team} url={r.avatar_url} className="st-av" />
+                      <span className="st-player-text">
+                        <span className="st-player-name">{r.name}</span>
+                        {r.team !== null && (
+                          <span className="st-player-team">
+                            <span
+                              className="st-team-dot"
+                              style={{ background: teamColor(r.team) }}
+                            />
+                            {teamLabel(r.team)}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="st-num">{r.played}</span>
+                    <span className="st-num">{r.wins}</span>
+                    <span className="st-num st-col-sec">{r.losses}</span>
+                    <span className="st-pct">{pct(r.winRate)}</span>
+                    <span
+                      className={`st-diff st-col-sec${r.diff > 0 ? ' pos' : r.diff < 0 ? ' neg' : ''}`}
+                    >
+                      {signed(r.diff)}
+                    </span>
+                    <span className={`st-streak${r.currentStreak > 0 ? ' pos' : ''}`}>
+                      {streakLabel(r.currentStreak)}
+                    </span>
+                    <span className="st-form st-col-sec">
+                      {r.form.map((won, j) => (
+                        <span
+                          key={j}
+                          className={`st-dot ${won ? 'w' : 'l'}`}
+                          title={won ? 'Victoire' : 'Défaite'}
+                        />
+                      ))}
+                    </span>
+                    <span className="st-titles">{r.titles > 0 ? r.titles : ''}</span>
+                    <span className="st-num st-mb-s st-col-sec">{r.matchBallsSaved}</span>
+                    <span className="st-num st-mb-w st-col-sec">{r.matchBallsWasted}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="setup-hint" style={{ textAlign: 'left' }}>
-              Clique sur une colonne pour trier. La série compte les victoires consécutives en
-              cours.
-            </p>
-          </section>
+          </div>
 
           {/* Team leaderboard */}
           {teamStats.length > 0 && (

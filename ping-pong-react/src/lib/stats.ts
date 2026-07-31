@@ -19,6 +19,9 @@ export interface PlayerStat {
   capotsTaken: number // times sent under the table (scored 0)
   matchBallsSaved: number // points won while one point from losing the match
   matchBallsWasted: number // match points held but not converted
+  form: boolean[] // last 5 results, most recent last (true = win)
+  playTimeMs: number // summed durations of this player's timed matches
+  lastPlayedAt: string | null // when their most recent match happened
 }
 
 /** A finished match where the loser scored 0 — a "capot" / sous la table. */
@@ -123,6 +126,9 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
         capotsTaken: 0,
         matchBallsSaved: 0,
         matchBallsWasted: 0,
+        form: [],
+        playTimeMs: 0,
+        lastPlayedAt: null,
       }
       map.set(key, s)
     }
@@ -165,6 +171,16 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
     A.matchBallsWasted += savedB
     B.matchBallsSaved += savedB
     B.matchBallsWasted += savedA
+    if (m.started_at && m.ended_at) {
+      const ms = matchDuration(m)
+      if (ms > 0) {
+        A.playTimeMs += ms
+        B.playTimeMs += ms
+      }
+    }
+    const at = m.ended_at ?? m.started_at
+    if (at && (!A.lastPlayedAt || at > A.lastPlayedAt)) A.lastPlayedAt = at
+    if (at && (!B.lastPlayedAt || at > B.lastPlayedAt)) B.lastPlayedAt = at
     pushResult(A.key, aWin)
     pushResult(B.key, !aWin)
   }
@@ -175,6 +191,7 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
     const r = results.get(s.key) ?? []
     s.longestStreak = longestRun(r)
     s.currentStreak = trailingRun(r)
+    s.form = r.slice(-5)
   }
   return [...map.values()]
 }
@@ -264,15 +281,19 @@ export function computeSuperlatives(matches: Match[]): Superlatives {
     if (m.started_at && m.ended_at) {
       const ms = matchDuration(m)
       if (ms > 0) {
-        if (!out.longestMatch || ms > out.longestMatch.value) out.longestMatch = { match: m, value: ms }
-        if (!out.shortestMatch || ms < out.shortestMatch.value) out.shortestMatch = { match: m, value: ms }
+        if (!out.longestMatch || ms > out.longestMatch.value)
+          out.longestMatch = { match: m, value: ms }
+        if (!out.shortestMatch || ms < out.shortestMatch.value)
+          out.shortestMatch = { match: m, value: ms }
       }
     }
-    if (!out.biggestBlowout || margin > out.biggestBlowout.value) out.biggestBlowout = { match: m, value: margin }
+    if (!out.biggestBlowout || margin > out.biggestBlowout.value)
+      out.biggestBlowout = { match: m, value: margin }
     if (
       !out.closestGame ||
       margin < out.closestGame.value ||
-      (margin === out.closestGame.value && total > out.closestGame.match.score_a + out.closestGame.match.score_b)
+      (margin === out.closestGame.value &&
+        total > out.closestGame.match.score_a + out.closestGame.match.score_b)
     ) {
       out.closestGame = { match: m, value: margin }
     }
@@ -306,7 +327,10 @@ export function opponentRecords(key: string, matches: Match[]): OpponentRecord[]
 /** A player's most recent matches, newest first. */
 export function recentMatchesFor(key: string, matches: Match[], limit = 8): Match[] {
   return matches
-    .filter((m) => sideKey(m.player_a_id, m.player_a) === key || sideKey(m.player_b_id, m.player_b) === key)
+    .filter(
+      (m) =>
+        sideKey(m.player_a_id, m.player_a) === key || sideKey(m.player_b_id, m.player_b) === key,
+    )
     .sort((a, b) => timeKey(b).localeCompare(timeKey(a)))
     .slice(0, limit)
 }
