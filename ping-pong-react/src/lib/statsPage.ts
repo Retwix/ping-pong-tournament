@@ -4,6 +4,7 @@ import type { Match, Tournament } from '../types'
 import { relativeTime, signed } from './format'
 import { matchDuration } from './pingpong'
 import { stakesOf } from './rating'
+import { fold } from './fold'
 import {
   computeSuperlatives,
   matchesByDay,
@@ -12,6 +13,7 @@ import {
   sideKey,
   winnerLoser,
   type PlayerStat,
+  type Rivalry,
 } from './stats'
 
 export type StatsPeriod = 'tout' | 'mois' | 'semaine'
@@ -522,6 +524,21 @@ export function matchRecords(matches: Match[]): RecordCard[] {
     })
   }
   return cards
+}
+
+/** « LEO » — 3-letter matrix header, unambiguous enough with the full-name tooltip. */
+export function abbrev(name: string): string {
+  const folded = fold(name.trim()).toUpperCase().slice(0, 3)
+  return folded === '' ? '?' : folded
+}
+
+/** « Les duels les plus serrés : Maxime — Nicolas (5–5) et Émilie — Julien (4–4). » */
+export function tightestHint(rivalries: Rivalry[]): string | null {
+  if (rivalries.length === 0) return null
+  const parts = rivalries.map((r) => `${r.aName} — ${r.bName} (${r.aWins}–${r.bWins})`)
+  const joined =
+    parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} et ${parts[parts.length - 1]}`
+  return `Les duels les plus serrés : ${joined}.`
 }
 
 export interface PlayerCardKpi {

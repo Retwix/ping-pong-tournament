@@ -15,6 +15,7 @@ import {
   DEFAULT_LEADERBOARD_SORT,
   PERIOD_OPTIONS,
   TYPE_OPTIONS,
+  abbrev,
   activityDays,
   chartRangeLabel,
   filterPillLabel,
@@ -30,6 +31,7 @@ import {
   sortLeaderboard,
   statsKpis,
   streakLabel,
+  tightestHint,
   titlesByName,
   toggleSort,
   weekdayProfile,
@@ -530,74 +532,69 @@ export default function Stats({
 
           {/* Head-to-head matrix */}
           {matrixPlayers.length > 1 && (
-            <section>
-              <div className="section-title">Confrontations directes</div>
-              <div className="panel h2h-wrap">
-                <table className="h2h">
-                  <thead>
-                    <tr>
-                      <th className="corner" />
-                      {matrixPlayers.map((c) => (
-                        <th key={c.key} title={c.name}>
-                          {(c.name.trim()[0] ?? '?').toUpperCase()}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matrixPlayers.map((row) => (
-                      <tr key={row.key}>
-                        <th className="rowname" title={row.name}>
-                          {row.name}
-                        </th>
-                        {matrixPlayers.map((col) => {
-                          if (row.key === col.key)
-                            return (
-                              <td key={col.key} className="self">
-                                ·
-                              </td>
-                            )
-                          const w = h2hWins(h2h, row.key, col.key)
-                          const l = h2hWins(h2h, col.key, row.key)
-                          const cls = w > l ? 'pos' : w < l ? 'neg' : ''
-                          return (
-                            <td
-                              key={col.key}
-                              className={cls}
-                              title={`${row.name} ${w}–${l} ${col.name}`}
-                            >
-                              {w + l === 0 ? '–' : `${w}-${l}`}
-                            </td>
-                          )
-                        })}
-                      </tr>
+            <div>
+              <SectionHead title="Confrontations directes" hint="la ligne bat la colonne" />
+              <div className="st-h2h">
+                <div className="st-h2h-inner">
+                  <div className="st-h2h-row st-h2h-heads">
+                    <span className="st-h2h-name" />
+                    {matrixPlayers.map((c) => (
+                      <span key={c.key} className="st-h2h-abbr" title={c.name}>
+                        {abbrev(c.name)}
+                      </span>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                  {matrixPlayers.map((row) => (
+                    <div key={row.key} className="st-h2h-row">
+                      <span className="st-h2h-name">
+                        <Avatar
+                          name={row.name}
+                          team={row.team}
+                          url={row.avatar_url}
+                          className="st-h2h-av"
+                        />
+                        <span className="st-h2h-label" title={row.name}>
+                          {row.name}
+                        </span>
+                      </span>
+                      {matrixPlayers.map((col) => {
+                        if (row.key === col.key)
+                          return (
+                            <span key={col.key} className="st-h2h-cell self">
+                              —
+                            </span>
+                          )
+                        const w = h2hWins(h2h, row.key, col.key)
+                        const l = h2hWins(h2h, col.key, row.key)
+                        const cls = w > l ? ' pos' : w < l ? ' neg' : ''
+                        return (
+                          <span
+                            key={col.key}
+                            className={`st-h2h-cell${cls}`}
+                            title={`${row.name} ${w} — ${l} ${col.name}`}
+                          >
+                            {w + l === 0 ? '–' : `${w}-${l}`}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <p className="setup-hint" style={{ textAlign: 'left' }}>
-                Chaque case : victoires de la ligne contre la colonne (V-D). Vert = avantage à la
-                ligne.
-              </p>
-            </section>
+            </div>
           )}
 
           {/* Rivalries */}
           {mostPlayed.length > 0 && (
-            <section>
-              <div className="section-title">Rivalités</div>
-              {tightest.length > 0 && (
-                <p className="setup-hint" style={{ textAlign: 'left', marginTop: 0 }}>
-                  Les duels les plus serrés :{' '}
-                  {tightest.map((r) => `${r.aName} vs ${r.bName}`).join(' · ')}
-                </p>
-              )}
-              <div className="rivalry-grid">
+            <div>
+              <SectionHead title="Rivalités" />
+              {tightest.length > 0 && <p className="st-riv-hint">{tightestHint(tightest)}</p>}
+              <div className="st-riv-grid">
                 {mostPlayed.map((r) => (
                   <RivalryCard key={`${r.aKey}|${r.bKey}`} r={r} />
                 ))}
               </div>
-            </section>
+            </div>
           )}
         </>
       )}
@@ -636,27 +633,27 @@ function RecordCard({ r }: { r: RecordCardData }) {
 function RivalryCard({ r }: { r: Rivalry }) {
   const aColor = teamColor(r.aTeam ?? '')
   const bColor = teamColor(r.bTeam ?? '')
-  const aPct = r.total ? (r.aWins / r.total) * 100 : 50
+  const aPct = r.total > 0 ? (r.aWins / r.total) * 100 : 50
   const leader = r.aWins === r.bWins ? null : r.aWins > r.bWins ? r.aName : r.bName
   return (
-    <div className="rivalry-card">
-      <div className="rv-top">
-        <span className="rv-name" style={{ color: aColor }} title={r.aName}>
+    <div className="st-riv-card">
+      <div className="st-riv-top">
+        <span className="st-riv-name" style={{ color: aColor }} title={r.aName}>
           {r.aName}
         </span>
-        <span className="rv-vs">
-          {r.aWins}–{r.bWins}
+        <span className="st-riv-score">
+          {r.aWins} – {r.bWins}
         </span>
-        <span className="rv-name rv-right" style={{ color: bColor }} title={r.bName}>
+        <span className="st-riv-name right" style={{ color: bColor }} title={r.bName}>
           {r.bName}
         </span>
       </div>
-      <div className="rv-bar">
-        <span className="rv-fill" style={{ width: `${aPct}%`, background: aColor }} />
-        <span className="rv-fill" style={{ width: `${100 - aPct}%`, background: bColor }} />
+      <div className="st-riv-bar">
+        <span style={{ width: `${aPct}%`, background: aColor }} />
+        <span className="trail" style={{ background: bColor }} />
       </div>
-      <div className="rv-sub">
-        {r.total} matchs · {leader ? `${leader} mène` : 'égalité parfaite'}
+      <div className="st-riv-meta">
+        {r.total} matchs · {leader !== null ? `${leader} mène` : 'à égalité'}
       </div>
     </div>
   )

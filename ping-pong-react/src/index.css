@@ -3073,3 +3073,81 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 @media (max-width: 820px) {
   .st-rec-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 }
+
+/* ===== stats — confrontations directes ===== */
+.st-h2h {
+  background: #fff; border: 1px solid #e8e4f2; border-radius: 18px;
+  padding: 18px; box-shadow: 0 2px 8px rgba(32, 10, 66, 0.05);
+  overflow-x: auto;
+}
+[data-theme='dark'] .st-h2h {
+  background: #1e1138; border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+}
+.st-h2h::-webkit-scrollbar { height: 8px; }
+.st-h2h::-webkit-scrollbar-thumb { background: #e4ddf8; border-radius: 8px; }
+[data-theme='dark'] .st-h2h::-webkit-scrollbar-thumb { background: rgba(139, 110, 233, 0.28); }
+.st-h2h-inner { min-width: 700px; }
+.st-h2h-row { display: flex; align-items: center; gap: 6px; }
+.st-h2h-row + .st-h2h-row { margin-top: 6px; }
+.st-h2h-name { width: 124px; flex: none; display: flex; align-items: center; gap: 9px; min-width: 0; }
+.avatar.st-h2h-av { width: 26px; height: 26px; font-size: 9.5px; flex: none; }
+.st-h2h-label {
+  font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--fg-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.st-h2h-abbr {
+  flex: 1; min-width: 58px; text-align: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 11px;
+  letter-spacing: 0.06em; color: #847e96;
+}
+[data-theme='dark'] .st-h2h-abbr { color: #a99fc4; }
+.st-h2h-cell {
+  flex: 1; min-width: 58px; height: 38px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  background: #f2effb; color: #847e96;
+}
+.st-h2h-cell.pos { background: #e4f5ee; color: var(--green); }
+.st-h2h-cell.neg { background: #fdeaea; color: #e54c4c; }
+.st-h2h-cell.self { background: #fbf9ff; color: #cbc3dd; }
+[data-theme='dark'] .st-h2h-cell { background: rgba(255, 255, 255, 0.06); color: #a99fc4; }
+[data-theme='dark'] .st-h2h-cell.pos { background: rgba(43, 165, 114, 0.18); color: #4bd69b; }
+[data-theme='dark'] .st-h2h-cell.neg { background: rgba(229, 76, 76, 0.18); color: #ff7676; }
+[data-theme='dark'] .st-h2h-cell.self { background: #241543; color: #8b82a8; }
+
+/* ===== stats — rivalités ===== */
+.st-riv-hint {
+  margin: 8px 0 0; font-family: var(--font-body); font-weight: 500;
+  font-size: 13px; color: #847e96;
+}
+[data-theme='dark'] .st-riv-hint { color: #a99fc4; }
+.st-riv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
+.st-riv-card {
+  background: #fff; border: 1px solid #e8e4f2; border-radius: 16px;
+  padding: 18px 20px; box-shadow: 0 2px 8px rgba(32, 10, 66, 0.05);
+  transition: transform 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+.st-riv-card:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(32, 10, 66, 0.14); }
+[data-theme='dark'] .st-riv-card {
+  background: #1e1138; border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+}
+[data-theme='dark'] .st-riv-card:hover { box-shadow: 0 16px 40px rgba(0, 0, 0, 0.46); }
+.st-riv-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.st-riv-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.st-riv-name.right { text-align: right; }
+.st-riv-score { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--fg-1); white-space: nowrap; }
+.st-riv-bar { display: flex; height: 8px; border-radius: 5px; overflow: hidden; margin-top: 14px; background: #f2effb; }
+[data-theme='dark'] .st-riv-bar { background: rgba(255, 255, 255, 0.06); }
+.st-riv-bar > span { display: block; height: 8px; }
+.st-riv-bar > .trail { flex: 1; opacity: 0.45; }
+.st-riv-meta { margin-top: 11px; font-family: var(--font-body); font-weight: 600; font-size: 12px; color: #847e96; }
+[data-theme='dark'] .st-riv-meta { color: #a99fc4; }
+
+@media (max-width: 820px) {
+  .st-riv-grid { grid-template-columns: 1fr; gap: 10px; }
+}

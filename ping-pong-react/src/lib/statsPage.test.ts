@@ -4,6 +4,7 @@ import { computePlayerStats, computeTeamStats } from './stats'
 import type { Player } from '../types'
 import {
   DEFAULT_LEADERBOARD_SORT,
+  abbrev,
   activityDays,
   chartRangeLabel,
   filterPillLabel,
@@ -22,6 +23,7 @@ import {
   statsKpis,
   statsSearch,
   streakLabel,
+  tightestHint,
   titlesByName,
   toggleSort,
   weekdayProfile,
@@ -880,6 +882,51 @@ describe('records assembly', () => {
   it('skips duration records when no match is timed', () => {
     const cards = matchRecords([getMockMatch({ id: 'a', score_a: 11, score_b: 8 })])
     expect(cards.map((c) => c.label)).toEqual(['Plus gros écart', 'Match le plus serré'])
+  })
+})
+
+describe('head-to-head abbreviations', () => {
+  it('takes the first three letters, uppercased and unaccented', () => {
+    expect(abbrev('Léo')).toBe('LEO')
+    expect(abbrev('Émilie')).toBe('EMI')
+    expect(abbrev('Thibault')).toBe('THI')
+  })
+
+  it('survives short and padded names', () => {
+    expect(abbrev('Al')).toBe('AL')
+    expect(abbrev('  Zoé ')).toBe('ZOE')
+    expect(abbrev('')).toBe('?')
+  })
+})
+
+describe('tightest rivalries hint', () => {
+  const rivalry = (aName: string, bName: string, aWins: number, bWins: number) => ({
+    aKey: aName,
+    aName,
+    aTeam: null,
+    bKey: bName,
+    bName,
+    bTeam: null,
+    total: aWins + bWins,
+    aWins,
+    bWins,
+    lastPlayed: null,
+  })
+
+  it('names the duels with their scores, French-joined', () => {
+    expect(tightestHint([rivalry('Maxime', 'Nicolas', 5, 5)])).toBe(
+      'Les duels les plus serrés : Maxime — Nicolas (5–5).',
+    )
+    expect(
+      tightestHint([rivalry('Maxime', 'Nicolas', 5, 5), rivalry('Émilie', 'Julien', 4, 4)]),
+    ).toBe('Les duels les plus serrés : Maxime — Nicolas (5–5) et Émilie — Julien (4–4).')
+    expect(
+      tightestHint([rivalry('A', 'B', 3, 3), rivalry('C', 'D', 2, 2), rivalry('E', 'F', 1, 1)]),
+    ).toBe('Les duels les plus serrés : A — B (3–3), C — D (2–2) et E — F (1–1).')
+  })
+
+  it('is null without tight duels', () => {
+    expect(tightestHint([])).toBeNull()
   })
 })
 
