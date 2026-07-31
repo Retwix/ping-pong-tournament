@@ -78,6 +78,8 @@ One PR for the page; each slice is a green auto-committed increment (RED-GREEN-M
 ## Mutation notes
 
 - Slice 1 (`joueurs.ts`): **100 % (72/72 killed)** after killing 2 survivors — `played >= 2` plural boundary (added « 2 matchs » test) and extras dedup `indexOf === i` (added distinct-free-text-teams test). No equivalents.
+- Slice 1 rework (registry-based rows): 2 real survivors on the row-matching fallback (homonym row owned by another id; unowned row with a different name) — killed with dedicated tests. The `r.team !== ''` guard in `filterJoueurs` produced only *equivalent* mutants (`teamLabel('')` folds to `''`, which never contains a non-empty query) — guard deleted instead of tested.
+- Final run (full module incl. subtitle/normalize/dialogTitle/avatarAction/photoShown): **100 % (148/148 killed)**, 0 survivors, 0 equivalents.
 
 ---
 *Delete this file when the plan is complete.*
