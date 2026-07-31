@@ -1,7 +1,7 @@
-import { IconPencil, IconSearch, IconX } from '@tabler/icons-react'
+import { IconPencil, IconPlus, IconSearch, IconX } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRatings } from '../hooks/useRatings'
-import { updatePlayer } from '../lib/db'
+import { createPlayer, deletePlayer, updatePlayer } from '../lib/db'
 import {
   dialogTitle,
   filterJoueurs,
@@ -36,7 +36,9 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
   const [query, setQuery] = useState('')
   const [team, setTeam] = useState('all')
   const [editing, setEditing] = useState<string | null>(null)
+  const [pending, setPending] = useState<string | null>(null)
   const [form, setForm] = useState<JoueurForm | null>(null)
+  const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -58,9 +60,37 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     setEditing(r.id)
   }
 
-  const cancel = () => {
+  // The handoff's optimistic create: the row exists before the modal opens
+  // (which also gives photo uploads a real player id), and cancelling removes it.
+  const addPlayer = async () => {
+    if (creating) return
+    setCreating(true)
+    setSaveError(null)
+    try {
+      const p = await createPlayer('Nouveau joueur', 'tech')
+      reload()
+      setForm({ name: '', team: 'tech' })
+      setPending(p.id)
+      setEditing(p.id)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const cancel = async () => {
+    const rollback = pending
     setEditing(null)
+    setPending(null)
     setForm(null)
+    if (rollback === null) return
+    try {
+      await deletePlayer(rollback)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e))
+    }
+    reload()
   }
 
   const save = async () => {
@@ -70,6 +100,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     try {
       await updatePlayer(editing, normalizeJoueurForm(form))
       setEditing(null)
+      setPending(null)
       setForm(null)
       reload()
     } catch (e) {
@@ -128,6 +159,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
       {nav}
 
       {error && <div className="error-banner">Erreur : {error}</div>}
+      {saveError && editing === null && <div className="error-banner">Erreur : {saveError}</div>}
 
       <div className="pl-head">
         <div className="pl-head-text">
@@ -146,6 +178,10 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
             />
             <kbd>⌘K</kbd>
           </label>
+          <button className="pl-add" onClick={addPlayer} disabled={creating}>
+            <IconPlus size={17} stroke={2.4} />
+            Ajouter un joueur
+          </button>
         </div>
       </div>
 
@@ -218,7 +254,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
           <div className="modal pl-modal">
             <div className="pl-modal-head">
               <div className="pl-modal-head-text">
-                <h2 className="pl-modal-title">{dialogTitle(false, form.name)}</h2>
+                <h2 className="pl-modal-title">{dialogTitle(pending !== null, form.name)}</h2>
                 <p className="pl-modal-sub">Nom, équipe et photo de profil.</p>
               </div>
               <button className="pl-close" onClick={cancel} aria-label="Fermer">
