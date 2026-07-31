@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { IconX } from '@tabler/icons-react'
 import { useStats } from '../hooks/useStats'
 import {
   computeHeadToHead,
@@ -7,10 +8,7 @@ import {
   computeSuperlatives,
   computeTeamStats,
   h2hWins,
-  opponentRecords,
-  recentMatchesFor,
   rivalryBalance,
-  sideKey,
   winnerLoser,
   type MatchHighlight,
   type PlayerStat,
@@ -25,6 +23,7 @@ import {
   filterPillLabel,
   isFiltered,
   leaderboardRows,
+  playerCard,
   scopeLabel,
   scopeMatches,
   sortLeaderboard,
@@ -35,6 +34,7 @@ import {
   weekdayProfile,
   type LeaderboardSort,
   type LeaderboardSortKey,
+  type PlayerTitles,
   type StatsFilters,
 } from '../lib/statsPage'
 import { signed } from '../lib/format'
@@ -663,11 +663,13 @@ export default function Stats({
         </>
       )}
 
-      {selected && (
-        <PlayerDetail
+      {selected !== null && (
+        <PlayerCardModal
           playerKey={selected}
           stats={playerStats}
+          titles={titles}
           matches={scoped}
+          now={now}
           onClose={() => setSelected(null)}
         />
       )}
@@ -715,155 +717,146 @@ function RivalryCard({ r }: { r: Rivalry }) {
     </div>
   )
 }
-
-function PlayerDetail({
+function PlayerCardModal({
   playerKey,
   stats,
+  titles,
   matches,
+  now,
   onClose,
 }: {
   playerKey: string
   stats: PlayerStat[]
+  titles: Map<string, PlayerTitles>
   matches: Match[]
+  now: Date
   onClose: () => void
 }) {
-  const s = stats.find((p) => p.key === playerKey)
-  if (!s) return null
+  const [allOpps, setAllOpps] = useState(false)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
-  const opps = opponentRecords(playerKey, matches)
-  const nemesis = opps
-    .filter((o) => o.losses > 0)
-    .sort((a, b) => b.losses - a.losses || a.wins - a.losses - (b.wins - b.losses))[0]
-  const victim = opps
-    .filter((o) => o.wins > 0)
-    .sort((a, b) => b.wins - a.wins || b.wins - b.losses - (a.wins - a.losses))[0]
-  const recent = recentMatchesFor(playerKey, matches, 8)
+  const card = useMemo(
+    () => playerCard(playerKey, stats, titles, matches, now),
+    [playerKey, stats, titles, matches, now],
+  )
+  if (card === null) return null
+
+  const opponents = allOpps ? card.opponents : card.opponents.slice(0, 4)
 
   return (
     <div
-      className="scrim"
+      className="scrim st-scrim"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="modal pd">
-        <div className="pd-head">
-          <Avatar name={s.name} team={s.team} url={s.avatar_url} />
-          <div>
-            <h2 style={{ marginBottom: 2 }}>{s.name}</h2>
-            <div className="modal-hint" style={{ marginBottom: 0 }}>
-              {s.team ? teamLabel(s.team) : '—'}
+      <div className="modal st-pm">
+        <div className="st-pm-head">
+          <Avatar name={card.name} team={card.team} url={card.avatarUrl} className="st-pm-av" />
+          <div className="st-pm-id">
+            <div className="st-pm-name">{card.name}</div>
+            <div className="st-pm-meta">
+              {card.team !== null && (
+                <span className="st-team-dot" style={{ background: teamColor(card.team) }} />
+              )}
+              <span>
+                {card.team !== null ? teamLabel(card.team) : '—'}
+                {card.lastSeen !== null && ` · dernier match ${card.lastSeen}`}
+              </span>
             </div>
           </div>
-        </div>
-
-        <div className="pd-kpis">
-          <div className="pd-kpi">
-            <div className="n">{s.played}</div>
-            <div className="l">Matchs</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">{pct(s.winRate)}</div>
-            <div className="l">Victoires</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">
-              {s.wins}-{s.losses}
-            </div>
-            <div className="l">V-D</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">
-              {s.diff > 0 ? '+' : ''}
-              {s.diff}
-            </div>
-            <div className="l">Diff</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">
-              {s.currentStreak >= 2 ? `🔥${s.currentStreak}` : s.currentStreak}
-            </div>
-            <div className="l">Série</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">{s.longestStreak}</div>
-            <div className="l">Meilleure série</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">{s.capotsDealt}</div>
-            <div className="l">Capots infligés</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">{s.capotsTaken}</div>
-            <div className="l">Sous la table</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">{s.matchBallsSaved}</div>
-            <div className="l">Balles de match sauvées</div>
-          </div>
-          <div className="pd-kpi">
-            <div className="n">{s.matchBallsWasted}</div>
-            <div className="l">Balles de match gâchées</div>
-          </div>
-        </div>
-
-        <div className="pd-foes">
-          <div className="pd-foe">
-            <div className="sc-label">Bête noire</div>
-            {nemesis ? (
-              <div className="pd-foe-v">
-                {nemesis.name}{' '}
-                <span className="muted">
-                  ({nemesis.wins}-{nemesis.losses})
-                </span>
-              </div>
-            ) : (
-              <div className="pd-foe-v muted">—</div>
-            )}
-          </div>
-          <div className="pd-foe">
-            <div className="sc-label">Victime favorite</div>
-            {victim ? (
-              <div className="pd-foe-v">
-                {victim.name}{' '}
-                <span className="muted">
-                  ({victim.wins}-{victim.losses})
-                </span>
-              </div>
-            ) : (
-              <div className="pd-foe-v muted">—</div>
-            )}
-          </div>
-        </div>
-
-        <div className="sc-label" style={{ marginBottom: 8 }}>
-          Derniers matchs
-        </div>
-        <div className="pd-recent">
-          {recent.map((m) => {
-            const isA = sideKey(m.player_a_id, m.player_a) === playerKey
-            const my = isA ? m.score_a : m.score_b
-            const their = isA ? m.score_b : m.score_a
-            const opp = isA ? m.player_b : m.player_a
-            const win = my > their
-            const date = m.ended_at ? new Date(m.ended_at).toLocaleDateString('fr-FR') : ''
-            return (
-              <div className="pd-row" key={m.id}>
-                <span className={`pd-res ${win ? 'w' : 'l'}`}>{win ? 'V' : 'D'}</span>
-                <span className="pd-opp">{opp}</span>
-                <span className="pd-score">
-                  {my}–{their}
-                </span>
-                <span className="pd-date">{date}</span>
-              </div>
-            )
-          })}
-        </div>
-
-        <div className="modal-actions">
-          <button className="btn-primary" onClick={onClose}>
-            Fermer
+          <button className="st-pm-close" onClick={onClose} aria-label="Fermer">
+            <IconX size={17} stroke={2} />
           </button>
+        </div>
+
+        <div className="st-pm-body">
+          <div className="st-pm-kpis">
+            {card.kpis.map((k) => (
+              <div className="st-pm-kpi" key={k.label}>
+                <div className="st-pm-kpi-label">{k.label}</div>
+                <div className={`st-pm-kpi-value ${k.tone}`}>{k.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {card.titles.length > 0 && (
+            <>
+              <div className="st-pm-sec">Palmarès</div>
+              <div className="st-pm-titles">
+                {card.titles.map((t) => (
+                  <div className="st-pm-title" key={`${t.name}|${t.date}`}>
+                    <span aria-hidden>🏆</span>
+                    <span className="st-pm-title-name">{t.name}</span>
+                    <span className="st-pm-title-date">{t.date}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="st-pm-foes">
+            <div className="st-pm-foe">
+              <div className="st-pm-foe-label">Bête noire</div>
+              <div className="st-pm-foe-row">
+                <span className="st-pm-foe-name">{card.nemesis?.name ?? '—'}</span>
+                {card.nemesis !== null && (
+                  <span className="st-pm-foe-rec neg">{card.nemesis.record}</span>
+                )}
+              </div>
+            </div>
+            <div className="st-pm-foe">
+              <div className="st-pm-foe-label">Victime favorite</div>
+              <div className="st-pm-foe-row">
+                <span className="st-pm-foe-name">{card.victim?.name ?? '—'}</span>
+                {card.victim !== null && (
+                  <span className="st-pm-foe-rec pos">{card.victim.record}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="st-pm-sec">Derniers matchs</div>
+          <div className="st-pm-recent">
+            {card.last8.map((m, i) => (
+              <div className="st-pm-match" key={i}>
+                <span className={`st-pm-res ${m.win ? 'w' : 'l'}`}>{m.win ? 'V' : 'D'}</span>
+                <span className="st-pm-opp">vs {m.opponent}</span>
+                <span className="st-pm-score">{m.score}</span>
+                <span className="st-pm-date">{m.date}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="st-pm-sec-row">
+            <div className="st-pm-sec">Bilan par adversaire</div>
+            {card.opponents.length > 4 && (
+              <button className="st-pm-toggle" onClick={() => setAllOpps((v) => !v)}>
+                {allOpps ? 'Réduire' : 'Voir tous les adversaires'}
+              </button>
+            )}
+          </div>
+          <div className="st-pm-opps">
+            {opponents.map((o) => (
+              <div className="st-pm-opp-row" key={o.name}>
+                <span className="st-pm-opp-name">{o.name}</span>
+                <span className={`st-pm-opp-rec ${o.positive ? 'pos' : 'neg'}`}>{o.record}</span>
+                <span className="st-pm-opp-track">
+                  <span
+                    className={`st-pm-opp-fill ${o.positive ? 'pos' : 'neg'}`}
+                    style={{ width: `${o.pct}%` }}
+                  />
+                </span>
+                <span className="st-pm-opp-pct">{o.pct}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

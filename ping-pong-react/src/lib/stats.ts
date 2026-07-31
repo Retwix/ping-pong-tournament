@@ -21,6 +21,7 @@ export interface PlayerStat {
   matchBallsWasted: number // match points held but not converted
   form: boolean[] // last 5 results, most recent last (true = win)
   playTimeMs: number // summed durations of this player's timed matches
+  timedMatches: number // how many of their matches carry a duration
   lastPlayedAt: string | null // when their most recent match happened
 }
 
@@ -128,6 +129,7 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
         matchBallsWasted: 0,
         form: [],
         playTimeMs: 0,
+        timedMatches: 0,
         lastPlayedAt: null,
       }
       map.set(key, s)
@@ -176,6 +178,8 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
       if (ms > 0) {
         A.playTimeMs += ms
         B.playTimeMs += ms
+        A.timedMatches++
+        B.timedMatches++
       }
     }
     const at = m.ended_at ?? m.started_at

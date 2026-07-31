@@ -10,6 +10,7 @@ import {
   isFiltered,
   leaderboardRows,
   parseStatsFilters,
+  playerCard,
   scopeLabel,
   scopeMatches,
   sortLeaderboard,
@@ -495,6 +496,7 @@ describe('leaderboard rows and sorting', () => {
     matchBallsWasted: 0,
     form: [true],
     playTimeMs: 0,
+    timedMatches: 0,
     lastPlayedAt: null,
     titles: 0,
     ...overrides,
@@ -568,6 +570,120 @@ describe('leaderboard rows and sorting', () => {
     expect(streakLabel(0)).toBe('—')
     expect(streakLabel(1)).toBe('1V')
     expect(streakLabel(4)).toBe('🔥 4V')
+  })
+})
+
+describe('player card (fiche joueur)', () => {
+  const duel = (
+    id: string,
+    opponent: { name: string; pid: string },
+    endedAt: string,
+    scoreA: number,
+    scoreB: number,
+    minutes?: number,
+  ): Match =>
+    getMockMatch({
+      id,
+      player_b: opponent.name,
+      player_b_id: opponent.pid,
+      ended_at: endedAt,
+      started_at:
+        minutes === undefined
+          ? null
+          : new Date(new Date(endedAt).getTime() - minutes * 60_000).toISOString(),
+      score_a: scoreA,
+      score_b: scoreB,
+    })
+
+  const thibault = { name: 'Thibault', pid: 'pb' }
+  const candice = { name: 'Candice', pid: 'pc' }
+  const matches = [
+    duel('m1', thibault, '2026-07-10T10:00:00.000Z', 11, 3, 20),
+    duel('m2', thibault, '2026-07-12T10:00:00.000Z', 5, 11),
+    duel('m3', candice, '2026-07-14T10:00:00.000Z', 11, 7, 30),
+  ]
+  const card = () => {
+    const stats = computePlayerStats(matches, [])
+    const titles = titlesByName(
+      [getMockTournament({ id: 't1', name: 'Open de juillet', champion: 'Léo' })],
+      [],
+    )
+    return playerCard('pa', stats, titles, matches, NOW)
+  }
+
+  it('is null for an unknown player', () => {
+    expect(playerCard('nope', computePlayerStats(matches, []), new Map(), matches, NOW)).toBeNull()
+  })
+
+  it('builds the identity header with the last outing', () => {
+    const c = card()
+    expect(c?.name).toBe('Léo')
+    expect(c?.lastSeen).toBe('il y a 1 j')
+  })
+
+  it('lays out the twelve KPIs with averages, play time and tones', () => {
+    const kpis = card()?.kpis ?? []
+    expect(kpis.map((k) => k.label)).toEqual([
+      'Matchs',
+      '% victoires',
+      'V — D',
+      'Diff',
+      'Série',
+      'Meilleure série',
+      'Pts pour / contre',
+      'Temps de jeu',
+      'Durée moyenne',
+      'Capots · sous la table',
+      'BM sauvées',
+      'BM gâchées',
+    ])
+    const byLabel = new Map(kpis.map((k) => [k.label, k]))
+    expect(byLabel.get('Matchs')?.value).toBe('3')
+    expect(byLabel.get('% victoires')?.value).toBe('67%')
+    expect(byLabel.get('V — D')?.value).toBe('2 — 1')
+    expect(byLabel.get('Diff')).toMatchObject({ value: '+6', tone: 'pos' })
+    expect(byLabel.get('Série')).toMatchObject({ value: '1V', tone: 'pos' })
+    expect(byLabel.get('Pts pour / contre')?.value).toBe('9,0 / 7,0')
+    expect(byLabel.get('Temps de jeu')?.value).toBe('50 min')
+    expect(byLabel.get('Durée moyenne')?.value).toBe('25 min')
+    expect(byLabel.get('Capots · sous la table')?.value).toBe('0 · 0')
+    expect(byLabel.get('BM sauvées')?.tone).toBe('pos')
+    expect(byLabel.get('BM gâchées')?.tone).toBe('neg')
+  })
+
+  it('shows the palmarès only when the player owns titles', () => {
+    expect(card()?.titles).toEqual([{ name: 'Open de juillet', date: 'juil. 2026' }])
+    const stats = computePlayerStats(matches, [])
+    expect(playerCard('pb', stats, new Map(), matches, NOW)?.titles).toEqual([])
+  })
+
+  it('finds the worst and best matchups by win rate', () => {
+    const c = card()
+    expect(c?.nemesis).toEqual({ name: 'Thibault', record: '1-1' })
+    expect(c?.victim).toEqual({ name: 'Candice', record: '1-0' })
+  })
+
+  it('never names a nemesis without a loss, nor a victim without a win', () => {
+    const clean = [duel('w1', thibault, '2026-07-10T10:00:00.000Z', 11, 3)]
+    const c = playerCard('pa', computePlayerStats(clean, []), new Map(), clean, NOW)
+    expect(c?.nemesis).toBeNull()
+    expect(c?.victim).toEqual({ name: 'Thibault', record: '1-0' })
+  })
+
+  it('lists the recent matches newest first with relative dates', () => {
+    const last = card()?.last8 ?? []
+    expect(last.map((m) => [m.win, m.opponent, m.score, m.date])).toEqual([
+      [true, 'Candice', '11-7', 'il y a 1 j'],
+      [false, 'Thibault', '5-11', 'il y a 3 j'],
+      [true, 'Thibault', '11-3', 'il y a 5 j'],
+    ])
+  })
+
+  it('ranks the full opponent balance by win rate', () => {
+    expect(card()?.opponents).toEqual([
+      { name: 'Candice', record: '1-0', pct: 100, positive: true },
+      { name: 'Thibault', record: '1-1', pct: 50, positive: true },
+    ])
   })
 })
 

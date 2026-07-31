@@ -1,8 +1,9 @@
 // Pure selectors for the « Les stats » page (/stats).
 
 import type { Match, Tournament } from '../types'
+import { relativeTime, signed } from './format'
 import { matchDuration } from './pingpong'
-import { matchesByDay, sideKey, type PlayerStat } from './stats'
+import { matchesByDay, opponentRecords, recentMatchesFor, sideKey, type PlayerStat } from './stats'
 
 export type StatsPeriod = 'tout' | 'mois' | 'semaine'
 export type StatsType = 'tout' | 'tournois' | 'rapides'
@@ -305,6 +306,147 @@ export function sortLeaderboard(rows: LeaderboardRow[], sort: LeaderboardSort): 
 export function streakLabel(streak: number): string {
   if (streak >= 2) return `🔥 ${streak}V`
   return streak === 1 ? '1V' : '—'
+}
+
+export interface PlayerCardKpi {
+  label: string
+  value: string
+  tone: 'ink' | 'pos' | 'neg'
+}
+
+export interface PlayerCardMatch {
+  win: boolean
+  opponent: string
+  score: string
+  date: string
+}
+
+export interface OpponentBalance {
+  name: string
+  record: string
+  pct: number
+  positive: boolean
+}
+
+export interface PlayerCardModel {
+  name: string
+  team: string | null
+  avatarUrl: string | null
+  lastSeen: string | null
+  kpis: PlayerCardKpi[]
+  titles: Array<{ name: string; date: string }>
+  nemesis: { name: string; record: string } | null
+  victim: { name: string; record: string } | null
+  last8: PlayerCardMatch[]
+  opponents: OpponentBalance[]
+}
+
+/** « 9,8 » — one-decimal French average. */
+const fmtAvg = (n: number): string => n.toFixed(1).replace('.', ',')
+
+/** Everything the fiche joueur shows, derived from the scoped stats and matches. */
+export function playerCard(
+  key: string,
+  stats: PlayerStat[],
+  titles: Map<string, PlayerTitles>,
+  matches: Match[],
+  now: Date,
+): PlayerCardModel | null {
+  const s = stats.find((p) => p.key === key)
+  if (s === undefined) return null
+
+  const balances = opponentRecords(key, matches)
+    .map((o) => {
+      const games = o.wins + o.losses
+      const pct = games === 0 ? 0 : Math.round((o.wins / games) * 100)
+      return {
+        name: o.name,
+        record: `${o.wins}-${o.losses}`,
+        pct,
+        positive: pct >= 50,
+        wins: o.wins,
+        losses: o.losses,
+      }
+    })
+    .sort((a, b) => b.pct - a.pct || b.wins + b.losses - (a.wins + a.losses))
+
+  const nemesis =
+    balances
+      .filter((o) => o.losses > 0)
+      .sort((a, b) => a.pct - b.pct || b.losses - a.losses)
+      .map((o) => ({ name: o.name, record: o.record }))[0] ?? null
+  const victim =
+    balances
+      .filter((o) => o.wins > 0)
+      .sort((a, b) => b.pct - a.pct || b.wins - a.wins)
+      .map((o) => ({ name: o.name, record: o.record }))[0] ?? null
+
+  const last8 = recentMatchesFor(key, matches, 8).map((m) => {
+    const meIsA = sideKey(m.player_a_id, m.player_a) === key
+    const my = meIsA ? m.score_a : m.score_b
+    const their = meIsA ? m.score_b : m.score_a
+    return {
+      win: my > their,
+      opponent: meIsA ? m.player_b : m.player_a,
+      score: `${my}-${their}`,
+      date: relativeTime(m.ended_at ?? m.started_at, now),
+    }
+  })
+
+  const kpis: PlayerCardKpi[] = [
+    { label: 'Matchs', value: String(s.played), tone: 'ink' },
+    { label: '% victoires', value: `${Math.round(s.winRate * 100)}%`, tone: 'ink' },
+    { label: 'V — D', value: `${s.wins} — ${s.losses}`, tone: 'ink' },
+    {
+      label: 'Diff',
+      value: signed(s.diff),
+      tone: s.diff > 0 ? 'pos' : s.diff < 0 ? 'neg' : 'ink',
+    },
+    {
+      label: 'Série',
+      value: streakLabel(s.currentStreak),
+      tone: s.currentStreak > 0 ? 'pos' : 'ink',
+    },
+    {
+      label: 'Meilleure série',
+      value: s.longestStreak > 0 ? `${s.longestStreak}V` : '—',
+      tone: 'ink',
+    },
+    {
+      label: 'Pts pour / contre',
+      value:
+        s.played === 0
+          ? '—'
+          : `${fmtAvg(s.pointsFor / s.played)} / ${fmtAvg(s.pointsAgainst / s.played)}`,
+      tone: 'ink',
+    },
+    {
+      label: 'Temps de jeu',
+      value: s.timedMatches > 0 ? fmtPlayTime(s.playTimeMs) : '—',
+      tone: 'ink',
+    },
+    {
+      label: 'Durée moyenne',
+      value: s.timedMatches > 0 ? `${Math.round(s.playTimeMs / s.timedMatches / 60_000)} min` : '—',
+      tone: 'ink',
+    },
+    { label: 'Capots · sous la table', value: `${s.capotsDealt} · ${s.capotsTaken}`, tone: 'ink' },
+    { label: 'BM sauvées', value: String(s.matchBallsSaved), tone: 'pos' },
+    { label: 'BM gâchées', value: String(s.matchBallsWasted), tone: 'neg' },
+  ]
+
+  return {
+    name: s.name,
+    team: s.team,
+    avatarUrl: s.avatar_url,
+    lastSeen: s.lastPlayedAt === null ? null : relativeTime(s.lastPlayedAt, now),
+    kpis,
+    titles: titles.get(s.name)?.titles ?? [],
+    nemesis,
+    victim,
+    last8,
+    opponents: balances.map(({ name, record, pct, positive }) => ({ name, record, pct, positive })),
+  }
 }
 
 export interface StatsKpi {

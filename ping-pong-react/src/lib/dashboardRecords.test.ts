@@ -25,6 +25,7 @@ function makeStat(overrides: Partial<PlayerStat> = {}): PlayerStat {
     matchBallsWasted: 0,
     form: [],
     playTimeMs: 0,
+    timedMatches: 0,
     lastPlayedAt: null,
     ...overrides,
   }
