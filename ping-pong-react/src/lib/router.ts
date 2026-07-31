@@ -10,14 +10,14 @@
 
 /** Current route path, with any trailing slash normalised away. */
 export function currentPath(): string {
-	return window.location.pathname.replace(/\/+$/, "") || "/"
+  return window.location.pathname.replace(/\/+$/, '') || '/'
 }
 
-/** Navigate to an in-app path (e.g. "/live", "/t/123") without a full reload. */
+/** Navigate to an in-app path (e.g. "/live", "/parties?f=match") without a full reload. */
 export function navigate(path: string): void {
-	if (path !== window.location.pathname) {
-		window.history.pushState({}, "", path)
-	}
-	// pushState doesn't emit popstate, so dispatch it ourselves to trigger a render.
-	window.dispatchEvent(new PopStateEvent("popstate"))
+  if (path !== window.location.pathname + window.location.search) {
+    window.history.pushState({}, '', path)
+  }
+  // pushState doesn't emit popstate, so dispatch it ourselves to trigger a render.
+  window.dispatchEvent(new PopStateEvent('popstate'))
 }

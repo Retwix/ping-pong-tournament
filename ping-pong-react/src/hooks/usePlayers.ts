@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listPlayers } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { uniqueChannelName } from '../lib/realtimeChannel'
 import type { Player } from '../types'
 
 /** The player registry, kept fresh via realtime on the players table. */
@@ -23,7 +24,7 @@ export function usePlayers() {
   useEffect(() => {
     refresh()
     const channel = supabase
-      .channel('players-list')
+      .channel(uniqueChannelName('players-list'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => refresh())
       .subscribe()
     return () => {

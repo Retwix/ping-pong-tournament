@@ -1,9 +1,24 @@
-import { useMemo, useState } from 'react'
-import { IconArrowLeft, IconRefresh } from '@tabler/icons-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { IconArrowLeft, IconInfoCircle, IconRefresh, IconSearch } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING } from '../lib/rating'
-import TopBack from './TopBack'
-import ThemeToggle from './ThemeToggle'
+import {
+  STREAK_BADGE_MIN,
+  filterRatingRows,
+  lastFive,
+  lastRatedAt,
+  latestRatingExample,
+  podium,
+  recordOf,
+  tightestGaps,
+  topProgressions,
+  weeklyDelta,
+  winStreak,
+} from '../lib/classement'
+import { relativeTime } from '../lib/format'
+import DashboardNav from './DashboardNav'
+import DashboardTabBar from './DashboardTabBar'
+import EloModal from './EloModal'
 import { playerHistory } from '../lib/playerHistory'
 import Avatar from './Avatar'
 import PlayerModal from './PlayerModal'
@@ -25,11 +40,21 @@ const STAKES_LABEL: Record<RatingEvent['stakes'], string | null> = {
   grand_final: 'Grande finale 🏆',
 }
 
+/** « ▲12 » / « ▼5 » / « ±0 » — the leader card's weekly move, white-on-violet. */
+function weekLabel(delta: number): string {
+  const v = Math.round(delta)
+  if (v === 0) return '±0'
+  return v > 0 ? `▲${v}` : `▼${Math.abs(v)}`
+}
+
 function fmtDate(at: string | null): string {
   if (!at) return '—'
   const d = new Date(at)
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) +
-    ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  return (
+    d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) +
+    ' · ' +
+    d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  )
 }
 
 /** One line of a log entry: a player's score and rating move for that match. */
@@ -48,30 +73,64 @@ function LogLine({ e, win }: { e: RatingEvent; win: boolean }) {
   )
 }
 
-export default function Ratings({ onBack }: { onBack: () => void }) {
+interface Props {
+  onHome: () => void
+  onStats: () => void
+  onPlayers: () => void
+  onNew: () => void
+  onNewGame: () => void
+}
+
+export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }: Props) {
   const { rows, events, matchCount, loading, error, recompute } = useRatings()
   const [mode, setMode] = useState<'board' | 'log'>('board')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [eloOpen, setEloOpen] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const leader = rows.find((r) => !r.provisional) ?? rows[0]
+  const ranked = rows.filter((r) => !r.provisional)
+  const updatedAt = lastRatedAt(events)
 
-  // Highlights drawn from the rating history.
-  const { biggestWin, biggestFinal } = useMemo(() => {
-    let biggestWin: RatingEvent | null = null
-    let biggestFinal: RatingEvent | null = null
-    for (const e of events) {
-      if (e.delta > 0 && (!biggestWin || e.delta > biggestWin.delta)) biggestWin = e
-      if (e.stakes !== 'normal' && e.delta > 0 && (!biggestFinal || e.delta > biggestFinal.delta))
-        biggestFinal = e
-    }
-    return { biggestWin, biggestFinal }
-  }, [events])
+  const tableRows = useMemo(() => {
+    const now = new Date()
+    return filterRatingRows(rows, query).map((r) => ({
+      ...r,
+      record: recordOf(events, r.key),
+      form: lastFive(events, r.key),
+      streak: winStreak(events, r.key),
+      delta7: weeklyDelta(events, r.key, now),
+    }))
+  }, [rows, events, query])
+
+  const pod = useMemo(() => podium(rows, events, new Date()), [rows, events])
+  const gaps = useMemo(() => tightestGaps(rows), [rows])
+  const progs = useMemo(() => topProgressions(events, rows, new Date()), [events, rows])
+  const example = useMemo(() => latestRatingExample(events), [events])
 
   // Group the two events of each match into one log entry, newest first.
   const logEntries = useMemo(() => {
     const byMatch = new Map<
       string,
-      { at: string | null; stakes: RatingEvent['stakes']; weight: number; winner?: RatingEvent; loser?: RatingEvent }
+      {
+        at: string | null
+        stakes: RatingEvent['stakes']
+        weight: number
+        winner?: RatingEvent
+        loser?: RatingEvent
+      }
     >()
     const order: string[] = []
     for (const e of events) {
@@ -90,37 +149,65 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
       .reverse()
   }, [events])
 
-  const header = (
-    <>
-      <TopBack onClick={onBack} label="Accueil" />
-      <header>
-        <ThemeToggle className="header-toggle" />
-        <div className="eyebrow">Classement Elo</div>
-        <h1>
-          Le <span className="em">classement</span>
-        </h1>
-        <p className="subtitle">
-          Force réelle de chaque joueur, calculée avec le système Glicko-2. L'écart du score
-          (et les finales) pèse plus lourd. Le rang combine la note et sa fiabilité.
-        </p>
-      </header>
-    </>
+  const nav = (
+    <DashboardNav
+      active="classement"
+      onHome={onHome}
+      onStats={onStats}
+      onPlayers={onPlayers}
+      onNew={onNew}
+      onNewGame={onNewGame}
+    />
+  )
+  const tabbar = (
+    <DashboardTabBar
+      active="classement"
+      onHome={onHome}
+      onStats={onStats}
+      onPlayers={onPlayers}
+      onNew={onNew}
+      onNewGame={onNewGame}
+    />
   )
 
   if (loading) {
     return (
-      <div className="wrap">
-        {header}
+      <div className="rv-page">
+        {nav}
         <p className="empty">Chargement…</p>
+        {tabbar}
       </div>
     )
   }
 
   return (
-    <div className="wrap">
-      {header}
+    <div className="rv-page">
+      {nav}
 
       {error && <div className="error-banner">Erreur : {error}</div>}
+
+      <div className="cl-head">
+        <div className="cl-head-text">
+          <h1 className="cl-title">Classement Elo</h1>
+          <p className="cl-sub">
+            Classement général
+            {updatedAt && ` · dernière mise à jour ${relativeTime(updatedAt, new Date())}`}
+          </p>
+        </div>
+        {rows.length > 0 && (
+          <label className="cl-search">
+            <IconSearch size={17} stroke={2} />
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Chercher un joueur…"
+              aria-label="Chercher un joueur"
+            />
+            <kbd>⌘K</kbd>
+          </label>
+        )}
+      </div>
 
       {rows.length === 0 ? (
         <section>
@@ -129,7 +216,7 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
           </div>
           <div className="footer-row">
             <span />
-            <button className="link-btn" onClick={onBack}>
+            <button className="link-btn" onClick={onHome}>
               <IconArrowLeft size={16} stroke={1.8} /> Accueil
             </button>
           </div>
@@ -155,7 +242,10 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
                     <div className="rt-log-head">
                       <span className="rt-log-date">{fmtDate(g.at)}</span>
                       {label && <span className={`rt-stakes ${g.stakes}`}>{label}</span>}
-                      <span className="rt-log-weight" title="Poids du match : marge au score × enjeu">
+                      <span
+                        className="rt-log-weight"
+                        title="Poids du match : marge au score × enjeu"
+                      >
                         poids ×{g.weight.toFixed(2)}
                       </span>
                     </div>
@@ -176,60 +266,99 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
         </>
       ) : (
         <>
-          <section>
-            <div className="kpi-strip">
-              <div className="kpi">
-                <div className="num">{rows.length}</div>
-                <div className="lbl">Joueurs classés</div>
-              </div>
-              <div className="kpi">
-                <div className="num">{matchCount}</div>
-                <div className="lbl">Matchs notés</div>
-              </div>
-              <div className="kpi">
-                <div className="num">{leader ? Math.round(leader.rating) : '—'}</div>
-                <div className="lbl">{leader ? `Meneur · ${leader.name}` : 'Meneur'}</div>
-              </div>
+          <div className="cl-tiles">
+            <div className="cl-tile">
+              <div className="cl-tile-num">{ranked.length}</div>
+              <div className="cl-tile-lbl">Joueurs classés</div>
             </div>
-          </section>
+            <div className="cl-tile">
+              <div className="cl-tile-num">{matchCount}</div>
+              <div className="cl-tile-lbl">Matchs notés</div>
+            </div>
+            <div className="cl-tile">
+              <div className="cl-tile-num">{leader ? Math.round(leader.rating) : '—'}</div>
+              <div className="cl-tile-lbl">{leader ? `Meneur · ${leader.name}` : 'Meneur'}</div>
+            </div>
+          </div>
 
-          <section>
-            <div className="section-title with-toggle">
-              Notes Elo
-              <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 12 }}>
-                <button
-                  className="link-btn"
-                  onClick={() => setMode('log')}
-                  title="Voir comment chaque match a fait évoluer les notes"
-                >
-                  Journal des calculs →
-                </button>
-                <button
-                  className="link-btn"
-                  onClick={recompute}
-                  title="Recalculer et enregistrer les notes"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                >
-                  <IconRefresh size={15} stroke={1.8} /> Recalculer
-                </button>
+          {pod && (
+            <div className="cl-podium">
+              <div className="cl-pod-1">
+                <div className="cl-pod-1-top">
+                  <Avatar
+                    name={pod.first.row.name}
+                    team={pod.first.row.team}
+                    url={pod.first.row.avatar_url}
+                    className="cl-ava-60"
+                    fill="hero"
+                  />
+                  <span className="cl-pod-badge1">1er · Leader</span>
+                </div>
+                <div className="cl-pod-1-name">{pod.first.row.name}</div>
+                <div className="cl-pod-1-elo">
+                  {Math.round(pod.first.row.rating)}
+                  <span className="cl-pod-1-week">{weekLabel(pod.first.delta7)} cette semaine</span>
+                </div>
+                <div className="cl-pod-1-tiles">
+                  <div className="cl-pod-1-tile">
+                    <b>
+                      {pod.first.record.wins}–{pod.first.record.losses}
+                    </b>
+                    <span>bilan total</span>
+                  </div>
+                  <div className="cl-pod-1-tile">
+                    <b>{pod.first.row.games}</b>
+                    <span>matchs joués</span>
+                  </div>
+                </div>
               </div>
+              {[pod.second, pod.third].map((p, i) => (
+                <div className="cl-pod-r" key={p.row.key}>
+                  <div className="cl-pod-r-top">
+                    <Avatar name={p.row.name} team={p.row.team} url={p.row.avatar_url} />
+                    <span className={`cl-pod-rank cl-pod-rank-${i + 2}`}>{i + 2}e</span>
+                  </div>
+                  <div className="cl-pod-r-name">{p.row.name}</div>
+                  <div className="cl-pod-r-elo">
+                    {Math.round(p.row.rating)} <Trend delta={p.delta7} />
+                  </div>
+                  <div className="cl-pod-r-note">{p.note}</div>
+                </div>
+              ))}
             </div>
-            <div className="panel">
-              <table className="leaderboard rating-board">
-                <thead>
-                  <tr>
-                    <th className="left">Joueur</th>
-                    <th>Elo</th>
-                    <th>Fiabilité</th>
-                    <th>Tendance</th>
-                    <th>J</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr
+          )}
+
+          <div className="cl-body">
+            <div className="cl-main">
+              <section>
+                <div className="cl-sec-head">
+                  <div className="cl-sec-title">
+                    Tous les joueurs
+                    <button
+                      className="cl-refresh"
+                      onClick={recompute}
+                      title="Recalculer et enregistrer les notes"
+                      aria-label="Recalculer les notes"
+                    >
+                      <IconRefresh size={15} stroke={2} />
+                    </button>
+                  </div>
+                </div>
+                <div className="cl-table">
+                  <div className="cl-tr cl-thead">
+                    <span className="cl-c-rank">#</span>
+                    <span className="cl-c-avatar" />
+                    <span className="cl-c-name">Joueur</span>
+                    <span className="cl-c-form">Forme</span>
+                    <span className="cl-c-rec">V–D</span>
+                    <span className="cl-c-games">Matchs</span>
+                    <span className="cl-c-elo">Elo</span>
+                    <span className="cl-c-delta">7 j</span>
+                  </div>
+                  {tableRows.map((r) => (
+                    <div
                       key={r.key}
-                      className={`rt-row${r.provisional ? '' : ` r${r.rank}`}`}
+                      className="cl-tr cl-row"
                       onClick={() => setSelectedKey(r.key)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -238,104 +367,142 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
                         }
                       }}
                       tabIndex={0}
+                      role="button"
                       aria-label={`Voir l'historique de ${r.name}`}
                     >
-                      <td className="left">
-                        <span className="rank">{r.rank}</span>
-                        <span className="lb-player">
-                          <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
-                          {r.name}
-                          {r.provisional && <span className="rt-prov">provisoire</span>}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="rt-rating">{Math.round(r.rating)}</span>
-                      </td>
-                      <td>
-                        <span className="rt-rd">± {Math.round(r.rd)}</span>
-                      </td>
-                      <td>
-                        <Trend delta={r.trend} />
-                      </td>
-                      <td>{r.games}</td>
-                    </tr>
+                      <span
+                        className={`cl-c-rank${
+                          r.provisional ? ' prov' : r.rank <= 3 ? ` p${r.rank}` : ''
+                        }`}
+                      >
+                        {r.provisional ? '—' : r.rank}
+                      </span>
+                      <span className="cl-c-avatar">
+                        <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
+                      </span>
+                      <span className="cl-c-name">
+                        <span className="cl-name-text">{r.name}</span>
+                        {!r.provisional && r.streak >= STREAK_BADGE_MIN && (
+                          <span className="cl-badge cl-badge-streak">{r.streak} victoires</span>
+                        )}
+                        {r.provisional && (
+                          <span className="cl-badge cl-badge-prov">Provisoire</span>
+                        )}
+                      </span>
+                      <span className="cl-c-form">
+                        {r.provisional ? (
+                          <span className="cl-form-count">
+                            {r.games} / {RATING.provisionalGames} matchs
+                          </span>
+                        ) : (
+                          r.form.map((won, i) => (
+                            <i key={i} className={`cl-dot ${won ? 'w' : 'l'}`} />
+                          ))
+                        )}
+                      </span>
+                      <span className="cl-c-rec">
+                        {r.record.wins}–{r.record.losses}
+                      </span>
+                      <span className="cl-c-games">{r.games}</span>
+                      <span
+                        className={`cl-c-elo${
+                          r.provisional ? ' prov' : r.key === leader?.key ? ' lead' : ''
+                        }`}
+                      >
+                        {r.provisional ? `~${Math.round(r.rating)}` : Math.round(r.rating)}
+                      </span>
+                      <span className="cl-c-delta">
+                        <Trend delta={r.delta7} />
+                      </span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                  {tableRows.length === 0 && (
+                    <div className="cl-empty-row">
+                      Aucun joueur trouvé. Essaie un autre nom ou une autre équipe.
+                    </div>
+                  )}
+                </div>
+                <p className="cl-note">
+                  Un joueur entre au classement après {RATING.provisionalGames} matchs. Avant cela,
+                  son Elo provisoire s'affiche en gris.
+                </p>
+              </section>
             </div>
-            <p className="setup-hint" style={{ textAlign: 'left' }}>
-              « Fiabilité » est la marge d'incertitude (± points) : elle se resserre avec les
-              matchs. Un joueur reste « provisoire » sous {RATING.provisionalGames} matchs ou tant
-              que sa marge dépasse {RATING.provisionalRd}.
-            </p>
-          </section>
 
-          {(biggestWin || biggestFinal) && (
-            <section>
-              <div className="section-title">Faits marquants</div>
-              <div className="super-grid">
-                {biggestWin && (
-                  <div className="super-card">
-                    <div className="sc-label">Plus gros gain</div>
-                    <div className="sc-value">+{Math.round(biggestWin.delta)}</div>
-                    <div className="sc-sub">
-                      {biggestWin.name} bat {biggestWin.opponentName}
+            <aside className="cl-rail">
+              {gaps.length > 0 && (
+                <div className="cl-rail-card">
+                  <div className="cl-rail-title">Écarts les plus serrés</div>
+                  <p className="cl-rail-explain">
+                    Les places qui peuvent basculer au prochain match.
+                  </p>
+                  {gaps.map((g) => (
+                    <div className="cl-gap-row" key={`${g.above.key}·${g.below.key}`}>
+                      <span className="cl-gap-name">{g.above.name}</span>
+                      <span className="cl-gap-pill">{g.gap} pts</span>
+                      <span className="cl-gap-name right">{g.below.name}</span>
                     </div>
+                  ))}
+                </div>
+              )}
+              {progs.length > 0 && (
+                <div className="cl-rail-card">
+                  <div className="cl-rail-head">
+                    <span className="cl-rail-title">Plus fortes progressions</span>
+                    <span className="cl-rail-tag">7 jours</span>
                   </div>
-                )}
-                {biggestFinal && (
-                  <div className="super-card">
-                    <div className="sc-label">Plus gros gain en finale 🏆</div>
-                    <div className="sc-value">+{Math.round(biggestFinal.delta)}</div>
-                    <div className="sc-sub">
-                      {biggestFinal.name} vs {biggestFinal.opponentName}
+                  {progs.map((p) => (
+                    <div className="cl-prog-row" key={p.row.key}>
+                      <span className="cl-prog-rank">{p.row.rank}</span>
+                      <Avatar
+                        name={p.row.name}
+                        team={p.row.team}
+                        url={p.row.avatar_url}
+                        className="sm"
+                      />
+                      <span className="cl-prog-name">{p.row.name}</span>
+                      <span className="cl-prog-delta">▲ {Math.round(p.delta7)}</span>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+              )}
+              <div className="cl-rail-card">
+                <div className="cl-explain-head">
+                  <span className="cl-explain-ico">
+                    <IconInfoCircle size={17} stroke={2} />
+                  </span>
+                  <span className="cl-rail-title">Comment marche l'Elo</span>
+                </div>
+                <p className="cl-rail-explain">
+                  Le vainqueur prend des points au perdant. L'écart au score, l'enjeu et la
+                  fiabilité « ± » de chaque note font varier le transfert — c'est le système
+                  Glicko-2.
+                </p>
+                <div className="cl-explain-row">
+                  <b>×{RATING.marginCap}</b>
+                  <span>poids maximal d'une grosse victoire</span>
+                </div>
+                <div className="cl-explain-row">
+                  <b>×{RATING.wGrandFinal}</b>
+                  <span>poids d'une grande finale</span>
+                </div>
+                <button className="cl-explain-link" onClick={() => setEloOpen(true)}>
+                  Voir le détail du calcul →
+                </button>
+                <button className="cl-explain-link sub" onClick={() => setMode('log')}>
+                  Journal des calculs →
+                </button>
               </div>
-            </section>
-          )}
-
-          <section>
-            <div className="section-title">Comment ça marche ?</div>
-            <div className="panel rt-explain">
-              <p>
-                Chaque joueur démarre à <b>1500</b>. Après un match, le vainqueur prend des points
-                au perdant : battre un joueur mieux classé en rapporte beaucoup, battre un joueur
-                moins bien classé très peu.
-              </p>
-              <p>
-                L'<b>écart au score</b> compte — un 11–2 fait bouger les notes plus qu'un 11–9 — et
-                les <b>finales</b> de tournoi pèsent encore plus lourd, surtout la grande finale 🏆.
-              </p>
-              <p>
-                Le <b>«&nbsp;±&nbsp;»</b> est la marge d'incertitude : elle se resserre au fil des
-                matchs. Tant qu'elle reste élevée (ou sous {RATING.provisionalGames} matchs), la
-                note est <b>provisoire</b>.
-              </p>
-              <p>
-                Une <b>longue absence ne fait pas baisser ta note</b>, mais élargit ton «&nbsp;±&nbsp;».
-                Comme le classement tient compte de cette fiabilité, ton <b>rang peut reculer</b>
-                malgré une note inchangée — et après quelques semaines sans jouer tu repasses
-                «&nbsp;provisoire&nbsp;». À ton retour, cette marge plus large fait que tes premiers
-                matchs comptent davantage et la note retrouve vite son niveau.
-              </p>
-              <p>
-                Le <b>rang</b> combine la note et sa fiabilité, pour qu'une note vite acquise ne
-                double pas une note bien établie. Le tout repose sur le système <b>Glicko-2</b>.
-                Le <b>journal des calculs</b> détaille chaque match, un par un.
-              </p>
-            </div>
-          </section>
+            </aside>
+          </div>
 
           <div className="footer-row">
             <span className="hint">Notes Glicko-2 · parties rapides et tournois confondus.</span>
-            <button className="link-btn" onClick={onBack}>
-              <IconArrowLeft size={16} stroke={1.8} /> Accueil
-            </button>
           </div>
         </>
       )}
+
+      {eloOpen && <EloModal example={example} onClose={() => setEloOpen(false)} />}
 
       {(() => {
         const selected = selectedKey ? rows.find((r) => r.key === selectedKey) : undefined
@@ -348,6 +515,7 @@ export default function Ratings({ onBack }: { onBack: () => void }) {
           />
         )
       })()}
+      {tabbar}
     </div>
   )
 }

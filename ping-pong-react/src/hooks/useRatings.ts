@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listAllDoneMatches, listPlayers, listTournaments, recomputeRatings } from '../lib/db'
 import { rankRatings, replayRatings, type RatingRow, type RatingEvent } from '../lib/rating'
 import { supabase } from '../lib/supabase'
+import { uniqueChannelName } from '../lib/realtimeChannel'
 import type { Match, Player, Tournament } from '../types'
 
 /**
@@ -38,7 +39,7 @@ export function useRatings() {
   useEffect(() => {
     refresh()
     const channel = supabase
-      .channel('ratings-live')
+      .channel(uniqueChannelName('ratings-live'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => refresh())
       .subscribe()
@@ -64,6 +65,9 @@ export function useRatings() {
   return {
     rows,
     events,
+    matches,
+    players,
+    tournaments,
     matchCount: matches.length,
     loading,
     error,

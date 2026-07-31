@@ -19,6 +19,10 @@ export interface PlayerStat {
   capotsTaken: number // times sent under the table (scored 0)
   matchBallsSaved: number // points won while one point from losing the match
   matchBallsWasted: number // match points held but not converted
+  form: boolean[] // last 5 results, most recent last (true = win)
+  playTimeMs: number // summed durations of this player's timed matches
+  timedMatches: number // how many of their matches carry a duration
+  lastPlayedAt: string | null // when their most recent match happened
 }
 
 /** A finished match where the loser scored 0 — a "capot" / sous la table. */
@@ -32,6 +36,7 @@ export interface TeamStat {
   played: number
   wins: number
   winRate: number
+  diff: number // point differential across inter-team matches
 }
 
 export interface MatchHighlight {
@@ -123,6 +128,10 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
         capotsTaken: 0,
         matchBallsSaved: 0,
         matchBallsWasted: 0,
+        form: [],
+        playTimeMs: 0,
+        timedMatches: 0,
+        lastPlayedAt: null,
       }
       map.set(key, s)
     }
@@ -165,6 +174,18 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
     A.matchBallsWasted += savedB
     B.matchBallsSaved += savedB
     B.matchBallsWasted += savedA
+    if (m.started_at && m.ended_at) {
+      const ms = matchDuration(m)
+      if (ms > 0) {
+        A.playTimeMs += ms
+        B.playTimeMs += ms
+        A.timedMatches++
+        B.timedMatches++
+      }
+    }
+    const at = m.ended_at ?? m.started_at
+    if (at && (!A.lastPlayedAt || at > A.lastPlayedAt)) A.lastPlayedAt = at
+    if (at && (!B.lastPlayedAt || at > B.lastPlayedAt)) B.lastPlayedAt = at
     pushResult(A.key, aWin)
     pushResult(B.key, !aWin)
   }
@@ -175,6 +196,7 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
     const r = results.get(s.key) ?? []
     s.longestStreak = longestRun(r)
     s.currentStreak = trailingRun(r)
+    s.form = r.slice(-5)
   }
   return [...map.values()]
 }
@@ -199,7 +221,7 @@ export function computeTeamStats(matches: Match[], players: Player[]): TeamStat[
   const ensure = (team: string): TeamStat => {
     let t = map.get(team)
     if (!t) {
-      t = { team, players: 0, played: 0, wins: 0, winRate: 0 }
+      t = { team, players: 0, played: 0, wins: 0, winRate: 0, diff: 0 }
       map.set(team, t)
       rosters.set(team, new Set())
     }
@@ -224,6 +246,8 @@ export function computeTeamStats(matches: Match[], players: Player[]): TeamStat[
     const tb = ensure(bTeam)
     ta.played++
     tb.played++
+    ta.diff += m.score_a - m.score_b
+    tb.diff += m.score_b - m.score_a
     if (m.score_a > m.score_b) ta.wins++
     else tb.wins++
   }
@@ -264,15 +288,19 @@ export function computeSuperlatives(matches: Match[]): Superlatives {
     if (m.started_at && m.ended_at) {
       const ms = matchDuration(m)
       if (ms > 0) {
-        if (!out.longestMatch || ms > out.longestMatch.value) out.longestMatch = { match: m, value: ms }
-        if (!out.shortestMatch || ms < out.shortestMatch.value) out.shortestMatch = { match: m, value: ms }
+        if (!out.longestMatch || ms > out.longestMatch.value)
+          out.longestMatch = { match: m, value: ms }
+        if (!out.shortestMatch || ms < out.shortestMatch.value)
+          out.shortestMatch = { match: m, value: ms }
       }
     }
-    if (!out.biggestBlowout || margin > out.biggestBlowout.value) out.biggestBlowout = { match: m, value: margin }
+    if (!out.biggestBlowout || margin > out.biggestBlowout.value)
+      out.biggestBlowout = { match: m, value: margin }
     if (
       !out.closestGame ||
       margin < out.closestGame.value ||
-      (margin === out.closestGame.value && total > out.closestGame.match.score_a + out.closestGame.match.score_b)
+      (margin === out.closestGame.value &&
+        total > out.closestGame.match.score_a + out.closestGame.match.score_b)
     ) {
       out.closestGame = { match: m, value: margin }
     }
@@ -306,7 +334,10 @@ export function opponentRecords(key: string, matches: Match[]): OpponentRecord[]
 /** A player's most recent matches, newest first. */
 export function recentMatchesFor(key: string, matches: Match[], limit = 8): Match[] {
   return matches
-    .filter((m) => sideKey(m.player_a_id, m.player_a) === key || sideKey(m.player_b_id, m.player_b) === key)
+    .filter(
+      (m) =>
+        sideKey(m.player_a_id, m.player_a) === key || sideKey(m.player_b_id, m.player_b) === key,
+    )
     .sort((a, b) => timeKey(b).localeCompare(timeKey(a)))
     .slice(0, limit)
 }

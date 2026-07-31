@@ -6,6 +6,7 @@ import {
   type BettorRow,
 } from '../lib/predictions'
 import { supabase } from '../lib/supabase'
+import { uniqueChannelName } from '../lib/realtimeChannel'
 
 /**
  * Global pronostics leaderboard: settles anything newly decided, then aggregates
@@ -36,7 +37,7 @@ export function useLeaderboard() {
 
     // Predictions changing or matches finishing can both move the standings.
     const channel = supabase
-      .channel('leaderboard')
+      .channel(uniqueChannelName('leaderboard'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'predictions' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => load())
       .subscribe()

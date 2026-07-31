@@ -1,10 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getMatches, getTournament, recomputeRatings, updateMatch, updateTournament } from '../lib/db'
+import {
+  getMatches,
+  getTournament,
+  recomputeRatings,
+  updateMatch,
+  updateTournament,
+} from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { uniqueChannelName } from '../lib/realtimeChannel'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
 import { reconcileBracket } from '../lib/doubleElim'
-import { mergeWithPending, reconcileEcho, upsertSorted, withRetry, type PendingValue } from '../lib/realtimeSync'
+import {
+  mergeWithPending,
+  reconcileEcho,
+  upsertSorted,
+  withRetry,
+  type PendingValue,
+} from '../lib/realtimeSync'
 import type { Match, Tournament } from '../types'
 
 interface MatchChangePayload {
@@ -59,10 +72,10 @@ export function useTournament(id: string | null) {
       // Self-heal: if the matching echo never arrives, stop ignoring after a bit.
       pendingTimers.current.set(
         mid,
-        setTimeout(() => clearPending(mid), 4000)
+        setTimeout(() => clearPending(mid), 4000),
       )
     },
-    [clearPending]
+    [clearPending],
   )
 
   // Refetch tournament + matches from the DB and merge, preserving any pending
@@ -105,7 +118,7 @@ export function useTournament(id: string | null) {
     })()
 
     const channel = supabase
-      .channel(`tournament-${id}`)
+      .channel(uniqueChannelName(`tournament-${id}`))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${id}` },
@@ -125,7 +138,7 @@ export function useTournament(id: string | null) {
           // Our latest write echoed back — settle so genuine remote updates flow.
           if (decision === 'settle') clearPending(row.id)
           setMatches((prev) => upsertSorted(prev, row))
-        }
+        },
       )
       .on(
         'postgres_changes',
@@ -133,7 +146,7 @@ export function useTournament(id: string | null) {
         (payload) => {
           if (payload.eventType === 'DELETE') return
           setTournament(payload.new as Tournament)
-        }
+        },
       )
       .subscribe((status) => {
         // On (re)subscribe, refetch to catch anything that changed while the
@@ -198,7 +211,7 @@ export function useTournament(id: string | null) {
         setError(e instanceof Error ? e.message : String(e))
       }
     },
-    [markPending, clearPending]
+    [markPending, clearPending],
   )
 
   // Double-elimination advancement. Whenever matches change, reconcile the
@@ -219,7 +232,7 @@ export function useTournament(id: string | null) {
         prev.map((m) => {
           const w = writes.find((x) => x.id === m.id)
           return w ? { ...m, ...w.patch } : m
-        })
+        }),
       )
       ;(async () => {
         try {
