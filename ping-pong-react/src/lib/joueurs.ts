@@ -1,17 +1,18 @@
 // Pure selectors for the Joueurs annuaire page (design handoff §Page 5).
-// Rows derive from the same Glicko-2 replay as the Classement, so the numbers
-// on the two pages can never disagree.
+// The registry is the base (a freshly added player has no match yet); ratings
+// and records come from the same Glicko-2 replay as the Classement, so the
+// numbers on the two pages can never disagree.
 
+import type { Player } from '../types'
 import { recordOf } from './classement'
 import { fold } from './fold'
-import type { RatingEvent, RatingRow } from './rating'
+import { RATING, type RatingEvent, type RatingRow } from './rating'
 import { TEAMS, teamLabel } from './teams'
 
 export interface JoueurRow {
-  key: string
-  playerId: string | null
+  id: string
   name: string
-  team: string | null
+  team: string
   avatarUrl: string | null
   elo: number
   played: number
@@ -23,28 +24,47 @@ export interface JoueurRow {
   winrateStrong: boolean
 }
 
-/** One annuaire table row per ranked player, in the incoming (ranked) order. */
-export function joueurRows(rows: RatingRow[], events: RatingEvent[]): JoueurRow[] {
-  return rows.map((r) => {
-    const { wins, losses } = recordOf(events, r.key)
-    const played = wins + losses
-    const rate = played === 0 ? 0 : Math.round((wins / played) * 100)
-    return {
-      key: r.key,
-      playerId: r.playerId,
-      name: r.name,
-      team: r.team,
-      avatarUrl: r.avatar_url,
-      elo: Math.round(r.rating),
-      played,
-      wins,
-      losses,
-      meta: `${wins} V · ${losses} D`,
-      matchsLabel: `${played} match${played >= 2 ? 's' : ''}`,
-      winrate: `${rate} %`,
-      winrateStrong: rate >= 50,
-    }
-  })
+/**
+ * One annuaire row per registered player, best Elo first. Identity (name, team,
+ * photo) always reflects the editable registry; the rating row is matched by
+ * player id, falling back to rows recorded by name only (pre-registry matches).
+ */
+export function joueurRows(
+  players: Player[],
+  rows: RatingRow[],
+  events: RatingEvent[],
+): JoueurRow[] {
+  const rowOf = (p: Player) =>
+    rows.find((r) => r.playerId === p.id) ??
+    rows.find((r) => r.playerId === null && r.name === p.name)
+  return players
+    .map((p) => {
+      const row = rowOf(p)
+      const { wins, losses } = row ? recordOf(events, row.key) : { wins: 0, losses: 0 }
+      const played = wins + losses
+      const rate = played === 0 ? 0 : Math.round((wins / played) * 100)
+      return {
+        id: p.id,
+        name: p.name,
+        team: p.team,
+        avatarUrl: p.avatar_url,
+        elo: Math.round(row?.rating ?? RATING.R0),
+        played,
+        wins,
+        losses,
+        meta: `${wins} V · ${losses} D`,
+        matchsLabel: `${played} match${played >= 2 ? 's' : ''}`,
+        winrate: `${rate} %`,
+        winrateStrong: rate >= 50,
+      }
+    })
+    .sort((a, b) => b.elo - a.elo || a.name.localeCompare(b.name, 'fr'))
+}
+
+/** « {n} joueurs inscrits · modifie un profil en un clic », singular below two. */
+export function joueursSubtitle(count: number): string {
+  const s = count >= 2 ? 's' : ''
+  return `${count} joueur${s} inscrit${s} · modifie un profil en un clic`
 }
 
 /** Accent-insensitive search on name + team label, combined with the team chip. */
@@ -53,7 +73,7 @@ export function filterJoueurs(rows: JoueurRow[], query: string, team: string): J
   return rows.filter(
     (r) =>
       (team === 'all' || r.team === team) &&
-      (fold(r.name).includes(q) || (r.team !== null && fold(teamLabel(r.team)).includes(q))),
+      (fold(r.name).includes(q) || fold(teamLabel(r.team)).includes(q)),
   )
 }
 
@@ -72,7 +92,7 @@ export function teamChips(rows: JoueurRow[]): TeamChip[] {
   const standardKeys = new Set<string>(TEAMS.map((t) => t.key))
   const extras = rows
     .map((r) => r.team)
-    .filter((t): t is string => t !== null && !standardKeys.has(t))
+    .filter((t) => t !== '' && !standardKeys.has(t))
     .filter((t, i, all) => all.indexOf(t) === i)
   return [
     { key: 'all', label: 'Tous', count: rows.length },

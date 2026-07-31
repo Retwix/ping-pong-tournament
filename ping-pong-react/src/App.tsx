@@ -92,7 +92,15 @@ function renderRoute(route: Route) {
         />
       )
     case 'players':
-      return <Players onBack={() => navigate('/')} />
+      return (
+        <Players
+          onHome={() => navigate('/')}
+          onClassement={() => navigate('/classement')}
+          onStats={() => navigate('/stats')}
+          onNew={() => navigate('/new')}
+          onNewGame={() => navigate('/game')}
+        />
+      )
     case 'stats':
       return (
         <Stats
