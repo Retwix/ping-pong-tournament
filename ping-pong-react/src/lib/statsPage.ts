@@ -2,7 +2,7 @@
 
 import type { Match, Tournament } from '../types'
 import { matchDuration } from './pingpong'
-import { sideKey } from './stats'
+import { matchesByDay, sideKey } from './stats'
 
 export type StatsPeriod = 'tout' | 'mois' | 'semaine'
 export type StatsType = 'tout' | 'tournois' | 'rapides'
@@ -121,6 +121,87 @@ export function fmtPlayTime(ms: number): string {
 
 /** Deterministic fr-FR grouping (narrow no-break space) — toLocaleString varies per ICU. */
 const fmtInt = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f')
+
+const MONTHS_FR = [
+  'janv.',
+  'févr.',
+  'mars',
+  'avr.',
+  'mai',
+  'juin',
+  'juil.',
+  'août',
+  'sept.',
+  'oct.',
+  'nov.',
+  'déc.',
+]
+
+/** « 2 juin » from a YYYY-MM-DD bucket. */
+const dayLabel = (date: string): string => {
+  const [, month, day] = date.split('-')
+  return `${Number(day)} ${MONTHS_FR[Number(month) - 1]}`
+}
+
+export interface ActivityDay {
+  date: string
+  label: string
+  count: number
+  /** At 75% of the busiest day or more — drawn in the stronger purple. */
+  peak: boolean
+}
+
+const ACTIVITY_MAX_DAYS = 30
+
+/** Matches per day for the activity chart — the 30 most recent active days. */
+export function activityDays(scoped: Match[]): ActivityDay[] {
+  const days = matchesByDay(scoped).slice(-ACTIVITY_MAX_DAYS)
+  const max = Math.max(1, ...days.map((d) => d.count))
+  return days.map((d) => ({
+    date: d.date,
+    label: dayLabel(d.date),
+    count: d.count,
+    peak: d.count >= max * 0.75,
+  }))
+}
+
+/** « 22 jours d'activité » — the chart's range readout. */
+export function chartRangeLabel(days: number): string {
+  return `${days} ${days >= 2 ? 'jours' : 'jour'} d'activité`
+}
+
+export interface WeekdayCount {
+  label: string
+  count: number
+  /** 0..100, relative to the busiest weekday. */
+  pct: number
+  top: boolean
+}
+
+const WEEKDAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+
+/**
+ * When the office actually plays: Monday–Friday always, weekend rows only if
+ * played. Empty when no match carries a timestamp.
+ */
+export function weekdayProfile(scoped: Match[]): WeekdayCount[] {
+  const counts = [0, 0, 0, 0, 0, 0, 0]
+  let timed = 0
+  for (const m of scoped) {
+    const t = matchTime(m)
+    if (t === null) continue
+    timed++
+    counts[(new Date(t).getDay() + 6) % 7]++
+  }
+  if (timed === 0) return []
+  const max = Math.max(1, ...counts)
+  return WEEKDAYS_FR.map((label, i) => ({
+    label,
+    count: counts[i],
+    pct: Math.round((counts[i] / max) * 100),
+    top: counts[i] === max,
+  })).filter((w, i) => i < 5 || w.count > 0)
+}
 
 export interface StatsKpi {
   label: string

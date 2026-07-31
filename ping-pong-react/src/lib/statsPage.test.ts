@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Match, Tournament } from '../types'
 import {
+  activityDays,
+  chartRangeLabel,
   filterPillLabel,
   fmtPlayTime,
   isFiltered,
@@ -9,6 +11,7 @@ import {
   scopeMatches,
   statsKpis,
   statsSearch,
+  weekdayProfile,
   type StatsFilters,
 } from './statsPage'
 
@@ -274,6 +277,95 @@ describe('KPI strip', () => {
     const kpis = statsKpis([untimed], getFilters(), NOW)
     expect(kpis[3].value).toBe('—')
     expect(kpis[3].sub).toBe('durées non enregistrées')
+  })
+})
+
+describe('activity chart days', () => {
+  const on = (id: string, endedAt: string) => getMockMatch({ id, ended_at: endedAt })
+
+  it('buckets matches per day, oldest first, with French labels', () => {
+    const days = activityDays([
+      on('a', '2026-07-02T10:00:00.000Z'),
+      on('b', '2026-07-01T10:00:00.000Z'),
+      on('c', '2026-07-02T14:00:00.000Z'),
+    ])
+    expect(days.map((d) => ({ date: d.date, label: d.label, count: d.count }))).toEqual([
+      { date: '2026-07-01', label: '1 juil.', count: 1 },
+      { date: '2026-07-02', label: '2 juil.', count: 2 },
+    ])
+  })
+
+  it('flags days at 75% of the peak or more', () => {
+    const days = activityDays([
+      on('a', '2026-07-01T10:00:00.000Z'),
+      on('b', '2026-07-02T10:00:00.000Z'),
+      on('c', '2026-07-02T11:00:00.000Z'),
+      on('d', '2026-07-02T12:00:00.000Z'),
+      on('e', '2026-07-02T13:00:00.000Z'),
+      on('f', '2026-07-03T10:00:00.000Z'),
+      on('g', '2026-07-03T11:00:00.000Z'),
+      on('h', '2026-07-03T12:00:00.000Z'),
+    ])
+    expect(days.map((d) => [d.date, d.peak])).toEqual([
+      ['2026-07-01', false],
+      ['2026-07-02', true],
+      ['2026-07-03', true],
+    ])
+  })
+
+  it('keeps only the 30 most recent days', () => {
+    const firstOfJune = Date.UTC(2026, 5, 1, 10)
+    const many = Array.from({ length: 35 }, (_, i) =>
+      on(`m${i}`, new Date(firstOfJune + i * 86_400_000).toISOString()),
+    )
+    const days = activityDays(many)
+    expect(days).toHaveLength(30)
+    expect(days[0].date).toBe('2026-06-06')
+    expect(days[days.length - 1].date).toBe('2026-07-05')
+  })
+})
+
+describe('weekday profile', () => {
+  const on = (id: string, endedAt: string) => getMockMatch({ id, ended_at: endedAt })
+
+  it('always shows Monday to Friday, scaled to the busiest day', () => {
+    // 2026-07-13 = Monday, 14 = Tuesday.
+    const profile = weekdayProfile([
+      on('a', '2026-07-13T10:00:00.000Z'),
+      on('b', '2026-07-14T10:00:00.000Z'),
+      on('c', '2026-07-14T11:00:00.000Z'),
+    ])
+    expect(
+      profile.map((w) => ({ label: w.label, count: w.count, pct: w.pct, top: w.top })),
+    ).toEqual([
+      { label: 'Lun', count: 1, pct: 50, top: false },
+      { label: 'Mar', count: 2, pct: 100, top: true },
+      { label: 'Mer', count: 0, pct: 0, top: false },
+      { label: 'Jeu', count: 0, pct: 0, top: false },
+      { label: 'Ven', count: 0, pct: 0, top: false },
+    ])
+  })
+
+  it('adds weekend rows only when someone actually played', () => {
+    // 2026-07-18 = Saturday.
+    const profile = weekdayProfile([
+      on('a', '2026-07-13T10:00:00.000Z'),
+      on('b', '2026-07-18T10:00:00.000Z'),
+    ])
+    expect(profile.map((w) => w.label)).toEqual(['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'])
+  })
+
+  it('is empty when no match has a timestamp', () => {
+    expect(weekdayProfile([getMockMatch({ id: 'u', ended_at: null, started_at: null })])).toEqual(
+      [],
+    )
+  })
+})
+
+describe('chart range label', () => {
+  it('counts the days of activity shown', () => {
+    expect(chartRangeLabel(22)).toBe("22 jours d'activité")
+    expect(chartRangeLabel(1)).toBe("1 jour d'activité")
   })
 })
 

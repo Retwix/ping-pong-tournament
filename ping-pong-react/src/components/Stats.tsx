@@ -7,7 +7,6 @@ import {
   computeSuperlatives,
   computeTeamStats,
   h2hWins,
-  matchesByDay,
   opponentRecords,
   recentMatchesFor,
   rivalryBalance,
@@ -20,18 +19,20 @@ import {
 import {
   PERIOD_OPTIONS,
   TYPE_OPTIONS,
+  activityDays,
+  chartRangeLabel,
   filterPillLabel,
   isFiltered,
   scopeLabel,
   scopeMatches,
   statsKpis,
+  weekdayProfile,
   type StatsFilters,
 } from '../lib/statsPage'
 import { formatDuration } from '../lib/pingpong'
 import { teamColor, teamLabel } from '../lib/teams'
 import type { Match } from '../types'
 import Avatar from './Avatar'
-import { ActivityChart } from './Charts'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 
@@ -66,6 +67,7 @@ export default function Stats({
   const { matches, players, tournaments, loading, error } = useStats()
   const [sortKey, setSortKey] = useState<SortKey>('wins')
   const [selected, setSelected] = useState<string | null>(null)
+  const [tip, setTip] = useState<number | null>(null)
 
   const now = useMemo(() => new Date(), [matches])
   const scoped = useMemo(
@@ -95,7 +97,8 @@ export default function Stats({
     [playerStats],
   )
 
-  const dayCounts = useMemo(() => matchesByDay(scoped), [scoped])
+  const days = useMemo(() => activityDays(scoped), [scoped])
+  const weekdays = useMemo(() => weekdayProfile(scoped), [scoped])
 
   const rivalries = useMemo(() => computeRivalries(scoped, players, 2), [scoped, players])
   const mostPlayed = useMemo(
@@ -279,16 +282,71 @@ export default function Stats({
           </div>
 
           {/* Activity over time */}
-          {dayCounts.length > 1 && (
-            <section>
-              <div className="section-title">Activité</div>
-              <div className="panel chart-panel">
-                <ActivityChart data={dayCounts} />
+          {days.length > 1 && (
+            <div className="st-activity">
+              <div className="st-card st-chart-card">
+                <div className="st-card-head">
+                  <div className="st-card-title">Activité</div>
+                  <div className="st-card-meta">
+                    matchs par jour · {chartRangeLabel(days.length)}
+                  </div>
+                </div>
+                <div className="st-plot">
+                  {days.map((d, i) => {
+                    const maxCount = Math.max(1, ...days.map((x) => x.count))
+                    return (
+                      <div
+                        key={d.date}
+                        className="st-col"
+                        onMouseEnter={() => setTip(i)}
+                        onMouseLeave={() => setTip(null)}
+                      >
+                        <div
+                          className={`st-bar${d.peak || tip === i ? ' peak' : ''}`}
+                          style={{ height: `${12 + (d.count / maxCount) * 88}%` }}
+                        />
+                      </div>
+                    )
+                  })}
+                  {tip !== null && days[tip] !== undefined && (
+                    <div
+                      className="st-tip"
+                      style={{ left: `${((tip + 0.5) / days.length) * 100}%` }}
+                    >
+                      <div className="st-tip-date">{days[tip].label}</div>
+                      <div className="st-tip-count">
+                        {days[tip].count} match{days[tip].count > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="st-axis">
+                  <span>{days[0].label}</span>
+                  <span>{days[Math.floor(days.length / 2)].label}</span>
+                  <span>{days[days.length - 1].label}</span>
+                </div>
               </div>
-              <p className="setup-hint" style={{ textAlign: 'left' }}>
-                Matchs joués par jour. Survole une barre pour le détail.
-              </p>
-            </section>
+              {weekdays.length > 0 && (
+                <div className="st-card st-weekdays-card">
+                  <div className="st-card-title">Par jour de semaine</div>
+                  <div className="st-card-meta">quand on joue vraiment</div>
+                  <div className="st-weekdays">
+                    {weekdays.map((w) => (
+                      <div key={w.label} className="st-wd-row">
+                        <span className="st-wd-label">{w.label}</span>
+                        <span className="st-wd-track">
+                          <span
+                            className={`st-wd-fill${w.top ? ' top' : ''}`}
+                            style={{ width: `${w.pct}%` }}
+                          />
+                        </span>
+                        <span className="st-wd-count">{w.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Player leaderboard */}
