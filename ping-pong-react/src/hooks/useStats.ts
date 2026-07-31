@@ -1,21 +1,27 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listAllDoneMatches, listPlayers } from '../lib/db'
+import { listAllDoneMatches, listPlayers, listTournaments } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { uniqueChannelName } from '../lib/realtimeChannel'
-import type { Match, Player } from '../types'
+import type { Match, Player, Tournament } from '../types'
 
-/** Loads all finished matches + the player registry, kept live via realtime. */
+/** Loads all finished matches + players + tournaments, kept live via realtime. */
 export function useStats() {
   const [matches, setMatches] = useState<Match[]>([])
   const [players, setPlayers] = useState<Player[]>([])
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const [ms, ps] = await Promise.all([listAllDoneMatches(), listPlayers()])
+      const [ms, ps, ts] = await Promise.all([
+        listAllDoneMatches(),
+        listPlayers(),
+        listTournaments(),
+      ])
       setMatches(ms)
       setPlayers(ps)
+      setTournaments(ts)
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -36,5 +42,5 @@ export function useStats() {
     }
   }, [refresh])
 
-  return { matches, players, loading, error }
+  return { matches, players, tournaments, loading, error }
 }

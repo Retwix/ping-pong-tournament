@@ -23,6 +23,10 @@ function makeStat(overrides: Partial<PlayerStat> = {}): PlayerStat {
     capotsTaken: 0,
     matchBallsSaved: 0,
     matchBallsWasted: 0,
+    form: [],
+    playTimeMs: 0,
+    timedMatches: 0,
+    lastPlayedAt: null,
     ...overrides,
   }
 }
