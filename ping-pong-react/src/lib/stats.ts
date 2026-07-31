@@ -36,6 +36,7 @@ export interface TeamStat {
   played: number
   wins: number
   winRate: number
+  diff: number // point differential across inter-team matches
 }
 
 export interface MatchHighlight {
@@ -220,7 +221,7 @@ export function computeTeamStats(matches: Match[], players: Player[]): TeamStat[
   const ensure = (team: string): TeamStat => {
     let t = map.get(team)
     if (!t) {
-      t = { team, players: 0, played: 0, wins: 0, winRate: 0 }
+      t = { team, players: 0, played: 0, wins: 0, winRate: 0, diff: 0 }
       map.set(team, t)
       rosters.set(team, new Set())
     }
@@ -245,6 +246,8 @@ export function computeTeamStats(matches: Match[], players: Player[]): TeamStat[
     const tb = ensure(bTeam)
     ta.played++
     tb.played++
+    ta.diff += m.score_a - m.score_b
+    tb.diff += m.score_b - m.score_a
     if (m.score_a > m.score_b) ta.wins++
     else tb.wins++
   }

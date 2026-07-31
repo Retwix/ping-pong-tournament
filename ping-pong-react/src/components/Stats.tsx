@@ -477,39 +477,48 @@ export default function Stats({
 
           {/* Team leaderboard */}
           {teamStats.length > 0 && (
-            <section>
-              <div className="section-title">Classement des pôles</div>
-              <div className="panel">
-                <table>
-                  <thead>
-                    <tr>
-                      <th className="left">Pôle</th>
-                      <th>Joueurs</th>
-                      <th>J</th>
-                      <th>V</th>
-                      <th>%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teamStats.map((t, i) => (
-                      <tr key={t.team} className={`r${i + 1}`}>
-                        <td className="left">
-                          <span className="rank">{i + 1}</span>
-                          <span className="lb-player">
-                            <span className="dept-dot" style={{ background: teamColor(t.team) }} />
-                            {teamLabel(t.team)}
-                          </span>
-                        </td>
-                        <td>{t.players}</td>
-                        <td>{t.played}</td>
-                        <td className="wins">{t.wins}</td>
-                        <td>{pct(t.winRate)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div>
+              <SectionHead title="Classement des pôles" />
+              <div className="st-teams">
+                <div className="st-teams-table">
+                  <div className="st-teamgrid st-lbhead">
+                    <span className="st-th-static left">Pôle</span>
+                    <span className="st-th-static">Joueurs</span>
+                    <span className="st-th-static">J</span>
+                    <span className="st-th-static">V</span>
+                    <span className="st-th-static">%</span>
+                    <span className="st-th-static">Diff</span>
+                  </div>
+                  {teamStats.map((t) => (
+                    <div key={t.team} className="st-teamgrid st-teamrow">
+                      <span className="st-team-name">
+                        <span
+                          className="st-team-dot lg"
+                          style={{ background: teamColor(t.team) }}
+                        />
+                        {teamLabel(t.team)}
+                      </span>
+                      <span className="st-num st-muted">{t.players}</span>
+                      <span className="st-num">{t.played}</span>
+                      <span className="st-num">{t.wins}</span>
+                      <span className="st-pct">{pct(t.winRate)}</span>
+                      <span className={`st-diff${t.diff > 0 ? ' pos' : t.diff < 0 ? ' neg' : ''}`}>
+                        {signed(t.diff)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="st-teams-note">
+                  <div className="st-pm-sec" style={{ marginTop: 0 }}>
+                    À savoir
+                  </div>
+                  <p>
+                    Les matchs entre joueurs d'un même pôle sont exclus de ce classement : seuls les
+                    duels inter-pôles comptent pour la victoire collective.
+                  </p>
+                </div>
               </div>
-            </section>
+            </div>
           )}
 
           {/* Superlatives */}

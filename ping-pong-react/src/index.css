@@ -2994,3 +2994,43 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
   .st-pm-foes { grid-template-columns: 1fr; }
   .st-pm-recent { grid-template-columns: 1fr; }
 }
+
+/* ===== stats — classement des pôles ===== */
+.st-teams { display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; }
+.st-teams-table {
+  background: #fff; border: 1px solid #e8e4f2; border-radius: 18px;
+  padding: 6px 18px 14px; box-shadow: 0 2px 8px rgba(32, 10, 66, 0.05);
+}
+[data-theme='dark'] .st-teams-table {
+  background: #1e1138; border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+}
+.st-teamgrid {
+  display: grid; grid-template-columns: 1fr 70px 54px 54px 60px 70px;
+  gap: 10px; align-items: center;
+}
+.st-teamgrid > .st-num, .st-teamgrid > .st-pct, .st-teamgrid > .st-diff { text-align: right; }
+.st-teamrow { padding: 13px 8px; border-radius: 10px; }
+.st-team-name {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: var(--fg-1);
+  min-width: 0;
+}
+.st-team-dot.lg { width: 10px; height: 10px; }
+.st-muted { color: #847e96; }
+[data-theme='dark'] .st-muted { color: #a99fc4; }
+.st-teams-note {
+  background: #fbf9ff; border: 1px dashed #e8e4f2; border-radius: 18px; padding: 18px 20px;
+}
+[data-theme='dark'] .st-teams-note { background: #241543; border-color: rgba(255, 255, 255, 0.1); }
+.st-teams-note p {
+  margin: 9px 0 0; font-family: var(--font-body); font-weight: 500;
+  font-size: 13px; line-height: 1.55; color: #847e96;
+}
+[data-theme='dark'] .st-teams-note p { color: #a99fc4; }
+
+@media (max-width: 820px) {
+  .st-teams { grid-template-columns: 1fr; }
+  .st-teamgrid { grid-template-columns: 1fr 44px 44px 54px 56px; }
+  .st-teamgrid > :nth-child(2) { display: none; }
+}

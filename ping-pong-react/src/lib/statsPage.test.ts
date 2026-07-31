@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Match, Tournament } from '../types'
-import { computePlayerStats } from './stats'
+import { computePlayerStats, computeTeamStats } from './stats'
+import type { Player } from '../types'
 import {
   DEFAULT_LEADERBOARD_SORT,
   activityDays,
@@ -684,6 +685,39 @@ describe('player card (fiche joueur)', () => {
       { name: 'Candice', record: '1-0', pct: 100, positive: true },
       { name: 'Thibault', record: '1-1', pct: 50, positive: true },
     ])
+  })
+})
+
+describe('team standings point diff', () => {
+  const getMockPlayer = (overrides?: Partial<Player>): Player => ({
+    id: 'p1',
+    created_at: '2026-01-01T09:00:00.000Z',
+    name: 'Léo',
+    team: 'tech',
+    slack_user_id: null,
+    avatar_url: null,
+    ...overrides,
+  })
+
+  it('accumulates the point diff of inter-team matches only', () => {
+    const players = [
+      getMockPlayer({ id: 'pa', name: 'Léo', team: 'tech' }),
+      getMockPlayer({ id: 'pb', name: 'Thibault', team: 'sales' }),
+      getMockPlayer({ id: 'pc', name: 'Candice', team: 'tech' }),
+    ]
+    const inter = getMockMatch({ id: 'm1', score_a: 11, score_b: 3 })
+    const intra = getMockMatch({
+      id: 'm2',
+      player_b: 'Candice',
+      player_b_id: 'pc',
+      score_a: 11,
+      score_b: 9,
+    })
+    const teams = computeTeamStats([inter, intra], players)
+    const tech = teams.find((t) => t.team === 'tech')
+    const sales = teams.find((t) => t.team === 'sales')
+    expect(tech).toMatchObject({ played: 1, wins: 1, diff: 8 })
+    expect(sales).toMatchObject({ played: 1, wins: 0, diff: -8 })
   })
 })
 
