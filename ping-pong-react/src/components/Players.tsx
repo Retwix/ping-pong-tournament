@@ -1,4 +1,4 @@
-import { IconPencil, IconPlus, IconSearch, IconUpload, IconX } from '@tabler/icons-react'
+import { IconPencil, IconPlus, IconSearch, IconTrash, IconUpload, IconX } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRatings } from '../hooks/useRatings'
 import { processAvatarFile, validateAvatarFile } from '../lib/avatar'
@@ -106,6 +106,17 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
       revokePreview(prev)
       return { kind: 'remove' }
     })
+  }
+
+  // Immediate removal, per the handoff. Past matches keep their recorded names.
+  const removeJoueur = async (r: JoueurRow) => {
+    setSaveError(null)
+    try {
+      await deletePlayer(r.id)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e))
+    }
+    reload()
   }
 
   // The handoff's optimistic create: the row exists before the modal opens
@@ -278,7 +289,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
               <div className="pl-name">{r.name}</div>
               <div className="pl-meta">{r.meta}</div>
             </div>
-            <div>
+            <div className="pl-c-team">
               <span className="pl-badge" style={badgeStyle(r.team)}>
                 {r.team === '' ? '—' : teamLabel(r.team)}
               </span>
@@ -294,6 +305,14 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
                 onClick={() => openEdit(r)}
               >
                 <IconPencil size={15} stroke={2} />
+              </button>
+              <button
+                className="pl-icon-btn trash"
+                title="Retirer"
+                aria-label={`Retirer ${r.name}`}
+                onClick={() => removeJoueur(r)}
+              >
+                <IconTrash size={15} stroke={1.9} />
               </button>
             </div>
           </div>
