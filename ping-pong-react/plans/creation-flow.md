@@ -1,7 +1,10 @@
 # Plan: Creation flow revamp (« Nouvelle partie » / « Nouveau tournoi »)
 
 **Branches**: `creation-flow` (PR 1, active) → `unranked-mode` (PR 2) → `doubles-2v2` (PR 3), all into `main`
-**Status**: Active — PR 1, slice 2 (slice 1 done: `a078161`, Stryker 100 %)
+**Status**: PR 1 complete (slices 1-4: `a078161`, `edf1981`, `c71841a`, `66029b3`) — next: PR 2 (unranked)
+**Quality gate (PR 1)**: 504 tests, tsc + build clean; Stryker 100 % on `nouvellePartie.ts`,
+`joueurs.ts`, `fold.ts`; `teams.ts` no-coverage mutants are pre-existing color/label constants
++ the visual badge helper (Thibault-verified visuals, house practice).
 **Design source of truth**: `~/Downloads/design_handoff_creation_flow/` (README.md, DESIGN-SYSTEM.md — tokens already in `index.css` from the app revamp; prototype `Nouvelle partie.dc.html` is reference only)
 
 ## Goal
