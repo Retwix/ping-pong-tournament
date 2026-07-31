@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest'
 import type { RatingEvent, RatingRow } from './rating'
 import type { Player } from '../types'
 import {
+  avatarAction,
   dialogTitle,
   filterJoueurs,
   joueurRows,
   joueursSubtitle,
   normalizeJoueurForm,
+  photoShown,
   teamChips,
   type JoueurRow,
+  type PhotoDraft,
 } from './joueurs'
 
 const getMockPlayer = (overrides?: Partial<Player>): Player => ({
@@ -309,6 +312,44 @@ describe('dialogTitle', () => {
   it('falls back to « le joueur » while the name field is empty', () => {
     expect(dialogTitle(false, '')).toBe('Modifier le joueur')
     expect(dialogTitle(false, '   ')).toBe('Modifier le joueur')
+  })
+})
+
+const newDraft = (): PhotoDraft => ({
+  kind: 'new',
+  blob: new Blob(['x'], { type: 'image/webp' }),
+  previewUrl: 'blob:preview-1',
+})
+
+describe('avatarAction', () => {
+  it('does nothing when the photo is untouched', () => {
+    expect(avatarAction('https://cdn/x.webp', { kind: 'keep' })).toBe('none')
+    expect(avatarAction(null, { kind: 'keep' })).toBe('none')
+  })
+
+  it('uploads when a new photo was picked, with or without a previous one', () => {
+    expect(avatarAction('https://cdn/x.webp', newDraft())).toBe('upload')
+    expect(avatarAction(null, newDraft())).toBe('upload')
+  })
+
+  it('removes only when there was a stored photo to remove', () => {
+    expect(avatarAction('https://cdn/x.webp', { kind: 'remove' })).toBe('remove')
+    expect(avatarAction(null, { kind: 'remove' })).toBe('none')
+  })
+})
+
+describe('photoShown', () => {
+  it('shows the stored photo while untouched', () => {
+    expect(photoShown('https://cdn/x.webp', { kind: 'keep' })).toBe('https://cdn/x.webp')
+    expect(photoShown(null, { kind: 'keep' })).toBeNull()
+  })
+
+  it('shows the local preview of a newly picked photo', () => {
+    expect(photoShown('https://cdn/x.webp', newDraft())).toBe('blob:preview-1')
+  })
+
+  it('falls back to initials as soon as « Retirer » is clicked', () => {
+    expect(photoShown('https://cdn/x.webp', { kind: 'remove' })).toBeNull()
   })
 })
 

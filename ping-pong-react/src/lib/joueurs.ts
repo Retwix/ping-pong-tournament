@@ -96,6 +96,30 @@ export function dialogTitle(pending: boolean, formName: string): string {
   return `Modifier ${formName.trim() || 'le joueur'}`
 }
 
+/**
+ * What happened to the photo since the modal opened. Nothing touches storage
+ * until « Enregistrer », so cancelling always rolls the photo back too.
+ */
+export type PhotoDraft =
+  { kind: 'keep' } | { kind: 'remove' } | { kind: 'new'; blob: Blob; previewUrl: string }
+
+/** The storage operation « Enregistrer » must perform for the photo. */
+export function avatarAction(
+  original: string | null,
+  draft: PhotoDraft,
+): 'none' | 'upload' | 'remove' {
+  if (draft.kind === 'new') return 'upload'
+  if (draft.kind === 'remove' && original !== null) return 'remove'
+  return 'none'
+}
+
+/** The photo the modal avatar shows right now (null → initials). */
+export function photoShown(original: string | null, draft: PhotoDraft): string | null {
+  if (draft.kind === 'new') return draft.previewUrl
+  if (draft.kind === 'remove') return null
+  return original
+}
+
 export interface TeamChip {
   key: string
   label: string

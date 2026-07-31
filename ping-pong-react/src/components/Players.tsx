@@ -1,16 +1,26 @@
-import { IconPencil, IconPlus, IconSearch, IconX } from '@tabler/icons-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { IconPencil, IconPlus, IconSearch, IconUpload, IconX } from '@tabler/icons-react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRatings } from '../hooks/useRatings'
-import { createPlayer, deletePlayer, updatePlayer } from '../lib/db'
+import { processAvatarFile, validateAvatarFile } from '../lib/avatar'
 import {
+  createPlayer,
+  deletePlayer,
+  removePlayerAvatar,
+  updatePlayer,
+  uploadPlayerAvatar,
+} from '../lib/db'
+import {
+  avatarAction,
   dialogTitle,
   filterJoueurs,
   joueurRows,
   joueursSubtitle,
   normalizeJoueurForm,
+  photoShown,
   teamChips,
   type JoueurForm,
   type JoueurRow,
+  type PhotoDraft,
 } from '../lib/joueurs'
 import { TEAMS, teamColor, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
@@ -41,7 +51,10 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
   const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [originalPhoto, setOriginalPhoto] = useState<string | null>(null)
+  const [photo, setPhoto] = useState<PhotoDraft>({ kind: 'keep' })
   const searchRef = useRef<HTMLInputElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,10 +67,45 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const revokePreview = (draft: PhotoDraft) => {
+    if (draft.kind === 'new') URL.revokeObjectURL(draft.previewUrl)
+  }
+
   const openEdit = (r: JoueurRow) => {
     setForm({ name: r.name, team: r.team })
+    setOriginalPhoto(r.avatarUrl)
+    setPhoto({ kind: 'keep' })
     setSaveError(null)
     setEditing(r.id)
+  }
+
+  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const check = validateAvatarFile(file)
+    if (!check.ok) {
+      setSaveError(check.error)
+      return
+    }
+    setSaveError(null)
+    try {
+      const blob = await processAvatarFile(file)
+      const previewUrl = URL.createObjectURL(blob)
+      setPhoto((prev) => {
+        revokePreview(prev)
+        return { kind: 'new', blob, previewUrl }
+      })
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  const removePhoto = () => {
+    setPhoto((prev) => {
+      revokePreview(prev)
+      return { kind: 'remove' }
+    })
   }
 
   // The handoff's optimistic create: the row exists before the modal opens
@@ -70,6 +118,8 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
       const p = await createPlayer('Nouveau joueur', 'tech')
       reload()
       setForm({ name: '', team: 'tech' })
+      setOriginalPhoto(null)
+      setPhoto({ kind: 'keep' })
       setPending(p.id)
       setEditing(p.id)
     } catch (e) {
@@ -81,6 +131,8 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
 
   const cancel = async () => {
     const rollback = pending
+    revokePreview(photo)
+    setPhoto({ kind: 'keep' })
     setEditing(null)
     setPending(null)
     setForm(null)
@@ -98,7 +150,18 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     setSaving(true)
     setSaveError(null)
     try {
-      await updatePlayer(editing, normalizeJoueurForm(form))
+      const patch = normalizeJoueurForm(form)
+      if (photo.kind === 'new') {
+        const url = await uploadPlayerAvatar(editing, photo.blob)
+        await updatePlayer(editing, { ...patch, avatar_url: url })
+      } else if (avatarAction(originalPhoto, photo) === 'remove') {
+        await updatePlayer(editing, patch)
+        await removePlayerAvatar(editing)
+      } else {
+        await updatePlayer(editing, patch)
+      }
+      revokePreview(photo)
+      setPhoto({ kind: 'keep' })
       setEditing(null)
       setPending(null)
       setForm(null)
@@ -260,6 +323,39 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
               <button className="pl-close" onClick={cancel} aria-label="Fermer">
                 <IconX size={16} stroke={2.2} />
               </button>
+            </div>
+
+            <div className="pl-photo">
+              <button
+                className="pl-mava-btn"
+                title="Changer la photo"
+                onClick={() => fileRef.current?.click()}
+              >
+                <Avatar
+                  name={form.name}
+                  team={form.team}
+                  url={photoShown(originalPhoto, photo)}
+                  className="pl-mava"
+                />
+              </button>
+              <div className="pl-photo-text">
+                <div className="pl-photo-title">Photo de profil</div>
+                <div className="pl-photo-sub">
+                  JPG ou PNG, carré de préférence. Sans photo, les initiales sont utilisées.
+                </div>
+                <div className="pl-photo-btns">
+                  <button className="pl-pbtn" onClick={() => fileRef.current?.click()}>
+                    <IconUpload size={14} stroke={2} />
+                    {photoShown(originalPhoto, photo) !== null ? 'Remplacer' : 'Téléverser'}
+                  </button>
+                  {photoShown(originalPhoto, photo) !== null && (
+                    <button className="pl-pbtn danger" onClick={removePhoto}>
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
+              </div>
             </div>
 
             <div className="pl-field">
