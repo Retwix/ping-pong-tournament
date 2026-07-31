@@ -241,7 +241,7 @@ export default function NouvellePartie({
 
       {error && <div className="error-banner">Erreur : {error}</div>}
 
-      <div>
+      <div className="np-in">
         <button className="np-crumb" onClick={onHome}>
           ‹ Accueil
         </button>
@@ -287,7 +287,7 @@ export default function NouvellePartie({
         </div>
       )}
 
-      <div className="np-grid">
+      <div className="np-grid np-in">
         <div className="np-form">
           {!isGame && (
             <>
@@ -694,6 +694,17 @@ export default function NouvellePartie({
             <div className="np-rule">{ruleHint}</div>
           </div>
         </div>
+      </div>
+
+      <div className="np-mobile-bar">
+        <div className="np-mobile-hint">{recap.hint}</div>
+        <button
+          className={`np-cta${creating ? ' busy' : recap.valid ? '' : ' off'}`}
+          title={recap.valid ? undefined : recap.hint}
+          onClick={create}
+        >
+          {creating ? 'Création…' : isGame ? 'Lancer la partie' : 'Générer le tournoi'}
+        </button>
       </div>
 
       {tabbar}
