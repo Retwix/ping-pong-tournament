@@ -4,6 +4,8 @@ import { computePlayerStats, computeTeamStats } from './stats'
 import type { Player } from '../types'
 import {
   DEFAULT_LEADERBOARD_SORT,
+  PERIOD_OPTIONS,
+  TYPE_OPTIONS,
   abbrev,
   activityDays,
   chartRangeLabel,
@@ -404,14 +406,14 @@ describe('player form, play time and last-seen (computePlayerStats extensions)',
       score_b: scoreB,
     })
 
-  it('records the last five results, most recent last', () => {
+  it('records the last five results, most recent last, whatever the input order', () => {
     const matches = [
-      vs('m1', '2026-07-01T10:00:00.000Z', 11, 3),
-      vs('m2', '2026-07-02T10:00:00.000Z', 5, 11),
-      vs('m3', '2026-07-03T10:00:00.000Z', 11, 7),
-      vs('m4', '2026-07-04T10:00:00.000Z', 11, 9),
-      vs('m5', '2026-07-05T10:00:00.000Z', 2, 11),
       vs('m6', '2026-07-06T10:00:00.000Z', 11, 8),
+      vs('m1', '2026-07-01T10:00:00.000Z', 11, 3),
+      vs('m4', '2026-07-04T10:00:00.000Z', 11, 9),
+      vs('m2', '2026-07-02T10:00:00.000Z', 5, 11),
+      vs('m5', '2026-07-05T10:00:00.000Z', 2, 11),
+      vs('m3', '2026-07-03T10:00:00.000Z', 11, 7),
     ]
     const leo = computePlayerStats(matches, []).find((s) => s.name === 'Léo')
     expect(leo?.form).toEqual([false, true, true, false, true])
@@ -423,15 +425,54 @@ describe('player form, play time and last-seen (computePlayerStats extensions)',
     expect(thibault?.form).toEqual([false])
   })
 
-  it('sums each player’s recorded play time and remembers the last outing', () => {
+  it('sums each player’s recorded play time and remembers the last outing, both sides', () => {
     const matches = [
       vs('m1', '2026-07-01T10:00:00.000Z', 11, 3, 20),
       vs('m2', '2026-07-04T10:00:00.000Z', 5, 11, 30),
       vs('m3', '2026-07-02T10:00:00.000Z', 11, 7),
     ]
-    const leo = computePlayerStats(matches, []).find((s) => s.name === 'Léo')
+    const stats = computePlayerStats(matches, [])
+    const leo = stats.find((s) => s.name === 'Léo')
+    const thibault = stats.find((s) => s.name === 'Thibault')
     expect(leo?.playTimeMs).toBe(50 * 60_000)
+    expect(leo?.timedMatches).toBe(2)
     expect(leo?.lastPlayedAt).toBe('2026-07-04T10:00:00.000Z')
+    expect(thibault?.playTimeMs).toBe(50 * 60_000)
+    expect(thibault?.timedMatches).toBe(2)
+    expect(thibault?.lastPlayedAt).toBe('2026-07-04T10:00:00.000Z')
+  })
+
+  it('ignores live and zero-length durations', () => {
+    const live = getMockMatch({
+      id: 'live',
+      started_at: '2026-07-05T10:00:00.000Z',
+      ended_at: null,
+      score_a: 11,
+      score_b: 4,
+    })
+    const instant = getMockMatch({
+      id: 'zero',
+      started_at: '2026-07-06T10:00:00.000Z',
+      ended_at: '2026-07-06T10:00:00.000Z',
+      score_a: 11,
+      score_b: 4,
+    })
+    const leo = computePlayerStats([live, instant], []).find((s) => s.name === 'Léo')
+    expect(leo?.playTimeMs).toBe(0)
+    expect(leo?.timedMatches).toBe(0)
+  })
+
+  it('splits match balls between both sides', () => {
+    const matches = [vs('m1', '2026-07-01T10:00:00.000Z', 11, 9)].map((m) => ({
+      ...m,
+      mb_saved_a: 2,
+      mb_saved_b: 1,
+    }))
+    const stats = computePlayerStats(matches, [])
+    const leo = stats.find((s) => s.name === 'Léo')
+    const thibault = stats.find((s) => s.name === 'Thibault')
+    expect(leo).toMatchObject({ matchBallsSaved: 2, matchBallsWasted: 1, wins: 1, losses: 0 })
+    expect(thibault).toMatchObject({ matchBallsSaved: 1, matchBallsWasted: 2, wins: 0, losses: 1 })
   })
 })
 
@@ -482,33 +523,33 @@ describe('tournament titles', () => {
   })
 })
 
-describe('leaderboard rows and sorting', () => {
-  const row = (overrides: Partial<LeaderboardRow>): LeaderboardRow => ({
-    key: 'k',
-    name: 'X',
-    team: null,
-    avatar_url: null,
-    played: 10,
-    wins: 5,
-    losses: 5,
-    pointsFor: 100,
-    pointsAgainst: 100,
-    diff: 0,
-    winRate: 0.5,
-    currentStreak: 0,
-    longestStreak: 2,
-    capotsDealt: 0,
-    capotsTaken: 0,
-    matchBallsSaved: 0,
-    matchBallsWasted: 0,
-    form: [true],
-    playTimeMs: 0,
-    timedMatches: 0,
-    lastPlayedAt: null,
-    titles: 0,
-    ...overrides,
-  })
+const row = (overrides: Partial<LeaderboardRow>): LeaderboardRow => ({
+  key: 'k',
+  name: 'X',
+  team: null,
+  avatar_url: null,
+  played: 10,
+  wins: 5,
+  losses: 5,
+  pointsFor: 100,
+  pointsAgainst: 100,
+  diff: 0,
+  winRate: 0.5,
+  currentStreak: 0,
+  longestStreak: 2,
+  capotsDealt: 0,
+  capotsTaken: 0,
+  matchBallsSaved: 0,
+  matchBallsWasted: 0,
+  form: [true],
+  playTimeMs: 0,
+  timedMatches: 0,
+  lastPlayedAt: null,
+  titles: 0,
+  ...overrides,
+})
 
+describe('leaderboard rows and sorting', () => {
   it('joins titles onto player stats by name', () => {
     const matches = [
       getMockMatch({ id: 'a', score_a: 11, score_b: 4, ended_at: '2026-07-01T10:00:00.000Z' }),
@@ -705,25 +746,47 @@ describe('team standings point diff', () => {
     ...overrides,
   })
 
-  it('accumulates the point diff of inter-team matches only', () => {
+  it('accumulates the point diff of inter-team matches only, ranked by win rate', () => {
     const players = [
       getMockPlayer({ id: 'pa', name: 'Léo', team: 'tech' }),
       getMockPlayer({ id: 'pb', name: 'Thibault', team: 'sales' }),
       getMockPlayer({ id: 'pc', name: 'Candice', team: 'tech' }),
     ]
-    const inter = getMockMatch({ id: 'm1', score_a: 11, score_b: 3 })
-    const intra = getMockMatch({
+    // Sales appears first so the ranking has to reorder, and each side wins once.
+    const salesWin = getMockMatch({
+      id: 'm0',
+      player_a: 'Thibault',
+      player_a_id: 'pb',
+      player_b: 'Léo',
+      player_b_id: 'pa',
+      score_a: 11,
+      score_b: 7,
+    })
+    const techWin = getMockMatch({ id: 'm1', score_a: 11, score_b: 3 })
+    const techWin2 = getMockMatch({
       id: 'm2',
+      player_a: 'Candice',
+      player_a_id: 'pc',
+      score_a: 11,
+      score_b: 5,
+    })
+    const intra = getMockMatch({
+      id: 'm3',
       player_b: 'Candice',
       player_b_id: 'pc',
       score_a: 11,
       score_b: 9,
     })
-    const teams = computeTeamStats([inter, intra], players)
-    const tech = teams.find((t) => t.team === 'tech')
-    const sales = teams.find((t) => t.team === 'sales')
-    expect(tech).toMatchObject({ played: 1, wins: 1, diff: 8 })
-    expect(sales).toMatchObject({ played: 1, wins: 0, diff: -8 })
+    const teams = computeTeamStats([salesWin, techWin, techWin2, intra], players)
+    expect(teams.map((t) => t.team)).toEqual(['tech', 'sales'])
+    expect(teams[0]).toMatchObject({
+      players: 2,
+      played: 3,
+      wins: 2,
+      diff: 8 + 6 - 4,
+    })
+    expect(teams[0].winRate).toBeCloseTo(2 / 3)
+    expect(teams[1]).toMatchObject({ players: 1, played: 3, wins: 1, diff: -10 })
   })
 })
 
@@ -927,6 +990,336 @@ describe('tightest rivalries hint', () => {
 
   it('is null without tight duels', () => {
     expect(tightestHint([])).toBeNull()
+  })
+})
+
+describe('mutation hardening', () => {
+  it('exposes the exact segmented-control options', () => {
+    expect(PERIOD_OPTIONS).toEqual([
+      { value: 'tout', label: 'Tout' },
+      { value: 'mois', label: 'Ce mois-ci' },
+      { value: 'semaine', label: 'Cette semaine' },
+    ])
+    expect(TYPE_OPTIONS).toEqual([
+      { value: 'tout', label: 'Tout' },
+      { value: 'tournois', label: 'Tournois' },
+      { value: 'rapides', label: 'Parties rapides' },
+    ])
+  })
+
+  it('accents only the weekly highlight of the first KPI', () => {
+    const thisWeek = getMockMatch({ id: 'w', ended_at: '2026-07-14T10:00:00.000Z' })
+    const older = getMockMatch({ id: 'o', ended_at: '2026-07-02T10:00:00.000Z' })
+    expect(statsKpis([thisWeek, older], getFilters(), NOW).map((k) => k.accent)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ])
+    expect(
+      statsKpis([thisWeek, older], getFilters({ period: 'mois' }), NOW).map((k) => k.accent),
+    ).toEqual([false, false, false, false])
+  })
+
+  it('dates a title from its latest match even when matches arrive out of order', () => {
+    const tournaments = [getMockTournament({ id: 't1', name: 'Long', champion: 'Léo' })]
+    const matches = [
+      getMockMatch({ id: 'late', tournament_id: 't1', ended_at: '2026-05-20T10:00:00.000Z' }),
+      getMockMatch({ id: 'early', tournament_id: 't1', ended_at: '2026-04-01T10:00:00.000Z' }),
+    ]
+    expect(titlesByName(tournaments, matches).get('Léo')?.titles).toEqual([
+      { name: 'Long', date: 'mai 2026' },
+    ])
+  })
+
+  it('crowns the serial winner even when a lesser champion registered first', () => {
+    const titles = titlesByName(
+      [
+        getMockTournament({ id: 't1', name: 'A', champion: 'Candice' }),
+        getMockTournament({ id: 't2', name: 'B', champion: 'Léo' }),
+        getMockTournament({ id: 't3', name: 'C', champion: 'Léo' }),
+      ],
+      [],
+    )
+    const serial = playerRecords([], titles, new Map(), new Map()).find(
+      (c) => c.label === 'Serial winner',
+    )
+    expect(serial).toMatchObject({ value: 'Léo', sub: '2 tournois gagnés' })
+  })
+
+  it('crowns the finalist with most finals even when registered later', () => {
+    const finals = finalsByPlayer([
+      getMockMatch({ id: 'gf', match_key: 'GF', score_a: 9, score_b: 11 }),
+      getMockMatch({
+        id: 'wf',
+        match_key: 'W3-0',
+        win_to: 'GF',
+        player_a: 'Candice',
+        player_a_id: 'pc',
+        score_a: 8,
+        score_b: 11,
+      }),
+    ])
+    const card = playerRecords([], new Map(), finals, new Map()).find(
+      (c) => c.label === 'Homme des finales',
+    )
+    expect(card).toMatchObject({ value: 'Thibault', sub: '2 finales jouées · 2 gagnées' })
+  })
+
+  it('pluralises repeated remontadas', () => {
+    const remontadas = remontadasByName(
+      [
+        getMockTournament({ id: 'd1', format: 'double_elim', champion: 'Léo' }),
+        getMockTournament({ id: 'd2', format: 'double_elim', champion: 'Léo' }),
+      ],
+      [
+        getMockMatch({ id: 'l1', tournament_id: 'd1', bracket: 'L' }),
+        getMockMatch({ id: 'l2', tournament_id: 'd2', bracket: 'L' }),
+      ],
+    )
+    const card = playerRecords([], new Map(), new Map(), remontadas).find(
+      (c) => c.label === 'Remontada',
+    )
+    expect(card).toMatchObject({
+      value: 'Léo',
+      sub: '2 titres décrochés depuis le loser bracket',
+    })
+  })
+
+  it('fills the capot, match-ball and streak record cards', () => {
+    const matches = [
+      getMockMatch({
+        id: 'm1',
+        ended_at: '2026-07-01T10:00:00.000Z',
+        score_a: 11,
+        score_b: 0,
+        mb_saved_a: 2,
+      }),
+      getMockMatch({
+        id: 'm2',
+        ended_at: '2026-07-02T10:00:00.000Z',
+        score_a: 11,
+        score_b: 9,
+        mb_saved_b: 1,
+      }),
+    ]
+    const cards = playerRecords(computePlayerStats(matches, []), new Map(), new Map(), new Map())
+    const byLabel = new Map(cards.map((c) => [c.label, c]))
+    expect(byLabel.get('Plus longue série')).toMatchObject({
+      icon: '🔥',
+      value: 'Léo',
+      sub: "2 victoires d'affilée",
+    })
+    expect(byLabel.get('Plus actif')).toMatchObject({ value: 'Léo', sub: '2 matchs joués' })
+    expect(byLabel.get('Bourreau')).toMatchObject({
+      icon: '🪑',
+      value: 'Léo',
+      sub: '1 capot infligé',
+    })
+    expect(byLabel.get('Roi de la table')).toMatchObject({
+      icon: '🙈',
+      value: 'Thibault',
+      sub: '1 passage sous la table',
+    })
+    expect(byLabel.get('Sang-froid')).toMatchObject({
+      icon: '🧊',
+      value: 'Léo',
+      sub: '2 balles de match sauvées',
+    })
+    expect(byLabel.get('Cardiaque')).toMatchObject({
+      icon: '😰',
+      value: 'Thibault',
+      sub: '2 balles de match gâchées',
+    })
+  })
+
+  it('stamps every match-record icon', () => {
+    const long = getMockMatch({
+      id: 'long',
+      started_at: '2026-07-10T09:00:00.000Z',
+      ended_at: '2026-07-10T09:38:00.000Z',
+      score_a: 16,
+      score_b: 14,
+    })
+    const short = getMockMatch({
+      id: 'short',
+      started_at: '2026-07-11T09:00:00.000Z',
+      ended_at: '2026-07-11T09:04:00.000Z',
+      score_a: 11,
+      score_b: 0,
+    })
+    expect(matchRecords([long, short]).map((c) => c.icon)).toEqual(['⌛', '⚡', '📏', '😬'])
+  })
+
+  it('ranks opponents by rate then volume, flags the losing balances', () => {
+    const duel = (id: string, name: string, pid: string, scoreA: number, scoreB: number) =>
+      getMockMatch({
+        id,
+        player_b: name,
+        player_b_id: pid,
+        score_a: scoreA,
+        score_b: scoreB,
+        ended_at: `2026-07-0${Number(id.slice(1)) % 9 || 1}T10:00:00.000Z`,
+      })
+    const matches = [
+      duel('d1', 'Xavier', 'px', 3, 11),
+      duel('d2', 'Xavier', 'px', 5, 11),
+      duel('d3', 'Yann', 'py', 11, 9),
+      duel('d4', 'Yann', 'py', 9, 11),
+      duel('d5', 'Zoé', 'pz', 11, 4),
+      duel('d6', 'Willy', 'pw', 11, 4),
+      duel('d7', 'Willy', 'pw', 11, 6),
+    ]
+    const card = playerCard('pa', computePlayerStats(matches, []), new Map(), matches, NOW)
+    expect(card?.opponents).toEqual([
+      { name: 'Willy', record: '2-0', pct: 100, positive: true },
+      { name: 'Zoé', record: '1-0', pct: 100, positive: true },
+      { name: 'Yann', record: '1-1', pct: 50, positive: true },
+      { name: 'Xavier', record: '0-2', pct: 0, positive: false },
+    ])
+    expect(card?.nemesis).toEqual({ name: 'Xavier', record: '0-2' })
+    expect(card?.victim).toEqual({ name: 'Willy', record: '2-0' })
+  })
+
+  it('shows the losing side of the fiche without inventing feats', () => {
+    const loss = getMockMatch({
+      id: 'l1',
+      ended_at: '2026-07-14T10:00:00.000Z',
+      score_a: 11,
+      score_b: 6,
+    })
+    const card = playerCard('pb', computePlayerStats([loss], []), new Map(), [loss], NOW)
+    const byLabel = new Map(card?.kpis.map((k) => [k.label, k]))
+    expect(byLabel.get('Matchs')?.value).toBe('1')
+    expect(byLabel.get('% victoires')?.value).toBe('0%')
+    expect(byLabel.get('V — D')?.value).toBe('0 — 1')
+    expect(byLabel.get('Diff')).toMatchObject({ value: '−5', tone: 'neg' })
+    expect(byLabel.get('Série')).toMatchObject({ value: '—', tone: 'ink' })
+    expect(byLabel.get('Meilleure série')?.value).toBe('—')
+    expect(byLabel.get('Temps de jeu')?.value).toBe('—')
+    expect(byLabel.get('Durée moyenne')?.value).toBe('—')
+    expect(card?.victim).toBeNull()
+    expect(card?.last8[0]).toEqual({
+      win: false,
+      opponent: 'Léo',
+      score: '6-11',
+      date: 'il y a 1 j',
+    })
+  })
+
+  it('keeps a neutral tone on a perfectly balanced diff', () => {
+    const matches = [
+      getMockMatch({ id: 'a', score_a: 11, score_b: 9, ended_at: '2026-07-01T10:00:00.000Z' }),
+      getMockMatch({ id: 'b', score_a: 9, score_b: 11, ended_at: '2026-07-02T10:00:00.000Z' }),
+    ]
+    const card = playerCard('pa', computePlayerStats(matches, []), new Map(), matches, NOW)
+    expect(card?.kpis.find((k) => k.label === 'Diff')).toMatchObject({
+      value: '±0',
+      tone: 'ink',
+    })
+  })
+
+  it('reads matches from the b side of the table too', () => {
+    const asB = getMockMatch({
+      id: 'b1',
+      player_a: 'Maxime',
+      player_a_id: 'pm',
+      player_b: 'Léo',
+      player_b_id: 'pa',
+      score_a: 7,
+      score_b: 11,
+      ended_at: '2026-07-14T10:00:00.000Z',
+    })
+    const card = playerCard('pa', computePlayerStats([asB], []), new Map(), [asB], NOW)
+    expect(card?.last8[0]).toMatchObject({ win: true, opponent: 'Maxime', score: '11-7' })
+  })
+
+  it('counts Sunday play in the weekday profile', () => {
+    // 2026-07-19 is a Sunday.
+    const profile = weekdayProfile([getMockMatch({ ended_at: '2026-07-19T10:00:00.000Z' })])
+    expect(profile.map((w) => w.label)).toEqual(['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Dim'])
+  })
+
+  it('sorts the leaderboard on every numeric column', () => {
+    const rows = [
+      row({
+        key: 'a',
+        name: 'A',
+        played: 1,
+        losses: 5,
+        diff: -2,
+        currentStreak: 3,
+        matchBallsSaved: 1,
+        matchBallsWasted: 9,
+      }),
+      row({
+        key: 'b',
+        name: 'B',
+        played: 9,
+        losses: 1,
+        diff: 4,
+        currentStreak: 0,
+        matchBallsSaved: 6,
+        matchBallsWasted: 2,
+      }),
+    ]
+    expect(sortLeaderboard(rows, { key: 'played', dir: 'desc' })[0].key).toBe('b')
+    expect(sortLeaderboard(rows, { key: 'losses', dir: 'desc' })[0].key).toBe('a')
+    expect(sortLeaderboard(rows, { key: 'diff', dir: 'desc' })[0].key).toBe('b')
+    expect(sortLeaderboard(rows, { key: 'streak', dir: 'desc' })[0].key).toBe('a')
+    expect(sortLeaderboard(rows, { key: 'mbSaved', dir: 'desc' })[0].key).toBe('b')
+    expect(sortLeaderboard(rows, { key: 'mbWasted', dir: 'desc' })[0].key).toBe('a')
+  })
+
+  it('handles the smallest plural boundaries', () => {
+    expect(streakLabel(2)).toBe('🔥 2V')
+    expect(chartRangeLabel(2)).toBe("2 jours d'activité")
+    expect(scopeLabel(2, getFilters())).toBe('2 matchs · tout · tout')
+  })
+
+  it('labels every month of the year', () => {
+    const months = [
+      '2026-01-15',
+      '2026-02-15',
+      '2026-03-15',
+      '2026-08-15',
+      '2026-09-15',
+      '2026-10-15',
+      '2026-11-15',
+      '2026-12-15',
+    ]
+    const days = activityDays(
+      months.map((d, i) => getMockMatch({ id: `m${i}`, ended_at: `${d}T10:00:00.000Z` })),
+    )
+    expect(days.map((d) => d.label)).toEqual([
+      '15 janv.',
+      '15 févr.',
+      '15 mars',
+      '15 août',
+      '15 sept.',
+      '15 oct.',
+      '15 nov.',
+      '15 déc.',
+    ])
+  })
+
+  it('keeps the neutral KPI tones neutral', () => {
+    const matches = [
+      getMockMatch({ id: 'm1', score_a: 11, score_b: 9, ended_at: '2026-07-01T10:00:00.000Z' }),
+    ]
+    const card = playerCard('pa', computePlayerStats(matches, []), new Map(), matches, NOW)
+    const tones = new Map(card?.kpis.map((k) => [k.label, k.tone]))
+    expect(tones.get('Matchs')).toBe('ink')
+    expect(tones.get('% victoires')).toBe('ink')
+    expect(tones.get('V — D')).toBe('ink')
+    expect(tones.get('Capots · sous la table')).toBe('ink')
+    expect(tones.get('Pts pour / contre')).toBe('ink')
+  })
+
+  it('leaves the last outing blank for an undated history', () => {
+    const untimed = getMockMatch({ id: 'u', ended_at: null, started_at: null })
+    const card = playerCard('pa', computePlayerStats([untimed], []), new Map(), [untimed], NOW)
+    expect(card?.lastSeen).toBeNull()
   })
 })
 

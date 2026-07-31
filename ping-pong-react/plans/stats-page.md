@@ -77,7 +77,38 @@ Remove WinRateBars + ActivityChart (unused after revamp), old stats CSS block (k
 
 ## Mutation report / documented equivalent survivors
 
-(filled during MUTATE)
+Stryker (vitest runner), 2026-07-31:
+
+- `src/lib/statsPage.ts` — **91.66%** (791 killed / 69 survived / 3 no-cov), up from 78.79%
+  after two hardening passes (options literals, record cards, sort keys, tones, month labels,
+  weekday Dim, boundary plurals, b-side matches, losing-player card).
+- `src/lib/stats.ts:89-262` (the functions this PR changed) — **82.61%** (133 killed /
+  25 survived), up from 66.46% (added: both-sides play time/timedMatches/lastPlayedAt,
+  shuffled-input form, match-ball split, zero/live durations, ranked team standings).
+
+Documented equivalent / accepted survivors:
+
+1. **Score-tie mutants** (`score_a > score_b` → `>=`, `win: my > their` → `>=`) — a ping-pong
+   match cannot end level; the flipped branch is unreachable with real data.
+2. **Week-boundary instant** (`d >= start` → `>`, `d < end` → `<=` in `inPeriod`) — differs
+   only for a timestamp at exactly local Monday 00:00:00.000; match timestamps are recorded
+   mid-play, and a TZ-fixed test would be flaky across CI/dev timezones.
+3. **`fmtInt` regex quantifier** (`(\d{3})+` → `(\d{3})`) — only diverges at ≥ 7 digits;
+   total points cannot plausibly reach 1 000 000.
+4. **Duration guard shadowing** (`started_at && ended_at` → `||`, `ms > 0` → `true` in
+   `statsKpis`) — `matchDuration` itself guards `started_at` and returns ≥ 0, making the
+   outer mutants observationally equivalent for the summed total (killed where observable
+   via `timedMatches` in `computePlayerStats`).
+5. **Tie-break arms shielded by upstream ordering** (victim `wins` tie-break, balances
+   games tie-break variants, finalist `won` tie-break, remontada count sort) — the primary
+   key or the preceding sort already fixes the order for every reachable input shape.
+6. **Unreachable fallbacks** (`?? []` on a key just inserted, `?? p` label fallback for
+   values constrained by the union type, junk-array mutant of the ignored `tournaments`
+   argument in the weekly recount).
+7. **`lastPlayedAt` ordering equivalents** — matches are processed oldest-first, so the
+   "always overwrite" mutant lands on the same final value.
+8. Remaining survivors in `stats.ts` sit in pre-existing name/team fallback plumbing
+   (`computePlayerStats` ensure maps, `teamFor` chains) untouched by this PR.
 
 ---
 *Delete this file when the plan is complete.*
