@@ -1,5 +1,4 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { IconArrowLeft } from '@tabler/icons-react'
 import { useStats } from '../hooks/useStats'
 import {
   computeHeadToHead,
@@ -18,13 +17,22 @@ import {
   type PlayerStat,
   type Rivalry,
 } from '../lib/stats'
+import {
+  PERIOD_OPTIONS,
+  TYPE_OPTIONS,
+  filterPillLabel,
+  isFiltered,
+  scopeLabel,
+  scopeMatches,
+  type StatsFilters,
+} from '../lib/statsPage'
 import { formatDuration } from '../lib/pingpong'
 import { teamColor, teamLabel } from '../lib/teams'
 import type { Match } from '../types'
 import Avatar from './Avatar'
-import { ActivityChart, WinRateBars, type BarDatum } from './Charts'
-import ThemeToggle from './ThemeToggle'
-import TopBack from './TopBack'
+import { ActivityChart } from './Charts'
+import DashboardNav from './DashboardNav'
+import DashboardTabBar from './DashboardTabBar'
 
 type SortKey = 'wins' | 'winRate' | 'diff' | 'played' | 'mbSaved' | 'mbWasted'
 
@@ -35,15 +43,39 @@ function matchLabel(m: MatchHighlight['match']) {
   return `${winner} ${ws}–${ls} ${loser}`
 }
 
-export default function Stats({ onBack }: { onBack: () => void }) {
-  const { matches, players, loading, error } = useStats()
+interface Props {
+  filters: StatsFilters
+  onFiltersChange: (filters: StatsFilters) => void
+  onHome: () => void
+  onClassement: () => void
+  onPlayers: () => void
+  onNew: () => void
+  onNewGame: () => void
+}
+
+export default function Stats({
+  filters,
+  onFiltersChange,
+  onHome,
+  onClassement,
+  onPlayers,
+  onNew,
+  onNewGame,
+}: Props) {
+  const { matches, players, tournaments, loading, error } = useStats()
   const [sortKey, setSortKey] = useState<SortKey>('wins')
   const [selected, setSelected] = useState<string | null>(null)
 
-  const playerStats = useMemo(() => computePlayerStats(matches, players), [matches, players])
-  const teamStats = useMemo(() => computeTeamStats(matches, players), [matches, players])
-  const h2h = useMemo(() => computeHeadToHead(matches), [matches])
-  const supers = useMemo(() => computeSuperlatives(matches), [matches])
+  const now = useMemo(() => new Date(), [matches])
+  const scoped = useMemo(
+    () => scopeMatches(matches, tournaments, filters, now),
+    [matches, tournaments, filters, now],
+  )
+
+  const playerStats = useMemo(() => computePlayerStats(scoped, players), [scoped, players])
+  const teamStats = useMemo(() => computeTeamStats(scoped, players), [scoped, players])
+  const h2h = useMemo(() => computeHeadToHead(scoped), [scoped])
+  const supers = useMemo(() => computeSuperlatives(scoped), [scoped])
 
   const sortedPlayers = useMemo(() => {
     const cmp: Record<SortKey, (a: PlayerStat, b: PlayerStat) => number> = {
@@ -59,31 +91,18 @@ export default function Stats({ onBack }: { onBack: () => void }) {
 
   const matrixPlayers = useMemo(
     () => [...playerStats].sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name, 'fr')),
-    [playerStats]
+    [playerStats],
   )
 
-  const dayCounts = useMemo(() => matchesByDay(matches), [matches])
+  const dayCounts = useMemo(() => matchesByDay(scoped), [scoped])
 
-  const winRateData = useMemo<BarDatum[]>(
-    () =>
-      [...playerStats]
-        .filter((s) => s.played > 0)
-        .sort((a, b) => b.winRate - a.winRate || b.played - a.played)
-        .slice(0, 8)
-        .map((s) => ({
-          key: s.key,
-          name: s.name,
-          team: s.team,
-          value: s.winRate,
-          sub: `${s.played} matchs`,
-        })),
-    [playerStats]
-  )
-
-  const rivalries = useMemo(() => computeRivalries(matches, players, 2), [matches, players])
+  const rivalries = useMemo(() => computeRivalries(scoped, players, 2), [scoped, players])
   const mostPlayed = useMemo(
-    () => [...rivalries].sort((a, b) => b.total - a.total || (b.lastPlayed ?? '').localeCompare(a.lastPlayed ?? '')).slice(0, 6),
-    [rivalries]
+    () =>
+      [...rivalries]
+        .sort((a, b) => b.total - a.total || (b.lastPlayed ?? '').localeCompare(a.lastPlayed ?? ''))
+        .slice(0, 6),
+    [rivalries],
   )
   const tightest = useMemo(
     () =>
@@ -91,60 +110,65 @@ export default function Stats({ onBack }: { onBack: () => void }) {
         .filter((r) => r.total >= 3)
         .sort((a, b) => rivalryBalance(b) - rivalryBalance(a) || b.total - a.total)
         .slice(0, 3),
-    [rivalries]
+    [rivalries],
   )
 
   const totalPoints = useMemo(
-    () => matches.reduce((sum, m) => sum + m.score_a + m.score_b, 0),
-    [matches]
+    () => scoped.reduce((sum, m) => sum + m.score_a + m.score_b, 0),
+    [scoped],
   )
   const mostActive = playerStats.reduce<PlayerStat | null>(
     (best, s) => (!best || s.played > best.played ? s : best),
-    null
+    null,
   )
   const streakHolder = playerStats.reduce<PlayerStat | null>(
     (best, s) => (!best || s.longestStreak > best.longestStreak ? s : best),
-    null
+    null,
   )
   const bourreau = playerStats.reduce<PlayerStat | null>(
     (best, s) => (!best || s.capotsDealt > best.capotsDealt ? s : best),
-    null
+    null,
   )
   const roiTable = playerStats.reduce<PlayerStat | null>(
     (best, s) => (!best || s.capotsTaken > best.capotsTaken ? s : best),
-    null
+    null,
   )
   const clutch = playerStats.reduce<PlayerStat | null>(
     (best, s) => (!best || s.matchBallsSaved > best.matchBallsSaved ? s : best),
-    null
+    null,
   )
   const cardiaque = playerStats.reduce<PlayerStat | null>(
     (best, s) => (!best || s.matchBallsWasted > best.matchBallsWasted ? s : best),
-    null
+    null,
   )
 
-  const header = (
-    <>
-      <TopBack onClick={onBack} />
-      <header>
-        <ThemeToggle className="header-toggle" />
-      <div className="eyebrow">Statistiques</div>
-      <h1>
-        Les <span className="em">stats</span>
-      </h1>
-      <p className="subtitle">
-        Toutes les parties et tous les tournois terminés, cumulés. Classements, confrontations
-        directes et records.
-      </p>
-      </header>
-    </>
+  const nav = (
+    <DashboardNav
+      active="stats"
+      onHome={onHome}
+      onClassement={onClassement}
+      onPlayers={onPlayers}
+      onNew={onNew}
+      onNewGame={onNewGame}
+    />
+  )
+  const tabbar = (
+    <DashboardTabBar
+      active="stats"
+      onHome={onHome}
+      onClassement={onClassement}
+      onPlayers={onPlayers}
+      onNew={onNew}
+      onNewGame={onNewGame}
+    />
   )
 
   if (loading) {
     return (
-      <div className="wrap">
-        {header}
+      <div className="rv-page">
+        {nav}
         <p className="empty">Chargement…</p>
+        {tabbar}
       </div>
     )
   }
@@ -160,29 +184,93 @@ export default function Stats({ onBack }: { onBack: () => void }) {
     </th>
   )
 
+  const filtered = isFiltered(filters)
+  const resetFilters = () => onFiltersChange({ period: 'tout', type: 'tout' })
+
   return (
-    <div className="wrap">
-      {header}
+    <div className="rv-page">
+      {nav}
 
       {error && <div className="error-banner">Erreur : {error}</div>}
 
-      {matches.length === 0 ? (
-        <section>
-          <div className="empty">Aucun match terminé pour l'instant. Joue une partie pour voir les stats !</div>
-          <div className="footer-row">
-            <span />
-            <button className="link-btn" onClick={onBack}>
-              <IconArrowLeft size={16} stroke={1.8} /> Accueil
+      <div className="st-head">
+        <div className="st-head-text">
+          <h1 className="st-title">Les stats</h1>
+          <p className="st-sub">
+            Toutes les parties terminées, parties rapides et tournois cumulés.
+          </p>
+        </div>
+        <button className="st-elo-link" onClick={onClassement}>
+          Voir le classement Elo →
+        </button>
+      </div>
+
+      <div className="st-filterbar">
+        <div className="st-seg-group">
+          <span className="st-seg-label">Période</span>
+          <div className="st-seg">
+            {PERIOD_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                className={`st-seg-opt${filters.period === o.value ? ' active' : ''}`}
+                onClick={() => onFiltersChange({ ...filters, period: o.value })}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="st-seg-group">
+          <span className="st-seg-label">Type</span>
+          <div className="st-seg">
+            {TYPE_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                className={`st-seg-opt${filters.type === o.value ? ' active' : ''}`}
+                onClick={() => onFiltersChange({ ...filters, type: o.value })}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <span className="st-spacer" />
+        {filtered && (
+          <button className="st-reset" onClick={resetFilters}>
+            <span className="st-reset-dot" />
+            {filterPillLabel(filters)}
+            <span className="st-reset-x">✕</span>
+          </button>
+        )}
+        <span className="st-scope">{scopeLabel(scoped.length, filters)}</span>
+      </div>
+
+      {scoped.length === 0 ? (
+        filtered ? (
+          <div className="st-empty">
+            <div className="st-empty-emoji">🏓</div>
+            <div className="st-empty-title">Aucun match sur ce filtre</div>
+            <p className="st-empty-sub">
+              Essaie une autre période ou un autre type, ou reviens à la vue complète.
+            </p>
+            <button className="st-empty-reset" onClick={resetFilters}>
+              Réinitialiser les filtres
             </button>
           </div>
-        </section>
+        ) : (
+          <div className="st-empty">
+            <div className="st-empty-emoji">🏓</div>
+            <div className="st-empty-title">Aucun match terminé pour l'instant</div>
+            <p className="st-empty-sub">Joue une partie pour voir les stats !</p>
+          </div>
+        )
       ) : (
         <>
           {/* KPI strip */}
           <section>
             <div className="kpi-strip">
               <div className="kpi">
-                <div className="num">{matches.length}</div>
+                <div className="num">{scoped.length}</div>
                 <div className="lbl">Matchs joués</div>
               </div>
               <div className="kpi">
@@ -258,19 +346,10 @@ export default function Stats({ onBack }: { onBack: () => void }) {
               </table>
             </div>
             <p className="setup-hint" style={{ textAlign: 'left' }}>
-              Clique sur une colonne pour trier. La série compte les victoires consécutives en cours.
+              Clique sur une colonne pour trier. La série compte les victoires consécutives en
+              cours.
             </p>
           </section>
-
-          {/* Win-rate bars */}
-          {winRateData.length > 0 && (
-            <section>
-              <div className="section-title">Taux de victoire</div>
-              <div className="panel chart-panel">
-                <WinRateBars data={winRateData} />
-              </div>
-            </section>
-          )}
 
           {/* Team leaderboard */}
           {teamStats.length > 0 && (
@@ -314,13 +393,25 @@ export default function Stats({ onBack }: { onBack: () => void }) {
             <div className="section-title">Records</div>
             <div className="super-grid">
               {supers.longestMatch && (
-                <SuperCard label="Plus long match" value={formatDuration(supers.longestMatch.value)} sub={matchLabel(supers.longestMatch.match)} />
+                <SuperCard
+                  label="Plus long match"
+                  value={formatDuration(supers.longestMatch.value)}
+                  sub={matchLabel(supers.longestMatch.match)}
+                />
               )}
               {supers.shortestMatch && (
-                <SuperCard label="Plus court match" value={formatDuration(supers.shortestMatch.value)} sub={matchLabel(supers.shortestMatch.match)} />
+                <SuperCard
+                  label="Plus court match"
+                  value={formatDuration(supers.shortestMatch.value)}
+                  sub={matchLabel(supers.shortestMatch.match)}
+                />
               )}
               {supers.biggestBlowout && (
-                <SuperCard label="Plus gros écart" value={`+${supers.biggestBlowout.value}`} sub={matchLabel(supers.biggestBlowout.match)} />
+                <SuperCard
+                  label="Plus gros écart"
+                  value={`+${supers.biggestBlowout.value}`}
+                  sub={matchLabel(supers.biggestBlowout.match)}
+                />
               )}
               {supers.closestGame && (
                 <SuperCard
@@ -329,26 +420,47 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                   sub={matchLabel(supers.closestGame.match)}
                 />
               )}
-              {supers.mostPoints && (
-                <SuperCard label="Plus de points" value={`${supers.mostPoints.value}`} sub={matchLabel(supers.mostPoints.match)} />
-              )}
               {mostActive && mostActive.played > 0 && (
-                <SuperCard label="Plus actif" value={mostActive.name} sub={`${mostActive.played} matchs`} />
+                <SuperCard
+                  label="Plus actif"
+                  value={mostActive.name}
+                  sub={`${mostActive.played} matchs`}
+                />
               )}
               {streakHolder && streakHolder.longestStreak >= 2 && (
-                <SuperCard label="Plus longue série" value={streakHolder.name} sub={`${streakHolder.longestStreak} victoires d'affilée`} />
+                <SuperCard
+                  label="Plus longue série"
+                  value={streakHolder.name}
+                  sub={`${streakHolder.longestStreak} victoires d'affilée`}
+                />
               )}
               {bourreau && bourreau.capotsDealt > 0 && (
-                <SuperCard label="Bourreau 🪑" value={bourreau.name} sub={`${bourreau.capotsDealt} capot${bourreau.capotsDealt > 1 ? 's' : ''} infligé${bourreau.capotsDealt > 1 ? 's' : ''}`} />
+                <SuperCard
+                  label="Bourreau 🪑"
+                  value={bourreau.name}
+                  sub={`${bourreau.capotsDealt} capot${bourreau.capotsDealt > 1 ? 's' : ''} infligé${bourreau.capotsDealt > 1 ? 's' : ''}`}
+                />
               )}
               {roiTable && roiTable.capotsTaken > 0 && (
-                <SuperCard label="Roi de la table 🙈" value={roiTable.name} sub={`${roiTable.capotsTaken} passage${roiTable.capotsTaken > 1 ? 's' : ''} sous la table`} />
+                <SuperCard
+                  label="Roi de la table 🙈"
+                  value={roiTable.name}
+                  sub={`${roiTable.capotsTaken} passage${roiTable.capotsTaken > 1 ? 's' : ''} sous la table`}
+                />
               )}
               {clutch && clutch.matchBallsSaved > 0 && (
-                <SuperCard label="Sang-froid 🧊" value={clutch.name} sub={`${clutch.matchBallsSaved} balle${clutch.matchBallsSaved > 1 ? 's' : ''} de match sauvée${clutch.matchBallsSaved > 1 ? 's' : ''}`} />
+                <SuperCard
+                  label="Sang-froid 🧊"
+                  value={clutch.name}
+                  sub={`${clutch.matchBallsSaved} balle${clutch.matchBallsSaved > 1 ? 's' : ''} de match sauvée${clutch.matchBallsSaved > 1 ? 's' : ''}`}
+                />
               )}
               {cardiaque && cardiaque.matchBallsWasted > 0 && (
-                <SuperCard label="Cardiaque 😰" value={cardiaque.name} sub={`${cardiaque.matchBallsWasted} balle${cardiaque.matchBallsWasted > 1 ? 's' : ''} de match gâchée${cardiaque.matchBallsWasted > 1 ? 's' : ''}`} />
+                <SuperCard
+                  label="Cardiaque 😰"
+                  value={cardiaque.name}
+                  sub={`${cardiaque.matchBallsWasted} balle${cardiaque.matchBallsWasted > 1 ? 's' : ''} de match gâchée${cardiaque.matchBallsWasted > 1 ? 's' : ''}`}
+                />
               )}
             </div>
           </section>
@@ -376,12 +488,21 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                           {row.name}
                         </th>
                         {matrixPlayers.map((col) => {
-                          if (row.key === col.key) return <td key={col.key} className="self">·</td>
+                          if (row.key === col.key)
+                            return (
+                              <td key={col.key} className="self">
+                                ·
+                              </td>
+                            )
                           const w = h2hWins(h2h, row.key, col.key)
                           const l = h2hWins(h2h, col.key, row.key)
                           const cls = w > l ? 'pos' : w < l ? 'neg' : ''
                           return (
-                            <td key={col.key} className={cls} title={`${row.name} ${w}–${l} ${col.name}`}>
+                            <td
+                              key={col.key}
+                              className={cls}
+                              title={`${row.name} ${w}–${l} ${col.name}`}
+                            >
                               {w + l === 0 ? '–' : `${w}-${l}`}
                             </td>
                           )
@@ -392,7 +513,8 @@ export default function Stats({ onBack }: { onBack: () => void }) {
                 </table>
               </div>
               <p className="setup-hint" style={{ textAlign: 'left' }}>
-                Chaque case : victoires de la ligne contre la colonne (V-D). Vert = avantage à la ligne.
+                Chaque case : victoires de la ligne contre la colonne (V-D). Vert = avantage à la
+                ligne.
               </p>
             </section>
           )}
@@ -403,7 +525,8 @@ export default function Stats({ onBack }: { onBack: () => void }) {
               <div className="section-title">Rivalités</div>
               {tightest.length > 0 && (
                 <p className="setup-hint" style={{ textAlign: 'left', marginTop: 0 }}>
-                  Les duels les plus serrés : {tightest.map((r) => `${r.aName} vs ${r.bName}`).join(' · ')}
+                  Les duels les plus serrés :{' '}
+                  {tightest.map((r) => `${r.aName} vs ${r.bName}`).join(' · ')}
                 </p>
               )}
               <div className="rivalry-grid">
@@ -413,13 +536,6 @@ export default function Stats({ onBack }: { onBack: () => void }) {
               </div>
             </section>
           )}
-
-          <div className="footer-row">
-            <span className="hint">Les stats cumulent parties rapides et tournois.</span>
-            <button className="link-btn" onClick={onBack}>
-              <IconArrowLeft size={16} stroke={1.8} /> Accueil
-            </button>
-          </div>
         </>
       )}
 
@@ -427,10 +543,12 @@ export default function Stats({ onBack }: { onBack: () => void }) {
         <PlayerDetail
           playerKey={selected}
           stats={playerStats}
-          matches={matches}
+          matches={scoped}
           onClose={() => setSelected(null)}
         />
       )}
+
+      {tabbar}
     </div>
   )
 }
@@ -456,7 +574,9 @@ function RivalryCard({ r }: { r: Rivalry }) {
         <span className="rv-name" style={{ color: aColor }} title={r.aName}>
           {r.aName}
         </span>
-        <span className="rv-vs">{r.aWins}–{r.bWins}</span>
+        <span className="rv-vs">
+          {r.aWins}–{r.bWins}
+        </span>
         <span className="rv-name rv-right" style={{ color: bColor }} title={r.bName}>
           {r.bName}
         </span>
@@ -514,16 +634,53 @@ function PlayerDetail({
         </div>
 
         <div className="pd-kpis">
-          <div className="pd-kpi"><div className="n">{s.played}</div><div className="l">Matchs</div></div>
-          <div className="pd-kpi"><div className="n">{pct(s.winRate)}</div><div className="l">Victoires</div></div>
-          <div className="pd-kpi"><div className="n">{s.wins}-{s.losses}</div><div className="l">V-D</div></div>
-          <div className="pd-kpi"><div className="n">{s.diff > 0 ? '+' : ''}{s.diff}</div><div className="l">Diff</div></div>
-          <div className="pd-kpi"><div className="n">{s.currentStreak >= 2 ? `🔥${s.currentStreak}` : s.currentStreak}</div><div className="l">Série</div></div>
-          <div className="pd-kpi"><div className="n">{s.longestStreak}</div><div className="l">Meilleure série</div></div>
-          <div className="pd-kpi"><div className="n">{s.capotsDealt}</div><div className="l">Capots infligés</div></div>
-          <div className="pd-kpi"><div className="n">{s.capotsTaken}</div><div className="l">Sous la table</div></div>
-          <div className="pd-kpi"><div className="n">{s.matchBallsSaved}</div><div className="l">Balles de match sauvées</div></div>
-          <div className="pd-kpi"><div className="n">{s.matchBallsWasted}</div><div className="l">Balles de match gâchées</div></div>
+          <div className="pd-kpi">
+            <div className="n">{s.played}</div>
+            <div className="l">Matchs</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">{pct(s.winRate)}</div>
+            <div className="l">Victoires</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">
+              {s.wins}-{s.losses}
+            </div>
+            <div className="l">V-D</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">
+              {s.diff > 0 ? '+' : ''}
+              {s.diff}
+            </div>
+            <div className="l">Diff</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">
+              {s.currentStreak >= 2 ? `🔥${s.currentStreak}` : s.currentStreak}
+            </div>
+            <div className="l">Série</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">{s.longestStreak}</div>
+            <div className="l">Meilleure série</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">{s.capotsDealt}</div>
+            <div className="l">Capots infligés</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">{s.capotsTaken}</div>
+            <div className="l">Sous la table</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">{s.matchBallsSaved}</div>
+            <div className="l">Balles de match sauvées</div>
+          </div>
+          <div className="pd-kpi">
+            <div className="n">{s.matchBallsWasted}</div>
+            <div className="l">Balles de match gâchées</div>
+          </div>
         </div>
 
         <div className="pd-foes">
@@ -531,7 +688,10 @@ function PlayerDetail({
             <div className="sc-label">Bête noire</div>
             {nemesis ? (
               <div className="pd-foe-v">
-                {nemesis.name} <span className="muted">({nemesis.wins}-{nemesis.losses})</span>
+                {nemesis.name}{' '}
+                <span className="muted">
+                  ({nemesis.wins}-{nemesis.losses})
+                </span>
               </div>
             ) : (
               <div className="pd-foe-v muted">—</div>
@@ -541,7 +701,10 @@ function PlayerDetail({
             <div className="sc-label">Victime favorite</div>
             {victim ? (
               <div className="pd-foe-v">
-                {victim.name} <span className="muted">({victim.wins}-{victim.losses})</span>
+                {victim.name}{' '}
+                <span className="muted">
+                  ({victim.wins}-{victim.losses})
+                </span>
               </div>
             ) : (
               <div className="pd-foe-v muted">—</div>
@@ -549,7 +712,9 @@ function PlayerDetail({
           </div>
         </div>
 
-        <div className="sc-label" style={{ marginBottom: 8 }}>Derniers matchs</div>
+        <div className="sc-label" style={{ marginBottom: 8 }}>
+          Derniers matchs
+        </div>
         <div className="pd-recent">
           {recent.map((m) => {
             const isA = sideKey(m.player_a_id, m.player_a) === playerKey
@@ -562,7 +727,9 @@ function PlayerDetail({
               <div className="pd-row" key={m.id}>
                 <span className={`pd-res ${win ? 'w' : 'l'}`}>{win ? 'V' : 'D'}</span>
                 <span className="pd-opp">{opp}</span>
-                <span className="pd-score">{my}–{their}</span>
+                <span className="pd-score">
+                  {my}–{their}
+                </span>
                 <span className="pd-date">{date}</span>
               </div>
             )
