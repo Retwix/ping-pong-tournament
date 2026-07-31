@@ -402,12 +402,7 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
   * { transition-duration: 0.01ms !important; }
 }
 
-/* ===== stats page ===== */
-.kpi-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow-card); text-align: center; }
-.kpi .num { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 6vw, 40px); color: var(--fg-1); line-height: 1; }
-.kpi .lbl { color: var(--fg-3); font-size: 12.5px; margin-top: 6px; }
-
+/* ===== shared bits once owned by the old stats page ===== */
 .avatar.sm { width: 30px; height: 30px; font-size: 13px; }
 /* `vertical-align: middle` is load-bearing: as a baseline-aligned inline box, this
    wrapper takes its baseline from the avatar. Initials give a text baseline, but a
@@ -415,88 +410,18 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
    the box bottom — which sits the whole avatar above the baseline and makes rows
    with a photo ~8px taller than rows with initials. Middle alignment sidesteps it. */
 .lb-player { display: inline-flex; align-items: center; gap: 10px; vertical-align: middle; }
-table.leaderboard tbody td.left { font-family: var(--font-display); }
-table.leaderboard tbody tr { cursor: pointer; }
-table.leaderboard tbody tr:hover td { background: var(--ghost-hover); }
 
-/* player detail modal */
-.modal.pd { max-width: 460px; max-height: 82vh; overflow-y: auto; }
+/* player detail modal (Ratings page) */
 .pd-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .pd-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
 .pd-kpi { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 6px; text-align: center; }
 .pd-kpi .n { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--fg-1); }
 .pd-kpi .l { color: var(--fg-3); font-size: 11px; margin-top: 2px; }
-.pd-foes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.pd-foe { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-.pd-foe-v { font-family: var(--font-display); font-weight: 600; margin-top: 6px; color: var(--fg-1); }
-.pd-foe-v.muted, .pd-foe-v .muted { color: var(--fg-3); font-weight: 500; font-size: 13px; }
-.pd-recent { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
-.pd-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
-.pd-res { width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 12px; flex: none; }
-.pd-res.w { background: rgba(43, 165, 114, 0.16); color: var(--green); }
-.pd-res.l { background: rgba(215, 66, 81, 0.14); color: var(--coral); }
-.pd-opp { flex: 1; color: var(--fg-1); }
-.pd-score { font-family: var(--font-display); font-weight: 600; color: var(--fg-2); }
-.pd-date { color: var(--fg-3); font-size: 12px; width: 80px; text-align: right; }
-th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
-th.sortable:hover { color: var(--fg-1); }
-th.sortable.active { color: var(--primary); }
-
-.super-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-.super-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow-card); }
-.super-card .sc-label { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3); }
-.super-card .sc-value { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--primary); margin: 6px 0 4px; line-height: 1.05; word-break: break-word; }
-.super-card .sc-sub { color: var(--fg-3); font-size: 13px; }
-
-.h2h-wrap { overflow-x: auto; }
-table.h2h { border-collapse: separate; border-spacing: 4px; width: auto; }
-table.h2h th, table.h2h td { font-family: var(--font-display); font-size: 12px; text-align: center; padding: 0; border: none; }
-table.h2h thead th { width: 36px; height: 28px; color: var(--fg-3); font-weight: 700; }
-table.h2h th.corner { background: transparent; }
-table.h2h th.rowname { text-align: right; padding-right: 10px; color: var(--fg-2); font-weight: 600; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-body); font-size: 13px; }
-table.h2h td { width: 36px; height: 34px; border-radius: 8px; background: var(--bg); color: var(--fg-2); font-weight: 600; }
-table.h2h td.self { background: transparent; color: var(--fg-4); }
-table.h2h td.pos { background: rgba(43, 165, 114, 0.16); color: var(--green); }
-table.h2h td.neg { background: rgba(215, 66, 81, 0.14); color: var(--coral); }
-
-/* --- Charts (zero-dependency, CSS only) --- */
-.chart-panel { padding: 18px; }
-
-/* Win-rate horizontal bars */
-.bars { display: flex; flex-direction: column; gap: 10px; }
-.bar-row { display: grid; grid-template-columns: 120px 1fr 44px; align-items: center; gap: 12px; }
-.bar-name { font-size: 14px; color: var(--fg-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-track { height: 12px; background: var(--bg); border-radius: 999px; overflow: hidden; }
-.bar-fill { display: block; height: 100%; border-radius: 999px; transition: width var(--dur) var(--ease); }
-.bar-val { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--fg-1); text-align: right; }
-
-/* Activity bar chart */
-.activity-chart { width: 100%; }
-.act-plot { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
-.act-col { flex: 1 1 0; min-width: 6px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
-.act-bar { width: 100%; max-width: 28px; min-height: 3px; background: var(--primary); border-radius: 6px 6px 2px 2px; position: relative; transition: height var(--dur) var(--ease); }
-.act-bar:hover { background: var(--primary-deep); }
-.act-count { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-family: var(--font-display); font-size: 10px; font-weight: 700; color: var(--fg-3); }
-.act-x { font-size: 10px; color: var(--fg-3); white-space: nowrap; height: 12px; }
-
-/* Rivalries */
-.rivalry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.rivalry-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow-card); }
-.rv-top { display: flex; align-items: baseline; gap: 8px; }
-.rv-name { font-family: var(--font-display); font-weight: 700; font-size: 14px; flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rv-name.rv-right { text-align: right; }
-.rv-vs { font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--fg-1); flex: 0 0 auto; }
-.rv-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; margin: 10px 0 8px; background: var(--bg); }
-.rv-fill { display: block; height: 100%; }
-.rv-sub { color: var(--fg-3); font-size: 12.5px; }
 
 @media (max-width: 460px) {
   .mp { font-size: 14px; }
-  .kpi-strip { grid-template-columns: 1fr 1fr 1fr; }
-  .kpi .lbl { font-size: 11px; }
-  .bar-row { grid-template-columns: 90px 1fr 40px; gap: 8px; }
-  .act-plot { height: 110px; }
 }
+
 
 /* ============================================================
    Pronostics (predictions / betting) — no-currency streak model
