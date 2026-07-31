@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { Match, Tournament } from '../types'
 import {
   filterPillLabel,
+  fmtPlayTime,
   isFiltered,
   parseStatsFilters,
   scopeLabel,
   scopeMatches,
+  statsKpis,
   statsSearch,
   type StatsFilters,
 } from './statsPage'
@@ -193,6 +195,85 @@ describe('scoping matches by type', () => {
       NOW,
     )
     expect(scoped.map((m) => m.id)).toEqual(['jj'])
+  })
+})
+
+describe('play time formatting', () => {
+  it('shows hours and zero-padded minutes past the first hour', () => {
+    expect(fmtPlayTime(872 * 60_000)).toBe('14 h 32')
+    expect(fmtPlayTime(60 * 60_000)).toBe('1 h 00')
+  })
+
+  it('stays in minutes under an hour', () => {
+    expect(fmtPlayTime(45 * 60_000)).toBe('45 min')
+    expect(fmtPlayTime(0)).toBe('0 min')
+  })
+})
+
+describe('KPI strip', () => {
+  const timed = (id: string, endedAt: string, minutes: number, overrides?: Partial<Match>) =>
+    getMockMatch({
+      id,
+      ended_at: endedAt,
+      started_at: new Date(new Date(endedAt).getTime() - minutes * 60_000).toISOString(),
+      ...overrides,
+    })
+
+  it('counts matches, distinct players, points and play time', () => {
+    const matches = [
+      timed('a', '2026-07-14T10:00:00.000Z', 20, { score_a: 11, score_b: 9 }),
+      timed('b', '2026-07-02T10:00:00.000Z', 40, {
+        player_a: 'Candice',
+        player_a_id: 'pc',
+        score_a: 11,
+        score_b: 5,
+      }),
+    ]
+    const kpis = statsKpis(matches, getFilters(), NOW)
+    expect(kpis.map((k) => k.label)).toEqual([
+      'Matchs joués',
+      'Joueurs',
+      'Points marqués',
+      'Temps de jeu',
+    ])
+    expect(kpis[0].value).toBe('2')
+    expect(kpis[1].value).toBe('3')
+    expect(kpis[1].sub).toBe('ayant joué au moins un match')
+    expect(kpis[2].value).toBe('36')
+    expect(kpis[2].unit).toBe('pts')
+    expect(kpis[3].value).toBe('1 h 00')
+    expect(kpis[3].sub).toBe('≈ 30 min par match')
+  })
+
+  it('groups thousands with a narrow space in the points KPI', () => {
+    const matches = Array.from({ length: 241 }, (_, i) =>
+      getMockMatch({ id: `m${i}`, score_a: 11, score_b: 9 }),
+    )
+    const kpis = statsKpis(matches, getFilters(), NOW)
+    expect(kpis[2].value).toBe('4\u202f820')
+  })
+
+  it('highlights this week when unfiltered, names the filtered period otherwise', () => {
+    const thisWeek = timed('w', '2026-07-14T10:00:00.000Z', 20)
+    const older = timed('o', '2026-07-02T10:00:00.000Z', 20)
+    const open = statsKpis([thisWeek, older], getFilters(), NOW)
+    expect(open[0].sub).toBe('+1 cette semaine')
+    expect(open[0].accent).toBe(true)
+
+    const filtered = statsKpis([thisWeek, older], getFilters({ period: 'mois' }), NOW)
+    expect(filtered[0].sub).toBe('sur la période filtrée')
+    expect(filtered[0].accent).toBe(false)
+
+    const quiet = statsKpis([older], getFilters(), NOW)
+    expect(quiet[0].sub).toBe('aucun match cette semaine')
+    expect(quiet[0].accent).toBe(false)
+  })
+
+  it('admits when durations are missing', () => {
+    const untimed = getMockMatch({ id: 'u', started_at: null })
+    const kpis = statsKpis([untimed], getFilters(), NOW)
+    expect(kpis[3].value).toBe('—')
+    expect(kpis[3].sub).toBe('durées non enregistrées')
   })
 })
 

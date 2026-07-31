@@ -1,6 +1,8 @@
 // Pure selectors for the « Les stats » page (/stats).
 
 import type { Match, Tournament } from '../types'
+import { matchDuration } from './pingpong'
+import { sideKey } from './stats'
 
 export type StatsPeriod = 'tout' | 'mois' | 'semaine'
 export type StatsType = 'tout' | 'tournois' | 'rapides'
@@ -107,4 +109,91 @@ export function filterPillLabel(filters: StatsFilters): string {
 export function scopeLabel(count: number, filters: StatsFilters): string {
   const matches = `${count} ${count >= 2 ? 'matchs' : 'match'}`
   return `${matches} · ${periodLabel(filters.period).toLowerCase()} · ${typeLabel(filters.type).toLowerCase()}`
+}
+
+/** Whole minutes, French style: « 45 min » under an hour, « 14 h 32 » beyond. */
+export function fmtPlayTime(ms: number): string {
+  const mins = Math.round(ms / 60_000)
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return h === 0 ? `${m} min` : `${h} h ${String(m).padStart(2, '0')}`
+}
+
+/** Deterministic fr-FR grouping (narrow no-break space) — toLocaleString varies per ICU. */
+const fmtInt = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f')
+
+export interface StatsKpi {
+  label: string
+  value: string
+  unit: string | null
+  sub: string
+  /** Green sub line (the unfiltered « +N cette semaine » highlight). */
+  accent: boolean
+}
+
+/** The 4-card KPI strip. Play time only counts matches with recorded durations. */
+export function statsKpis(scoped: Match[], filters: StatsFilters, now: Date): StatsKpi[] {
+  const filtered = isFiltered(filters)
+  const players = new Set<string>()
+  let points = 0
+  let timeMs = 0
+  let timedCount = 0
+  for (const m of scoped) {
+    players.add(sideKey(m.player_a_id, m.player_a))
+    players.add(sideKey(m.player_b_id, m.player_b))
+    points += m.score_a + m.score_b
+    if (m.started_at && m.ended_at) {
+      const ms = matchDuration(m)
+      if (ms > 0) {
+        timeMs += ms
+        timedCount++
+      }
+    }
+  }
+  const weekly = scopeMatches(scoped, [], { period: 'semaine', type: 'tout' }, now).length
+  const matchesSub = filtered
+    ? 'sur la période filtrée'
+    : weekly > 0
+      ? `+${weekly} cette semaine`
+      : 'aucun match cette semaine'
+  const playTime: StatsKpi =
+    timedCount === 0
+      ? {
+          label: 'Temps de jeu',
+          value: '—',
+          unit: null,
+          sub: 'durées non enregistrées',
+          accent: false,
+        }
+      : {
+          label: 'Temps de jeu',
+          value: fmtPlayTime(timeMs),
+          unit: null,
+          sub: `≈ ${Math.round(timeMs / timedCount / 60_000)} min par match`,
+          accent: false,
+        }
+  return [
+    {
+      label: 'Matchs joués',
+      value: String(scoped.length),
+      unit: null,
+      sub: matchesSub,
+      accent: !filtered && weekly > 0,
+    },
+    {
+      label: 'Joueurs',
+      value: String(players.size),
+      unit: null,
+      sub: 'ayant joué au moins un match',
+      accent: false,
+    },
+    {
+      label: 'Points marqués',
+      value: fmtInt(points),
+      unit: 'pts',
+      sub: 'tous joueurs confondus',
+      accent: false,
+    },
+    playTime,
+  ]
 }

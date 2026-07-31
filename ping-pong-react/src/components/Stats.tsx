@@ -24,6 +24,7 @@ import {
   isFiltered,
   scopeLabel,
   scopeMatches,
+  statsKpis,
   type StatsFilters,
 } from '../lib/statsPage'
 import { formatDuration } from '../lib/pingpong'
@@ -113,10 +114,7 @@ export default function Stats({
     [rivalries],
   )
 
-  const totalPoints = useMemo(
-    () => scoped.reduce((sum, m) => sum + m.score_a + m.score_b, 0),
-    [scoped],
-  )
+  const kpis = useMemo(() => statsKpis(scoped, filters, now), [scoped, filters, now])
   const mostActive = playerStats.reduce<PlayerStat | null>(
     (best, s) => (!best || s.played > best.played ? s : best),
     null,
@@ -267,22 +265,18 @@ export default function Stats({
       ) : (
         <>
           {/* KPI strip */}
-          <section>
-            <div className="kpi-strip">
-              <div className="kpi">
-                <div className="num">{scoped.length}</div>
-                <div className="lbl">Matchs joués</div>
+          <div className="st-kpis">
+            {kpis.map((k) => (
+              <div className="st-kpi" key={k.label}>
+                <div className="st-kpi-label">{k.label}</div>
+                <div className="st-kpi-value">
+                  {k.value}
+                  {k.unit !== null && <span className="st-kpi-unit"> {k.unit}</span>}
+                </div>
+                <div className={`st-kpi-sub${k.accent ? ' accent' : ''}`}>{k.sub}</div>
               </div>
-              <div className="kpi">
-                <div className="num">{playerStats.length}</div>
-                <div className="lbl">Joueurs</div>
-              </div>
-              <div className="kpi">
-                <div className="num">{totalPoints}</div>
-                <div className="lbl">Points marqués</div>
-              </div>
-            </div>
-          </section>
+            ))}
+          </div>
 
           {/* Activity over time */}
           {dayCounts.length > 1 && (
