@@ -6,6 +6,8 @@ import Avatar from './Avatar'
 
 interface Props {
   onOpenTournament: (id: string) => void
+  /** Opens /parties pre-filtered on matches (« Historique → » header link). */
+  onHistory?: () => void
 }
 
 /**
@@ -13,13 +15,20 @@ interface Props {
  * tournament, newest first. Each row opens the tournament/board that result
  * belongs to.
  */
-export default function RecentResults({ onOpenTournament }: Props) {
+export default function RecentResults({ onOpenTournament, onHistory }: Props) {
   const { matches, players } = useRatings()
   const rows = recentResults(matches, players, 5)
 
   return (
     <div className="rv-card">
-      <div className="rv-card-title">Résultats récents</div>
+      <div className="rv-top-header">
+        <div className="rv-card-title">Résultats récents</div>
+        {onHistory && (
+          <button className="rv-top-link" onClick={onHistory}>
+            Historique →
+          </button>
+        )}
+      </div>
       {rows.length === 0 ? (
         <div className="empty">Aucun match terminé pour l'instant.</div>
       ) : (
