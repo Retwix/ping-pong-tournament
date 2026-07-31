@@ -1,8 +1,18 @@
-import { IconSearch } from '@tabler/icons-react'
+import { IconPencil, IconSearch, IconX } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRatings } from '../hooks/useRatings'
-import { filterJoueurs, joueurRows, joueursSubtitle, teamChips } from '../lib/joueurs'
-import { teamColor, teamLabel } from '../lib/teams'
+import { updatePlayer } from '../lib/db'
+import {
+  dialogTitle,
+  filterJoueurs,
+  joueurRows,
+  joueursSubtitle,
+  normalizeJoueurForm,
+  teamChips,
+  type JoueurForm,
+  type JoueurRow,
+} from '../lib/joueurs'
+import { TEAMS, teamColor, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
@@ -22,9 +32,13 @@ interface Props {
 }
 
 export default function Players({ onHome, onClassement, onStats, onNew, onNewGame }: Props) {
-  const { rows, events, players, loading, error } = useRatings()
+  const { rows, events, players, loading, error, reload } = useRatings()
   const [query, setQuery] = useState('')
   const [team, setTeam] = useState('all')
+  const [editing, setEditing] = useState<string | null>(null)
+  const [form, setForm] = useState<JoueurForm | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -37,6 +51,42 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  const openEdit = (r: JoueurRow) => {
+    setForm({ name: r.name, team: r.team })
+    setSaveError(null)
+    setEditing(r.id)
+  }
+
+  const cancel = () => {
+    setEditing(null)
+    setForm(null)
+  }
+
+  const save = async () => {
+    if (editing === null || form === null || saving) return
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await updatePlayer(editing, normalizeJoueurForm(form))
+      setEditing(null)
+      setForm(null)
+      reload()
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    if (editing === null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [editing])
 
   const annuaire = useMemo(() => joueurRows(players, rows, events), [players, rows, events])
   const visible = useMemo(() => filterJoueurs(annuaire, query, team), [annuaire, query, team])
@@ -119,6 +169,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
           <div className="pl-th-r">Elo</div>
           <div className="pl-th-r">Matchs</div>
           <div className="pl-th-r">Victoires</div>
+          <div />
         </div>
 
         {visible.map((r) => (
@@ -136,6 +187,16 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
             <div className="pl-c-elo">{r.elo}</div>
             <div className="pl-c-matchs">{r.matchsLabel}</div>
             <div className={`pl-c-win${r.winrateStrong ? ' strong' : ''}`}>{r.winrate}</div>
+            <div className="pl-act">
+              <button
+                className="pl-icon-btn edit"
+                title="Modifier"
+                aria-label={`Modifier ${r.name}`}
+                onClick={() => openEdit(r)}
+              >
+                <IconPencil size={15} stroke={2} />
+              </button>
+            </div>
           </div>
         ))}
 
@@ -146,6 +207,72 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
           </div>
         )}
       </div>
+
+      {editing !== null && form !== null && (
+        <div
+          className="scrim"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) cancel()
+          }}
+        >
+          <div className="modal pl-modal">
+            <div className="pl-modal-head">
+              <div className="pl-modal-head-text">
+                <h2 className="pl-modal-title">{dialogTitle(false, form.name)}</h2>
+                <p className="pl-modal-sub">Nom, équipe et photo de profil.</p>
+              </div>
+              <button className="pl-close" onClick={cancel} aria-label="Fermer">
+                <IconX size={16} stroke={2.2} />
+              </button>
+            </div>
+
+            <div className="pl-field">
+              <div className="pl-flabel">Nom</div>
+              <input
+                className="pl-finput"
+                autoFocus
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Prénom ou pseudo"
+                maxLength={40}
+              />
+            </div>
+
+            <div className="pl-field">
+              <div className="pl-flabel">Équipe</div>
+              <div className="pl-mchips">
+                {TEAMS.map((t) => (
+                  <button
+                    key={t.key}
+                    className={`pl-chip${form.team === t.key ? ' active' : ''}`}
+                    onClick={() => setForm({ ...form, team: t.key })}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                className="pl-finput pl-finput-team"
+                value={form.team}
+                onChange={(e) => setForm({ ...form, team: e.target.value })}
+                placeholder="ou saisis une autre équipe"
+                maxLength={40}
+              />
+            </div>
+
+            {saveError && <div className="error-banner pl-modal-error">{saveError}</div>}
+
+            <div className="pl-modal-foot">
+              <button className="pl-btn-ghost" onClick={cancel}>
+                Annuler
+              </button>
+              <button className="pl-btn-primary" onClick={save} disabled={saving}>
+                {saving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {tabbar}
     </div>

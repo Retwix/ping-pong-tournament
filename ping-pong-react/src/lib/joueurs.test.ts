@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { RatingEvent, RatingRow } from './rating'
 import type { Player } from '../types'
-import { filterJoueurs, joueurRows, joueursSubtitle, teamChips, type JoueurRow } from './joueurs'
+import {
+  dialogTitle,
+  filterJoueurs,
+  joueurRows,
+  joueursSubtitle,
+  normalizeJoueurForm,
+  teamChips,
+  type JoueurRow,
+} from './joueurs'
 
 const getMockPlayer = (overrides?: Partial<Player>): Player => ({
   id: 'p1',
@@ -267,6 +275,40 @@ describe('filterJoueurs', () => {
   it('never matches an empty team through the query', () => {
     expect(filterJoueurs(annuaire, 'sam', 'all').map((r) => r.name)).toEqual(['Sam'])
     expect(filterJoueurs(annuaire, 'tech', 'all').map((r) => r.name)).toEqual(['Léo'])
+  })
+})
+
+describe('normalizeJoueurForm', () => {
+  it('trims the name and team before saving', () => {
+    expect(normalizeJoueurForm({ name: '  Léo  ', team: ' tech ' })).toEqual({
+      name: 'Léo',
+      team: 'tech',
+    })
+  })
+
+  it('saves an empty or whitespace-only name as « Sans nom »', () => {
+    expect(normalizeJoueurForm({ name: '', team: 'tech' }).name).toBe('Sans nom')
+    expect(normalizeJoueurForm({ name: '   ', team: 'tech' }).name).toBe('Sans nom')
+  })
+
+  it('saves an empty or whitespace-only team as « — »', () => {
+    expect(normalizeJoueurForm({ name: 'Léo', team: '' }).team).toBe('—')
+    expect(normalizeJoueurForm({ name: 'Léo', team: '   ' }).team).toBe('—')
+  })
+})
+
+describe('dialogTitle', () => {
+  it('titles a pending creation « Nouveau joueur »', () => {
+    expect(dialogTitle(true, 'Léo')).toBe('Nouveau joueur')
+  })
+
+  it('titles an edit with the live form name', () => {
+    expect(dialogTitle(false, 'Léo')).toBe('Modifier Léo')
+  })
+
+  it('falls back to « le joueur » while the name field is empty', () => {
+    expect(dialogTitle(false, '')).toBe('Modifier le joueur')
+    expect(dialogTitle(false, '   ')).toBe('Modifier le joueur')
   })
 })
 

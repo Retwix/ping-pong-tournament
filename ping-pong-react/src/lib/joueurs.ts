@@ -77,6 +77,25 @@ export function filterJoueurs(rows: JoueurRow[], query: string, team: string): J
   )
 }
 
+export interface JoueurForm {
+  name: string
+  team: string
+}
+
+/** M2 save fallbacks: never persist an empty name (« Sans nom ») or team (« — »). */
+export function normalizeJoueurForm(form: JoueurForm): JoueurForm {
+  return {
+    name: form.name.trim() || 'Sans nom',
+    team: form.team.trim() || '—',
+  }
+}
+
+/** « Nouveau joueur » while the optimistic create is pending, live form name otherwise. */
+export function dialogTitle(pending: boolean, formName: string): string {
+  if (pending) return 'Nouveau joueur'
+  return `Modifier ${formName.trim() || 'le joueur'}`
+}
+
 export interface TeamChip {
   key: string
   label: string
