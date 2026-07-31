@@ -16,3 +16,9 @@ export function teamLabel(key: string): string {
 export function teamColor(key: string): string {
   return TEAMS.find((t) => t.key === key)?.color ?? '#8E889C'
 }
+
+/** 12 %-alpha tint of the team color behind its full-strength label (house badge treatment). */
+export function teamBadgeStyle(key: string): { background: string; color: string } {
+  const color = teamColor(key)
+  return { background: `${color}1F`, color }
+}
