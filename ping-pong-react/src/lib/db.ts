@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import { generateSchedule, shuffle } from './roundRobin'
 import { buildDoubleElim } from './doubleElim'
-import { RATING, replayRatings } from './rating'
+import { RATING, ratedMatches, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
 import { avatarStoragePath, withCacheBuster } from './avatar'
 import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
@@ -284,7 +284,9 @@ export async function recomputeRatings(): Promise<void> {
     listTournaments(),
   ])
   const targetByTournament = new Map(tournaments.map((t) => [t.id, t.target]))
-  const { states, events } = replayRatings(matches, players, { targetByTournament })
+  const { states, events } = replayRatings(ratedMatches(matches, tournaments), players, {
+    targetByTournament,
+  })
 
   // Persist current state for every registered player (reset to defaults when
   // they have no rated games left).
