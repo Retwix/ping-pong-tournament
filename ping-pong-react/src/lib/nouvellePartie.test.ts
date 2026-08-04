@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   estDoublon,
   filterJoueurs,
+  noteEnjeu,
   pointsCible,
   recapitulatif,
   type CreationState,
@@ -174,6 +175,20 @@ describe('pointsCible', () => {
 
   it('tolerates surrounding whitespace', () => {
     expect(pointsCible(11, ' 21 ')).toBe(21)
+  })
+})
+
+describe('noteEnjeu', () => {
+  it('explains that a ranked game moves Elo and counts in the classement', () => {
+    expect(noteEnjeu(false)).toBe(
+      'Le résultat déplace l’Elo des joueurs et compte dans « Le classement ».',
+    )
+  })
+
+  it('explains that an unranked game touches no Elo but stays visible', () => {
+    expect(noteEnjeu(true)).toBe(
+      'Aucun impact sur le classement Elo. La partie reste visible dans les parties.',
+    )
   })
 })
 

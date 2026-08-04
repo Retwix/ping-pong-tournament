@@ -3595,6 +3595,32 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 }
 [data-theme='dark'] .np-rule { border-top-color: rgba(255, 255, 255, 0.08); color: #a99fc4; }
 
+/* ===== l'enjeu (classée / non classée) ===== */
+.np-enjeu { margin-top: 16px; border-top: 1px solid #e8e4f2; padding-top: 14px; }
+[data-theme='dark'] .np-enjeu { border-top-color: rgba(255, 255, 255, 0.08); }
+.np-enjeu-seg {
+  margin-top: 9px; display: flex;
+  background: #f7f5fd; border: 1px solid #e8e4f2; border-radius: 12px; padding: 3px;
+}
+[data-theme='dark'] .np-enjeu-seg { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.09); }
+.np-enjeu-btn {
+  flex: 1; text-align: center; cursor: pointer;
+  font-family: var(--font-display); font-weight: 600; font-size: 13px;
+  color: #6b6480; background: transparent; border: 0; border-radius: 10px; padding: 10px 0;
+  transition: color 160ms var(--ease), background 160ms var(--ease);
+}
+.np-enjeu-btn:hover { color: #4a2aa4; }
+.np-enjeu-btn.active { font-weight: 800; color: #fff; background: #4a2aa4; cursor: default; }
+.np-enjeu-btn.active:hover { color: #fff; }
+[data-theme='dark'] .np-enjeu-btn { color: #a99fc4; }
+[data-theme='dark'] .np-enjeu-btn:hover { color: #c9b8ff; }
+[data-theme='dark'] .np-enjeu-btn.active { color: #fff; background: #5b39c4; }
+.np-enjeu-note {
+  margin-top: 9px;
+  font-family: var(--font-body); font-weight: 600; font-size: 12px; line-height: 1.5; color: #847e96;
+}
+[data-theme='dark'] .np-enjeu-note { color: #8b82a8; }
+
 /* ===== picker top + nouveau joueur ===== */
 .np-picker-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .np-picker-top .np-search { flex: 1; min-width: 0; }

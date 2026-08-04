@@ -42,6 +42,12 @@ export interface Tournament {
   slack_thread_ts: string | null
   result_notified: boolean
   /**
+   * « Non classée » : the result moves no Elo and is excluded from « Le
+   * classement », but stays in the Parties history. Absent on rows created
+   * before the unranked migration — readers treat missing as false.
+   */
+  unranked: boolean
+  /**
    * Chaos Mode config (see docs/chaos-mode.md). Absent on tournaments created
    * before the feature existed; read via chaosSettingsFromTournament, which
    * normalizes missing columns to the defaults.
