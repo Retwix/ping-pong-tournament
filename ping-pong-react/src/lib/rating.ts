@@ -38,9 +38,11 @@ export const RATING = {
   // ~18 returns a settled RD (~50) to the 350 default after roughly a year off.
   rdDecayPerDay: 18,
 
-  // A rating is "provisional" until it has settled.
-  provisionalGames: 5,
-  provisionalRd: 100,
+  // A rating is "provisional" until the player has played enough games. RD is
+  // deliberately left out: this group plays ~3x/week in a small pool, which
+  // floors a settled RD around ~100, so an RD gate would keep long-time regulars
+  // (100+ games) permanently flagged. Games-played is the honest signal here.
+  provisionalGames: 10,
 } as const
 
 export type Stakes = 'normal' | 'final' | 'grand_final'
@@ -107,7 +109,7 @@ function chronological(a: Match, b: Match): number {
 /** The game target for a match (for margin normalisation). */
 function targetFor(
   m: Pick<Match, 'tournament_id' | 'score_a' | 'score_b'>,
-  opts?: ReplayOptions
+  opts?: ReplayOptions,
 ): number {
   const fromMap = opts?.targetByTournament?.get(m.tournament_id)
   if (fromMap) return fromMap
@@ -239,7 +241,7 @@ export function projectDeltas(
   a: RatingNumbers,
   b: RatingNumbers,
   aWins: boolean,
-  weight: number
+  weight: number,
 ): { a: number; b: number } {
   const preA = toGlicko2(a.rating, a.rd, a.vol)
   const preB = toGlicko2(b.rating, b.rd, b.vol)
@@ -270,7 +272,7 @@ function daysBetween(from: string | null, to: string | null): number {
 export function replayRatings(
   matches: Match[],
   players: Player[],
-  opts?: ReplayOptions
+  opts?: ReplayOptions,
 ): ReplayResult {
   const nameById = new Map(players.map((p) => [p.id, p.name]))
 
@@ -381,8 +383,8 @@ export function replayRatings(
   return { states, events }
 }
 
-export function isProvisional(s: { games: number; rd: number }): boolean {
-  return s.games < RATING.provisionalGames || s.rd > RATING.provisionalRd
+export function isProvisional(s: { games: number }): boolean {
+  return s.games < RATING.provisionalGames
 }
 
 /** A display row for the Classement: rating with confidence band and rank. */
