@@ -5,7 +5,7 @@
 
 import type { Player } from '../types'
 import { recordOf } from './classement'
-import { fold } from './fold'
+import { fold, matchesJoueur } from './fold'
 import { RATING, type RatingEvent, type RatingRow } from './rating'
 import { TEAMS, teamLabel } from './teams'
 
@@ -70,11 +70,7 @@ export function joueursSubtitle(count: number): string {
 /** Accent-insensitive search on name + team label, combined with the team chip. */
 export function filterJoueurs(rows: JoueurRow[], query: string, team: string): JoueurRow[] {
   const q = fold(query.trim())
-  return rows.filter(
-    (r) =>
-      (team === 'all' || r.team === team) &&
-      (fold(r.name).includes(q) || fold(teamLabel(r.team)).includes(q)),
-  )
+  return rows.filter((r) => (team === 'all' || r.team === team) && matchesJoueur(r, q))
 }
 
 export interface JoueurForm {

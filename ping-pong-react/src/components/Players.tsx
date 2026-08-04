@@ -22,16 +22,10 @@ import {
   type JoueurRow,
   type PhotoDraft,
 } from '../lib/joueurs'
-import { TEAMS, teamColor, teamLabel } from '../lib/teams'
+import { TEAMS, teamBadgeStyle, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
-
-/** 12 %-alpha tint of the team color behind its full-strength label. */
-const badgeStyle = (team: string) => {
-  const color = teamColor(team)
-  return { background: `${color}1F`, color }
-}
 
 interface Props {
   onHome: () => void
@@ -290,7 +284,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
               <div className="pl-meta">{r.meta}</div>
             </div>
             <div className="pl-c-team">
-              <span className="pl-badge" style={badgeStyle(r.team)}>
+              <span className="pl-badge" style={teamBadgeStyle(r.team)}>
                 {r.team === '' ? '—' : teamLabel(r.team)}
               </span>
             </div>
