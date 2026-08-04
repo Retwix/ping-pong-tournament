@@ -225,6 +225,13 @@ describe('tournamentRows', () => {
     expect(rows.map((r) => r.unranked)).toEqual([true, false])
   })
 
+  it('treats a pre-migration tournament without the flag as ranked', () => {
+    // Rows created before the unranked migration lack the column entirely.
+    const { unranked: _, ...preMigration } = doneTournament({ id: 't1' })
+    const rows = tournamentRows([preMigration as Tournament], [])
+    expect(rows[0].unranked).toBe(false)
+  })
+
   it('falls back to the creation date when a finished tournament has no matches', () => {
     const tournaments = [
       doneTournament({ id: 'early', created_at: '2026-06-01T09:00:00.000Z' }),

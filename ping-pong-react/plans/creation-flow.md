@@ -27,6 +27,11 @@ Replace the last old-design screen — `Setup.tsx` at `/new` and `/game` — wit
 
 - `fold.ts` `.toLowerCase()` → `.toUpperCase()`: equivalent in-app — every caller folds both
   sides of the comparison (query and candidate), so the case direction is unobservable.
+- `parties.ts` `latestEnd` (pre-existing helper, untouched by PR 2 — 3 survivors): the
+  `ended_at === null` guard and the `latest === null` short-circuit are only distinguishable
+  when a timestamp is *before* the 1970 epoch (`new Date(null)` = epoch, always older than any
+  real match); `>` → `>=` only differs when two matches end on the same millisecond, where both
+  variants return equal timestamp strings.
 
 ## Open questions (flagged, with plan defaults)
 
