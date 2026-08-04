@@ -19,7 +19,13 @@ import { DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from '../lib/chaos'
 import { createPlayer, createTournament } from '../lib/db'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { joueurRows, type JoueurRow } from '../lib/joueurs'
-import { estDoublon, filterJoueurs, pointsCible, recapitulatif } from '../lib/nouvellePartie'
+import {
+  estDoublon,
+  filterJoueurs,
+  noteEnjeu,
+  pointsCible,
+  recapitulatif,
+} from '../lib/nouvellePartie'
 import { inviteToSlack } from '../lib/slack'
 import { TEAMS, teamBadgeStyle, teamColor, teamLabel, type TeamKey } from '../lib/teams'
 import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
@@ -82,6 +88,7 @@ export default function NouvellePartie({
   const [savingPlayer, setSavingPlayer] = useState(false)
   const [chaos, setChaos] = useState<ChaosSettings>(DEFAULT_CHAOS_SETTINGS)
   const [chaosOpen, setChaosOpen] = useState(false)
+  const [unranked, setUnranked] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -160,6 +167,7 @@ export default function NouvellePartie({
         isGame ? 'game' : 'tournament',
         isGame ? 'round_robin' : format,
         chaos,
+        unranked,
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
       void inviteToSlack(id)
@@ -667,6 +675,25 @@ export default function NouvellePartie({
                 <IconInfoCircle size={15} stroke={2.2} className="np-hint-info" />
               )}
               <span>{recap.hint}</span>
+            </div>
+
+            <div className="np-enjeu">
+              <div className="np-label">L’enjeu</div>
+              <div className="np-enjeu-seg">
+                <button
+                  className={`np-enjeu-btn${unranked ? '' : ' active'}`}
+                  onClick={() => setUnranked(false)}
+                >
+                  Classée
+                </button>
+                <button
+                  className={`np-enjeu-btn${unranked ? ' active' : ''}`}
+                  onClick={() => setUnranked(true)}
+                >
+                  Non classée
+                </button>
+              </div>
+              <div className="np-enjeu-note">{noteEnjeu(unranked)}</div>
             </div>
 
             <div className="np-actions">

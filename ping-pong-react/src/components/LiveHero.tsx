@@ -67,6 +67,7 @@ export default function LiveHero({ onWatch, onRef, onNew }: Props) {
         <span className="rv-hero-live-label">EN DIRECT</span>
         <span className="rv-hero-live-meta-sep">·</span>
         <span>Jeu en {tournament.target}</span>
+        {tournament.unranked && <span className="badge-nc on-color">Non classé</span>}
       </div>
 
       <div className="rv-hero-matchup">

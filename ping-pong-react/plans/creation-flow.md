@@ -1,10 +1,10 @@
 # Plan: Creation flow revamp (« Nouvelle partie » / « Nouveau tournoi »)
 
 **Branches**: `creation-flow` (PR 1, active) → `unranked-mode` (PR 2) → `doubles-2v2` (PR 3), all into `main`
-**Status**: PR 1 complete (slices 1-4: `a078161`, `edf1981`, `c71841a`, `66029b3`) — next: PR 2 (unranked)
-**Quality gate (PR 1)**: 504 tests, tsc + build clean; Stryker 100 % on `nouvellePartie.ts`,
-`joueurs.ts`, `fold.ts`; `teams.ts` no-coverage mutants are pre-existing color/label constants
-+ the visual badge helper (Thibault-verified visuals, house practice).
+**Status**: PR 1 **merged** to main 2026-08-04 (#26, squash `c64a3f9`, live on prod). **Next: PR 2
+(unranked)** — its section below is written as a self-contained handoff for a fresh session:
+branch `unranked-mode` off up-to-date main, load `tdd`/`testing`/`mutation-testing`/`refactoring`
+before code, auto-commit green slices, then PR → CI → merge on green → delete branch.
 **Design source of truth**: `~/Downloads/design_handoff_creation_flow/` (README.md, DESIGN-SYSTEM.md — tokens already in `index.css` from the app revamp; prototype `Nouvelle partie.dc.html` is reference only)
 
 ## Goal
@@ -27,6 +27,11 @@ Replace the last old-design screen — `Setup.tsx` at `/new` and `/game` — wit
 
 - `fold.ts` `.toLowerCase()` → `.toUpperCase()`: equivalent in-app — every caller folds both
   sides of the comparison (query and candidate), so the case direction is unobservable.
+- `parties.ts` `latestEnd` (pre-existing helper, untouched by PR 2 — 3 survivors): the
+  `ended_at === null` guard and the `latest === null` short-circuit are only distinguishable
+  when a timestamp is *before* the 1970 epoch (`new Date(null)` = epoch, always older than any
+  real match); `>` → `>=` only differs when two matches end on the same millisecond, where both
+  variants return equal timestamp strings.
 
 ## Open questions (flagged, with plan defaults)
 
@@ -81,19 +86,84 @@ Replace the last old-design screen — `Setup.tsx` at `/new` and `/game` — wit
 
 ---
 
-## PR 2 — Mode non classé (`unranked-mode`)
+## PR 2 — Mode non classé (`unranked-mode`) — SELF-CONTAINED HANDOFF
+
+**Goal**: a game or tournament can be created « Non classée »: it moves no Elo anywhere and is
+excluded from « Le classement », but still lives in the Parties history (and, plan default, in
+Les stats). A neutral « NON CLASSÉ » badge marks it downstream.
+
+**Context a fresh session needs**:
+- PR 1 merged (#26): `/new` + `/game` render `src/components/NouvellePartie.tsx` (props: `variant`,
+  `onCreated`, 5 nav callbacks + `onNew`/`onNewGame`); pure selectors in `src/lib/nouvellePartie.ts`
+  (`recapitulatif`, `filterJoueurs`, `pointsCible`, `estDoublon` — 32 tests, Stryker 100 %); page CSS
+  is the `np-` section at the end of `src/index.css` (hardcoded handoff hex + `[data-theme='dark']`
+  overrides — follow that convention, tokens in the handoff `DESIGN-SYSTEM.md`).
+- Design source: `~/Downloads/design_handoff_creation_flow/` — README §« Décisions » #2 and #7,
+  §« Badge non classé », and prototype `Nouvelle partie.dc.html` lines 388-395 (rail markup) and
+  833-841 (enjeu logic/strings).
+- The Glicko replay is `replayRatings(matches, players, { targetByTournament })` in
+  `src/lib/rating.ts`. Its three call sites: `src/hooks/useRatings.ts` (classement + `joueurRows`
+  consumers), `src/hooks/useTournament.ts` (per-match deltas shown by the scorer's `RatingDelta`),
+  and `recomputeRatings()` in `src/lib/db.ts` (persists to `players` + `rating_events`) — all three
+  already load the tournaments list.
+- Migrations are standalone SQL files in `supabase/` (see `chaos-migration.sql` as template),
+  **run manually by Thibault in the Supabase SQL editor before the PR merges**.
+- Rows created before the migration lack the column → normalize on read like chaos does
+  (`chaosSettingsFromTournament` precedent in `src/lib/chaos.ts`): treat missing as `false`.
 
 ### Slice 5: `unranked` flag through creation + « L'ENJEU » control
 
-`unranked-migration.sql` (boolean default false on `tournaments` — run in Supabase before merge), `Tournament` type, `createTournament` param, rail segmented Classée/Non classée + calm line. TDD the flag plumbing where testable.
+- `supabase/unranked-migration.sql`:
+  `alter table tournaments add column if not exists unranked boolean not null default false;`
+- `Tournament` interface (`src/types.ts`): add `unranked: boolean` (doc: absent pre-migration,
+  normalized to false).
+- `createTournament` (`src/lib/db.ts`, currently `(name, players, target, kind, format, chaos)`):
+  add `unranked` and include it in the tournaments insert.
+- **RED first** in `src/lib/nouvellePartie.ts`: `noteEnjeu(unranked: boolean): string` —
+  ranked → « Le résultat déplace l'Elo des joueurs et compte dans « Le classement ». » ·
+  unranked → « Aucun impact sur le classement Elo. La partie reste visible dans les parties. »
+  (PR 3 adds the doubles-locked variant « Les doubles sont non classés en v1 — pas encore d'Elo
+  de paire. »). Exact-string tests kill the literal mutants.
+- UI in the rail of `NouvellePartie.tsx`, **between the hint pill and `.np-actions`** (prototype
+  L388-395): section with border-top, `.np-label` « L'enjeu », segmented **Classée (default) ·
+  Non classée** (card2 container r12 padding 3, two flex:1 cells — active = white on `#4a2aa4`
+  / dark `#5b39c4`, same treatment as the header segmenté), then the `noteEnjeu` line
+  (`.np-note`-like, 12px). State `unranked: boolean` (default false) passed to `createTournament`.
 
 ### Slice 6: Ratings exclude unranked matches
 
-Matches of unranked tournaments are skipped by the Glicko replay: `recomputeRatings`, `useRatings` (classement), `useTournament` (per-match deltas — scorer shows no Elo delta on unranked games). TDD via `replayRatings` inputs. Mutator watch: filter conditions.
+- **RED first**: tests (natural home: a `describe` in an existing rating-behavior suite, e.g.
+  alongside `scorerElo.test.ts` patterns) proving a done match whose tournament is unranked
+  (a) moves no player rating, (b) emits no rating events, (c) produces no scorer delta.
+- Implementation: filter the matches passed to `replayRatings` at the three call sites (build
+  `Set` of unranked tournament ids from the already-loaded tournaments; `matches.filter(m =>
+  !unrankedIds.has(m.tournament_id))`) — or one shared helper `ratedMatches(matches, tournaments)`
+  in a lib so the knowledge lives once (preferred; TDD it directly).
+- The classement page and `joueurRows` (Joueurs page, picker Elo) then exclude unranked
+  automatically via `useRatings`. The scorer shows no `RatingDelta` because no event exists for
+  the match — verify how `useTournament`/`scorerElo` look up deltas and add a test if reachable.
+- **Mutator watch**: the `!` on the Set-membership filter, `has` vs `!has`.
 
 ### Slice 7: « Non classé » badge downstream
 
-Badge (TERMINÉ-gabarit, neutral, never coral) on: parties list row, board header, live/spectator surface; « Aucun impact sur le classement Elo. » once per surface. Stats keep counting unranked games (plan default — confirm before merge).
+- Badge spec (handoff §Badge): light: Outfit 800 9px/1, letter-spacing .08em, uppercase,
+  color `#847E96`, border 1.5px `#E8E4F2`, r999, padding 6px 10px — same gabarit as « TERMINÉ »,
+  **neutral, never coral**. Dark: `#8B82A8` / border `rgba(255,255,255,.13)`. On a colored
+  surface (live hero): white text on `rgba(255,255,255,.18)`, no border.
+- Surfaces (one badge per surface, plus the line « Aucun impact sur le classement Elo. » where
+  a subtitle slot exists): Parties list rows (`src/components/Parties.tsx`, rows built by
+  `src/lib/parties.ts` — expose `unranked` on the row selectors, TDD in `parties.test.ts`),
+  board header (`src/components/Board.tsx`), live hero (`src/components/LiveHero.tsx`).
+- **Stats decision (plan default, confirm with Thibault before merge)**: unranked games KEEP
+  counting in « Les stats » and Parties — only Elo/classement ignores them. Under this default
+  slice 7 touches no stats code.
+
+### PR 2 quality gate
+
+Stryker on changed lib files (new selectors + the shared `ratedMatches` filter), refactoring
+assessment, `npx tsc --noEmit`, full `npx vitest run`, `npm run build`, then push → PR into main
+→ watch CI (GitHub Actions « Typecheck, build & test » + Vercel) → **remind Thibault to run
+`supabase/unranked-migration.sql` in Supabase before merging** → merge on green → delete branch.
 
 ---
 

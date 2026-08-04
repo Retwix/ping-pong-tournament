@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listAllDoneMatches, listPlayers, listTournaments, recomputeRatings } from '../lib/db'
-import { rankRatings, replayRatings, type RatingRow, type RatingEvent } from '../lib/rating'
+import {
+  rankRatings,
+  ratedMatches,
+  replayRatings,
+  type RatingRow,
+  type RatingEvent,
+} from '../lib/rating'
 import { supabase } from '../lib/supabase'
 import { uniqueChannelName } from '../lib/realtimeChannel'
 import type { Match, Player, Tournament } from '../types'
@@ -50,7 +56,9 @@ export function useRatings() {
 
   const { rows, events } = useMemo(() => {
     const targetByTournament = new Map(tournaments.map((t) => [t.id, t.target]))
-    const result = replayRatings(matches, players, { targetByTournament })
+    const result = replayRatings(ratedMatches(matches, tournaments), players, {
+      targetByTournament,
+    })
     return { rows: rankRatings(result, players), events: result.events }
   }, [matches, players, tournaments])
 

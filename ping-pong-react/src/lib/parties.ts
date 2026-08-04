@@ -33,6 +33,8 @@ export interface TournamentRow {
   finalist: string | null
   /** When the last match ended — null while nothing finished (FIN column shows « — »). */
   endedAt: string | null
+  /** « Non classée » : shows the neutral badge; missing pre-migration flag counts as ranked. */
+  unranked: boolean
 }
 
 const latestEnd = (matches: Match[]): string | null =>
@@ -68,6 +70,7 @@ export function tournamentRows(tournaments: Tournament[], matches: Match[]): Tou
             : (finalStandings({ players: t.players, matches: own, format: t.format })[1]?.name ??
               null),
         endedAt,
+        unranked: t.unranked ?? false,
         sortAt: endedAt ?? t.created_at,
       }
     })
@@ -89,6 +92,8 @@ export interface MatchRow {
   eloDelta: number | null
   competition: string
   endedAt: string | null
+  /** « Non classée » : the match moved no Elo; missing pre-migration flag counts as ranked. */
+  unranked: boolean
 }
 
 const timeKey = (m: Match): string => m.ended_at ?? m.started_at ?? ''
@@ -126,6 +131,7 @@ export function matchRows(
               ? 'Partie rapide'
               : tournament.name,
         endedAt: m.ended_at,
+        unranked: tournament?.unranked ?? false,
       }
     })
 }

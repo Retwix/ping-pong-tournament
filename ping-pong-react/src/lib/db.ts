@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import { generateSchedule, shuffle } from './roundRobin'
 import { buildDoubleElim } from './doubleElim'
-import { RATING, replayRatings } from './rating'
+import { RATING, ratedMatches, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
 import { avatarStoragePath, withCacheBuster } from './avatar'
 import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
@@ -21,15 +21,11 @@ export async function createPlayer(
   name: string,
   team: string,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _slackUserId?: string | null
+  _slackUserId?: string | null,
 ): Promise<Player> {
   // NOTE: the `slack_user_id` column isn't in the DB schema yet, so we don't
   // write it. Re-add it here (and below) once the column exists in Supabase.
-  const { data, error } = await supabase
-    .from('players')
-    .insert({ name, team })
-    .select()
-    .single()
+  const { data, error } = await supabase.from('players').insert({ name, team }).select().single()
   if (error) throw error
   return data as Player
 }
@@ -37,7 +33,12 @@ export async function createPlayer(
 /** Update a player's name, team and/or avatar. */
 export async function updatePlayer(
   id: string,
-  patch: { name?: string; team?: string; slack_user_id?: string | null; avatar_url?: string | null }
+  patch: {
+    name?: string
+    team?: string
+    slack_user_id?: string | null
+    avatar_url?: string | null
+  },
 ): Promise<void> {
   // Strip slack_user_id until the column exists in the DB schema.
   const { slack_user_id: _ignored, ...dbPatch } = patch
@@ -77,7 +78,9 @@ export async function deletePlayer(id: string): Promise<void> {
 }
 
 /** A blank match row, before the matchup-specific fields are filled in. */
-function blankMatch(tournamentId: string): Omit<Match, 'id' | 'round' | 'idx' | 'player_a' | 'player_b'> {
+function blankMatch(
+  tournamentId: string,
+): Omit<Match, 'id' | 'round' | 'idx' | 'player_a' | 'player_b'> {
   return {
     tournament_id: tournamentId,
     player_a_id: null,
@@ -111,7 +114,8 @@ export async function createTournament(
   target: number,
   kind: TournamentKind = 'tournament',
   format: TournamentFormat = 'round_robin',
-  chaos: ChaosSettings = DEFAULT_CHAOS_SETTINGS
+  chaos: ChaosSettings = DEFAULT_CHAOS_SETTINGS,
+  unranked = false,
 ): Promise<string> {
   // Games are always a single round-robin match regardless of the chosen format.
   const effectiveFormat: TournamentFormat = kind === 'game' ? 'round_robin' : format
@@ -143,6 +147,7 @@ export async function createTournament(
       kind,
       format: effectiveFormat,
       is_active: true,
+      unranked,
       ...chaosColumns(chaos),
     })
     .select()
@@ -279,7 +284,9 @@ export async function recomputeRatings(): Promise<void> {
     listTournaments(),
   ])
   const targetByTournament = new Map(tournaments.map((t) => [t.id, t.target]))
-  const { states, events } = replayRatings(matches, players, { targetByTournament })
+  const { states, events } = replayRatings(ratedMatches(matches, tournaments), players, {
+    targetByTournament,
+  })
 
   // Persist current state for every registered player (reset to defaults when
   // they have no rated games left).
@@ -304,7 +311,7 @@ export async function recomputeRatings(): Promise<void> {
             last_rated_at: null,
           }
       return supabase.from('players').update(patch).eq('id', p.id)
-    })
+    }),
   )
 
   // Persist per-match history for players that have a registry id (FK target).

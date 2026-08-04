@@ -266,6 +266,19 @@ function daysBetween(from: string | null, to: string | null): number {
 // ---------- replay ----------
 
 /**
+ * The matches that count for Elo: drops those belonging to « non classée »
+ * tournaments before the replay. Rows created before the unranked migration
+ * lack the flag — missing counts as ranked, as does an unknown tournament.
+ */
+export function ratedMatches(
+  matches: Match[],
+  tournaments: Array<{ id: string; unranked?: boolean }>,
+): Match[] {
+  const unrankedIds = new Set(tournaments.filter((t) => t.unranked).map((t) => t.id))
+  return matches.filter((m) => !unrankedIds.has(m.tournament_id))
+}
+
+/**
  * Replay all finished matches in chronological order and produce the current
  * rating state per player plus the ordered list of rating changes.
  */

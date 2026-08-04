@@ -74,6 +74,7 @@ const getMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
   slack_channel: null,
   slack_thread_ts: null,
   result_notified: false,
+  unranked: false,
   chaos_enabled: false,
   chaos_interval: 5,
   chaos_intensity: 'mild',

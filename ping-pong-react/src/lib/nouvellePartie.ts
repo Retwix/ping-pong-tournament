@@ -61,6 +61,13 @@ export function recapitulatif(state: CreationState): Recapitulatif {
   }
 }
 
+/** One-line stakes note under the « L'enjeu » control: what this choice does to Elo. */
+export function noteEnjeu(unranked: boolean): string {
+  return unranked
+    ? 'Aucun impact sur le classement Elo. La partie reste visible dans les parties.'
+    : 'Le résultat déplace l’Elo des joueurs et compte dans « Le classement ».'
+}
+
 /** Accent- and case-insensitive duplicate check against the registry (« Leo » = « Léo »). */
 export function estDoublon(players: { name: string }[], name: string): boolean {
   const n = fold(name.trim())
