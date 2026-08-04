@@ -66,7 +66,10 @@ function TournoisTable({
                 <IconTrophy size={17} stroke={2} />
               </span>
               <div className="pt-tname">
-                <div className="pt-tname-main">{row.name}</div>
+                <div className="pt-tname-main">
+                  {row.name}
+                  {row.unranked && <span className="badge-nc">Non classé</span>}
+                </div>
                 <div className="pt-tname-sub">{row.playersCount} joueurs</div>
               </div>
               <div className="pt-winner">
@@ -235,7 +238,13 @@ function MatchesTable({
                 {row.winnerScore}–{row.loserScore}
               </div>
               <div className="pt-delta">
-                {row.eloDelta === null ? <span className="pt-dash">—</span> : signed(row.eloDelta)}
+                {row.unranked ? (
+                  <span className="badge-nc">Non classé</span>
+                ) : row.eloDelta === null ? (
+                  <span className="pt-dash">—</span>
+                ) : (
+                  signed(row.eloDelta)
+                )}
               </div>
               <div className="pt-cell-r pt-ellip pt-col-sec">{row.competition}</div>
               <div className="pt-cell-r pt-col-sec">

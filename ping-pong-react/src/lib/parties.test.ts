@@ -167,6 +167,7 @@ describe('tournamentRows', () => {
         champion: 'Ana',
         finalist: 'Bo',
         endedAt: '2026-07-10T12:00:00.000Z',
+        unranked: false,
       },
     ])
   })
@@ -216,6 +217,14 @@ describe('tournamentRows', () => {
     expect(rows[0].finalist).toBeNull()
   })
 
+  it('flags a « non classée » tournament and keeps ranked ones unflagged', () => {
+    const rows = tournamentRows(
+      [doneTournament({ id: 't1', unranked: true }), doneTournament({ id: 't2' })],
+      [],
+    )
+    expect(rows.map((r) => r.unranked)).toEqual([true, false])
+  })
+
   it('falls back to the creation date when a finished tournament has no matches', () => {
     const tournaments = [
       doneTournament({ id: 'early', created_at: '2026-06-01T09:00:00.000Z' }),
@@ -258,6 +267,7 @@ describe('matchRows', () => {
         eloDelta: 12,
         competition: 'Tournoi de juillet',
         endedAt: '2026-07-30T10:00:00.000Z',
+        unranked: false,
       },
     ])
   })
@@ -314,6 +324,23 @@ describe('matchRows', () => {
     expect(rows[0].competition).toBe('—')
   })
 
+  it('flags matches from a « non classée » competition', () => {
+    const rows = matchRows(
+      [
+        getMockMatch({ id: 'm1', tournament_id: 't1' }),
+        getMockMatch({ id: 'm2', tournament_id: 't2', ended_at: '2026-07-29T10:00:00.000Z' }),
+      ],
+      [],
+      [getMockTournament({ id: 't1', unranked: true }), getMockTournament({ id: 't2' })],
+    )
+    expect(rows.map((r) => r.unranked)).toEqual([true, false])
+  })
+
+  it('treats a match of a vanished tournament as ranked', () => {
+    const rows = matchRows([getMockMatch({ tournament_id: 'gone' })], [], [])
+    expect(rows[0].unranked).toBe(false)
+  })
+
   it('has no Elo delta for an unrated match', () => {
     const rows = matchRows(
       [getMockMatch({ id: 'm1' })],
@@ -353,6 +380,7 @@ const getMatchRow = (overrides?: Partial<MatchRow>): MatchRow => ({
   eloDelta: 12,
   competition: 'Tournoi de juillet',
   endedAt: '2026-07-30T10:00:00.000Z',
+  unranked: false,
   ...overrides,
 })
 
@@ -365,6 +393,7 @@ const getTourRow = (overrides?: Partial<TournamentRow>): TournamentRow => ({
   champion: 'Léo',
   finalist: 'Bo',
   endedAt: '2026-07-10T12:00:00.000Z',
+  unranked: false,
   ...overrides,
 })
 

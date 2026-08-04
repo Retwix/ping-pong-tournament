@@ -129,11 +129,15 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
           {isDouble ? 'Élimination directe' : 'Round-robin'} · {tournament.players.length} joueurs ·
           jeu en {tournament.target}
         </div>
-        <h1>{tournament.name}</h1>
+        <h1>
+          {tournament.name}
+          {tournament.unranked && <span className="badge-nc">Non classé</span>}
+        </h1>
         <p className="subtitle">
           {isDouble
             ? 'Le gagnant avance, le perdant tombe dans le tableau des perdants. Tape un match prêt pour le marquer.'
             : 'Tape un match pour ouvrir le marqueur. Tout se synchronise en direct.'}
+          {tournament.unranked && ' Aucun impact sur le classement Elo.'}
         </p>
         <div className="share-bar">
           <span className="url">{window.location.href}</span>

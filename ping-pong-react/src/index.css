@@ -3621,6 +3621,19 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 }
 [data-theme='dark'] .np-enjeu-note { color: #8b82a8; }
 
+/* ===== badge « non classé » (shared across surfaces — neutral, never coral) ===== */
+.badge-nc {
+  display: inline-block; vertical-align: middle;
+  font-family: var(--font-display); font-weight: 800; font-size: 9px; line-height: 1;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: #847e96; border: 1.5px solid #e8e4f2; border-radius: 999px; padding: 6px 10px;
+}
+[data-theme='dark'] .badge-nc { color: #8b82a8; border-color: rgba(255, 255, 255, 0.13); }
+/* On a colored surface (live hero): white on translucent white, no border. */
+.badge-nc.on-color { color: #fff; background: rgba(255, 255, 255, 0.18); border: 0; }
+.pt-tname-main .badge-nc { margin-left: 7px; }
+header h1 .badge-nc { margin-left: 10px; }
+
 /* ===== picker top + nouveau joueur ===== */
 .np-picker-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .np-picker-top .np-search { flex: 1; min-width: 0; }
