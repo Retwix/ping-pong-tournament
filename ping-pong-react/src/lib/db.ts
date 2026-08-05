@@ -116,6 +116,8 @@ export async function createTournament(
   format: TournamentFormat = 'round_robin',
   chaos: ChaosSettings = DEFAULT_CHAOS_SETTINGS,
   unranked = false,
+  /** 2v2: the two id-pairs [[idA1, idA2], [idB1, idB2]]. `players` then holds the pair display names. */
+  teams: [string[], string[]] | null = null,
 ): Promise<string> {
   // Games are always a single round-robin match regardless of the chosen format.
   const effectiveFormat: TournamentFormat = kind === 'game' ? 'round_robin' : format
@@ -148,6 +150,8 @@ export async function createTournament(
       format: effectiveFormat,
       is_active: true,
       unranked,
+      doubles: teams !== null,
+      teams,
       ...chaosColumns(chaos),
     })
     .select()

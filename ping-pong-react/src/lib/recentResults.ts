@@ -11,6 +11,8 @@ export interface RecentResult {
   loserScore: number
   endedAt: string | null
   winnerAvatar: string | null
+  /** 2v2 : winner/loser are pair display names — the row pluralises its verb. */
+  doubles: boolean
 }
 
 function timeKey(m: Match): string {
@@ -22,12 +24,18 @@ function timeKey(m: Match): string {
  * are excluded (they aren't real results). Avatars are matched by the same
  * stable identity the rating engine uses — player id, then a name fallback.
  */
-export function recentResults(matches: Match[], players: Player[], limit = 5): RecentResult[] {
+export function recentResults(
+  matches: Match[],
+  players: Player[],
+  tournaments: Array<{ id: string; doubles?: boolean }>,
+  limit = 5,
+): RecentResult[] {
   const avatarByKey = new Map<string, string | null>()
   for (const p of players) {
     avatarByKey.set(sideKey(p.id, p.name), p.avatar_url)
     avatarByKey.set(`name:${p.name}`, p.avatar_url)
   }
+  const doublesIds = new Set(tournaments.filter((t) => t.doubles).map((t) => t.id))
 
   return matches
     .filter((m) => m.done && !m.bye)
@@ -48,6 +56,7 @@ export function recentResults(matches: Match[], players: Player[], limit = 5): R
         loserScore: ls,
         endedAt: m.ended_at,
         winnerAvatar,
+        doubles: doublesIds.has(m.tournament_id),
       }
     })
 }

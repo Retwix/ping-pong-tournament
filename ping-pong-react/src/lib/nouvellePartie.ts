@@ -1,3 +1,4 @@
+import { nomPaire } from './doubles'
 import { fold, matchesJoueur } from './fold'
 import { doubleElimMatchCount, MIN_DE_PLAYERS } from './doubleElim'
 import { matchCount, roundCount } from './roundRobin'
@@ -61,8 +62,72 @@ export function recapitulatif(state: CreationState): Recapitulatif {
   }
 }
 
+export type Camp = 'A' | 'B'
+
+/** 2v2 selection: the two pairs plus the camp the next pick lands in. */
+export interface SelectionDouble {
+  a: string[]
+  b: string[]
+  camp: Camp
+}
+
+const TAILLE_EQUIPE = 2
+const AUTRE_CAMP: Record<Camp, Camp> = { A: 'B', B: 'A' }
+
+/**
+ * Pick a player: joins the active camp until it is full, then the other one.
+ * Full game or already-picked player → selection unchanged.
+ */
+export function choisirJoueurDouble(sel: SelectionDouble, name: string): SelectionDouble {
+  if (sel.a.includes(name) || sel.b.includes(name)) return sel
+  const equipe = (camp: Camp) => (camp === 'A' ? sel.a : sel.b)
+  const aDeLaPlace = (camp: Camp) => equipe(camp).length < TAILLE_EQUIPE
+  const cible = aDeLaPlace(sel.camp)
+    ? sel.camp
+    : aDeLaPlace(AUTRE_CAMP[sel.camp])
+      ? AUTRE_CAMP[sel.camp]
+      : null
+  if (cible === null) return sel
+  const a = cible === 'A' ? [...sel.a, name] : sel.a
+  const b = cible === 'B' ? [...sel.b, name] : sel.b
+  const complet = (cible === 'A' ? a : b).length === TAILLE_EQUIPE
+  const resteUnePlace = (cible === 'A' ? b : a).length < TAILLE_EQUIPE
+  return { a, b, camp: complet && resteUnePlace ? AUTRE_CAMP[cible] : cible }
+}
+
+/** Remove a player from whichever camp holds them; the active camp stays put. */
+export function retirerJoueurDouble(sel: SelectionDouble, name: string): SelectionDouble {
+  return {
+    a: sel.a.filter((n) => n !== name),
+    b: sel.b.filter((n) => n !== name),
+    camp: sel.camp,
+  }
+}
+
+/** Live recap for a 2v2 game: pair auto-name, per-camp counters, submittability. */
+export function recapitulatifDouble(sel: SelectionDouble, target: number): Recapitulatif {
+  const { a, b } = sel
+  const distincts = new Set([...a, ...b]).size === a.length + b.length
+  const valid = a.length === TAILLE_EQUIPE && b.length === TAILLE_EQUIPE && distincts
+  const matchup = `${nomPaire(a)} vs ${nomPaire(b)}`
+  return {
+    autoName: matchup,
+    hint: valid
+      ? `${matchup} · jeu en ${target}`
+      : `Choisis 4 joueurs — 2 par équipe. Équipe A : ${a.length}/2 · Équipe B : ${b.length}/2.`,
+    valid,
+  }
+}
+
+/** Helper line under the team cards: where the next pick lands, or completeness. */
+export function aideCamp(sel: SelectionDouble): string {
+  if (sel.a.length + sel.b.length === 2 * TAILLE_EQUIPE) return 'Les deux équipes sont complètes.'
+  return `Les joueurs choisis rejoignent l’équipe ${sel.camp} — clique l’autre carte pour changer de camp.`
+}
+
 /** One-line stakes note under the « L'enjeu » control: what this choice does to Elo. */
-export function noteEnjeu(unranked: boolean): string {
+export function noteEnjeu(unranked: boolean, doubles = false): string {
+  if (doubles) return 'Les doubles sont non classés en v1 — pas encore d’Elo de paire.'
   return unranked
     ? 'Aucun impact sur le classement Elo. La partie reste visible dans les parties.'
     : 'Le résultat déplace l’Elo des joueurs et compte dans « Le classement ».'

@@ -1,6 +1,7 @@
 // Pure selectors for the « Les stats » page (/stats).
 
 import type { Match, Tournament } from '../types'
+import { individualMatches } from './doubles'
 import { relativeTime, signed } from './format'
 import { matchDuration } from './pingpong'
 import { stakesOf } from './rating'
@@ -91,7 +92,8 @@ export function scopeMatches(
   now: Date,
 ): Match[] {
   const kindById = new Map(tournaments.map((t) => [t.id, t.kind]))
-  return matches.filter((m) => {
+  // Doubles matches carry pair display names — no individual to aggregate on.
+  return individualMatches(matches, tournaments).filter((m) => {
     if (filters.type !== 'tout') {
       const kind = kindById.get(m.tournament_id)
       const wanted = filters.type === 'tournois' ? 'tournament' : 'game'

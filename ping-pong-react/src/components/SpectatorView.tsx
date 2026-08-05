@@ -2,6 +2,7 @@ import { IconCrown, IconX } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import type { MatchRatings } from '../hooks/useRatingDeltas'
 import { isPlayable } from '../lib/doubleElim'
+import { libelleFormat } from '../lib/format'
 import {
   computeStandings,
   formatDuration,
@@ -118,12 +119,7 @@ export default function SpectatorView({
     return () => clearInterval(id)
   }, [showLive, match?.done, match?.id])
 
-  const formatLabel =
-    tournament.format === 'double_elim'
-      ? 'Élimination directe'
-      : tournament.kind === 'game'
-        ? 'Partie rapide'
-        : 'Round-robin'
+  const formatLabel = libelleFormat(tournament)
   const eloByName = new Map(rows.map((r) => [r.name, Math.round(r.rating)]))
 
   const chrome = (

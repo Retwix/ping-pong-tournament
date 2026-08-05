@@ -1,6 +1,7 @@
 import { IconFlame, IconTrendingUp } from '@tabler/icons-react'
 import { useRatings } from '../hooks/useRatings'
 import { dashboardRecords } from '../lib/dashboardRecords'
+import { individualMatches } from '../lib/doubles'
 import { signed } from '../lib/format'
 import { computePlayerStats } from '../lib/stats'
 
@@ -10,9 +11,10 @@ import { computePlayerStats } from '../lib/stats'
  * independently nullable so the card degrades gracefully when data is thin.
  */
 export default function RecordsCard() {
-  const { matches, players, events } = useRatings()
-  const stats = computePlayerStats(matches, players)
-  const rec = dashboardRecords(stats, matches, events)
+  const { matches, players, events, tournaments } = useRatings()
+  const individuels = individualMatches(matches, tournaments)
+  const stats = computePlayerStats(individuels, players)
+  const rec = dashboardRecords(stats, individuels, events)
 
   const isEmpty = !rec.topStreak && !rec.biggestUpset && !rec.mostActive && rec.capots === 0
 

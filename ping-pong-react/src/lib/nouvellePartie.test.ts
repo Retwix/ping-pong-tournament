@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aideCamp,
+  choisirJoueurDouble,
   estDoublon,
   filterJoueurs,
   noteEnjeu,
   pointsCible,
   recapitulatif,
+  recapitulatifDouble,
+  retirerJoueurDouble,
   type CreationState,
+  type SelectionDouble,
 } from './nouvellePartie'
 
 const getState = (overrides?: Partial<CreationState>): CreationState => ({
@@ -190,6 +195,18 @@ describe('noteEnjeu', () => {
       'Aucun impact sur le classement Elo. La partie reste visible dans les parties.',
     )
   })
+
+  it('explains the v1 doubles lock for a 2v2 game', () => {
+    expect(noteEnjeu(true, true)).toBe(
+      'Les doubles sont non classés en v1 — pas encore d’Elo de paire.',
+    )
+  })
+
+  it('lets the doubles lock override a ranked enjeu', () => {
+    expect(noteEnjeu(false, true)).toBe(
+      'Les doubles sont non classés en v1 — pas encore d’Elo de paire.',
+    )
+  })
 })
 
 describe('filterJoueurs', () => {
@@ -225,5 +242,197 @@ describe('filterJoueurs', () => {
 
   it('returns nothing when neither names nor pôles match', () => {
     expect(filterJoueurs(registry, 'zzz')).toEqual([])
+  })
+})
+
+const getSelDouble = (overrides?: Partial<SelectionDouble>): SelectionDouble => ({
+  a: [],
+  b: [],
+  camp: 'A',
+  ...overrides,
+})
+
+describe('choisirJoueurDouble', () => {
+  it('sends the first pick to équipe A and keeps A active', () => {
+    expect(choisirJoueurDouble(getSelDouble(), 'Léo')).toEqual({
+      a: ['Léo'],
+      b: [],
+      camp: 'A',
+    })
+  })
+
+  it('auto-switches the active camp to B once A is full', () => {
+    const sel = getSelDouble({ a: ['Léo'] })
+    expect(choisirJoueurDouble(sel, 'Inès')).toEqual({
+      a: ['Léo', 'Inès'],
+      b: [],
+      camp: 'B',
+    })
+  })
+
+  it('fills a manually chosen camp B and stays there while it has room', () => {
+    expect(choisirJoueurDouble(getSelDouble({ camp: 'B' }), 'Karim')).toEqual({
+      a: [],
+      b: ['Karim'],
+      camp: 'B',
+    })
+  })
+
+  it('switches back to A once a B-first camp is full', () => {
+    const sel = getSelDouble({ b: ['Karim'], camp: 'B' })
+    expect(choisirJoueurDouble(sel, 'Julie')).toEqual({
+      a: [],
+      b: ['Karim', 'Julie'],
+      camp: 'A',
+    })
+  })
+
+  it('overflows to the other camp when the active one is already full', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], camp: 'A' })
+    expect(choisirJoueurDouble(sel, 'Karim')).toEqual({
+      a: ['Léo', 'Inès'],
+      b: ['Karim'],
+      camp: 'B',
+    })
+  })
+
+  it('keeps the camp on the team just completed by the fourth pick', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim'], camp: 'B' })
+    expect(choisirJoueurDouble(sel, 'Julie')).toEqual({
+      a: ['Léo', 'Inès'],
+      b: ['Karim', 'Julie'],
+      camp: 'B',
+    })
+  })
+
+  it('ignores a fifth pick when both teams are full', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim', 'Julie'], camp: 'B' })
+    expect(choisirJoueurDouble(sel, 'Zoé')).toEqual(sel)
+  })
+
+  it('ignores a player already picked in équipe A', () => {
+    const sel = getSelDouble({ a: ['Léo'], b: ['Karim'], camp: 'B' })
+    expect(choisirJoueurDouble(sel, 'Léo')).toEqual(sel)
+  })
+
+  it('ignores a player already picked in équipe B', () => {
+    const sel = getSelDouble({ a: ['Léo'], b: ['Karim'], camp: 'A' })
+    expect(choisirJoueurDouble(sel, 'Karim')).toEqual(sel)
+  })
+
+  it('does not mutate the incoming selection', () => {
+    const sel = getSelDouble({ a: ['Léo'] })
+    choisirJoueurDouble(sel, 'Inès')
+    expect(sel).toEqual(getSelDouble({ a: ['Léo'] }))
+  })
+})
+
+describe('retirerJoueurDouble', () => {
+  it('removes a player from équipe A without touching the active camp', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim'], camp: 'B' })
+    expect(retirerJoueurDouble(sel, 'Léo')).toEqual({
+      a: ['Inès'],
+      b: ['Karim'],
+      camp: 'B',
+    })
+  })
+
+  it('removes a player from équipe B', () => {
+    const sel = getSelDouble({ a: ['Léo'], b: ['Karim', 'Julie'], camp: 'A' })
+    expect(retirerJoueurDouble(sel, 'Julie')).toEqual({
+      a: ['Léo'],
+      b: ['Karim'],
+      camp: 'A',
+    })
+  })
+
+  it('leaves the selection untouched for an unknown name', () => {
+    const sel = getSelDouble({ a: ['Léo'], b: ['Karim'], camp: 'B' })
+    expect(retirerJoueurDouble(sel, 'Zoé')).toEqual(sel)
+  })
+
+  it('does not mutate the incoming selection', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'] })
+    retirerJoueurDouble(sel, 'Léo')
+    expect(sel).toEqual(getSelDouble({ a: ['Léo', 'Inès'] }))
+  })
+})
+
+describe('aideCamp', () => {
+  it('points picks at équipe A while the game is incomplete', () => {
+    expect(aideCamp(getSelDouble())).toBe(
+      'Les joueurs choisis rejoignent l’équipe A — clique l’autre carte pour changer de camp.',
+    )
+  })
+
+  it('points picks at équipe B after a camp switch', () => {
+    expect(aideCamp(getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim'], camp: 'B' }))).toBe(
+      'Les joueurs choisis rejoignent l’équipe B — clique l’autre carte pour changer de camp.',
+    )
+  })
+
+  it('announces completeness once 4 players are picked', () => {
+    expect(aideCamp(getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim', 'Julie'] }))).toBe(
+      'Les deux équipes sont complètes.',
+    )
+  })
+})
+
+describe('récapitulatif — partie en double', () => {
+  it('shows ellipsis placeholders and 0/2 counters when nobody is picked', () => {
+    expect(recapitulatifDouble(getSelDouble(), 11)).toEqual({
+      autoName: '… vs …',
+      hint: 'Choisis 4 joueurs — 2 par équipe. Équipe A : 0/2 · Équipe B : 0/2.',
+      valid: false,
+    })
+  })
+
+  it('previews a lone équipe A player against an ellipsis', () => {
+    expect(recapitulatifDouble(getSelDouble({ a: ['Léo'] }), 11)).toEqual({
+      autoName: 'Léo vs …',
+      hint: 'Choisis 4 joueurs — 2 par équipe. Équipe A : 1/2 · Équipe B : 0/2.',
+      valid: false,
+    })
+  })
+
+  it('joins a full pair with « & » while the other team is incomplete', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim'] })
+    expect(recapitulatifDouble(sel, 11)).toEqual({
+      autoName: 'Léo & Inès vs Karim',
+      hint: 'Choisis 4 joueurs — 2 par équipe. Équipe A : 2/2 · Équipe B : 1/2.',
+      valid: false,
+    })
+  })
+
+  it('names the full matchup and echoes the target once both pairs are complete', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim', 'Julie'] })
+    expect(recapitulatifDouble(sel, 11)).toEqual({
+      autoName: 'Léo & Inès vs Karim & Julie',
+      hint: 'Léo & Inès vs Karim & Julie · jeu en 11',
+      valid: true,
+    })
+  })
+
+  it('reflects a custom points target in the hint', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim', 'Julie'] })
+    expect(recapitulatifDouble(sel, 21).hint).toBe('Léo & Inès vs Karim & Julie · jeu en 21')
+  })
+
+  it('stays invalid when équipe B is full but équipe A is not', () => {
+    const sel = getSelDouble({ a: ['Léo'], b: ['Karim', 'Julie'] })
+    expect(recapitulatifDouble(sel, 11)).toEqual({
+      autoName: 'Léo vs Karim & Julie',
+      hint: 'Choisis 4 joueurs — 2 par équipe. Équipe A : 1/2 · Équipe B : 2/2.',
+      valid: false,
+    })
+  })
+
+  it('rejects a player appearing in both teams', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Léo', 'Julie'] })
+    expect(recapitulatifDouble(sel, 11)).toEqual({
+      autoName: 'Léo & Inès vs Léo & Julie',
+      hint: 'Choisis 4 joueurs — 2 par équipe. Équipe A : 2/2 · Équipe B : 2/2.',
+      valid: false,
+    })
   })
 })

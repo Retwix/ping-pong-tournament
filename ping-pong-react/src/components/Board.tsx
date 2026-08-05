@@ -4,6 +4,7 @@ import { useRatingDeltas } from '../hooks/useRatingDeltas'
 import { useTournament } from '../hooks/useTournament'
 import { createTournament } from '../lib/db'
 import { chaosSettingsFromTournament } from '../lib/chaos'
+import { libelleFormat } from '../lib/format'
 import { playerLookup } from '../lib/playerLookup'
 import { navigate } from '../lib/router'
 import { isCapot, winnerLoser } from '../lib/stats'
@@ -70,12 +71,18 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
     if (match.done) {
       // Rematch = a brand-new game with the same players, so the finished one
       // stays in history/stats instead of being overwritten.
+      // Carry the whole setup over: chaos config, « non classée », and the
+      // doubles pairs — a rematch is the same game with fresh scores.
       const rematch = async () => {
         const newId = await createTournament(
           tournament.name,
           tournament.players,
           tournament.target,
           'game',
+          'round_robin',
+          chaosSettingsFromTournament(tournament),
+          tournament.unranked ?? false,
+          tournament.teams === null ? null : [tournament.teams[0] ?? [], tournament.teams[1] ?? []],
         )
         onOpen(newId)
       }
@@ -100,7 +107,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
           /* match.done flips via the patch above, which renders GameResult */
         }}
         tournamentName={tournament.name}
-        subtitle="Partie rapide"
+        subtitle={libelleFormat(tournament)}
         elos={elosFor(match)}
         onPresent={() => navigate(`/t/${id}/live`)}
       />
@@ -126,8 +133,8 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
       <header>
         <ThemeToggle className="header-toggle" />
         <div className="kicker">
-          {isDouble ? 'Élimination directe' : 'Round-robin'} · {tournament.players.length} joueurs ·
-          jeu en {tournament.target}
+          {libelleFormat(tournament)} · {tournament.players.length} joueurs · jeu en{' '}
+          {tournament.target}
         </div>
         <h1>
           {tournament.name}
@@ -208,7 +215,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
             setOpenId(null)
           }}
           tournamentName={tournament.name}
-          subtitle={isDouble ? 'Élimination directe' : 'Round-robin'}
+          subtitle={libelleFormat(tournament)}
           elos={elosFor(openMatch)}
           onPresent={() => navigate(`/t/${id}/live`)}
         />

@@ -75,6 +75,8 @@ const getMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
   slack_thread_ts: null,
   result_notified: false,
   unranked: false,
+  doubles: false,
+  teams: null,
   chaos_enabled: false,
   chaos_interval: 5,
   chaos_intensity: 'mild',
@@ -200,6 +202,19 @@ describe('scoping matches by type', () => {
   it('« tout » keeps matches whose tournament is unknown', () => {
     const scoped = scopeMatches([inTour, inGame, orphan], [tour, game], getFilters(), NOW)
     expect(scoped.map((m) => m.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('excludes doubles matches from every scope — pair names are no individuals', () => {
+    const dbl = getMockTournament({ id: 'td', kind: 'game', doubles: true })
+    const inDouble = getMockMatch({ id: 'd', tournament_id: 'td' })
+    expect(
+      scopeMatches([inGame, inDouble], [game, dbl], getFilters(), NOW).map((m) => m.id),
+    ).toEqual(['b'])
+    expect(
+      scopeMatches([inGame, inDouble], [game, dbl], getFilters({ type: 'rapides' }), NOW).map(
+        (m) => m.id,
+      ),
+    ).toEqual(['b'])
   })
 
   it('combines period and type', () => {

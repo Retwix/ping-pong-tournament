@@ -59,6 +59,8 @@ const getMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
   slack_thread_ts: null,
   result_notified: false,
   unranked: false,
+  doubles: false,
+  teams: null,
   chaos_enabled: false,
   chaos_interval: 5,
   chaos_intensity: 'mild',
@@ -275,8 +277,23 @@ describe('matchRows', () => {
         competition: 'Tournoi de juillet',
         endedAt: '2026-07-30T10:00:00.000Z',
         unranked: false,
+        doubles: false,
       },
     ])
+  })
+
+  it('flags doubles matches for their dedicated row treatment', () => {
+    const rows = matchRows(
+      [getMockMatch({ player_a: 'Léo & Inès', player_b: 'Karim & Julie' })],
+      [],
+      [getMockTournament({ id: 't1', kind: 'game', doubles: true })],
+    )
+    expect(rows[0].doubles).toBe(true)
+  })
+
+  it('treats a match with an unknown tournament as an individual one', () => {
+    const rows = matchRows([getMockMatch()], [], [])
+    expect(rows[0].doubles).toBe(false)
   })
 
   it('orders rows newest first whatever the input order', () => {
@@ -388,6 +405,7 @@ const getMatchRow = (overrides?: Partial<MatchRow>): MatchRow => ({
   competition: 'Tournoi de juillet',
   endedAt: '2026-07-30T10:00:00.000Z',
   unranked: false,
+  doubles: false,
   ...overrides,
 })
 
