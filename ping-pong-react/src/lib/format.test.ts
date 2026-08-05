@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { signed, relativeTime } from './format'
+import { libelleFormat, signed, relativeTime } from './format'
 
 describe('signed', () => {
   it('prefixes a positive value with a plus', () => {
@@ -28,7 +28,7 @@ describe('relativeTime', () => {
   const now = new Date('2026-07-27T12:00:00Z')
 
   it('shows "à l\'instant" under a minute', () => {
-    expect(relativeTime('2026-07-27T11:59:30Z', now)).toBe('à l\'instant')
+    expect(relativeTime('2026-07-27T11:59:30Z', now)).toBe("à l'instant")
   })
 
   it('shows minutes under an hour', () => {
@@ -47,7 +47,49 @@ describe('relativeTime', () => {
     expect(relativeTime('2026-07-01T12:00:00Z', now)).toBe('1 juil.')
   })
 
+  it("leaves « à l'instant » at exactly one minute", () => {
+    expect(relativeTime('2026-07-27T11:59:00Z', now)).toBe('il y a 1 min')
+  })
+
+  it('switches to hours at exactly sixty minutes', () => {
+    expect(relativeTime('2026-07-27T11:00:00Z', now)).toBe('il y a 1 h')
+  })
+
+  it('switches to days at exactly twenty-four hours', () => {
+    expect(relativeTime('2026-07-26T12:00:00Z', now)).toBe('il y a 1 j')
+  })
+
+  it('switches to the short date at exactly seven days', () => {
+    expect(relativeTime('2026-07-20T12:00:00Z', now)).toBe('20 juil.')
+  })
+
   it('returns an empty string for a null timestamp', () => {
     expect(relativeTime(null, now)).toBe('')
+  })
+})
+
+describe('libelleFormat', () => {
+  it('labels a quick game', () => {
+    expect(libelleFormat({ kind: 'game', format: 'round_robin', doubles: false })).toBe(
+      'Partie rapide',
+    )
+  })
+
+  it('labels a doubles quick game', () => {
+    expect(libelleFormat({ kind: 'game', format: 'round_robin', doubles: true })).toBe(
+      'Partie rapide · Double',
+    )
+  })
+
+  it('labels a round-robin tournament', () => {
+    expect(libelleFormat({ kind: 'tournament', format: 'round_robin', doubles: false })).toBe(
+      'Round-robin',
+    )
+  })
+
+  it('labels a double-elimination tournament', () => {
+    expect(libelleFormat({ kind: 'tournament', format: 'double_elim', doubles: false })).toBe(
+      'Élimination directe',
+    )
   })
 })

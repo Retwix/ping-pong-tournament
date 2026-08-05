@@ -204,6 +204,19 @@ describe('scoping matches by type', () => {
     expect(scoped.map((m) => m.id)).toEqual(['a', 'b', 'c'])
   })
 
+  it('excludes doubles matches from every scope — pair names are no individuals', () => {
+    const dbl = getMockTournament({ id: 'td', kind: 'game', doubles: true })
+    const inDouble = getMockMatch({ id: 'd', tournament_id: 'td' })
+    expect(
+      scopeMatches([inGame, inDouble], [game, dbl], getFilters(), NOW).map((m) => m.id),
+    ).toEqual(['b'])
+    expect(
+      scopeMatches([inGame, inDouble], [game, dbl], getFilters({ type: 'rapides' }), NOW).map(
+        (m) => m.id,
+      ),
+    ).toEqual(['b'])
+  })
+
   it('combines period and type', () => {
     const juneTour = getMockMatch({
       id: 'jt',

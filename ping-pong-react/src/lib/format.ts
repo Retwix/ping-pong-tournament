@@ -1,3 +1,14 @@
+import type { Tournament } from '../types'
+
+/**
+ * Header label for what is being played: quick game (« · Double » when 2v2)
+ * or the tournament format.
+ */
+export function libelleFormat(t: Pick<Tournament, 'kind' | 'format' | 'doubles'>): string {
+  if (t.kind === 'game') return t.doubles ? 'Partie rapide · Double' : 'Partie rapide'
+  return t.format === 'double_elim' ? 'Élimination directe' : 'Round-robin'
+}
+
 /**
  * A signed integer for display — Elo moves, point differentials — in the app's
  * house idiom: a plus on gains, a real minus sign (−, not a hyphen) on losses,
@@ -19,7 +30,7 @@ export function relativeTime(iso: string | null, now: Date): string {
   if (!iso) return ''
   const then = new Date(iso).getTime()
   const secs = Math.max(0, Math.floor((now.getTime() - then) / 1000))
-  if (secs < 60) return 'à l\'instant'
+  if (secs < 60) return "à l'instant"
   const mins = Math.floor(secs / 60)
   if (mins < 60) return `il y a ${mins} min`
   const hours = Math.floor(mins / 60)

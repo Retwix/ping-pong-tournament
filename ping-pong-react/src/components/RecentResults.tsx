@@ -16,8 +16,8 @@ interface Props {
  * belongs to.
  */
 export default function RecentResults({ onOpenTournament, onHistory }: Props) {
-  const { matches, players } = useRatings()
-  const rows = recentResults(matches, players, 5)
+  const { matches, players, tournaments } = useRatings()
+  const rows = recentResults(matches, players, tournaments, 5)
 
   return (
     <div className="rv-card">
@@ -42,7 +42,10 @@ export default function RecentResults({ onOpenTournament, onHistory }: Props) {
               <Avatar name={row.winner} team={null} url={row.winnerAvatar} className="sm" />
               <div className="rvrow-text">
                 <span className="rvrow-winner">{row.winner}</span>
-                <span className="rvrow-connective"> bat {row.loser} · </span>
+                <span className="rvrow-connective">
+                  {' '}
+                  {row.doubles ? 'battent' : 'bat'} {row.loser} ·{' '}
+                </span>
                 <span className="rvrow-score">
                   {row.winnerScore}–{row.loserScore}
                 </span>

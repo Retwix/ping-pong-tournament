@@ -35,7 +35,7 @@ function enDate(date: Date): string {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
-    })
+    }),
   )
 }
 
@@ -47,7 +47,13 @@ function whenBadge(date: Date, time?: string): string {
 }
 
 /** Greedy word wrap into at most `maxLines` lines that fit `maxW`. */
-function wrap(text: string, maxW: number, size: number, factor: number, maxLines: number): string[] {
+function wrap(
+  text: string,
+  maxW: number,
+  size: number,
+  factor: number,
+  maxLines: number,
+): string[] {
   const words = text.split(/\s+/)
   const lines: string[] = []
   let cur = ''
@@ -62,7 +68,10 @@ function wrap(text: string, maxW: number, size: number, factor: number, maxLines
   }
   if (cur) lines.push(cur)
   if (lines.length > maxLines) {
-    lines[maxLines - 1] = trunc(lines.slice(maxLines - 1).join(' '), Math.floor(maxW / (size * factor)))
+    lines[maxLines - 1] = trunc(
+      lines.slice(maxLines - 1).join(' '),
+      Math.floor(maxW / (size * factor)),
+    )
     lines.length = maxLines
   }
   return lines
@@ -90,7 +99,10 @@ interface CardSpec {
   tagline?: string
 }
 
-function pill(text: string, cy: number): { svg: string; width: number; render: (x: number) => string } {
+function pill(
+  text: string,
+  cy: number,
+): { svg: string; width: number; render: (x: number) => string } {
   const size = 28
   const w = estW(text, size, 0.54) + 64
   const h = 64
@@ -120,7 +132,7 @@ function buildCardSvg(spec: CardSpec, fontCss: string): PosterResult {
 
   // Eyebrow
   parts.push(
-    `<text x="${CX}" y="${y}" text-anchor="middle" font-family="${FONT_DISPLAY}" font-size="${ebSize}" font-weight="600" letter-spacing="5" fill="${CORAL}">${esc(spec.eyebrow)}</text>`
+    `<text x="${CX}" y="${y}" text-anchor="middle" font-family="${FONT_DISPLAY}" font-size="${ebSize}" font-weight="600" letter-spacing="5" fill="${CORAL}">${esc(spec.eyebrow)}</text>`,
   )
   y += ebGap
 
@@ -130,7 +142,7 @@ function buildCardSvg(spec: CardSpec, fontCss: string): PosterResult {
     const style = ln.italic ? ' font-style="italic"' : ''
     const sp = ln.spacing ? ` letter-spacing="${ln.spacing}"` : ''
     parts.push(
-      `<text x="${CX}" y="${y}" text-anchor="middle" font-family="${FONT_DISPLAY}" font-size="${ln.size}" font-weight="${ln.weight}"${style}${sp} fill="${ln.color}">${esc(ln.text)}</text>`
+      `<text x="${CX}" y="${y}" text-anchor="middle" font-family="${FONT_DISPLAY}" font-size="${ln.size}" font-weight="${ln.weight}"${style}${sp} fill="${ln.color}">${esc(ln.text)}</text>`,
     )
     y += lineGap
   }
@@ -151,7 +163,7 @@ function buildCardSvg(spec: CardSpec, fontCss: string): PosterResult {
   if (spec.tagline) {
     y += taglineGap
     parts.push(
-      `<text x="${CX}" y="${y}" text-anchor="middle" font-family="${FONT_BODY}" font-size="${taglineSize}" font-weight="500" font-style="italic" fill="#ffffff" fill-opacity="0.9">${esc(spec.tagline)}</text>`
+      `<text x="${CX}" y="${y}" text-anchor="middle" font-family="${FONT_BODY}" font-size="${taglineSize}" font-weight="500" font-style="italic" fill="#ffffff" fill-opacity="0.9">${esc(spec.tagline)}</text>`,
     )
   }
 
@@ -174,7 +186,7 @@ function buildCardSvg(spec: CardSpec, fontCss: string): PosterResult {
 /** Tournament announcement: it's a tournament, the date, and the points per game. */
 export function buildTournamentPosterSvg(
   opts: { name: string; target: number; date?: Date; time?: string },
-  fontCss = ''
+  fontCss = '',
 ): PosterResult {
   const title = opts.name.trim() || 'Ping-pong tournament'
   const size = estW(title, 88, 0.56) > SIZE - 180 ? 64 : 88
@@ -190,18 +202,21 @@ export function buildTournamentPosterSvg(
       lines,
       badges: [whenBadge(opts.date ?? new Date(), opts.time), `Game to ${opts.target} points`],
     },
-    fontCss
+    fontCss,
   )
 }
 
 /** Quick-game challenge card to send to an opponent. */
 export function buildChallengePosterSvg(
   opts: { playerA: string; playerB: string; target: number; date?: Date; time?: string },
-  fontCss = ''
+  fontCss = '',
 ): PosterResult {
-  const a = trunc(opts.playerA.trim() || 'Player 1', 18)
-  const b = trunc(opts.playerB.trim() || 'Player 2', 18)
-  const nameSize = Math.max(a.length, b.length) > 12 ? 72 : 92
+  // Doubles pass pair display names (« Léo & Inès ») — longer lines, so a
+  // wider cap and a third, smaller size tier keep them on one line each.
+  const a = trunc(opts.playerA.trim() || 'Player 1', 26)
+  const b = trunc(opts.playerB.trim() || 'Player 2', 26)
+  const longest = Math.max(a.length, b.length)
+  const nameSize = longest > 18 ? 56 : longest > 12 ? 72 : 92
   return buildCardSvg(
     {
       eyebrow: 'PING-PONG CHALLENGE',
@@ -213,6 +228,6 @@ export function buildChallengePosterSvg(
       badges: [whenBadge(opts.date ?? new Date(), opts.time), `Game to ${opts.target} points`],
       tagline: 'Will you take up the challenge?',
     },
-    fontCss
+    fontCss,
   )
 }

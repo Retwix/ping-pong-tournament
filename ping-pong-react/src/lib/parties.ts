@@ -94,6 +94,8 @@ export interface MatchRow {
   endedAt: string | null
   /** « Non classée » : the match moved no Elo; missing pre-migration flag counts as ranked. */
   unranked: boolean
+  /** 2v2 : the winner/loser are pair display names — row gets the doubles treatment. */
+  doubles: boolean
 }
 
 const timeKey = (m: Match): string => m.ended_at ?? m.started_at ?? ''
@@ -132,6 +134,7 @@ export function matchRows(
               : tournament.name,
         endedAt: m.ended_at,
         unranked: tournament?.unranked ?? false,
+        doubles: tournament?.doubles ?? false,
       }
     })
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTournament } from '../hooks/useTournament'
 import { chaosSettingsFromTournament } from '../lib/chaos'
+import { libelleFormat } from '../lib/format'
 import { useRatingDeltas } from '../hooks/useRatingDeltas'
 import { winnerLoserRatings } from '../lib/ratingSides'
 import { computeStandings } from '../lib/pingpong'
@@ -257,12 +258,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
     )
   }
 
-  const formatLabel =
-    tournament.format === 'double_elim'
-      ? 'Élimination directe'
-      : tournament.kind === 'game'
-        ? 'Partie rapide'
-        : 'Round-robin'
+  const formatLabel = libelleFormat(tournament)
 
   return (
     <LiveScorer

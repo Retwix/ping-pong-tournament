@@ -2394,6 +2394,12 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 }
 .pt-th-c { text-align: center; }
 .avatar.pt-av-sm { width: 30px; height: 30px; font-size: 12px; flex: none; }
+/* Doubles rows: two stacked winner avatars (−10px), so the avatar column widens. */
+.pt-row-dbl { grid-template-columns: 50px 1fr 70px 74px 120px 84px 15px; }
+.pt-av-stack { display: flex; }
+.pt-av-stack .avatar { box-shadow: 0 0 0 2px #fff; }
+.pt-av-stack .avatar + .avatar { margin-left: -10px; }
+[data-theme='dark'] .pt-av-stack .avatar { box-shadow: 0 0 0 2px #1e1138; }
 .pt-match-phrase {
   font-family: var(--font-body); font-weight: 600; font-size: 14px; color: var(--fg-2);
   min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -2418,6 +2424,7 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
   .pt-col-sec { display: none; }
   .pt-tourrow { grid-template-columns: 34px 1fr auto 15px; gap: 11px; }
   .pt-matchrow { grid-template-columns: 30px 1fr auto auto 15px; gap: 11px; }
+  .pt-row-dbl { grid-template-columns: 50px 1fr auto auto 15px; }
   .pt-section { margin-top: 20px; }
 }
 

@@ -35,6 +35,14 @@ Replace the last old-design screen — `Setup.tsx` at `/new` and `/game` — wit
   when a timestamp is *before* the 1970 epoch (`new Date(null)` = epoch, always older than any
   real match); `>` → `>=` only differs when two matches end on the same millisecond, where both
   variants return equal timestamp strings.
+- `format.ts` `signed` `v > 0` → `v >= 0`: unreachable difference — `v === 0` returns « ±0 »
+  on the line above, so the ternary never sees 0.
+- `recentResults.ts` `score_a > score_b` → `>=`: only differs on a tied finished match, which
+  ping-pong rules (win by 2) make impossible.
+- `statsPage.ts` `scopeMatches` `t === null` guard → `false` (pre-existing): a match with no
+  timestamps hits `inPeriod(new Date(null))` = the 1970 epoch, which no real filter period
+  contains — same « excluded » outcome either way. The other statsPage survivors (66) are
+  pre-existing baseline in untouched sections of that large file, out of PR 3's changed lines.
 
 ## Open questions (flagged, with plan defaults)
 

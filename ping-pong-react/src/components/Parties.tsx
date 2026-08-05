@@ -3,6 +3,7 @@ import { IconChevronRight, IconPlayerPlay, IconSearch, IconTrophy } from '@table
 import { useCurrentTournament } from '../hooks/useCurrentTournament'
 import { useRatings } from '../hooks/useRatings'
 import { useTournament } from '../hooks/useTournament'
+import { membresPaire } from '../lib/doubles'
 import { pickLiveMatch } from '../lib/liveHero'
 import { signed } from '../lib/format'
 import {
@@ -220,18 +221,32 @@ function MatchesTable({
           rows.map((row) => (
             <div
               key={row.id}
-              className="pt-matchrow pt-row"
+              className={`pt-matchrow pt-row${row.doubles ? ' pt-row-dbl' : ''}`}
               onClick={() => onOpen(row.tournamentId)}
             >
-              <Avatar
-                name={row.winner}
-                team={look(row.winner).team}
-                url={look(row.winner).url}
-                className="pt-av-sm"
-              />
+              {row.doubles ? (
+                <span className="pt-av-stack">
+                  {membresPaire(row.winner).map((n) => (
+                    <Avatar
+                      key={n}
+                      name={n}
+                      team={look(n).team}
+                      url={look(n).url}
+                      className="pt-av-sm"
+                    />
+                  ))}
+                </span>
+              ) : (
+                <Avatar
+                  name={row.winner}
+                  team={look(row.winner).team}
+                  url={look(row.winner).url}
+                  className="pt-av-sm"
+                />
+              )}
               <div className="pt-match-phrase">
                 <span className="pt-match-winner">{row.winner}</span>
-                <span className="pt-match-verb"> bat </span>
+                <span className="pt-match-verb">{row.doubles ? ' battent ' : ' bat '}</span>
                 {row.loser}
               </div>
               <div className="pt-score">

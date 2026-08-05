@@ -1,3 +1,4 @@
+import { nomPaire } from './doubles'
 import { fold, matchesJoueur } from './fold'
 import { doubleElimMatchCount, MIN_DE_PLAYERS } from './doubleElim'
 import { matchCount, roundCount } from './roundRobin'
@@ -101,11 +102,6 @@ export function retirerJoueurDouble(sel: SelectionDouble, name: string): Selecti
     b: sel.b.filter((n) => n !== name),
     camp: sel.camp,
   }
-}
-
-/** Pair display name: « Léo & Inès », or « … » while the camp is empty. */
-export function nomPaire(noms: string[]): string {
-  return noms.join(' & ') || '…'
 }
 
 /** Live recap for a 2v2 game: pair auto-name, per-camp counters, submittability. */

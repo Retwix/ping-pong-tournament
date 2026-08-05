@@ -20,12 +20,12 @@ import { DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from '../lib/chaos'
 import { createPlayer, createTournament } from '../lib/db'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { joueurRows, type JoueurRow } from '../lib/joueurs'
+import { nomPaire } from '../lib/doubles'
 import {
   aideCamp,
   choisirJoueurDouble,
   estDoublon,
   filterJoueurs,
-  nomPaire,
   noteEnjeu,
   pointsCible,
   recapitulatif,
