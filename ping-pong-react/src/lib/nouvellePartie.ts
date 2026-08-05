@@ -103,14 +103,17 @@ export function retirerJoueurDouble(sel: SelectionDouble, name: string): Selecti
   }
 }
 
+/** Pair display name: « Léo & Inès », or « … » while the camp is empty. */
+export function nomPaire(noms: string[]): string {
+  return noms.join(' & ') || '…'
+}
+
 /** Live recap for a 2v2 game: pair auto-name, per-camp counters, submittability. */
 export function recapitulatifDouble(sel: SelectionDouble, target: number): Recapitulatif {
   const { a, b } = sel
   const distincts = new Set([...a, ...b]).size === a.length + b.length
   const valid = a.length === TAILLE_EQUIPE && b.length === TAILLE_EQUIPE && distincts
-  const paireA = a.join(' & ') || '…'
-  const paireB = b.join(' & ') || '…'
-  const matchup = `${paireA} vs ${paireB}`
+  const matchup = `${nomPaire(a)} vs ${nomPaire(b)}`
   return {
     autoName: matchup,
     hint: valid
@@ -120,8 +123,15 @@ export function recapitulatifDouble(sel: SelectionDouble, target: number): Recap
   }
 }
 
+/** Helper line under the team cards: where the next pick lands, or completeness. */
+export function aideCamp(sel: SelectionDouble): string {
+  if (sel.a.length + sel.b.length === 2 * TAILLE_EQUIPE) return 'Les deux équipes sont complètes.'
+  return `Les joueurs choisis rejoignent l’équipe ${sel.camp} — clique l’autre carte pour changer de camp.`
+}
+
 /** One-line stakes note under the « L'enjeu » control: what this choice does to Elo. */
-export function noteEnjeu(unranked: boolean): string {
+export function noteEnjeu(unranked: boolean, doubles = false): string {
+  if (doubles) return 'Les doubles sont non classés en v1 — pas encore d’Elo de paire.'
   return unranked
     ? 'Aucun impact sur le classement Elo. La partie reste visible dans les parties.'
     : 'Le résultat déplace l’Elo des joueurs et compte dans « Le classement ».'

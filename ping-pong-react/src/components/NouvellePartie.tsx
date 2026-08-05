@@ -6,6 +6,7 @@ import {
   IconClock,
   IconDownload,
   IconInfoCircle,
+  IconLock,
   IconPlus,
   IconSearch,
   IconSparkles,
@@ -20,11 +21,17 @@ import { createPlayer, createTournament } from '../lib/db'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { joueurRows, type JoueurRow } from '../lib/joueurs'
 import {
+  aideCamp,
+  choisirJoueurDouble,
   estDoublon,
   filterJoueurs,
+  nomPaire,
   noteEnjeu,
   pointsCible,
   recapitulatif,
+  recapitulatifDouble,
+  retirerJoueurDouble,
+  type SelectionDouble,
 } from '../lib/nouvellePartie'
 import { inviteToSlack } from '../lib/slack'
 import { TEAMS, teamBadgeStyle, teamColor, teamLabel, type TeamKey } from '../lib/teams'
@@ -46,6 +53,7 @@ function slugify(s: string, fallback: string): string {
 }
 
 const PRESETS = [11, 21, 15]
+const SELECTION_DOUBLE_VIDE: SelectionDouble = { a: [], b: [], camp: 'A' }
 
 interface Props {
   variant: 'game' | 'tournament'
@@ -89,7 +97,19 @@ export default function NouvellePartie({
   const [chaos, setChaos] = useState<ChaosSettings>(DEFAULT_CHAOS_SETTINGS)
   const [chaosOpen, setChaosOpen] = useState(false)
   const [unranked, setUnranked] = useState(false)
+  const [dbl, setDbl] = useState(false)
+  const [selDouble, setSelDouble] = useState<SelectionDouble>(SELECTION_DOUBLE_VIDE)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  const isDouble = isGame && dbl
+
+  // The « Nouveau tournoi » variant has no doubles yet: drop the mode when leaving /game.
+  useEffect(() => {
+    if (!isGame) {
+      setDbl(false)
+      setSelDouble(SELECTION_DOUBLE_VIDE)
+    }
+  }, [isGame])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -110,27 +130,64 @@ export default function NouvellePartie({
         .filter((r): r is JoueurRow => r !== undefined),
     [selected, annuaire],
   )
+  const teamRows = useMemo(
+    () => ({
+      a: selDouble.a
+        .map((id) => annuaire.find((r) => r.id === id))
+        .filter((r): r is JoueurRow => r !== undefined),
+      b: selDouble.b
+        .map((id) => annuaire.find((r) => r.id === id))
+        .filter((r): r is JoueurRow => r !== undefined),
+    }),
+    [selDouble, annuaire],
+  )
   const available = useMemo(
-    () => annuaire.filter((r) => !selected.includes(r.id)),
-    [annuaire, selected],
+    () =>
+      annuaire.filter((r) =>
+        isDouble
+          ? !selDouble.a.includes(r.id) && !selDouble.b.includes(r.id)
+          : !selected.includes(r.id),
+      ),
+    [annuaire, isDouble, selDouble, selected],
   )
   const visible = useMemo(() => filterJoueurs(available, query), [available, query])
 
-  const gameFull = isGame && selRows.length >= 2
+  const nDouble = selDouble.a.length + selDouble.b.length
+  const gameFull = isGame && (isDouble ? nDouble >= 4 : selRows.length >= 2)
   const target = pointsCible(preset, autre)
-  const recap = recapitulatif({
-    variant,
-    format,
-    selected: selRows.map((r) => r.name),
-    name,
-    target,
-  })
+  const selDoubleNoms: SelectionDouble = {
+    a: teamRows.a.map((r) => r.name),
+    b: teamRows.b.map((r) => r.name),
+    camp: selDouble.camp,
+  }
+  const recap = isDouble
+    ? recapitulatifDouble(selDoubleNoms, target)
+    : recapitulatif({
+        variant,
+        format,
+        selected: selRows.map((r) => r.name),
+        name,
+        target,
+      })
+  // Doubles have no pair Elo in v1: the enjeu is locked on « Non classée ».
+  const unrankedEffectif = isDouble || unranked
+
+  const basculerMode = (double: boolean) => {
+    if (double === dbl) return
+    setDbl(double)
+    setSelected([])
+    setSelDouble(SELECTION_DOUBLE_VIDE)
+  }
 
   const add = (id: string) => {
     if (gameFull) return
-    setSelected((s) => [...s, id])
+    if (isDouble) setSelDouble((s) => choisirJoueurDouble(s, id))
+    else setSelected((s) => [...s, id])
   }
-  const remove = (id: string) => setSelected((s) => s.filter((x) => x !== id))
+  const remove = (id: string) => {
+    if (isDouble) setSelDouble((s) => retirerJoueurDouble(s, id))
+    else setSelected((s) => s.filter((x) => x !== id))
+  }
 
   const addNewPlayer = async () => {
     const nm = newName.trim()
@@ -143,7 +200,7 @@ export default function NouvellePartie({
     try {
       const p = await createPlayer(nm, newTeam)
       await reload()
-      if (!gameFull) setSelected((s) => [...s, p.id])
+      add(p.id)
       setNewOpen(false)
       setNewName('')
       setNewTeam('guests')
@@ -162,12 +219,15 @@ export default function NouvellePartie({
     try {
       const id = await createTournament(
         recap.autoName,
-        selRows.map((r) => r.name),
+        isDouble
+          ? [nomPaire(selDoubleNoms.a), nomPaire(selDoubleNoms.b)]
+          : selRows.map((r) => r.name),
         target,
         isGame ? 'game' : 'tournament',
         isGame ? 'round_robin' : format,
         chaos,
-        unranked,
+        unrankedEffectif,
+        isDouble ? [selDouble.a, selDouble.b] : null,
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
       void inviteToSlack(id)
@@ -185,13 +245,12 @@ export default function NouvellePartie({
     setPosterBusy(true)
     try {
       const fontCss = await getEmbeddedFontCss()
+      const paireA = isDouble ? nomPaire(selDoubleNoms.a) : selRows[0].name
+      const paireB = isDouble ? nomPaire(selDoubleNoms.b) : selRows[1].name
       const { svg, width, height, filename } = isGame
         ? {
-            ...buildChallengePosterSvg(
-              { playerA: selRows[0].name, playerB: selRows[1].name, target, time },
-              fontCss,
-            ),
-            filename: `challenge-${slugify(`${selRows[0].name}-vs-${selRows[1].name}`, 'challenge')}.png`,
+            ...buildChallengePosterSvg({ playerA: paireA, playerB: paireB, target, time }, fontCss),
+            filename: `challenge-${slugify(`${paireA}-vs-${paireB}`, 'challenge')}.png`,
           }
         : {
             ...buildTournamentPosterSvg({ name: name.trim(), target, time }, fontCss),
@@ -212,7 +271,9 @@ export default function NouvellePartie({
       ? 'Round-robin · nouveau tournoi'
       : 'Élimination directe · nouveau tournoi'
   const countPill = isGame
-    ? `${selRows.length} / 2`
+    ? isDouble
+      ? `${nDouble} / 4`
+      : `${selRows.length} / 2`
     : selRows.length === 1
       ? '1 joueur'
       : `${selRows.length} joueurs`
@@ -221,6 +282,59 @@ export default function NouvellePartie({
     : format === 'round_robin'
       ? 'Départage : victoires, puis différence de points.'
       : 'Tableau à double élimination : il faut perdre 2 fois pour être éliminé.'
+
+  const carteEquipe = (camp: 'A' | 'B') => {
+    const rows = camp === 'A' ? teamRows.a : teamRows.b
+    const active = selDouble.camp === camp && !gameFull
+    const activer = () => setSelDouble((s) => ({ ...s, camp }))
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        aria-pressed={selDouble.camp === camp}
+        className={`np-team${active ? ' active' : ''}`}
+        onClick={activer}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            activer()
+          }
+        }}
+      >
+        <div className="np-team-head">
+          <span className="np-team-title">Équipe {camp}</span>
+          <span className="np-team-count">{rows.length} / 2</span>
+        </div>
+        <div className="np-team-list">
+          {rows.map((r) => (
+            <div className="np-team-row" key={r.id}>
+              <Avatar className="np-av" name={r.name} team={r.team} url={r.avatarUrl} />
+              <span className="np-team-txt">
+                <span className="np-team-name">{r.name}</span>
+                <span className="np-team-pole">{teamLabel(r.team)}</span>
+              </span>
+              <button
+                className="np-x"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  remove(r.id)
+                }}
+                title="Retirer"
+              >
+                <IconX size={15} stroke={2.2} />
+              </button>
+            </div>
+          ))}
+          {Array.from({ length: Math.max(0, 2 - rows.length) }, (_, i) => (
+            <div className="np-team-slot" key={i}>
+              <span className="np-slot-plus">+</span>
+              <span>Ajouter un joueur</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const nav = (
     <DashboardNav
@@ -359,39 +473,71 @@ export default function NouvellePartie({
             <div className="np-players-head">
               <h2 className="np-sec-title">Joueurs</h2>
               <span className="np-count-pill">{countPill}</span>
-            </div>
-
-            <div className="np-sel">
-              {selRows.map((r, i) => (
-                <div className="np-sel-row" key={r.id}>
-                  <span className="np-idx">{i + 1}</span>
-                  <Avatar className="np-av" name={r.name} team={r.team} url={r.avatarUrl} />
-                  <span className="np-sel-name">{r.name}</span>
-                  <span className="np-poletag" style={teamBadgeStyle(r.team)}>
-                    {teamLabel(r.team)}
-                  </span>
-                  <span className="np-elo">{r.elo}</span>
-                  <button className="np-x" onClick={() => remove(r.id)} title="Retirer">
-                    <IconX size={16} stroke={2.2} />
+              {isGame && (
+                <div className="np-mode-seg">
+                  <button
+                    className={`np-mode-btn${dbl ? '' : ' active'}`}
+                    onClick={() => basculerMode(false)}
+                  >
+                    Simple · 1v1
                   </button>
-                </div>
-              ))}
-              {selRows.length === 0 && (
-                <div className="np-empty-sel">
-                  {isGame
-                    ? 'Aucun joueur — choisis-en 2 ci-dessous.'
-                    : 'Aucun joueur — choisis-les ci-dessous.'}
+                  <button
+                    className={`np-mode-btn${dbl ? ' active' : ''}`}
+                    onClick={() => basculerMode(true)}
+                  >
+                    Double · 2v2
+                  </button>
                 </div>
               )}
             </div>
+
+            {isDouble ? (
+              <>
+                <div className="np-teams">
+                  {carteEquipe('A')}
+                  <div className="np-vs">vs</div>
+                  {carteEquipe('B')}
+                </div>
+                <div className="np-camp-hint">{aideCamp(selDouble)}</div>
+              </>
+            ) : (
+              <div className="np-sel">
+                {selRows.map((r, i) => (
+                  <div className="np-sel-row" key={r.id}>
+                    <span className="np-idx">{i + 1}</span>
+                    <Avatar className="np-av" name={r.name} team={r.team} url={r.avatarUrl} />
+                    <span className="np-sel-name">{r.name}</span>
+                    <span className="np-poletag" style={teamBadgeStyle(r.team)}>
+                      {teamLabel(r.team)}
+                    </span>
+                    <span className="np-elo">{r.elo}</span>
+                    <button className="np-x" onClick={() => remove(r.id)} title="Retirer">
+                      <IconX size={16} stroke={2.2} />
+                    </button>
+                  </div>
+                ))}
+                {selRows.length === 0 && (
+                  <div className="np-empty-sel">
+                    {isGame
+                      ? 'Aucun joueur — choisis-en 2 ci-dessous.'
+                      : 'Aucun joueur — choisis-les ci-dessous.'}
+                  </div>
+                )}
+              </div>
+            )}
 
             {gameFull ? (
               <div className="np-full">
                 <IconCheck size={17} stroke={2.2} className="np-full-check" />
                 <span className="np-full-text">
-                  2 joueurs sélectionnés — la sélection est complète.
+                  {isDouble
+                    ? '4 joueurs sélectionnés — la sélection est complète.'
+                    : '2 joueurs sélectionnés — la sélection est complète.'}
                 </span>
-                <button className="np-clear" onClick={() => setSelected([])}>
+                <button
+                  className="np-clear"
+                  onClick={() => (isDouble ? setSelDouble(SELECTION_DOUBLE_VIDE) : setSelected([]))}
+                >
                   Tout retirer
                 </button>
               </div>
@@ -678,22 +824,31 @@ export default function NouvellePartie({
             </div>
 
             <div className="np-enjeu">
-              <div className="np-label">L’enjeu</div>
+              <div className="np-enjeu-head">
+                <div className="np-label">L’enjeu</div>
+                {isDouble && (
+                  <span className="np-verrou">
+                    <IconLock size={12} stroke={2.2} />
+                    verrouillé
+                  </span>
+                )}
+              </div>
               <div className="np-enjeu-seg">
                 <button
-                  className={`np-enjeu-btn${unranked ? '' : ' active'}`}
+                  className={`np-enjeu-btn${unrankedEffectif ? '' : ' active'}`}
+                  disabled={isDouble}
                   onClick={() => setUnranked(false)}
                 >
                   Classée
                 </button>
                 <button
-                  className={`np-enjeu-btn${unranked ? ' active' : ''}`}
+                  className={`np-enjeu-btn${unrankedEffectif ? ' active' : ''}`}
                   onClick={() => setUnranked(true)}
                 >
                   Non classée
                 </button>
               </div>
-              <div className="np-enjeu-note">{noteEnjeu(unranked)}</div>
+              <div className="np-enjeu-note">{noteEnjeu(unrankedEffectif, isDouble)}</div>
             </div>
 
             <div className="np-actions">

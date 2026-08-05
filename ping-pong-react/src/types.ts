@@ -48,6 +48,15 @@ export interface Tournament {
    */
   unranked: boolean
   /**
+   * « Double » : a 2v2 quick game. The single match carries the pair display
+   * names (« Léo & Inès ») as its players; `teams` stores the two id-pairs
+   * ([[idA1, idA2], [idB1, idB2]]) so stats stay rename-proof. Absent on rows
+   * created before the doubles migration — readers treat missing as
+   * false/null. Doubles are always unranked in v1 (no pair Elo).
+   */
+  doubles: boolean
+  teams: string[][] | null
+  /**
    * Chaos Mode config (see docs/chaos-mode.md). Absent on tournaments created
    * before the feature existed; read via chaosSettingsFromTournament, which
    * normalizes missing columns to the defaults.

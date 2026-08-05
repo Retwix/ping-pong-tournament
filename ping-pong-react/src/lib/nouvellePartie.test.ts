@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aideCamp,
   choisirJoueurDouble,
   estDoublon,
   filterJoueurs,
@@ -194,6 +195,18 @@ describe('noteEnjeu', () => {
       'Aucun impact sur le classement Elo. La partie reste visible dans les parties.',
     )
   })
+
+  it('explains the v1 doubles lock for a 2v2 game', () => {
+    expect(noteEnjeu(true, true)).toBe(
+      'Les doubles sont non classés en v1 — pas encore d’Elo de paire.',
+    )
+  })
+
+  it('lets the doubles lock override a ranked enjeu', () => {
+    expect(noteEnjeu(false, true)).toBe(
+      'Les doubles sont non classés en v1 — pas encore d’Elo de paire.',
+    )
+  })
 })
 
 describe('filterJoueurs', () => {
@@ -342,6 +355,26 @@ describe('retirerJoueurDouble', () => {
     const sel = getSelDouble({ a: ['Léo', 'Inès'] })
     retirerJoueurDouble(sel, 'Léo')
     expect(sel).toEqual(getSelDouble({ a: ['Léo', 'Inès'] }))
+  })
+})
+
+describe('aideCamp', () => {
+  it('points picks at équipe A while the game is incomplete', () => {
+    expect(aideCamp(getSelDouble())).toBe(
+      'Les joueurs choisis rejoignent l’équipe A — clique l’autre carte pour changer de camp.',
+    )
+  })
+
+  it('points picks at équipe B after a camp switch', () => {
+    expect(aideCamp(getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim'], camp: 'B' }))).toBe(
+      'Les joueurs choisis rejoignent l’équipe B — clique l’autre carte pour changer de camp.',
+    )
+  })
+
+  it('announces completeness once 4 players are picked', () => {
+    expect(aideCamp(getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim', 'Julie'] }))).toBe(
+      'Les deux équipes sont complètes.',
+    )
   })
 })
 
