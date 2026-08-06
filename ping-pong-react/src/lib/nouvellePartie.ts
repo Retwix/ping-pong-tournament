@@ -119,6 +119,18 @@ export function recapitulatifDouble(sel: SelectionDouble, target: number): Recap
   }
 }
 
+/** Live recap in « équipes au hasard » mode: the duos don't exist until the draw. */
+export function recapitulatifHasard(n: number, target: number): Recapitulatif {
+  const valid = n === 2 * TAILLE_EQUIPE
+  return {
+    autoName: 'Partie en double',
+    hint: valid
+      ? `4 joueurs · équipes au hasard · jeu en ${target}`
+      : `Choisis 4 joueurs — les équipes seront tirées au sort. Joueurs : ${n}/4.`,
+    valid,
+  }
+}
+
 /** Helper line under the team cards: where the next pick lands, or completeness. */
 export function aideCamp(sel: SelectionDouble): string {
   if (sel.a.length + sel.b.length === 2 * TAILLE_EQUIPE) return 'Les deux équipes sont complètes.'
