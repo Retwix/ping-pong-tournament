@@ -1,0 +1,834 @@
+<title>Schema evolution — Slack auth &amp; multi-tenancy</title>
+<style>
+  :root {
+    --paper:   #F7F9F9;
+    --card:    #FFFFFF;
+    --ink:     #0F1A1E;
+    --ink-2:   #38494F;
+    --mute:    #6B7C83;
+    --rule:    #DCE4E6;
+    --rule-2:  #EDF1F2;
+    --accent:  #0B7F7F;
+    --accent-s:#E6F2F1;
+    --alert:   #A93B25;
+    --alert-s: #FAEAE5;
+    --serif: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,ui-serif,serif;
+    --mono: ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --measure: 68ch;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:   #0B1315;
+      --card:    #111B1E;
+      --ink:     #E8F0F1;
+      --ink-2:   #B6C6CA;
+      --mute:    #7C9095;
+      --rule:    #223034;
+      --rule-2:  #1A2528;
+      --accent:  #46C3B6;
+      --accent-s:#0E2C2B;
+      --alert:   #E88465;
+      --alert-s: #2E1710;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:   #0B1315;
+    --card:    #111B1E;
+    --ink:     #E8F0F1;
+    --ink-2:   #B6C6CA;
+    --mute:    #7C9095;
+    --rule:    #223034;
+    --rule-2:  #1A2528;
+    --accent:  #46C3B6;
+    --accent-s:#0E2C2B;
+    --alert:   #E88465;
+    --alert-s: #2E1710;
+  }
+  :root[data-theme="light"] {
+    --paper:   #F7F9F9;
+    --card:    #FFFFFF;
+    --ink:     #0F1A1E;
+    --ink-2:   #38494F;
+    --mute:    #6B7C83;
+    --rule:    #DCE4E6;
+    --rule-2:  #EDF1F2;
+    --accent:  #0B7F7F;
+    --accent-s:#E6F2F1;
+    --alert:   #A93B25;
+    --alert-s: #FAEAE5;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: clamp(2.5rem, 6vw, 5.5rem) clamp(1.1rem, 4vw, 2.5rem) 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25rem;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead { display: flex; flex-direction: column; gap: 1.1rem; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(2.1rem, 5.2vw, 3.15rem);
+    line-height: 1.08;
+    letter-spacing: -.022em;
+    font-weight: 600;
+    text-wrap: balance;
+    max-width: 20ch;
+    margin: 0;
+  }
+  .standfirst {
+    max-width: var(--measure);
+    color: var(--ink-2);
+    font-size: 1.14rem;
+    margin: 0;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin-top: .6rem;
+  }
+  .fact {
+    padding: .95rem 1.6rem .95rem 0;
+    margin-right: 1.6rem;
+    border-right: 1px solid var(--rule-2);
+    display: flex;
+    flex-direction: column;
+    gap: .12rem;
+  }
+  .fact:last-child { border-right: 0; margin-right: 0; }
+  .fact b {
+    font-family: var(--mono);
+    font-size: 1.3rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+  }
+  .fact span {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+  .fact.is-alert b { color: var(--alert); }
+  .fact.is-accent b { color: var(--accent); }
+
+  /* ---------- sections ---------- */
+  section { display: flex; flex-direction: column; gap: 1.15rem; }
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.4rem, 3vw, 1.78rem);
+    line-height: 1.2;
+    letter-spacing: -.016em;
+    font-weight: 600;
+    margin: 0;
+    max-width: 26ch;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--mute);
+    font-weight: 500;
+    margin: 0;
+  }
+  p { max-width: var(--measure); margin: 0; }
+  .lede { color: var(--ink-2); }
+  code {
+    font-family: var(--mono);
+    font-size: .855em;
+    background: var(--rule-2);
+    padding: .1em .35em;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+  strong { font-weight: 600; }
+  em.t { font-style: normal; color: var(--accent); font-weight: 600; }
+
+  /* ---------- figures ---------- */
+  figure {
+    margin: .4rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+  }
+  .figbox {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.5rem 1.4rem;
+    overflow-x: auto;
+  }
+  .figbox svg { display: block; width: 100%; min-width: 680px; height: auto; color: var(--ink-2); }
+  figcaption {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--mute);
+    max-width: 82ch;
+  }
+  .s-accent { color: var(--accent); }
+  .s-alert  { color: var(--alert); }
+  .s-mute   { color: var(--mute); }
+
+  /* ---------- code ---------- */
+  .code { display: flex; flex-direction: column; }
+  .code-bar {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .5rem .9rem;
+    border: 1px solid var(--rule);
+    border-bottom: 0;
+    border-radius: 4px 4px 0 0;
+    background: var(--rule-2);
+  }
+  .code-bar span {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+  pre {
+    margin: 0;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 0 0 4px 4px;
+    padding: 1.1rem 1.2rem;
+    overflow-x: auto;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: 12.9px;
+    line-height: 1.72;
+    color: var(--ink-2);
+    white-space: pre;
+  }
+  .c { color: var(--mute); font-style: italic; }
+  .hl { color: var(--accent); font-weight: 600; }
+  .rm { color: var(--alert); font-weight: 600; }
+
+  /* ---------- chips ---------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: .18rem .45rem;
+    border-radius: 3px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .chip-new   { background: var(--accent-s); color: var(--accent); border-color: var(--accent); }
+  .chip-add   { background: var(--accent-s); color: var(--accent); }
+  .chip-break { background: var(--alert-s);  color: var(--alert); border-color: var(--alert); }
+  .chip-same  { background: var(--rule-2);   color: var(--mute); }
+
+  /* ---------- table ---------- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; }
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--mute);
+    font-weight: 500;
+    text-align: left;
+    padding: .8rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    background: var(--rule-2);
+  }
+  td {
+    padding: .78rem 1rem;
+    border-bottom: 1px solid var(--rule-2);
+    font-size: 14px;
+    line-height: 1.55;
+    vertical-align: top;
+    color: var(--ink-2);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.name { font-family: var(--mono); font-size: 12.5px; color: var(--ink); white-space: nowrap; }
+  td.tags { white-space: nowrap; }
+  td.tags .chip { margin: 0 .3rem .25rem 0; }
+
+  /* ---------- callout ---------- */
+  .callout {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--alert);
+    background: var(--card);
+    border-radius: 0 4px 4px 0;
+    padding: 1.15rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: .55rem;
+  }
+  .callout.is-accent { border-left-color: var(--accent); }
+  .callout h4 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--alert);
+    font-weight: 500;
+  }
+  .callout.is-accent h4 { color: var(--accent); }
+  .callout p { font-size: 15.5px; max-width: 74ch; }
+
+  /* ---------- ordered steps ---------- */
+  ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; counter-reset: s; }
+  ol.steps li {
+    counter-increment: s;
+    display: grid;
+    grid-template-columns: 2.6rem 1fr;
+    gap: 1rem;
+    padding: .95rem 0;
+    border-bottom: 1px solid var(--rule-2);
+    align-items: baseline;
+  }
+  ol.steps li:last-child { border-bottom: 0; }
+  ol.steps li::before {
+    content: counter(s, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: .06em;
+  }
+  ol.steps b { font-weight: 600; display: block; font-size: 15.5px; }
+  ol.steps p { font-size: 14.5px; color: var(--mute); margin-top: .1rem; max-width: 70ch; }
+
+  /* ---------- split ---------- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+  .end {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Schema evolution &#183; option A</p>
+    <h1>Behind Slack, one pool per workspace</h1>
+    <p class="standfirst">
+      Today five tables sit in one open pool that anyone holding the anon key can read and write.
+      Signing in with Slack turns the workspace ID into a tenant boundary the database itself
+      enforces &mdash; so a bug in <code>db.ts</code> can't leak another company's data.
+    </p>
+    <div class="facts">
+      <div class="fact"><b>5&#8594;7</b><span>tables</span></div>
+      <div class="fact is-accent"><b>+1</b><span>column &#215; 5 tables</span></div>
+      <div class="fact is-alert"><b>2</b><span>constraints break</span></div>
+      <div class="fact"><b>~0</b><span>changes in db.ts</span></div>
+      <div class="fact is-alert"><b>2</b><span>still open</span></div>
+    </div>
+  </header>
+
+  <hr />
+
+  <!-- ============ FIG 1 ============ -->
+  <section>
+    <h3>The mechanism</h3>
+    <h2>Where the boundary moves</h2>
+    <p class="lede">
+      The anon key ships inside the Vite bundle, and every policy today reads
+      <code>using (true)</code>. A login screen in React changes nothing about that &mdash; the REST API
+      stays open to anyone with <code>curl</code>. The boundary has to live in Postgres.
+    </p>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 1000 360" role="img" aria-label="Before and after comparison. Today the anonymous key reaches all five tables directly through open row-level-security policies, with no tenant column anywhere. After, a Slack session carries an org_id claim that the current_org_id function checks, allowing access to the Recovr org's rows and denying every other org's.">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+            </marker>
+          </defs>
+
+          <!-- ---------- LEFT : today ---------- -->
+          <text x="4" y="14" font-family="ui-monospace, Menlo, monospace" font-size="10.5" letter-spacing="1.4" class="s-mute" fill="currentColor">TODAY &#183; ONE OPEN POOL</text>
+
+          <rect x="4" y="32" width="215" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="111" y="56" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" fill="currentColor">anon key &#183; in the bundle</text>
+
+          <line x1="111" y1="70" x2="111" y2="112" stroke="currentColor" stroke-width="1" marker-end="url(#ar)" />
+          <text x="121" y="95" font-family="ui-monospace, Menlo, monospace" font-size="11" class="s-alert" fill="currentColor">using (true)</text>
+
+          <rect x="4"   y="120" width="132" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.32" />
+          <text x="70"  y="140" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">players</text>
+          <rect x="144" y="120" width="132" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.32" />
+          <text x="210" y="140" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">tournaments</text>
+          <rect x="284" y="120" width="132" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.32" />
+          <text x="350" y="140" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">matches</text>
+          <rect x="4"   y="160" width="132" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.32" />
+          <text x="70"  y="180" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">rating_events</text>
+          <rect x="144" y="160" width="132" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.32" />
+          <text x="210" y="180" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">predictions</text>
+
+          <text x="4" y="228" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-alert" fill="currentColor">&#215;&#160; no tenant column anywhere</text>
+          <text x="4" y="250" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-alert" fill="currentColor">&#215;&#160; players.name unique globally</text>
+          <text x="4" y="272" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-alert" fill="currentColor">&#215;&#160; one active tournament, worldwide</text>
+
+          <!-- ---------- the net ---------- -->
+          <line x1="470" y1="6" x2="470" y2="340" stroke="currentColor" stroke-width="1" stroke-dasharray="5 9" opacity="0.3" />
+
+          <!-- ---------- RIGHT : after ---------- -->
+          <text x="500" y="14" font-family="ui-monospace, Menlo, monospace" font-size="10.5" letter-spacing="1.4" class="s-accent" fill="currentColor">AFTER &#183; ONE POOL PER WORKSPACE</text>
+
+          <rect x="500" y="32" width="150" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="575" y="56" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" fill="currentColor">Slack session</text>
+
+          <line x1="575" y1="70" x2="575" y2="192" stroke="currentColor" stroke-width="1" marker-end="url(#ar)" />
+          <text x="585" y="118" font-family="ui-monospace, Menlo, monospace" font-size="11" class="s-accent" fill="currentColor">jwt.app_metadata.org_id</text>
+
+          <rect x="500" y="196" width="150" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" class="s-accent" />
+          <text x="575" y="220" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-accent" fill="currentColor">current_org_id()</text>
+
+          <line x1="652" y1="204" x2="694" y2="192" stroke="currentColor" stroke-width="1.2" class="s-accent" marker-end="url(#ar)" />
+          <text x="654" y="182" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-accent" fill="currentColor">allow</text>
+
+          <line x1="652" y1="228" x2="694" y2="282" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 4" class="s-alert" marker-end="url(#ar)" />
+          <text x="656" y="256" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-alert" fill="currentColor">deny</text>
+
+          <rect x="700" y="150" width="296" height="96" rx="4" fill="none" stroke="currentColor" stroke-width="1.5" class="s-accent" />
+          <text x="716" y="174" font-family="ui-monospace, Menlo, monospace" font-size="10.5" letter-spacing="1.2" class="s-accent" fill="currentColor">ORG &#183; RECOVR</text>
+          <text x="716" y="196" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">players &#183; tournaments &#183; matches</text>
+          <text x="716" y="214" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">rating_events &#183; predictions</text>
+          <text x="716" y="234" font-family="ui-monospace, Menlo, monospace" font-size="10.5" class="s-mute" fill="currentColor">every row carries org_id</text>
+
+          <rect x="700" y="262" width="296" height="58" rx="4" fill="none" stroke="currentColor" stroke-width="1" opacity="0.28" />
+          <text x="716" y="284" font-family="ui-monospace, Menlo, monospace" font-size="10.5" letter-spacing="1.2" class="s-mute" fill="currentColor">ORG &#183; ACME</text>
+          <text x="716" y="303" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-mute" fill="currentColor">same tables &#183; never visible</text>
+        </svg>
+      </div>
+      <figcaption>
+        Left: every table reachable through <span class="s-alert">using (true)</span>, with no column that
+        could tell one company from another. Right: the session carries
+        <span class="s-accent">org_id</span> as a JWT claim, and one indexed equality per policy decides
+        every read and write. Isolation becomes a property of the database, not of application code.
+      </figcaption>
+    </figure>
+  </section>
+
+  <hr />
+
+  <!-- ============ TABLE INVENTORY ============ -->
+  <section>
+    <h3>Inventory</h3>
+    <h2>What each table gains</h2>
+    <p class="lede">
+      Two new tables carry tenancy; the five existing ones each take a single column. The
+      <code>avatars</code> storage bucket is listed because it has its own policies and is easy to forget.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Table</th><th>Change</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name">orgs</td>
+            <td class="tags"><span class="chip chip-new">new</span></td>
+            <td>The tenant. <code>slack_team_id</code> is unique &mdash; that one indexed lookup <em class="t">is</em> the &ldquo;does my company already have a space?&rdquo; check. Also holds the rotatable <code>share_token</code>.</td>
+          </tr>
+          <tr>
+            <td class="name">memberships</td>
+            <td class="tags"><span class="chip chip-new">new</span></td>
+            <td>Which <code>auth.users</code> belong to which org. Written on first sign-in, read by the token hook.</td>
+          </tr>
+          <tr>
+            <td class="name">players</td>
+            <td class="tags"><span class="chip chip-add">+org_id</span><span class="chip chip-break">constraint</span><span class="chip chip-add">+2 cols</span></td>
+            <td><code>name</code> stops being globally unique. Gains <code>auth_user_id</code> (claimed vs guest) and finally a real <code>slack_user_id</code>.</td>
+          </tr>
+          <tr>
+            <td class="name">tournaments</td>
+            <td class="tags"><span class="chip chip-add">+org_id</span><span class="chip chip-break">constraint</span></td>
+            <td>The one-active-tournament index is currently global. It must become per-org, or the first company to start a game kills everyone else's.</td>
+          </tr>
+          <tr>
+            <td class="name">matches</td>
+            <td class="tags"><span class="chip chip-add">+org_id</span></td>
+            <td>Denormalized deliberately &mdash; deriving it through <code>tournament_id</code> would force a join on every row <em class="t">and every Realtime message</em> on the hot table.</td>
+          </tr>
+          <tr>
+            <td class="name">rating_events</td>
+            <td class="tags"><span class="chip chip-add">+org_id</span></td>
+            <td>Elo history. Its unique index keys on <code>match_id</code>, already org-scoped through the foreign key &mdash; no constraint change.</td>
+          </tr>
+          <tr>
+            <td class="name">predictions</td>
+            <td class="tags"><span class="chip chip-add">+org_id</span></td>
+            <td>Same story: indexes hang off <code>match_id</code> and <code>tournament_id</code>, so they inherit scoping for free.</td>
+          </tr>
+          <tr>
+            <td class="name">storage: avatars</td>
+            <td class="tags"><span class="chip chip-same">review</span></td>
+            <td>Public bucket, open policies. Paths are player UUIDs so they aren't guessable, but any avatar URL works across orgs. Fine for V1 &mdash; worth deciding on purpose rather than by omission.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ THE DEFAULT TRICK ============ -->
+  <section>
+    <h3>The part that keeps the diff small</h3>
+    <h2>Postgres stamps the tenant, not your code</h2>
+    <p class="lede">
+      <code>lib/</code> holds 67 files, but nearly all of it &mdash; <code>classement</code>,
+      <code>chaos</code>, <code>doubles</code>, <code>finalStandings</code> &mdash; is pure logic that never
+      touches the database. The real surface is <code>db.ts</code>, and a column default keeps even that
+      almost untouched: inserts get stamped by Postgres, reads get filtered by RLS.
+    </p>
+
+    <div class="code">
+      <div class="code-bar"><span class="s-accent">new</span><span>&#183;</span><span>the single tenancy predicate</span></div>
+      <pre><code>create or replace function public.current_org_id() returns uuid
+language sql stable as $$
+  select nullif(auth.jwt() -&gt; 'app_metadata' -&gt;&gt; 'org_id', '')::uuid
+$$;
+
+<span class="c">-- this default is what spares ~40 query functions from ever naming org_id</span>
+alter table public.players add column org_id uuid
+  references public.orgs(id) on delete cascade
+  <span class="hl">default public.current_org_id()</span>;
+
+create index players_org     on public.players(org_id);
+create index tournaments_org on public.tournaments(org_id, created_at desc);
+create index matches_org     on public.matches(org_id);</code></pre>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ BREAKING CONSTRAINTS ============ -->
+  <section>
+    <h3>The actual risk</h3>
+    <h2>Two constraints are silently global</h2>
+    <p class="lede">
+      These are the migration's real hazard. Both look innocuous, both stay invisible while one company
+      uses the app, and both fail on the <em class="t">second</em> company's very first action.
+    </p>
+
+    <div class="callout">
+      <h4>Breaking &#183; players.name</h4>
+      <p>
+        Unique across the entire database. Two companies each employing a Thomas is not an edge case
+        &mdash; it's Tuesday. The second Thomas simply cannot be created.
+      </p>
+    </div>
+
+    <div class="callout">
+      <h4>Breaking &#183; tournaments_one_active</h4>
+      <p>
+        <code>unique (is_active) where is_active</code> permits exactly one active tournament
+        <em class="t">worldwide</em>. Recovr starting a game would deactivate another company's live match,
+        and their <code>/live</code> TV would silently switch to a tournament they've never heard of.
+      </p>
+    </div>
+
+    <div class="code">
+      <div class="code-bar"><span class="s-alert">breaking</span><span>&#183;</span><span>scope both to the org</span></div>
+      <pre><code><span class="c">-- players: drop the global unique, re-add it per-org</span>
+<span class="rm">alter table public.players drop constraint players_name_key;</span>
+create unique index players_org_name
+  on public.players (<span class="hl">org_id</span>, name);
+
+<span class="c">-- tournaments: schema.sql:52 — one active row GLOBALLY becomes one per org</span>
+<span class="rm">drop index if exists public.tournaments_one_active;</span>
+create unique index tournaments_one_active
+  on public.tournaments (<span class="hl">org_id</span>) where is_active;</code></pre>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ FIG 2 : sign-in ============ -->
+  <section>
+    <h3>The flow you asked about</h3>
+    <h2>How a workspace gets detected</h2>
+    <p class="lede">
+      Signing in with Slack yields an OIDC token carrying <code>https://slack.com/team_id</code>. One
+      indexed read against <code>orgs</code> decides whether you're joining a space that already exists or
+      being offered the chance to create it.
+    </p>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 1000 200" role="img" aria-label="Sign-in flow. Signing in with Slack returns an id_token containing a team_id, looked up against the unique slack_team_id index on the orgs table. On a match, a membership row is upserted and the user is in. With no match, the user is offered the chance to create their company's space, which inserts an org and membership then refreshes the session.">
+          <rect x="4" y="72" width="160" height="48" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="84" y="92" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" fill="currentColor">Sign in</text>
+          <text x="84" y="109" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" class="s-mute" fill="currentColor">with Slack</text>
+
+          <line x1="164" y1="96" x2="198" y2="96" stroke="currentColor" stroke-width="1" marker-end="url(#ar)" />
+          <text x="166" y="86" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-mute" fill="currentColor">id_token</text>
+
+          <rect x="204" y="72" width="176" height="48" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="292" y="92" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" fill="currentColor">team_id</text>
+          <text x="292" y="109" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" class="s-mute" fill="currentColor">T024BE7LD</text>
+
+          <line x1="380" y1="96" x2="414" y2="96" stroke="currentColor" stroke-width="1" marker-end="url(#ar)" />
+          <text x="382" y="86" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-mute" fill="currentColor">lookup</text>
+
+          <rect x="420" y="72" width="186" height="48" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" class="s-accent" />
+          <text x="513" y="92" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-accent" fill="currentColor">orgs.slack_team_id</text>
+          <text x="513" y="109" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" class="s-mute" fill="currentColor">unique index</text>
+
+          <polyline points="606,96 630,96 630,44 656,44" fill="none" stroke="currentColor" stroke-width="1.2" class="s-accent" marker-end="url(#ar)" />
+          <text x="636" y="62" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-accent" fill="currentColor">match</text>
+
+          <polyline points="606,96 630,96 630,150 656,150" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.65" marker-end="url(#ar)" />
+          <text x="636" y="140" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-mute" fill="currentColor">none</text>
+
+          <rect x="662" y="20" width="334" height="48" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" class="s-accent" />
+          <text x="678" y="40" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-accent" fill="currentColor">Your company has a space</text>
+          <text x="678" y="57" font-family="ui-monospace, Menlo, monospace" font-size="10.5" class="s-mute" fill="currentColor">upsert membership &#183; you're in</text>
+
+          <rect x="662" y="126" width="334" height="48" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5" />
+          <text x="678" y="146" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">Offer to create it</text>
+          <text x="678" y="163" font-family="ui-monospace, Menlo, monospace" font-size="10.5" class="s-mute" fill="currentColor">insert org + membership &#183; refreshSession()</text>
+        </svg>
+      </div>
+      <figcaption>
+        The <span class="s-accent">refreshSession()</span> on the lower path is not optional: that user's
+        JWT was minted before the org existed, so it carries no <code>org_id</code> claim. Skip it and their
+        very first write fails RLS with a confusing permission error.
+      </figcaption>
+    </figure>
+  </section>
+
+  <hr />
+
+  <!-- ============ PLAYERS ============ -->
+  <section>
+    <h3>Identity</h3>
+    <h2>Claimed players and guests</h2>
+    <p class="lede">
+      A player row with <code>auth_user_id</code> set has been claimed &mdash; name and avatar come from
+      Slack. Null means a hand-created guest: the intern, the client, whoever wandered past the table.
+      Claiming later is a single <code>update</code>, so an unclaimed player's Elo history survives the day
+      they finally sign in.
+    </p>
+
+    <div class="code">
+      <div class="code-bar"><span class="s-accent">new columns</span><span>&#183;</span><span>players</span></div>
+      <pre><code>alter table public.players
+  add column auth_user_id  uuid references auth.users(id) on delete set null,
+  add column slack_user_id text;   <span class="c">-- schema.sql has it; prod doesn't (db.ts:26)</span>
+
+create unique index players_org_auth
+  on public.players (org_id, auth_user_id)  where auth_user_id  is not null;
+create unique index players_org_slack
+  on public.players (org_id, slack_user_id) where slack_user_id is not null;</code></pre>
+    </div>
+
+    <div class="callout is-accent">
+      <h4>Incidental win</h4>
+      <p>
+        This retires the workaround at <code>db.ts:26</code> and <code>db.ts:44</code>, where
+        <code>slack_user_id</code> is stripped from every write because the production column never existed.
+      </p>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ FIG 3 : share token ============ -->
+  <section>
+    <h3>A correction to what I told you earlier</h3>
+    <h2>Why the share link has to be a token, not a header</h2>
+    <p class="lede">
+      I suggested carrying the <code>/live</code> and <code>/ref</code> share token in a request header.
+      That works for ordinary queries and fails for the one thing that matters most &mdash; the live
+      scoreboard. <code>current_setting('request.headers')</code> is a PostgREST mechanism, and Realtime
+      never goes through PostgREST; it authorizes on the WebSocket's own JWT.
+    </p>
+
+    <figure>
+      <div class="figbox">
+        <svg viewBox="0 0 1000 292" role="img" aria-label="Comparison of two share-token designs. In the rejected header approach the browser's REST reads succeed, but the Realtime WebSocket carries no header, so row-level security matches nothing and the live scoreboard never updates. In the chosen approach an edge function exchanges the share token for a scoped JWT, which both the REST path and the Realtime path present, so a single policy predicate covers both.">
+          <!-- ROW A : rejected -->
+          <text x="4" y="14" font-family="ui-monospace, Menlo, monospace" font-size="10.5" letter-spacing="1.3" class="s-alert" fill="currentColor">REJECTED &#183; TOKEN IN A REQUEST HEADER</text>
+
+          <rect x="4" y="28" width="150" height="84" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="79" y="64" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" fill="currentColor">TV browser</text>
+          <text x="79" y="81" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" class="s-mute" fill="currentColor">/live</text>
+
+          <line x1="154" y1="48" x2="222" y2="48" stroke="currentColor" stroke-width="1" marker-end="url(#ar)" />
+          <text x="158" y="40" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-mute" fill="currentColor">X-Share header</text>
+          <line x1="154" y1="92" x2="222" y2="92" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4" opacity="0.6" marker-end="url(#ar)" />
+          <text x="158" y="110" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-alert" fill="currentColor">no header possible</text>
+
+          <rect x="228" y="28" width="170" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="313" y="53" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">PostgREST</text>
+
+          <rect x="228" y="72" width="170" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="313" y="97" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">Realtime WS</text>
+
+          <line x1="398" y1="48" x2="440" y2="48" stroke="currentColor" stroke-width="1" marker-end="url(#ar)" />
+          <line x1="398" y1="92" x2="440" y2="92" stroke="currentColor" stroke-width="1" class="s-alert" marker-end="url(#ar)" />
+
+          <rect x="446" y="28" width="200" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" class="s-accent" />
+          <text x="546" y="53" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-accent" fill="currentColor">RLS matches &#10003;</text>
+
+          <rect x="446" y="72" width="200" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" class="s-alert" />
+          <text x="546" y="97" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-alert" fill="currentColor">RLS sees nothing</text>
+
+          <text x="668" y="76" font-family="ui-monospace, Menlo, monospace" font-size="12" class="s-alert" fill="currentColor">&#8594; the TV scoreboard</text>
+          <text x="668" y="95" font-family="ui-monospace, Menlo, monospace" font-size="12" class="s-alert" fill="currentColor">&#160;&#160;&#160;never updates</text>
+
+          <line x1="4" y1="140" x2="996" y2="140" stroke="currentColor" stroke-width="1" stroke-dasharray="5 9" opacity="0.3" />
+
+          <!-- ROW B : chosen -->
+          <text x="4" y="172" font-family="ui-monospace, Menlo, monospace" font-size="10.5" letter-spacing="1.3" class="s-accent" fill="currentColor">CHOSEN &#183; TOKEN EXCHANGED FOR A JWT</text>
+
+          <rect x="4" y="186" width="150" height="84" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="79" y="222" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" fill="currentColor">TV browser</text>
+          <text x="79" y="239" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" class="s-mute" fill="currentColor">/live</text>
+
+          <line x1="154" y1="228" x2="196" y2="228" stroke="currentColor" stroke-width="1" marker-end="url(#ar)" />
+          <text x="156" y="220" font-family="ui-monospace, Menlo, monospace" font-size="10" class="s-mute" fill="currentColor">share_token</text>
+
+          <rect x="202" y="207" width="176" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1" opacity="0.55" />
+          <text x="290" y="233" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" fill="currentColor">edge fn /share</text>
+
+          <line x1="378" y1="228" x2="420" y2="228" stroke="currentColor" stroke-width="1.2" class="s-accent" marker-end="url(#ar)" />
+
+          <rect x="426" y="207" width="180" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" class="s-accent" />
+          <text x="516" y="226" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-accent" fill="currentColor">scoped JWT</text>
+          <text x="516" y="241" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9.5" class="s-mute" fill="currentColor">org_id + scope:share &#183; expires</text>
+
+          <polyline points="606,228 626,228 626,196 652,196" fill="none" stroke="currentColor" stroke-width="1.2" class="s-accent" marker-end="url(#ar)" />
+          <polyline points="606,228 626,228 626,258 652,258" fill="none" stroke="currentColor" stroke-width="1.2" class="s-accent" marker-end="url(#ar)" />
+
+          <rect x="658" y="176" width="190" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" class="s-accent" />
+          <text x="753" y="201" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-accent" fill="currentColor">PostgREST &#10003;</text>
+
+          <rect x="658" y="238" width="190" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" class="s-accent" />
+          <text x="753" y="263" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-accent" fill="currentColor">Realtime &#10003;</text>
+
+          <text x="866" y="216" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-mute" fill="currentColor">one predicate,</text>
+          <text x="866" y="234" font-family="ui-monospace, Menlo, monospace" font-size="11.5" class="s-mute" fill="currentColor">both paths</text>
+        </svg>
+      </div>
+      <figcaption>
+        Exchanging the token for a JWT is strictly better than the header, not merely a workaround:
+        <code>current_org_id()</code> becomes the single tenancy predicate for members and the TV alike,
+        Realtime works untouched, and the link expires on its own instead of living forever in someone's
+        Slack history.
+      </figcaption>
+    </figure>
+
+    <div class="code">
+      <div class="code-bar"><span class="s-accent">new</span><span>&#183;</span><span>what a share session may write</span></div>
+      <pre><code>create or replace function public.current_scope() returns text
+language sql stable as $$
+  select coalesce(auth.jwt() -&gt; 'app_metadata' -&gt;&gt; 'scope', 'member')
+$$;
+
+<span class="c">-- /ref may score, but only on the org's currently-active tournament</span>
+create policy "share link scores" on public.matches for update
+  using (
+    org_id = public.current_org_id()
+    and (public.current_scope() <span class="hl">&lt;&gt;</span> 'share' or tournament_id in (
+      select id from public.tournaments
+       where org_id = public.current_org_id() and is_active
+    ))
+  );</code></pre>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ============ MIGRATION ORDER ============ -->
+  <section>
+    <h3>Sequence matters</h3>
+    <h2>Migration order</h2>
+    <p class="lede">
+      These steps are genuinely ordered. A <code>not null</code> before the backfill fails outright, and
+      dropping the old policies before the new ones exist leaves a window where the app is wide open.
+    </p>
+
+    <ol class="steps">
+      <li><div><b>Create <code>orgs</code> and <code>memberships</code></b><p>Insert the Recovr row with its real Slack team id. Nothing references them yet, so this step is inert.</p></div></li>
+      <li><div><b>Add <code>org_id</code> as nullable, with the default</b><p>Existing rows get null, new rows would get the claim. Still inert &mdash; no policy reads it yet.</p></div></li>
+      <li><div><b>Backfill every table to the Recovr org</b><p>Five <code>update &hellip; set org_id</code> statements. The one step with real data at stake; take a snapshot first.</p></div></li>
+      <li><div><b>Set <code>not null</code>, add the indexes</b><p>Only safe once the backfill has verifiably touched every row. Check for nulls before running it, don't assume.</p></div></li>
+      <li><div><b>Swap the two global constraints</b><p><code>players_name_key</code> and <code>tournaments_one_active</code>. There's a brief window where uniqueness isn't enforced, so do it inside one transaction.</p></div></li>
+      <li><div><b>Enable Slack OIDC and the token hook</b><p>Before the RLS change, so you can confirm a real session actually carries <code>org_id</code> &mdash; the one assumption I want proven rather than trusted.</p></div></li>
+      <li><div><b>Replace the policies, last</b><p>Drop <code>using (true)</code>, install the org predicate. This is the moment the app becomes private; everything before it is reversible.</p></div></li>
+    </ol>
+  </section>
+
+  <hr />
+
+  <!-- ============ OPEN ============ -->
+  <section>
+    <h3>Before this becomes a spec</h3>
+    <h2>Two things still open</h2>
+
+    <div class="split">
+      <div class="callout">
+        <h4>Unverified &#183; does team_id survive?</h4>
+        <p>
+          Slack's OIDC userinfo returns <code>https://slack.com/team_id</code>, but whether Supabase
+          persists that namespaced claim into <code>identity_data</code> is something I want to confirm
+          rather than assume. Fallback: read <code>provider_token</code> once after sign-in and ask Slack
+          directly.
+        </p>
+      </div>
+      <div class="callout">
+        <h4>Undecided &#183; column scoping</h4>
+        <p>
+          Postgres grants are per-role, not per-claim. Restricting a share session to
+          <em class="t">score columns only</em> means either a dedicated <code>share_scorer</code> role with
+          column-level grants, or a trigger. I lean role &mdash; it uses Postgres's own machinery instead of
+          a hand-rolled check.
+        </p>
+      </div>
+    </div>
+
+    <p class="end">Design draft &#183; not yet a spec &#183; option A</p>
+  </section>
+
+</div>
