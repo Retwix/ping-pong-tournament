@@ -1,5 +1,6 @@
 import {
   IconAlertCircle,
+  IconArrowsShuffle,
   IconBolt,
   IconCheck,
   IconCirclePlus,
@@ -20,7 +21,7 @@ import { DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from '../lib/chaos'
 import { createPlayer, createTournament } from '../lib/db'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { joueurRows, type JoueurRow } from '../lib/joueurs'
-import { nomPaire } from '../lib/doubles'
+import { melangerEquipes, nomPaire, tirerEquipes } from '../lib/doubles'
 import {
   aideCamp,
   choisirJoueurDouble,
@@ -30,6 +31,7 @@ import {
   pointsCible,
   recapitulatif,
   recapitulatifDouble,
+  recapitulatifHasard,
   retirerJoueurDouble,
   type SelectionDouble,
 } from '../lib/nouvellePartie'
@@ -54,6 +56,9 @@ function slugify(s: string, fallback: string): string {
 
 const PRESETS = [11, 21, 15]
 const SELECTION_DOUBLE_VIDE: SelectionDouble = { a: [], b: [], camp: 'A' }
+
+const rowsPour = (annuaire: JoueurRow[], ids: string[]): JoueurRow[] =>
+  ids.map((id) => annuaire.find((r) => r.id === id)).filter((r): r is JoueurRow => r !== undefined)
 
 interface Props {
   variant: 'game' | 'tournament'
@@ -99,14 +104,18 @@ export default function NouvellePartie({
   const [unranked, setUnranked] = useState(false)
   const [dbl, setDbl] = useState(false)
   const [selDouble, setSelDouble] = useState<SelectionDouble>(SELECTION_DOUBLE_VIDE)
+  const [hasard, setHasard] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const isDouble = isGame && dbl
+  // « Équipes au hasard » : the 4 players live in the flat pool, duos drawn at creation.
+  const isHasard = isDouble && hasard
 
   // The « Nouveau tournoi » variant has no doubles yet: drop the mode when leaving /game.
   useEffect(() => {
     if (!isGame) {
       setDbl(false)
+      setHasard(false)
       setSelDouble(SELECTION_DOUBLE_VIDE)
     }
   }, [isGame])
@@ -123,69 +132,80 @@ export default function NouvellePartie({
   }, [])
 
   const annuaire = useMemo(() => joueurRows(players, rows, events), [players, rows, events])
-  const selRows = useMemo(
-    () =>
-      selected
-        .map((id) => annuaire.find((r) => r.id === id))
-        .filter((r): r is JoueurRow => r !== undefined),
-    [selected, annuaire],
-  )
+  const selRows = useMemo(() => rowsPour(annuaire, selected), [selected, annuaire])
   const teamRows = useMemo(
     () => ({
-      a: selDouble.a
-        .map((id) => annuaire.find((r) => r.id === id))
-        .filter((r): r is JoueurRow => r !== undefined),
-      b: selDouble.b
-        .map((id) => annuaire.find((r) => r.id === id))
-        .filter((r): r is JoueurRow => r !== undefined),
+      a: rowsPour(annuaire, selDouble.a),
+      b: rowsPour(annuaire, selDouble.b),
     }),
     [selDouble, annuaire],
   )
   const available = useMemo(
     () =>
       annuaire.filter((r) =>
-        isDouble
+        isDouble && !hasard
           ? !selDouble.a.includes(r.id) && !selDouble.b.includes(r.id)
           : !selected.includes(r.id),
       ),
-    [annuaire, isDouble, selDouble, selected],
+    [annuaire, isDouble, hasard, selDouble, selected],
   )
   const visible = useMemo(() => filterJoueurs(available, query), [available, query])
 
   const nDouble = selDouble.a.length + selDouble.b.length
-  const gameFull = isGame && (isDouble ? nDouble >= 4 : selRows.length >= 2)
+  const gameFull =
+    isGame && (isDouble ? (hasard ? selRows.length >= 4 : nDouble >= 4) : selRows.length >= 2)
   const target = pointsCible(preset, autre)
   const selDoubleNoms: SelectionDouble = {
     a: teamRows.a.map((r) => r.name),
     b: teamRows.b.map((r) => r.name),
     camp: selDouble.camp,
   }
-  const recap = isDouble
-    ? recapitulatifDouble(selDoubleNoms, target)
-    : recapitulatif({
-        variant,
-        format,
-        selected: selRows.map((r) => r.name),
-        name,
-        target,
-      })
+  const recap = isHasard
+    ? recapitulatifHasard(selRows.length, target)
+    : isDouble
+      ? recapitulatifDouble(selDoubleNoms, target)
+      : recapitulatif({
+          variant,
+          format,
+          selected: selRows.map((r) => r.name),
+          name,
+          target,
+        })
   // Doubles have no pair Elo in v1: the enjeu is locked on « Non classée ».
   const unrankedEffectif = isDouble || unranked
 
   const basculerMode = (double: boolean) => {
     if (double === dbl) return
     setDbl(double)
+    setHasard(false)
     setSelected([])
     setSelDouble(SELECTION_DOUBLE_VIDE)
   }
 
+  // Toggling the draw mode keeps everyone picked: pool ↔ camps (A first, then B).
+  const basculerHasard = (on: boolean) => {
+    if (on === hasard) return
+    if (on) {
+      setSelected([...selDouble.a, ...selDouble.b])
+      setSelDouble(SELECTION_DOUBLE_VIDE)
+    } else {
+      setSelDouble({
+        a: selected.slice(0, 2),
+        b: selected.slice(2, 4),
+        camp: selected.length >= 2 ? 'B' : 'A',
+      })
+      setSelected([])
+    }
+    setHasard(on)
+  }
+
   const add = (id: string) => {
     if (gameFull) return
-    if (isDouble) setSelDouble((s) => choisirJoueurDouble(s, id))
+    if (isDouble && !hasard) setSelDouble((s) => choisirJoueurDouble(s, id))
     else setSelected((s) => [...s, id])
   }
   const remove = (id: string) => {
-    if (isDouble) setSelDouble((s) => retirerJoueurDouble(s, id))
+    if (isDouble && !hasard) setSelDouble((s) => retirerJoueurDouble(s, id))
     else setSelected((s) => s.filter((x) => x !== id))
   }
 
@@ -217,17 +237,21 @@ export default function NouvellePartie({
     setCreating(true)
     setCreateError(null)
     try {
+      // Doubles: manual camps as picked, or drawn here — the surprise revealed on the scorer.
+      const [equipeA, equipeB] = isHasard
+        ? tirerEquipes(selected, Math.random)
+        : [selDouble.a, selDouble.b]
+      const paireA = nomPaire(rowsPour(annuaire, equipeA).map((r) => r.name))
+      const paireB = nomPaire(rowsPour(annuaire, equipeB).map((r) => r.name))
       const id = await createTournament(
-        recap.autoName,
-        isDouble
-          ? [nomPaire(selDoubleNoms.a), nomPaire(selDoubleNoms.b)]
-          : selRows.map((r) => r.name),
+        isDouble ? `${paireA} vs ${paireB}` : recap.autoName,
+        isDouble ? [paireA, paireB] : selRows.map((r) => r.name),
         target,
         isGame ? 'game' : 'tournament',
         isGame ? 'round_robin' : format,
         chaos,
         unrankedEffectif,
-        isDouble ? [selDouble.a, selDouble.b] : null,
+        isDouble ? [equipeA, equipeB] : null,
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
       void inviteToSlack(id)
@@ -238,7 +262,8 @@ export default function NouvellePartie({
     }
   }
 
-  const canPoster = isGame ? recap.valid : true
+  // No poster in draw mode: the duos don't exist until « Lancer la partie ».
+  const canPoster = isGame ? recap.valid && !isHasard : true
 
   const downloadPoster = async () => {
     if (!canPoster || posterBusy) return
@@ -272,7 +297,7 @@ export default function NouvellePartie({
       : 'Élimination directe · nouveau tournoi'
   const countPill = isGame
     ? isDouble
-      ? `${nDouble} / 4`
+      ? `${hasard ? selRows.length : nDouble} / 4`
       : `${selRows.length} / 2`
     : selRows.length === 1
       ? '1 joueur'
@@ -491,14 +516,43 @@ export default function NouvellePartie({
               )}
             </div>
 
-            {isDouble ? (
+            {isDouble && (
+              <button
+                className="np-legend np-hasard"
+                aria-pressed={hasard}
+                onClick={() => basculerHasard(!hasard)}
+              >
+                <span className="np-legend-text">
+                  <span className="np-legend-title">Équipes au hasard</span>
+                  <span className="np-legend-desc">
+                    Les duos seront tirés au sort au lancement.
+                  </span>
+                </span>
+                <span className={`np-sw np-sw-sm${hasard ? ' on' : ''}`}>
+                  <span className="np-sw-knob" />
+                </span>
+              </button>
+            )}
+
+            {isDouble && !hasard ? (
               <>
                 <div className="np-teams">
                   {carteEquipe('A')}
                   <div className="np-vs">vs</div>
                   {carteEquipe('B')}
                 </div>
-                <div className="np-camp-hint">{aideCamp(selDouble)}</div>
+                <div className="np-camp-row">
+                  <span className="np-camp-hint">{aideCamp(selDouble)}</span>
+                  <button
+                    className="np-melanger"
+                    disabled={!gameFull}
+                    title={gameFull ? undefined : 'Choisis d’abord les 4 joueurs'}
+                    onClick={() => setSelDouble((s) => melangerEquipes(s, Math.random))}
+                  >
+                    <IconArrowsShuffle size={15} stroke={2.1} />
+                    Mélanger
+                  </button>
+                </div>
               </>
             ) : (
               <div className="np-sel">
@@ -518,9 +572,11 @@ export default function NouvellePartie({
                 ))}
                 {selRows.length === 0 && (
                   <div className="np-empty-sel">
-                    {isGame
-                      ? 'Aucun joueur — choisis-en 2 ci-dessous.'
-                      : 'Aucun joueur — choisis-les ci-dessous.'}
+                    {isDouble
+                      ? 'Aucun joueur — choisis-en 4 ci-dessous.'
+                      : isGame
+                        ? 'Aucun joueur — choisis-en 2 ci-dessous.'
+                        : 'Aucun joueur — choisis-les ci-dessous.'}
                   </div>
                 )}
               </div>
@@ -536,7 +592,9 @@ export default function NouvellePartie({
                 </span>
                 <button
                   className="np-clear"
-                  onClick={() => (isDouble ? setSelDouble(SELECTION_DOUBLE_VIDE) : setSelected([]))}
+                  onClick={() =>
+                    isDouble && !hasard ? setSelDouble(SELECTION_DOUBLE_VIDE) : setSelected([])
+                  }
                 >
                   Tout retirer
                 </button>
@@ -861,7 +919,13 @@ export default function NouvellePartie({
               </button>
               <button
                 className={`np-poster${posterBusy ? ' busy' : canPoster ? '' : ' off'}`}
-                title={canPoster ? undefined : 'Choisis d’abord les joueurs'}
+                title={
+                  canPoster
+                    ? undefined
+                    : isHasard
+                      ? 'Les équipes sont tirées au sort au lancement.'
+                      : 'Choisis d’abord les joueurs'
+                }
                 onClick={downloadPoster}
               >
                 {!posterBusy && <IconDownload size={16} stroke={2.1} />}

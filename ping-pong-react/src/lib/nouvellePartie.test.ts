@@ -3,6 +3,7 @@ import {
   aideCamp,
   choisirJoueurDouble,
   estDoublon,
+  recapitulatifHasard,
   filterJoueurs,
   noteEnjeu,
   pointsCible,
@@ -355,6 +356,38 @@ describe('retirerJoueurDouble', () => {
     const sel = getSelDouble({ a: ['Léo', 'Inès'] })
     retirerJoueurDouble(sel, 'Léo')
     expect(sel).toEqual(getSelDouble({ a: ['Léo', 'Inès'] }))
+  })
+})
+
+describe('récapitulatif — équipes au hasard', () => {
+  it('asks for 4 players and shows the count while nobody is picked', () => {
+    expect(recapitulatifHasard(0, 11)).toEqual({
+      autoName: 'Partie en double',
+      hint: 'Choisis 4 joueurs — les équipes seront tirées au sort. Joueurs : 0/4.',
+      valid: false,
+    })
+  })
+
+  it('counts the picked players in the hint', () => {
+    expect(recapitulatifHasard(2, 11).hint).toBe(
+      'Choisis 4 joueurs — les équipes seront tirées au sort. Joueurs : 2/4.',
+    )
+  })
+
+  it('stays invalid at 3 players', () => {
+    expect(recapitulatifHasard(3, 11).valid).toBe(false)
+  })
+
+  it('validates at exactly 4 players and echoes the target', () => {
+    expect(recapitulatifHasard(4, 21)).toEqual({
+      autoName: 'Partie en double',
+      hint: '4 joueurs · équipes au hasard · jeu en 21',
+      valid: true,
+    })
+  })
+
+  it('rejects an overfull selection defensively', () => {
+    expect(recapitulatifHasard(5, 11).valid).toBe(false)
   })
 })
 
