@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Match } from '../types'
-import { finalStandings, type PlayerRating } from './finalStandings'
+import {
+	finalStandings,
+	podiumOrder,
+	type FinalStandingRow,
+	type PlayerRating,
+} from './finalStandings'
 
 /** A finished round-robin match; override only what the case is about. */
 function match(over: Partial<Match>): Match {
@@ -445,5 +450,44 @@ describe('finalStandings — double elimination', () => {
 
 		expect([...rows.map((r) => r.name)].sort()).toEqual(['Léo', 'Marc', 'Sophie'])
 		expect(rows.map((r) => r.place)).toEqual([1, 2, 3])
+	})
+})
+
+/** A classement row; only the fields the podium reads matter here. */
+function standingRow(place: number, name: string): FinalStandingRow {
+	return {
+		place,
+		name,
+		wins: 0,
+		losses: 0,
+		diff: 0,
+		elo: null,
+		eloDelta: null,
+		provisional: false,
+		exAequo: false,
+	}
+}
+
+function classement(...names: string[]): FinalStandingRow[] {
+	return names.map((name, i) => standingRow(i + 1, name))
+}
+
+describe('podiumOrder', () => {
+	it('puts the champion in the middle, silver left and bronze right', () => {
+		const steps = podiumOrder(classement('Léo', 'Marc', 'Sophie'))
+
+		expect(steps.map((r) => r.name)).toEqual(['Marc', 'Léo', 'Sophie'])
+	})
+
+	it('leaves everyone below third off the podium', () => {
+		const steps = podiumOrder(classement('Léo', 'Marc', 'Sophie', 'Nina', 'Tom'))
+
+		expect(steps.map((r) => r.place)).toEqual([2, 1, 3])
+	})
+
+	it('shows only the steps there are players for, rather than empty slots', () => {
+		expect(podiumOrder(classement('Léo', 'Marc')).map((r) => r.name)).toEqual(['Marc', 'Léo'])
+		expect(podiumOrder(classement('Léo')).map((r) => r.name)).toEqual(['Léo'])
+		expect(podiumOrder([])).toEqual([])
 	})
 })

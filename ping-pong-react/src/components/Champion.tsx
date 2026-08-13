@@ -1,4 +1,4 @@
-import { finalStandings, type FinalStandingRow } from "../lib/finalStandings";
+import { finalStandings, podiumOrder, type FinalStandingRow } from "../lib/finalStandings";
 import { signed } from "../lib/format";
 import type { LookUpPlayer } from "../lib/playerLookup";
 import type { TournamentRating } from "../hooks/useRatingDeltas";
@@ -17,17 +17,10 @@ interface Props {
 	onNew: () => void;
 }
 
-/** Podium steps, tallest in the middle: silver, gold, bronze. */
-const PODIUM_ORDER = [1, 0, 2];
-
 function Podium({ rows, look }: { rows: FinalStandingRow[]; look: LookUpPlayer }) {
-	// Only ever as many steps as there are players — never an empty placeholder.
-	const steps = PODIUM_ORDER.filter((i) => i < rows.length);
 	return (
 		<div className="tk-podium">
-			{steps.map((i) => {
-				const row = rows[i];
-				if (row === undefined) return null;
+			{podiumOrder(rows).map((row) => {
 				const { team, url } = look(row.name);
 				return (
 					<div key={row.name} className={`pod pod--${row.place}`}>

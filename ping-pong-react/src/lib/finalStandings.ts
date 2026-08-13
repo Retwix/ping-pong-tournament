@@ -133,3 +133,17 @@ export function finalStandings({ players, matches, format, ratings }: Options): 
 		}
 	})
 }
+
+/** Podium steps, tallest in the middle: silver, gold, bronze. */
+const PODIUM_ORDER = [1, 0, 2]
+
+/**
+ * The top three of a classement in podium order, so the champion stands in the
+ * middle. Short rosters simply get fewer steps — never an empty placeholder.
+ */
+export function podiumOrder(rows: FinalStandingRow[]): FinalStandingRow[] {
+	return PODIUM_ORDER.flatMap((i) => {
+		const row = rows[i]
+		return row === undefined ? [] : [row]
+	})
+}
