@@ -2484,12 +2484,16 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
   transition: background 160ms var(--ease), color 160ms var(--ease);
 }
 .st-seg-opt:hover { color: #4a2aa4; }
+.st-seg-opt:disabled { color: #c0bbcc; cursor: not-allowed; }
+.st-seg-opt:disabled:hover { color: #c0bbcc; }
 .st-seg-opt.active {
   font-weight: 700; background: #fff; color: #4a2aa4; cursor: default;
   box-shadow: 0 2px 8px rgba(32, 10, 66, 0.05);
 }
 [data-theme='dark'] .st-seg-opt { color: #a99fc4; }
 [data-theme='dark'] .st-seg-opt:hover { color: #c9b8ff; }
+[data-theme='dark'] .st-seg-opt:disabled { color: #6b6386; }
+[data-theme='dark'] .st-seg-opt:disabled:hover { color: #6b6386; }
 [data-theme='dark'] .st-seg-opt.active { background: #1e1138; color: #c9b8ff; }
 .st-spacer { flex: 1; }
 .st-reset {

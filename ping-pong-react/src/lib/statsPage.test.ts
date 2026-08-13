@@ -5,6 +5,7 @@ import type { Player } from '../types'
 import {
   DEFAULT_LEADERBOARD_SORT,
   PERIOD_OPTIONS,
+  isPeriodAvailable,
   TYPE_OPTIONS,
   abbrev,
   activityDays,
@@ -1442,5 +1443,23 @@ describe('« Cette semaine » window boundaries', () => {
   it('drops a match played at the next Monday midnight', () => {
     const next = getMockMatch({ id: 'next', ended_at: new Date(2026, 6, 20).toISOString() })
     expect(scopeMatches([next], [getMockTournament()], semaine, NOW)).toEqual([])
+  })
+})
+
+describe('isPeriodAvailable', () => {
+  it('offers « Cette saison » only once a season is running', () => {
+    expect(isPeriodAvailable('saison', new Date(2026, 9, 15))).toBe(true)
+    expect(isPeriodAvailable('saison', new Date(2026, 7, 15))).toBe(false)
+  })
+
+  it('is true on the very first day of the very first season', () => {
+    expect(isPeriodAvailable('saison', new Date(2026, 8, 1))).toBe(true)
+  })
+
+  it('never withholds the periods that do not depend on a season', () => {
+    const before = new Date(2026, 7, 15)
+    expect(isPeriodAvailable('tout', before)).toBe(true)
+    expect(isPeriodAvailable('mois', before)).toBe(true)
+    expect(isPeriodAvailable('semaine', before)).toBe(true)
   })
 })

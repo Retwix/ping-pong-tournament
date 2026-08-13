@@ -39,6 +39,15 @@ export const TYPE_OPTIONS: ReadonlyArray<{ value: StatsType; label: string }> = 
   { value: 'rapides', label: 'Parties rapides' },
 ]
 
+/**
+ * Whether a period can be chosen right now. « Cette saison » is shown before
+ * 1 September but not selectable: hiding it made people ask for a filter that
+ * already existed, and a greyed chip answers the question the absent one raised.
+ */
+export function isPeriodAvailable(period: StatsPeriod, now: Date): boolean {
+  return period !== 'saison' || currentSeason(now) !== null
+}
+
 const periodLabel = (p: StatsPeriod): string =>
   PERIOD_OPTIONS.find((o) => o.value === p)?.label ?? p
 

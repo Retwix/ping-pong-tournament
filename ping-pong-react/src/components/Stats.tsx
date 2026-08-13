@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { IconX } from '@tabler/icons-react'
 import { useStats } from '../hooks/useStats'
-import { currentSeason } from '../lib/seasons'
+import { SEASONS_START } from '../lib/seasons'
 import {
   computeHeadToHead,
   computePlayerStats,
@@ -15,6 +15,7 @@ import {
 import {
   DEFAULT_LEADERBOARD_SORT,
   PERIOD_OPTIONS,
+  isPeriodAvailable,
   TYPE_OPTIONS,
   abbrev,
   activityDays,
@@ -77,12 +78,9 @@ export default function Stats({
 
   const now = useMemo(() => new Date(), [matches])
 
-  // No season is running before 1 Sep 2026, so the chip would open a permanently
-  // empty view. Offer it only once there is a season to scope to.
-  const periodOptions = useMemo(
-    () => PERIOD_OPTIONS.filter((o) => o.value !== 'saison' || currentSeason(now) !== null),
-    [now],
-  )
+  // « Cette saison » is shown before 1 September but greyed: the whole control
+  // stays legible, and nobody can land on a window that has not opened yet.
+  const seasonStart = SEASONS_START.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
   const scoped = useMemo(
     () => scopeMatches(matches, tournaments, filters, now),
     [matches, tournaments, filters, now],
@@ -221,15 +219,20 @@ export default function Stats({
         <div className="st-seg-group">
           <span className="st-seg-label">Période</span>
           <div className="st-seg">
-            {periodOptions.map((o) => (
-              <button
-                key={o.value}
-                className={`st-seg-opt${filters.period === o.value ? ' active' : ''}`}
-                onClick={() => onFiltersChange({ ...filters, period: o.value })}
-              >
-                {o.label}
-              </button>
-            ))}
+            {PERIOD_OPTIONS.map((o) => {
+              const available = isPeriodAvailable(o.value, now)
+              return (
+                <button
+                  key={o.value}
+                  className={`st-seg-opt${available && filters.period === o.value ? ' active' : ''}`}
+                  disabled={!available}
+                  title={available ? undefined : `À partir du ${seasonStart}`}
+                  onClick={() => onFiltersChange({ ...filters, period: o.value })}
+                >
+                  {o.label}
+                </button>
+              )
+            })}
           </div>
         </div>
         <div className="st-seg-group">
