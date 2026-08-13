@@ -1013,6 +1013,7 @@ describe('mutation hardening', () => {
   it('exposes the exact segmented-control options', () => {
     expect(PERIOD_OPTIONS).toEqual([
       { value: 'tout', label: 'Tout' },
+      { value: 'saison', label: 'Cette saison' },
       { value: 'mois', label: 'Ce mois-ci' },
       { value: 'semaine', label: 'Cette semaine' },
     ])
@@ -1360,5 +1361,86 @@ describe('filter labels', () => {
       '1 match · ce mois-ci · tournois',
     )
     expect(scopeLabel(0, getFilters({ type: 'rapides' }))).toBe('0 match · tout · parties rapides')
+  })
+})
+
+describe('« Cette saison » period', () => {
+  it('offers the periods widest to narrowest, season second', () => {
+    expect(PERIOD_OPTIONS.map((o) => o.value)).toEqual(['tout', 'saison', 'mois', 'semaine'])
+  })
+
+  it('round-trips through the URL', () => {
+    expect(parseStatsFilters('?p=saison').period).toBe('saison')
+    expect(statsSearch({ period: 'saison', type: 'tout' })).toBe('?p=saison')
+  })
+
+  it('rejects an unknown period', () => {
+    expect(parseStatsFilters('?p=nawak').period).toBe('tout')
+  })
+
+  it('filters to the season window, not a rolling ninety days', () => {
+    const now = new Date(2026, 9, 15)
+    const inside = getMockMatch({ id: 'in', ended_at: new Date(2026, 8, 2).toISOString() })
+    const recentButPreSeason = getMockMatch({
+      id: 'out',
+      ended_at: new Date(2026, 7, 20).toISOString(),
+    })
+    const kept = scopeMatches(
+      [inside, recentButPreSeason],
+      [getMockTournament()],
+      { period: 'saison', type: 'tout' },
+      now,
+    )
+    expect(kept.map((m) => m.id)).toEqual(['in'])
+  })
+
+  it('stops at the season boundary rather than running on into the next one', () => {
+    const now = new Date(2026, 9, 15)
+    const nextSeason = getMockMatch({ id: 'next', ended_at: new Date(2026, 11, 2).toISOString() })
+    expect(
+      scopeMatches([nextSeason], [getMockTournament()], { period: 'saison', type: 'tout' }, now),
+    ).toEqual([])
+  })
+
+  it('keeps nothing before the first season starts', () => {
+    const now = new Date(2026, 7, 15)
+    const m = getMockMatch({ ended_at: new Date(2026, 7, 1).toISOString() })
+    expect(
+      scopeMatches([m], [getMockTournament()], { period: 'saison', type: 'tout' }, now),
+    ).toEqual([])
+  })
+})
+
+describe('« Cette saison » window boundaries', () => {
+  const now = new Date(2026, 9, 15)
+  const saison = { period: 'saison', type: 'tout' } as const
+
+  it('keeps a match played at the opening midnight', () => {
+    const opener = getMockMatch({ id: 'opener', ended_at: new Date(2026, 8, 1).toISOString() })
+    expect(scopeMatches([opener], [getMockTournament()], saison, now).map((m) => m.id)).toEqual([
+      'opener',
+    ])
+  })
+
+  it('drops a match played at the closing midnight — that one belongs to winter', () => {
+    const closer = getMockMatch({ id: 'closer', ended_at: new Date(2026, 11, 1).toISOString() })
+    expect(scopeMatches([closer], [getMockTournament()], saison, now)).toEqual([])
+  })
+})
+
+describe('« Cette semaine » window boundaries', () => {
+  // NOW is Wednesday 15 July 2026, so the week runs Monday 13th → Monday 20th.
+  const semaine = { period: 'semaine', type: 'tout' } as const
+
+  it('keeps a match played at Monday midnight', () => {
+    const monday = getMockMatch({ id: 'monday', ended_at: new Date(2026, 6, 13).toISOString() })
+    expect(scopeMatches([monday], [getMockTournament()], semaine, NOW).map((m) => m.id)).toEqual([
+      'monday',
+    ])
+  })
+
+  it('drops a match played at the next Monday midnight', () => {
+    const next = getMockMatch({ id: 'next', ended_at: new Date(2026, 6, 20).toISOString() })
+    expect(scopeMatches([next], [getMockTournament()], semaine, NOW)).toEqual([])
   })
 })

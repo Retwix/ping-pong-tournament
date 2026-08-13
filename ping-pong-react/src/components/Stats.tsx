@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { IconX } from '@tabler/icons-react'
 import { useStats } from '../hooks/useStats'
+import { currentSeason } from '../lib/seasons'
 import {
   computeHeadToHead,
   computePlayerStats,
@@ -75,6 +76,13 @@ export default function Stats({
   const [tip, setTip] = useState<number | null>(null)
 
   const now = useMemo(() => new Date(), [matches])
+
+  // No season is running before 1 Sep 2026, so the chip would open a permanently
+  // empty view. Offer it only once there is a season to scope to.
+  const periodOptions = useMemo(
+    () => PERIOD_OPTIONS.filter((o) => o.value !== 'saison' || currentSeason(now) !== null),
+    [now],
+  )
   const scoped = useMemo(
     () => scopeMatches(matches, tournaments, filters, now),
     [matches, tournaments, filters, now],
@@ -213,7 +221,7 @@ export default function Stats({
         <div className="st-seg-group">
           <span className="st-seg-label">Période</span>
           <div className="st-seg">
-            {PERIOD_OPTIONS.map((o) => (
+            {periodOptions.map((o) => (
               <button
                 key={o.value}
                 className={`st-seg-opt${filters.period === o.value ? ' active' : ''}`}
