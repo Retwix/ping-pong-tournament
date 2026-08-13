@@ -493,8 +493,10 @@ export default function Ratings({
                   )}
                 </div>
                 <p className="cl-note">
-                  Un joueur entre au classement après {RATING.provisionalGames} matchs. Avant cela,
-                  son Elo provisoire s'affiche en gris.
+                  Un joueur apparaît au classement dès son premier match. En dessous de{' '}
+                  {RATING.provisionalGames} parties son Elo est « provisoire » et s'affiche en gris
+                  — et il faut {RATING.provisionalGames} parties dans la saison pour pouvoir être
+                  sacré champion.
                 </p>
               </section>
             </div>
