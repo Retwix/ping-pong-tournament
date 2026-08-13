@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  .st-l{
+    --ink:#17082B; --body:#4A4458; --muted:#847E96; --faint:#A49EB3;
+    --card:#FFFFFF; --card2:#FBF9FF; --line:#E8E4F2; --div:#F0ECF9; --tint:#F2EFFB; --lav:#E4DDF8;
+    --purple:#4A2AA4; --purple2:#8663E9; --coral:#D74251; --coralbg:#FEE7EE;
+    --green:#2BA572; --greenbg:#E4F5EE; --red:#E54C4C; --redbg:#FDEAEA; --gold:#E8B53A;
+    --glass:rgba(255,255,255,.82); --headbg:radial-gradient(120% 100% at 0% 0%, #E4DDF8 0%, transparent 55%), radial-gradient(120% 100% at 100% 0%, #FEE7EE 0%, transparent 55%), #FBFAFF;
+    --sh-sm:0 2px 8px rgba(32,10,66,.05); --sh-md:0 8px 24px rgba(32,10,66,.07); --sh-lg:0 14px 34px rgba(32,10,66,.14);
+  }
+  .st-d{
+    --ink:#FFFFFF; --body:#CFC6E6; --muted:#A99FC4; --faint:#8B82A8;
+    --card:#1E1138; --card2:#241543; --line:rgba(255,255,255,.08); --div:rgba(255,255,255,.06); --tint:rgba(255,255,255,.06); --lav:rgba(139,110,233,.28);
+    --purple:#C9B8FF; --purple2:#8B6EE9; --coral:#FF7A85; --coralbg:rgba(215,66,81,.18);
+    --green:#4BD69B; --greenbg:rgba(43,165,114,.18); --red:#FF7676; --redbg:rgba(229,76,76,.18); --gold:#F0C84B;
+    --glass:rgba(28,14,54,.78); --headbg:radial-gradient(120% 100% at 0% 0%, #2A1550 0%, transparent 55%), radial-gradient(120% 100% at 100% 0%, #3A1636 0%, transparent 55%), #170A31;
+    --sh-sm:0 3px 12px rgba(0,0,0,.3); --sh-md:0 10px 26px rgba(0,0,0,.36); --sh-lg:0 16px 40px rgba(0,0,0,.46);
+  }
+  .strow{ transition:background 160ms cubic-bezier(.2,.7,.2,1) }
+  .strow:hover{ background:var(--tint) !important; cursor:pointer }
+  .stcard{ transition:transform 160ms cubic-bezier(.2,.7,.2,1), box-shadow 160ms cubic-bezier(.2,.7,.2,1) }
+  .stcard:hover{ transform:translateY(-2px); box-shadow:var(--sh-lg) !important }
+  .sth{ cursor:pointer; user-select:none } .sth:hover{ color:var(--purple) !important }
+  .stscroll::-webkit-scrollbar{ height:8px } .stscroll::-webkit-scrollbar-thumb{ background:var(--lav); border-radius:8px }
+  @keyframes stpop{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
+</style>
+</helmet>
+
+<div class="{{ themeClass }}" style="font-family:'Outfit',sans-serif">
+
+  <!-- PAGE TITLE -->
+  <div style="display:flex; align-items:flex-end; gap:20px; margin-top:16px">
+    <div style="flex:1; min-width:0">
+      <div style="font:800 32px/1 'Outfit'; letter-spacing:-.02em; color:var(--ink)">Les stats</div>
+      <div style="margin-top:7px; font:600 14px 'DM Sans'; color:var(--muted)">Toutes les parties terminées, parties rapides et tournois cumulés.</div>
+    </div>
+    <div onClick="{{ goRank }}" style="flex:none; display:inline-flex; align-items:center; gap:7px; font:700 13px 'Outfit'; color:var(--purple); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 15px; box-shadow:var(--sh-sm); cursor:pointer">Voir le classement Elo →</div>
+  </div>
+
+  <!-- FILTERS -->
+  <div style="position:sticky; top:82px; z-index:30; margin-top:18px; padding:10px 14px; background:var(--glass); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:1px solid var(--line); border-radius:14px; box-shadow:var(--sh-sm)">
+    <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap">
+      <div style="display:flex; align-items:center; gap:9px">
+        <div style="font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Période</div>
+        <div style="display:flex; gap:3px; background:var(--tint); border-radius:11px; padding:3px">
+          <sc-for list="{{ periodOpts }}" as="o" hint-placeholder-count="3"><div onClick="{{ o.pick }}" style="font:600 12.5px 'Outfit'; padding:7px 13px; border-radius:9px; cursor:pointer; background:{{ o.bg }}; color:{{ o.fg }}; box-shadow:{{ o.sh }}">{{ o.label }}</div></sc-for>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:9px">
+        <div style="font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Type</div>
+        <div style="display:flex; gap:3px; background:var(--tint); border-radius:11px; padding:3px">
+          <sc-for list="{{ typeOpts }}" as="o" hint-placeholder-count="3"><div onClick="{{ o.pick }}" style="font:600 12.5px 'Outfit'; padding:7px 13px; border-radius:9px; cursor:pointer; background:{{ o.bg }}; color:{{ o.fg }}; box-shadow:{{ o.sh }}">{{ o.label }}</div></sc-for>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <sc-if value="{{ filtered }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ resetFilters }}" style="display:inline-flex; align-items:center; gap:8px; font:600 12px 'Outfit'; color:var(--coral); background:var(--coralbg); border-radius:999px; padding:7px 13px; cursor:pointer">
+          <span style="width:7px; height:7px; border-radius:50%; background:var(--coral)"></span>{{ filterLabel }}<span style="opacity:.65">✕</span>
+        </div>
+      </sc-if>
+      <div style="font:600 12.5px 'DM Sans'; color:var(--muted)">{{ scopeLabel }}</div>
+    </div>
+  </div>
+
+  <!-- FILTERED-TO-EMPTY -->
+  <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top:18px; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:70px 24px; text-align:center; box-shadow:var(--sh-md)">
+      <div style="font-size:38px">🏓</div>
+      <div style="margin-top:14px; font:800 22px 'Outfit'; color:var(--ink)">Aucun match sur ce filtre</div>
+      <div style="margin-top:8px; font:500 14px 'DM Sans'; color:var(--muted)">Aucun tournoi terminé cette semaine. Essaie une autre période ou reviens à la vue complète.</div>
+      <div onClick="{{ resetFilters }}" style="display:inline-block; margin-top:20px; font:600 14px 'Outfit'; color:#fff; background:#4A2AA4; border-radius:12px; padding:11px 20px; box-shadow:0 12px 30px rgba(74,42,164,.28); cursor:pointer">Réinitialiser les filtres</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasData }}" hint-placeholder-val="{{ true }}">
+  <div>
+
+    <!-- KPI STRIP -->
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:18px">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <div class="stcard" style="background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; box-shadow:var(--sh-sm)">
+          <div style="font:700 10.5px 'Outfit'; letter-spacing:.09em; text-transform:uppercase; color:var(--faint)">{{ k.label }}</div>
+          <div style="margin-top:8px; font:800 34px/1 'Outfit'; letter-spacing:-.02em; color:var(--ink)">{{ k.value }}<span style="font:700 15px 'DM Sans'; color:var(--muted)"> {{ k.unit }}</span></div>
+          <div style="margin-top:7px; font:600 11.5px 'DM Sans'; color:{{ k.subColor }}">{{ k.sub }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div style="display:grid; grid-template-columns:1fr 300px; gap:14px; margin-top:14px">
+      <div style="position:relative; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px 22px 16px; box-shadow:var(--sh-sm)">
+        <div style="display:flex; align-items:baseline; justify-content:space-between">
+          <div style="font:800 17px 'Outfit'; color:var(--ink)">Activité</div>
+          <div style="font:600 12px 'DM Sans'; color:var(--muted)">matchs par jour · {{ chartRange }}</div>
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:5px; height:168px; margin-top:18px">
+          <sc-for list="{{ days }}" as="d" hint-placeholder-count="22">
+            <div onMouseEnter="{{ d.enter }}" onMouseLeave="{{ d.leave }}" style="flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%">
+              <div style="width:100%; height:{{ d.h }}px; border-radius:6px 6px 0 0; background:{{ d.bg }}"></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:9px; font:600 10.5px 'DM Sans'; color:var(--faint)">
+          <div>{{ axisA }}</div><div>{{ axisB }}</div><div>{{ axisC }}</div>
+        </div>
+        <sc-if value="{{ tip }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; top:52px; left:{{ tip.x }}%; transform:translateX(-50%); background:var(--ink); color:var(--card); border-radius:10px; padding:8px 11px; box-shadow:var(--sh-md); pointer-events:none">
+            <div style="font:700 12px 'Outfit'">{{ tip.date }}</div>
+            <div style="font:600 11px 'DM Sans'; opacity:.8">{{ tip.count }} matchs</div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px 22px 16px; box-shadow:var(--sh-sm)">
+        <div style="font:800 17px 'Outfit'; color:var(--ink)">Par jour de semaine</div>
+        <div style="margin-top:4px; font:600 12px 'DM Sans'; color:var(--muted)">quand on joue vraiment</div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px">
+          <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="5">
+            <div style="display:flex; align-items:center; gap:10px">
+              <div style="width:28px; font:600 11.5px 'DM Sans'; color:var(--muted)">{{ w.label }}</div>
+              <div style="flex:1; height:9px; border-radius:5px; background:var(--tint)"><div style="width:{{ w.pct }}%; height:9px; border-radius:5px; background:{{ w.bg }}"></div></div>
+              <div style="width:26px; text-align:right; font:700 12px 'Outfit'; color:var(--ink)">{{ w.count }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div style="display:flex; align-items:center; gap:12px; margin:32px 0 0">
+      <div style="font:800 21px 'Outfit'; color:var(--ink)">Classement des joueurs</div>
+      <div style="font:600 12px 'DM Sans'; color:var(--muted)">clique une ligne pour la fiche joueur</div>
+      <div style="flex:1; height:1px; background:var(--line)"></div>
+    </div>
+    <div class="stscroll" style="margin-top:16px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:6px 18px 14px; box-shadow:var(--sh-sm); overflow-x:auto">
+      <div style="min-width:1060px">
+        <div style="display:flex; align-items:center; gap:10px; padding:14px 8px 10px; border-bottom:1px solid var(--div)">
+          <div style="width:26px; font:700 10px 'Outfit'; color:var(--faint)">#</div>
+          <div onClick="{{ s.name }}" class="sth" style="flex:1; min-width:180px; font:700 10px 'Outfit'; letter-spacing:.09em; text-transform:uppercase; color:{{ ind.nameC }}">Joueur {{ ind.name }}</div>
+          <div onClick="{{ s.pl }}" class="sth" title="Matchs joués" style="width:44px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:{{ ind.plC }}">J {{ ind.pl }}</div>
+          <div onClick="{{ s.v }}" class="sth" title="Victoires" style="width:44px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:{{ ind.vC }}">V {{ ind.v }}</div>
+          <div onClick="{{ s.d }}" class="sth" title="Défaites" style="width:44px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:{{ ind.dC }}">D {{ ind.d }}</div>
+          <div onClick="{{ s.pct }}" class="sth" title="Taux de victoire" style="width:56px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:{{ ind.pctC }}">% {{ ind.pct }}</div>
+          <div onClick="{{ s.diff }}" class="sth" title="Différence de points" style="width:62px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:{{ ind.diffC }}">Diff {{ ind.diff }}</div>
+          <div onClick="{{ s.str }}" class="sth" title="Série en cours" style="width:66px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:{{ ind.strC }}">Série {{ ind.str }}</div>
+          <div title="5 derniers résultats, le plus récent à droite" style="width:82px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:var(--faint)">Forme</div>
+          <div onClick="{{ s.ti }}" class="sth" title="Tournois gagnés" style="width:44px; text-align:right; font:700 11px 'Outfit'; color:{{ ind.tiC }}">🏆 {{ ind.ti }}</div>
+          <div onClick="{{ s.bs }}" class="sth" title="Balles de match sauvées" style="width:56px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:{{ ind.bsC }}">BM ✓ {{ ind.bs }}</div>
+          <div onClick="{{ s.bw }}" class="sth" title="Balles de match gâchées" style="width:56px; text-align:right; font:700 10px 'Outfit'; letter-spacing:.09em; color:{{ ind.bwC }}">BM ✗ {{ ind.bw }}</div>
+        </div>
+        <sc-for list="{{ rows }}" as="p" hint-placeholder-count="10">
+          <div class="strow" onClick="{{ p.open }}" style="display:flex; align-items:center; gap:10px; padding:11px 8px; border-radius:10px">
+            <div style="width:26px; font:800 13px 'Outfit'; color:{{ p.rankC }}">{{ p.rank }}</div>
+            <div style="flex:1; min-width:180px; display:flex; align-items:center; gap:11px">
+              <div style="width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font:700 11px 'Outfit'; background:{{ p.avBg }}; color:{{ p.avFg }}">{{ p.i }}</div>
+              <div>
+                <div style="font:700 14.5px 'Outfit'; color:var(--ink)">{{ p.n }}</div>
+                <div style="display:flex; align-items:center; gap:5px; margin-top:2px"><span style="width:6px; height:6px; border-radius:50%; background:{{ p.teamC }}"></span><span style="font:500 11px 'DM Sans'; color:var(--muted)">{{ p.team }}</span></div>
+              </div>
+            </div>
+            <div style="width:44px; text-align:right; font:600 13px 'DM Sans'; color:var(--body)">{{ p.j }}</div>
+            <div style="width:44px; text-align:right; font:600 13px 'DM Sans'; color:var(--body)">{{ p.v }}</div>
+            <div style="width:44px; text-align:right; font:600 13px 'DM Sans'; color:var(--body)">{{ p.d }}</div>
+            <div style="width:56px; text-align:right; font:700 14px 'Outfit'; color:var(--ink)">{{ p.pct }}%</div>
+            <div style="width:62px; text-align:right; font:700 13.5px 'Outfit'; color:{{ p.diffC }}">{{ p.diffTxt }}</div>
+            <div style="width:66px; text-align:right; font:600 12.5px 'DM Sans'; color:{{ p.strC }}">{{ p.strTxt }}</div>
+            <div style="width:82px; display:flex; justify-content:flex-end; gap:4px">
+              <sc-for list="{{ p.form }}" as="f" hint-placeholder-count="5"><span title="{{ f.t }}" style="width:9px; height:9px; border-radius:50%; background:{{ f.c }}"></span></sc-for>
+            </div>
+            <div style="width:44px; text-align:right; font:700 13px 'Outfit'; color:var(--gold)">{{ p.tiTxt }}</div>
+            <div style="width:56px; text-align:right; font:600 13px 'DM Sans'; color:var(--green)">{{ p.bs }}</div>
+            <div style="width:56px; text-align:right; font:600 13px 'DM Sans'; color:var(--red)">{{ p.bw }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- TEAMS -->
+    <div style="display:flex; align-items:center; gap:12px; margin:32px 0 0">
+      <div style="font:800 21px 'Outfit'; color:var(--ink)">Classement des pôles</div>
+      <div style="flex:1; height:1px; background:var(--line)"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 300px; gap:14px; margin-top:16px; align-items:start">
+      <div style="background:var(--card); border:1px solid var(--line); border-radius:18px; padding:6px 18px 14px; box-shadow:var(--sh-sm)">
+        <div style="display:flex; align-items:center; gap:10px; padding:14px 8px 10px; border-bottom:1px solid var(--div); font:700 10px 'Outfit'; letter-spacing:.09em; text-transform:uppercase; color:var(--faint)">
+          <div style="flex:1">Pôle</div><div style="width:70px; text-align:right">Joueurs</div><div style="width:54px; text-align:right">J</div><div style="width:54px; text-align:right">V</div><div style="width:60px; text-align:right">%</div><div style="width:70px; text-align:right">Diff</div>
+        </div>
+        <sc-for list="{{ teams }}" as="t" hint-placeholder-count="4">
+          <div style="display:flex; align-items:center; gap:10px; padding:13px 8px; border-radius:10px">
+            <div style="flex:1; display:flex; align-items:center; gap:10px"><span style="width:10px; height:10px; border-radius:50%; background:{{ t.c }}"></span><span style="font:700 14.5px 'Outfit'; color:var(--ink)">{{ t.n }}</span></div>
+            <div style="width:70px; text-align:right; font:600 13px 'DM Sans'; color:var(--muted)">{{ t.players }}</div>
+            <div style="width:54px; text-align:right; font:600 13px 'DM Sans'; color:var(--body)">{{ t.j }}</div>
+            <div style="width:54px; text-align:right; font:600 13px 'DM Sans'; color:var(--body)">{{ t.v }}</div>
+            <div style="width:60px; text-align:right; font:700 14px 'Outfit'; color:var(--ink)">{{ t.pct }}%</div>
+            <div style="width:70px; text-align:right; font:700 13.5px 'Outfit'; color:{{ t.diffC }}">{{ t.diffTxt }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:var(--card2); border:1px dashed var(--line); border-radius:18px; padding:18px 20px">
+        <div style="font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">À savoir</div>
+        <div style="margin-top:9px; font:500 13px/1.55 'DM Sans'; color:var(--muted)">Les matchs entre joueurs d'un même pôle sont exclus de ce classement : seuls les duels inter-pôles comptent pour la victoire collective.</div>
+      </div>
+    </div>
+
+    <!-- RECORDS -->
+    <div style="display:flex; align-items:center; gap:12px; margin:32px 0 0">
+      <div style="font:800 21px 'Outfit'; color:var(--ink)">Records</div>
+      <div style="font:600 12px 'DM Sans'; color:var(--muted)">les moments légendaires</div>
+      <div style="flex:1; height:1px; background:var(--line)"></div>
+    </div>
+    <div style="margin-top:18px; font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Joueurs</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; margin-top:12px">
+      <sc-for list="{{ recPlayers }}" as="r" hint-placeholder-count="10">
+        <div class="stcard" style="background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px; box-shadow:var(--sh-sm)">
+          <div style="display:flex; align-items:center; gap:8px"><span style="font-size:15px">{{ r.icon }}</span><span style="font:700 10.5px 'Outfit'; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)">{{ r.label }}</span></div>
+          <div style="margin-top:9px; font:800 22px/1.1 'Outfit'; color:var(--ink)">{{ r.value }}</div>
+          <div style="margin-top:6px; font:600 12px 'DM Sans'; color:var(--muted)">{{ r.sub }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top:20px; font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Matchs</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; margin-top:12px">
+      <sc-for list="{{ recMatches }}" as="r" hint-placeholder-count="4">
+        <div class="stcard" style="background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px; box-shadow:var(--sh-sm)">
+          <div style="display:flex; align-items:center; gap:8px"><span style="font-size:15px">{{ r.icon }}</span><span style="font:700 10.5px 'Outfit'; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)">{{ r.label }}</span></div>
+          <div style="margin-top:9px; font:800 22px/1.1 'Outfit'; color:var(--ink)">{{ r.value }}</div>
+          <div style="margin-top:6px; font:600 12px 'DM Sans'; color:var(--muted)">{{ r.sub }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- HEAD TO HEAD -->
+    <div style="display:flex; align-items:center; gap:12px; margin:32px 0 0">
+      <div style="font:800 21px 'Outfit'; color:var(--ink)">Confrontations directes</div>
+      <div style="font:600 12px 'DM Sans'; color:var(--muted)">la ligne bat la colonne</div>
+      <div style="flex:1; height:1px; background:var(--line)"></div>
+    </div>
+    <div class="stscroll" style="margin-top:16px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:var(--sh-sm); overflow-x:auto">
+      <div style="min-width:900px">
+        <div style="display:flex; align-items:center; gap:6px; padding-left:130px">
+          <sc-for list="{{ matrixHeads }}" as="h" hint-placeholder-count="8">
+            <div title="{{ h.full }}" style="flex:1; min-width:74px; text-align:center; font:700 11px 'Outfit'; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)">{{ h.abbr }}</div>
+          </sc-for>
+        </div>
+        <sc-for list="{{ matrixRows }}" as="r" hint-placeholder-count="8">
+          <div style="display:flex; align-items:center; gap:6px; margin-top:6px">
+            <div style="width:124px; display:flex; align-items:center; gap:9px">
+              <div style="width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font:700 9.5px 'Outfit'; background:var(--lav); color:var(--purple)">{{ r.i }}</div>
+              <div style="font:700 13px 'Outfit'; color:var(--ink)">{{ r.n }}</div>
+            </div>
+            <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="8">
+              <div title="{{ c.title }}" style="flex:1; min-width:74px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font:700 13px 'Outfit'; background:{{ c.bg }}; color:{{ c.fg }}">{{ c.txt }}</div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- RIVALRIES -->
+    <div style="display:flex; align-items:center; gap:12px; margin:32px 0 0">
+      <div style="font:800 21px 'Outfit'; color:var(--ink)">Rivalités</div>
+      <div style="flex:1; height:1px; background:var(--line)"></div>
+    </div>
+    <div style="margin-top:8px; font:500 13px 'DM Sans'; color:var(--muted)">{{ rivalryHint }}</div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px">
+      <sc-for list="{{ rivalries }}" as="r" hint-placeholder-count="6">
+        <div class="stcard" style="background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; box-shadow:var(--sh-sm)">
+          <div style="display:flex; align-items:center; justify-content:space-between">
+            <div style="font:700 15px 'Outfit'; color:{{ r.c1 }}">{{ r.n1 }}</div>
+            <div style="font:800 18px 'Outfit'; color:var(--ink)">{{ r.score }}</div>
+            <div style="font:700 15px 'Outfit'; color:{{ r.c2 }}">{{ r.n2 }}</div>
+          </div>
+          <div style="display:flex; height:8px; border-radius:5px; overflow:hidden; margin-top:14px; background:var(--tint)">
+            <div style="width:{{ r.pct }}%; background:{{ r.c1 }}"></div>
+            <div style="flex:1; background:{{ r.c2 }}; opacity:.45"></div>
+          </div>
+          <div style="margin-top:11px; font:600 12px 'DM Sans'; color:var(--muted)">{{ r.meta }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+  </sc-if>
+
+  <!-- PLAYER MODAL -->
+  <sc-if value="{{ modal }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed; inset:0; z-index:80; background:rgba(23,8,43,.5); backdrop-filter:blur(3px); display:flex; align-items:flex-start; justify-content:center; padding:48px 20px; overflow-y:auto">
+      <div onClick="{{ stop }}" style="width:100%; max-width:760px; background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--sh-lg); overflow:hidden; animation:stpop 220ms cubic-bezier(.2,.7,.2,1)">
+        <div style="padding:24px 28px; background:var(--headbg); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:16px">
+          <div style="width:58px; height:58px; border-radius:50%; display:flex; align-items:center; justify-content:center; font:700 18px 'Outfit'; background:{{ modal.avBg }}; color:{{ modal.avFg }}">{{ modal.i }}</div>
+          <div style="flex:1">
+            <div style="font:800 26px 'Outfit'; color:var(--ink)">{{ modal.n }}</div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:4px"><span style="width:7px; height:7px; border-radius:50%; background:{{ modal.teamC }}"></span><span style="font:500 13px 'DM Sans'; color:var(--muted)">{{ modal.team }} · dernier match {{ modal.lastSeen }}</span></div>
+          </div>
+          <div onClick="{{ closeModal }}" style="width:34px; height:34px; border-radius:50%; background:var(--card); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font:600 15px 'Outfit'; color:var(--muted); cursor:pointer">✕</div>
+        </div>
+        <div style="padding:22px 28px 28px">
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:9px">
+            <sc-for list="{{ modal.kpis }}" as="k" hint-placeholder-count="12">
+              <div style="background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:11px 13px">
+                <div style="font:700 9px 'Outfit'; letter-spacing:.07em; text-transform:uppercase; color:var(--faint)">{{ k.label }}</div>
+                <div style="margin-top:5px; font:800 18px 'Outfit'; color:{{ k.color }}">{{ k.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ modal.hasTitles }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <div style="margin-top:22px; font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Palmarès</div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px">
+                <sc-for list="{{ modal.titlesList }}" as="t" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:8px; background:var(--card2); border:1px solid var(--line); border-radius:11px; padding:9px 13px">
+                    <span>🏆</span><span style="font:700 13px 'Outfit'; color:var(--ink)">{{ t.name }}</span><span style="font:500 11.5px 'DM Sans'; color:var(--muted)">{{ t.date }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px">
+            <div style="background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:15px 17px">
+              <div style="font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Bête noire</div>
+              <div style="margin-top:8px; display:flex; align-items:center; justify-content:space-between"><span style="font:700 15px 'Outfit'; color:var(--ink)">{{ modal.nemesis }}</span><span style="font:700 14px 'Outfit'; color:var(--red)">{{ modal.nemesisRec }}</span></div>
+            </div>
+            <div style="background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:15px 17px">
+              <div style="font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Victime favorite</div>
+              <div style="margin-top:8px; display:flex; align-items:center; justify-content:space-between"><span style="font:700 15px 'Outfit'; color:var(--ink)">{{ modal.victim }}</span><span style="font:700 14px 'Outfit'; color:var(--green)">{{ modal.victimRec }}</span></div>
+            </div>
+          </div>
+
+          <div style="margin-top:22px; font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Derniers matchs</div>
+          <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:2px 20px">
+            <sc-for list="{{ modal.last8 }}" as="m" hint-placeholder-count="8">
+              <div style="display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px solid var(--div)">
+                <span style="width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; font:800 10.5px 'Outfit'; background:{{ m.bg }}; color:{{ m.fg }}">{{ m.res }}</span>
+                <span style="flex:1; font:600 13px 'DM Sans'; color:var(--body)">{{ m.opp }}</span>
+                <span style="font:700 13px 'Outfit'; color:var(--ink)">{{ m.score }}</span>
+                <span style="width:52px; text-align:right; font:500 11.5px 'DM Sans'; color:var(--faint)">{{ m.date }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="margin-top:22px; display:flex; align-items:center; justify-content:space-between">
+            <div style="font:700 10px 'Outfit'; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)">Bilan par adversaire</div>
+            <div onClick="{{ toggleOpps }}" style="font:700 12px 'Outfit'; color:var(--purple); cursor:pointer">{{ oppsLabel }}</div>
+          </div>
+          <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px">
+            <sc-for list="{{ modal.opponents }}" as="o" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:12px">
+                <div style="width:110px; font:600 13px 'DM Sans'; color:var(--body)">{{ o.n }}</div>
+                <div style="width:56px; font:700 13px 'Outfit'; color:{{ o.c }}">{{ o.rec }}</div>
+                <div style="flex:1; height:8px; border-radius:5px; background:var(--tint)"><div style="width:{{ o.pct }}%; height:8px; border-radius:5px; background:{{ o.c }}"></div></div>
+                <div style="width:40px; text-align:right; font:600 12px 'DM Sans'; color:var(--muted)">{{ o.pct }}%</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:1400},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;onGoRank&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const TEAMS = { 'Pôle Dev':'#7C5CE0', 'Pôle Design':'#E0596A', 'Pôle Ops':'#33B57F', 'Pôle Sales':'#8663E9' };
+
+const PLAYERS = [
+  { n:'Léo', i:'LÉ', ab:'LEO', team:'Pôle Dev', j:42, v:29, diff:118, streak:4, form:'VVDVV', ti:3, bs:7, bw:2, mins:1010, pf:9.8, pa:8.1, last:'hier',
+    titles:[{name:'Tournoi de printemps',date:'avr. 2026'},{name:'Coupe du vendredi',date:'juin 2026'},{name:'Open de l\'étage 3',date:'juil. 2026'}] },
+  { n:'Thibault', i:'TH', ab:'THI', team:'Pôle Dev', j:39, v:24, diff:61, streak:2, form:'VDVVV', ti:1, bs:5, bw:4, mins:922, pf:9.5, pa:8.6, last:'hier',
+    titles:[{name:'Tournoi de rentrée',date:'mars 2026'}] },
+  { n:'Candice', i:'CA', ab:'CAN', team:'Pôle Design', j:37, v:21, diff:34, streak:-1, form:'DVVDV', ti:1, bs:6, bw:1, mins:874, pf:9.3, pa:8.7, last:'il y a 2 j',
+    titles:[{name:'Coupe de mai',date:'mai 2026'}] },
+  { n:'Maxime', i:'MX', ab:'MAX', team:'Pôle Ops', j:35, v:18, diff:8, streak:1, form:'VDDVV', ti:0, bs:3, bw:5, mins:812, pf:9.0, pa:8.9, last:'il y a 3 j', titles:[] },
+  { n:'Sarah', i:'SA', ab:'SAR', team:'Pôle Design', j:33, v:16, diff:-12, streak:-2, form:'DDVDV', ti:0, bs:4, bw:3, mins:760, pf:8.8, pa:9.1, last:'il y a 4 j', titles:[] },
+  { n:'Nicolas', i:'NI', ab:'NIC', team:'Pôle Ops', j:31, v:14, diff:-25, streak:1, form:'VDVDD', ti:0, bs:2, bw:6, mins:706, pf:8.5, pa:9.3, last:'il y a 5 j', titles:[] },
+  { n:'Émilie', i:'ÉM', ab:'EMI', team:'Pôle Sales', j:28, v:11, diff:-48, streak:-3, form:'DDVDD', ti:0, bs:3, bw:2, mins:634, pf:8.1, pa:9.6, last:'il y a 6 j', titles:[] },
+  { n:'Julien', i:'JU', ab:'JUL', team:'Pôle Sales', j:26, v:9, diff:-63, streak:2, form:'VVDDD', ti:0, bs:1, bw:4, mins:588, pf:7.9, pa:9.8, last:'il y a 8 j', titles:[] },
+  { n:'Karim', i:'KA', ab:'KAR', team:'Pôle Dev', j:22, v:10, diff:-9, streak:-1, form:'DVDVD', ti:0, bs:2, bw:1, mins:498, pf:8.6, pa:9.0, last:'il y a 9 j', titles:[] },
+  { n:'Anaïs', i:'AN', ab:'ANA', team:'Pôle Design', j:19, v:8, diff:-14, streak:1, form:'VDDVD', ti:0, bs:1, bw:3, mins:430, pf:8.4, pa:9.2, last:'il y a 12 j', titles:[] }
+];
+
+const DAYS = [3,5,2,7,4,6,9,5,8,4,11,6,7,3,9,12,5,8,6,10,7,14];
+const DAY_LABELS = ['2 juin','3 juin','4 juin','7 juin','8 juin','9 juin','10 juin','11 juin','14 juin','15 juin','16 juin','17 juin','18 juin','21 juin','22 juin','23 juin','24 juin','25 juin','28 juin','29 juin','30 juin','1 juil.'];
+
+class Component extends DCLogic {
+  state = { period:'tout', type:'tout', sort:{ k:'v', dir:-1 }, open:null, tip:null, allOpps:false };
+
+  fmt(mins){ const h = Math.floor(mins/60), m = mins%60; return h + ' h ' + String(m).padStart(2,'0'); }
+
+  h2h(a, b){
+    const x = Math.min(a, b), y = Math.max(a, b);
+    const total = 3 + ((x * 7 + y * 5) % 5);
+    const rx = PLAYERS[x].v / PLAYERS[x].j, ry = PLAYERS[y].v / PLAYERS[y].j;
+    let wx = Math.round(total * (0.5 + (rx - ry) * 1.15));
+    wx = Math.max(0, Math.min(total, wx));
+    const w = a === x ? wx : total - wx;
+    return { w, l: total - w, total };
+  }
+
+  renderVals(){
+    const st = this.state;
+    const dark = (this.props.theme || 'light') === 'dark';
+    const set = (k, v) => () => this.setState({ [k]: v });
+    const seg = (val, cur) => cur === val
+      ? { bg:'var(--card)', fg:'var(--purple)', sh:'var(--sh-sm)' }
+      : { bg:'transparent', fg:'var(--muted)', sh:'none' };
+
+    const periods = [['tout','Tout'],['saison','Cette saison'],['mois','Ce mois-ci'],['semaine','Cette semaine']];
+    const types = [['tout','Tout'],['tournois','Tournois'],['rapides','Parties rapides']];
+    const periodOpts = periods.map(([v,label]) => Object.assign({ label, pick:set('period', v) }, seg(v, st.period)));
+    const typeOpts = types.map(([v,label]) => Object.assign({ label, pick:set('type', v) }, seg(v, st.type)));
+
+    const filtered = st.period !== 'tout' || st.type !== 'tout';
+    const empty = st.period === 'semaine' && st.type === 'tournois';
+    const f = st.period === 'tout' ? 1 : st.period === 'saison' ? 0.62 : st.period === 'mois' ? 0.3 : 0.1;
+    const tf = st.type === 'tout' ? 1 : st.type === 'tournois' ? 0.42 : 0.58;
+    const scale = f * tf;
+
+    const pLabel = { tout:'Tout', saison:'Cette saison', mois:'Ce mois-ci', semaine:'Cette semaine' }[st.period];
+    const tLabel = { tout:'Tout', tournois:'Tournois', rapides:'Parties rapides' }[st.type];
+    const bits = []; if (st.period !== 'tout') bits.push(pLabel); if (st.type !== 'tout') bits.push(tLabel);
+
+    const matches = empty ? 0 : Math.round(156 * scale), points = Math.round(4812 * scale), mins = Math.round(2538 * scale);
+    const kpis = [
+      { label:'Matchs joués', value:matches, unit:'', sub: filtered ? 'sur la période filtrée' : '+18 cette semaine', subColor: filtered ? 'var(--muted)' : 'var(--green)' },
+      { label:'Joueurs', value: scale > 0.5 ? 10 : scale > 0.2 ? 8 : 5, unit:'', sub:'ayant joué au moins un match', subColor:'var(--muted)' },
+      { label:'Points marqués', value: points.toLocaleString('fr-FR'), unit:'pts', sub:'tous joueurs confondus', subColor:'var(--muted)' },
+      { label:'Temps de jeu', value:this.fmt(mins), unit:'', sub:'≈ ' + Math.round(mins / Math.max(matches,1)) + ' min par match', subColor:'var(--muted)' }
+    ];
+
+    const shown = st.period === 'semaine' ? DAYS.slice(-5) : st.period === 'mois' ? DAYS.slice(-10) : DAYS;
+    const labels = st.period === 'semaine' ? DAY_LABELS.slice(-5) : st.period === 'mois' ? DAY_LABELS.slice(-10) : DAY_LABELS;
+    const max = Math.max.apply(null, shown);
+    const days = shown.map((c, i) => ({
+      h: Math.round(20 + (c / max) * 148),
+      bg: st.tip && st.tip.i === i ? 'var(--purple2)' : c >= max * 0.75 ? 'var(--purple2)' : 'var(--lav)',
+      enter: () => this.setState({ tip:{ i, date:labels[i], count:c, x: ((i + 0.5) / shown.length) * 100 } }),
+      leave: () => this.setState({ tip:null })
+    }));
+
+    const wdRaw = [{ label:'Lun', count:21 },{ label:'Mar', count:29 },{ label:'Mer', count:24 },{ label:'Jeu', count:33 },{ label:'Ven', count:49 }];
+    const weekdays = wdRaw.map(w => ({ label:w.label, count: Math.round(w.count * scale), pct: Math.round((w.count / 49) * 100), bg: w.count === 49 ? 'var(--purple)' : 'var(--purple2)' }));
+
+    const base = PLAYERS.map((p, idx) => {
+      const j = Math.max(1, Math.round(p.j * scale)), v = Math.round(p.v * scale), d = j - v;
+      return Object.assign({}, p, { idx, j, v, d, pct: Math.round((v / j) * 100), diffN: Math.round(p.diff * scale) });
+    });
+    const key = st.sort.k, dir = st.sort.dir;
+    const getter = { name:x => x.n, pl:x => x.j, v:x => x.v, d:x => x.d, pct:x => x.pct, diff:x => x.diffN, str:x => x.streak, ti:x => x.ti, bs:x => x.bs, bw:x => x.bw }[key];
+    const sorted = base.slice().sort((a, b) => {
+      const av = getter(a), bv = getter(b);
+      if (typeof av === 'string') return av.localeCompare(bv) * dir;
+      return (av - bv) * dir;
+    });
+
+    const rows = sorted.map((p, i) => ({
+      rank: i + 1, rankC: i === 0 ? 'var(--purple)' : 'var(--faint)',
+      n:p.n, i:p.i, team:p.team, teamC:TEAMS[p.team],
+      avBg: i === 0 ? (dark ? '#5B39C4' : '#4A2AA4') : 'var(--lav)', avFg: i === 0 ? '#fff' : 'var(--purple)',
+      j:p.j, v:p.v, d:p.d, pct:p.pct,
+      diffTxt: (p.diffN > 0 ? '+' : '') + p.diffN,
+      diffC: p.diffN > 0 ? 'var(--green)' : p.diffN < 0 ? 'var(--red)' : 'var(--muted)',
+      strTxt: p.streak >= 2 ? '🔥 ' + p.streak + 'V' : p.streak > 0 ? p.streak + 'V' : Math.abs(p.streak) + 'D',
+      strC: p.streak > 0 ? 'var(--green)' : 'var(--red)',
+      form: p.form.split('').map(c => ({ c: c === 'V' ? 'var(--green)' : 'var(--red)', t: c === 'V' ? 'Victoire' : 'Défaite' })),
+      tiTxt: p.ti > 0 ? p.ti : '',
+      bs:p.bs, bw:p.bw,
+      open: () => this.setState({ open:p.idx, allOpps:false })
+    }));
+
+    const s = {}, ind = {};
+    ['name','pl','v','d','pct','diff','str','ti','bs','bw'].forEach(k => {
+      s[k] = () => this.setState({ sort:{ k, dir: st.sort.k === k ? -st.sort.dir : -1 } });
+      ind[k] = st.sort.k === k ? (st.sort.dir === -1 ? '▼' : '▲') : '';
+      ind[k + 'C'] = st.sort.k === k ? 'var(--purple)' : 'var(--faint)';
+    });
+
+    const teamAgg = {};
+    PLAYERS.forEach(p => {
+      const t = teamAgg[p.team] || (teamAgg[p.team] = { n:p.team, c:TEAMS[p.team], players:0, j:0, v:0, diff:0 });
+      t.players++; t.j += Math.round(p.j * 0.62); t.v += Math.round(p.v * 0.62); t.diff += p.diff;
+    });
+    const teams = Object.keys(teamAgg).map(k => teamAgg[k]).map(t => ({
+      n:t.n, c:t.c, players:t.players, j:Math.round(t.j * scale), v:Math.round(t.v * scale),
+      pct: Math.round((t.v / t.j) * 100),
+      diffTxt: (t.diff > 0 ? '+' : '') + Math.round(t.diff * scale),
+      diffC: t.diff > 0 ? 'var(--green)' : 'var(--red)'
+    })).sort((a, b) => b.pct - a.pct);
+
+    const recPlayers = [
+      { icon:'🏆', label:'Serial winner', value:'Léo', sub:'3 tournois gagnés' },
+      { icon:'🔥', label:'Plus longue série', value:'Léo', sub:'9 victoires d\'affilée' },
+      { icon:'📈', label:'Plus actif', value:'Léo', sub:'42 matchs joués' },
+      { icon:'⏱️', label:'Marathonien', value:'Léo', sub:'16 h 50 de jeu cumulées' },
+      { icon:'🎯', label:'Homme des finales', value:'Thibault', sub:'4 finales jouées · 1 gagnée' },
+      { icon:'🧗', label:'Remontada', value:'Candice', sub:'titre décroché depuis le loser bracket' },
+      { icon:'🪑', label:'Bourreau', value:'Maxime', sub:'5 capots infligés' },
+      { icon:'🙈', label:'Roi de la table', value:'Julien', sub:'4 passages sous la table' },
+      { icon:'🧊', label:'Sang-froid', value:'Léo', sub:'7 balles de match sauvées' },
+      { icon:'😰', label:'Cardiaque', value:'Nicolas', sub:'6 balles de match gâchées' }
+    ];
+    const recMatches = [
+      { icon:'⌛', label:'Plus long match', value:'38 min', sub:'Léo 16 — 14 Maxime' },
+      { icon:'⚡', label:'Plus court match', value:'4 min', sub:'Candice 11 — 1 Anaïs' },
+      { icon:'📏', label:'Plus gros écart', value:'+11', sub:'Léo 11 — 0 Julien' },
+      { icon:'😬', label:'Match le plus serré', value:'18 — 16', sub:'Thibault vs Candice · 12 juin' }
+    ];
+
+    const sub = PLAYERS.slice(0, 8);
+    const matrixHeads = sub.map(p => ({ abbr:p.ab, full:p.n }));
+    const matrixRows = sub.map((p, a) => ({
+      n:p.n, i:p.i,
+      cells: sub.map((q, b) => {
+        if (a === b) return { txt:'—', bg:'var(--card2)', fg:'var(--faint)', title:'' };
+        const r = this.h2h(a, b);
+        const adv = r.w - r.l;
+        return {
+          txt: r.w + '-' + r.l,
+          bg: adv > 0 ? 'var(--greenbg)' : adv < 0 ? 'var(--redbg)' : 'var(--tint)',
+          fg: adv > 0 ? 'var(--green)' : adv < 0 ? 'var(--red)' : 'var(--muted)',
+          title: p.n + ' ' + r.w + ' — ' + r.l + ' ' + q.n
+        };
+      })
+    }));
+
+    const rivalries = [
+      { n1:'Léo', n2:'Thibault', c1:TEAMS['Pôle Dev'], c2:TEAMS['Pôle Dev'], w1:7, w2:6 },
+      { n1:'Candice', n2:'Sarah', c1:TEAMS['Pôle Design'], c2:TEAMS['Pôle Design'], w1:6, w2:5 },
+      { n1:'Maxime', n2:'Nicolas', c1:TEAMS['Pôle Ops'], c2:TEAMS['Pôle Ops'], w1:5, w2:5 },
+      { n1:'Léo', n2:'Candice', c1:TEAMS['Pôle Dev'], c2:TEAMS['Pôle Design'], w1:6, w2:3 },
+      { n1:'Thibault', n2:'Maxime', c1:TEAMS['Pôle Dev'], c2:TEAMS['Pôle Ops'], w1:5, w2:4 },
+      { n1:'Émilie', n2:'Julien', c1:TEAMS['Pôle Sales'], c2:TEAMS['Pôle Sales'], w1:4, w2:4 }
+    ].map(r => {
+      const tot = r.w1 + r.w2;
+      const lead = r.w1 === r.w2 ? 'à égalité' : (r.w1 > r.w2 ? r.n1 : r.n2) + ' mène';
+      return Object.assign({}, r, { score: r.w1 + ' – ' + r.w2, pct: Math.round((r.w1 / tot) * 100), meta: tot + ' matchs · ' + lead });
+    });
+
+    let modal = null;
+    if (st.open !== null) {
+      const p = PLAYERS[st.open];
+      const oppsAll = PLAYERS.map((q, b) => {
+        if (q.n === p.n) return null;
+        const r = this.h2h(st.open, b);
+        const pct = Math.round((r.w / r.total) * 100);
+        return { n:q.n, rec: r.w + '-' + r.l, pct, c: pct >= 50 ? 'var(--green)' : 'var(--red)' };
+      }).filter(Boolean).sort((a, b) => b.pct - a.pct);
+      const worst = oppsAll[oppsAll.length - 1], best = oppsAll[0];
+      const opponents = st.allOpps ? oppsAll : oppsAll.slice(0, 4);
+      const dates = ['hier','il y a 2 j','il y a 4 j','il y a 5 j','il y a 7 j','il y a 9 j','il y a 11 j','il y a 14 j'];
+      const scores = [['11','8'],['9','11'],['11','6'],['12','10'],['7','11'],['11','9'],['11','4'],['8','11']];
+      const last8 = (p.form + p.form.split('').reverse().join('')).slice(0, 8).split('').map((c, i) => ({
+        res: c, opp: 'vs ' + PLAYERS[(st.open + i + 1) % PLAYERS.length].n,
+        score: c === 'V' ? scores[i][0] + '-' + scores[i][1] : scores[i][1] + '-' + scores[i][0],
+        date: dates[i],
+        bg: c === 'V' ? 'var(--greenbg)' : 'var(--redbg)', fg: c === 'V' ? 'var(--green)' : 'var(--red)'
+      }));
+      modal = {
+        n:p.n, i:p.i, team:p.team, teamC:TEAMS[p.team], lastSeen:p.last,
+        avBg: st.open === 0 ? (dark ? '#5B39C4' : '#4A2AA4') : 'var(--lav)', avFg: st.open === 0 ? '#fff' : 'var(--purple)',
+        hasTitles: p.titles.length > 0, titlesList:p.titles,
+        kpis: [
+          { label:'Matchs', value:p.j, color:'var(--ink)' },
+          { label:'% victoires', value: Math.round((p.v / p.j) * 100) + '%', color:'var(--ink)' },
+          { label:'V — D', value: p.v + ' — ' + (p.j - p.v), color:'var(--ink)' },
+          { label:'Diff', value: (p.diff > 0 ? '+' : '') + p.diff, color: p.diff > 0 ? 'var(--green)' : 'var(--red)' },
+          { label:'Série', value: p.streak > 0 ? p.streak + 'V' : Math.abs(p.streak) + 'D', color: p.streak > 0 ? 'var(--green)' : 'var(--red)' },
+          { label:'Meilleure série', value: (Math.abs(p.streak) + 3) + 'V', color:'var(--ink)' },
+          { label:'Pts pour / contre', value: p.pf + ' / ' + p.pa, color:'var(--ink)' },
+          { label:'Temps de jeu', value:this.fmt(p.mins), color:'var(--ink)' },
+          { label:'Durée moyenne', value: Math.round(p.mins / p.j) + ' min', color:'var(--ink)' },
+          { label:'Capots · sous la table', value: (p.ti + 1) + ' · ' + p.bw, color:'var(--ink)' },
+          { label:'BM sauvées', value:p.bs, color:'var(--green)' },
+          { label:'BM gâchées', value:p.bw, color:'var(--red)' }
+        ],
+        nemesis: worst.n, nemesisRec: worst.rec, victim: best.n, victimRec: best.rec,
+        last8, opponents
+      };
+    }
+
+    return {
+      themeClass: dark ? 'st-d' : 'st-l',
+      goRank: this.props.onGoRank || (() => { location.hash = '#/classement'; }),
+      periodOpts, typeOpts, filtered, empty, hasData: !empty,
+      filterLabel: 'Filtré · ' + bits.join(' · '),
+      scopeLabel: matches + ' matchs · ' + pLabel.toLowerCase() + ' · ' + tLabel.toLowerCase(),
+      resetFilters: () => this.setState({ period:'tout', type:'tout' }),
+      kpis, days, weekdays, tip: st.tip,
+      chartRange: st.period === 'semaine' ? '5 derniers jours' : st.period === 'mois' ? '10 derniers jours' : '22 jours d\'activité',
+      axisA: labels[0], axisB: labels[Math.floor(labels.length / 2)], axisC: labels[labels.length - 1],
+      rows, s, ind, teams, recPlayers, recMatches, matrixHeads, matrixRows, rivalries,
+      rivalryHint: 'Les duels les plus serrés : Maxime — Nicolas (5–5) et Émilie — Julien (4–4).',
+      modal,
+      oppsLabel: st.allOpps ? 'Réduire' : 'Voir tous les adversaires',
+      toggleOpps: () => this.setState({ allOpps: !st.allOpps }),
+      closeModal: () => this.setState({ open:null }),
+      stop: e => e.stopPropagation()
+    };
+  }
+}
+</script>
+</body>
+</html>
