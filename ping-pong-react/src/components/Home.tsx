@@ -6,6 +6,7 @@ import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
 import RecentResults from './RecentResults'
+import SeasonBanner from './SeasonBanner'
 import RecordsCard from './RecordsCard'
 import TopPlayers from './TopPlayers'
 import TournamentCard from './TournamentCard'
@@ -63,6 +64,8 @@ export default function Home({
       />
 
       <LiveHero onWatch={onLive} onRef={onRef} onNew={onNew} />
+
+      <SeasonBanner onClassement={onClassement} onNew={onNew} />
 
       {error && <div className="error-banner">Erreur : {error}</div>}
 
