@@ -14,7 +14,8 @@ import {
   seasonsUpTo,
   type SeasonBannerInput,
 } from './seasons'
-import type { Match } from '../types'
+import { rankRatings, ratedMatches, replayRatings, RATING } from './rating'
+import type { Match, Player, Tournament } from '../types'
 import type { RatingRow } from './rating'
 
 const at = (y: number, m: number, d: number, h = 12): string =>
@@ -341,5 +342,89 @@ describe('seasonBannerState', () => {
     expect(seasonBannerState(getMockBannerInput({ now: new Date(2026, 11, 5), leader }))).toBe(
       'nochamp',
     )
+  })
+})
+
+const getMockPlayer = (overrides?: Partial<Player>): Player => ({
+  id: 'pa',
+  created_at: at(2026, 0, 1),
+  name: 'Léo',
+  team: 'tech',
+  slack_user_id: null,
+  avatar_url: null,
+  ...overrides,
+})
+
+const getMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
+  id: 't1',
+  created_at: at(2026, 8, 1),
+  name: 'Tournoi',
+  target: 11,
+  players: ['Léo', 'Thibault'],
+  status: 'done',
+  kind: 'tournament',
+  format: 'round_robin',
+  champion: null,
+  is_active: false,
+  slack_channel: null,
+  slack_thread_ts: null,
+  result_notified: false,
+  unranked: false,
+  doubles: false,
+  teams: null,
+  chaos_enabled: false,
+  chaos_interval: 2,
+  chaos_intensity: 'full',
+  chaos_legendary: true,
+  ...overrides,
+})
+
+describe('scoped replay', () => {
+  const players = [
+    getMockPlayer({ id: 'pa', name: 'Léo' }),
+    getMockPlayer({ id: 'pb', name: 'Thibault' }),
+  ]
+
+  it('starts everyone at 1500 with maximum RD in a new season, ignoring earlier form', () => {
+    const autumn = Array.from({ length: 8 }, (_, i) =>
+      getMockMatch({ id: `a${i}`, ended_at: at(2026, 9, 1 + i) }),
+    )
+    const winterOpener = getMockMatch({ id: 'w0', ended_at: at(2026, 11, 3) })
+    const winter = replayRatings(matchesInSeason([...autumn, winterOpener], 'hiver-2026'), players)
+
+    expect(winter.events).toHaveLength(2)
+    expect(winter.events[0].ratingBefore).toBe(RATING.R0)
+    expect(winter.events[0].rdBefore).toBe(RATING.RD0)
+    expect([...winter.states.values()].find((s) => s.playerId === 'pa')?.games).toBe(1)
+  })
+
+  it('carries no RD decay across the boundary', () => {
+    const autumn = getMockMatch({ id: 'a', ended_at: at(2026, 8, 2) })
+    const winter = getMockMatch({ id: 'w', ended_at: at(2027, 1, 20) })
+    const scoped = replayRatings(matchesInSeason([autumn, winter], 'hiver-2026'), players)
+    // Five months of inactivity would have inflated RD had the boundary been crossed.
+    expect(scoped.events[0].rdBefore).toBe(RATING.RD0)
+  })
+
+  it('excludes an unranked tournament inside the window from season Elo', () => {
+    const tournaments = [
+      getMockTournament({ id: 't1', unranked: false }),
+      getMockTournament({ id: 't2', unranked: true }),
+    ]
+    const ranked = getMockMatch({ id: 'r', tournament_id: 't1', ended_at: at(2026, 9, 4) })
+    const unranked = getMockMatch({ id: 'u', tournament_id: 't2', ended_at: at(2026, 9, 5) })
+
+    // Season window first, then ratedMatches — the order the spec fixes.
+    const scoped = ratedMatches(matchesInSeason([ranked, unranked], 'automne-2026'), tournaments)
+    expect(scoped.map((m) => m.id)).toEqual(['r'])
+    expect(replayRatings(scoped, players).events).toHaveLength(2)
+  })
+
+  it('produces a bare ladder when every match in the window is unranked', () => {
+    const tournaments = [getMockTournament({ id: 't2', unranked: true })]
+    const unranked = getMockMatch({ id: 'u', tournament_id: 't2', ended_at: at(2026, 9, 5) })
+    const scoped = ratedMatches(matchesInSeason([unranked], 'automne-2026'), tournaments)
+    expect(scoped).toEqual([])
+    expect(rankRatings(replayRatings(scoped, players), players)).toEqual([])
   })
 })
