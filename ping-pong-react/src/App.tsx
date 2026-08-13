@@ -10,6 +10,7 @@ import NouvellePartie from './components/NouvellePartie'
 import Stats from './components/Stats'
 import { parseFilter, type PartiesFilter } from './lib/parties'
 import { parseStatsFilters, statsSearch, type StatsFilters } from './lib/statsPage'
+import { ladderScopeSearch, parseLadderScope, type LadderScope } from './lib/seasons'
 import { currentPath, navigate } from './lib/router'
 import { hasSupabaseConfig } from './lib/supabase'
 
@@ -20,7 +21,7 @@ type Route =
   | { name: 'parties'; filter: PartiesFilter }
   | { name: 'players' }
   | { name: 'stats'; filters: StatsFilters }
-  | { name: 'classement' }
+  | { name: 'classement'; scope: LadderScope }
   | { name: 'board'; id: string }
   | { name: 'live'; id: string }
   | { name: 'live-current' }
@@ -33,7 +34,8 @@ function parseRoute(): Route {
   if (p === '/parties') return { name: 'parties', filter: parseFilter(window.location.search) }
   if (p === '/players') return { name: 'players' }
   if (p === '/stats') return { name: 'stats', filters: parseStatsFilters(window.location.search) }
-  if (p === '/classement') return { name: 'classement' }
+  if (p === '/classement')
+    return { name: 'classement', scope: parseLadderScope(window.location.search, new Date()) }
   // Stable, shareable views that follow the current tournament (no id needed).
   if (p === '/live') return { name: 'live-current' }
   if (p === '/ref') return { name: 'ref-current' }
@@ -120,6 +122,8 @@ function renderRoute(route: Route) {
     case 'classement':
       return (
         <Ratings
+          scope={route.scope}
+          onScopeChange={(s) => navigate(`/classement${ladderScopeSearch(s, new Date())}`)}
           onHome={() => navigate('/')}
           onStats={() => navigate('/stats')}
           onPlayers={() => navigate('/players')}
