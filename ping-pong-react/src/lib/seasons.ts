@@ -98,3 +98,43 @@ export function seasonById(id: string): Season | null {
   if (!isSlug(slug) || !Number.isInteger(year)) return null
   return makeSeason(slug, year)
 }
+
+const DAY_MS = 86_400_000
+
+export function currentSeason(now: Date): Season | null {
+  if (now < SEASONS_START) return null
+  return seasonAt(now)
+}
+
+/** The season that begins the instant this one ends. */
+export function nextSeason(s: Season): Season {
+  return seasonAt(s.end)
+}
+
+/** Started seasons, newest first. */
+export function seasonsUpTo(now: Date): Season[] {
+  const out: Season[] = []
+  let s = seasonAt(SEASONS_START)
+  while (s.start <= now) {
+    out.push(s)
+    s = nextSeason(s)
+  }
+  return out.reverse()
+}
+
+/** Whole days until the window closes. Zero once closed — never negative. */
+export function daysLeft(s: Season, now: Date): number {
+  return Math.max(0, Math.ceil((s.end.getTime() - now.getTime()) / DAY_MS))
+}
+
+export function isClosed(s: Season, now: Date): boolean {
+  return now >= s.end
+}
+
+/** « 1 septembre → 30 novembre 2026 » — the last day is s.end minus one day. */
+export function seasonWindowLabel(s: Season): string {
+  const last = new Date(s.end.getTime() - DAY_MS)
+  const from = s.start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  const to = last.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  return `${from} → ${to}`
+}
