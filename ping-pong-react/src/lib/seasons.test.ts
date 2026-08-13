@@ -7,9 +7,15 @@ import {
   SEASONS_START,
   seasonById,
   seasonOf,
+  matchesInSeason,
+  seasonBannerState,
+  seasonChampion,
   seasonWindowLabel,
   seasonsUpTo,
+  type SeasonBannerInput,
 } from './seasons'
+import type { Match } from '../types'
+import type { RatingRow } from './rating'
 
 const at = (y: number, m: number, d: number, h = 12): string =>
   new Date(y, m, d, h).toISOString()
@@ -30,12 +36,28 @@ describe('seasonOf', () => {
     expect(seasonOf(at(2027, 1, 28))).toBe('hiver-2026')
   })
 
+  it('maps March, April and May to the spring of that year', () => {
+    expect(seasonOf(at(2027, 2, 10))).toBe('printemps-2027')
+    expect(seasonOf(at(2027, 3, 10))).toBe('printemps-2027')
+    expect(seasonOf(at(2027, 4, 10))).toBe('printemps-2027')
+  })
+
+  it('maps June, July and August to the summer of that year', () => {
+    expect(seasonOf(at(2027, 5, 10))).toBe('ete-2027')
+    expect(seasonOf(at(2027, 6, 10))).toBe('ete-2027')
+    expect(seasonOf(at(2027, 7, 10))).toBe('ete-2027')
+  })
+
   it('returns null before seasons began', () => {
     expect(seasonOf(at(2026, 7, 31))).toBeNull()
   })
 
   it('returns null for an undated match', () => {
     expect(seasonOf(null)).toBeNull()
+  })
+
+  it('returns null for a timestamp that will not parse', () => {
+    expect(seasonOf('pas une date')).toBeNull()
   })
 
   it('begins exactly at local midnight on 1 September 2026', () => {
@@ -77,6 +99,12 @@ describe('currentSeason', () => {
   })
 })
 
+describe('currentSeason boundary', () => {
+  it('is already running at the very first midnight', () => {
+    expect(currentSeason(SEASONS_START)?.id).toBe('automne-2026')
+  })
+})
+
 describe('seasonsUpTo', () => {
   it('is empty before the first season starts', () => {
     expect(seasonsUpTo(new Date(2026, 7, 31))).toEqual([])
@@ -92,6 +120,15 @@ describe('seasonsUpTo', () => {
 
   it('excludes a season that has not started yet', () => {
     expect(seasonsUpTo(new Date(2026, 10, 30)).map((s) => s.id)).toEqual(['automne-2026'])
+  })
+})
+
+describe('seasonsUpTo boundary', () => {
+  it('counts a season from the day it opens, not the day after', () => {
+    expect(seasonsUpTo(new Date(2026, 11, 1)).map((s) => s.id)).toEqual([
+      'hiver-2026',
+      'automne-2026',
+    ])
   })
 })
 
@@ -129,5 +166,180 @@ describe('seasonWindowLabel', () => {
 
   it('spans the new year for winter', () => {
     expect(seasonWindowLabel(seasonById('hiver-2026')!)).toBe('1 décembre → 28 février 2027')
+  })
+})
+
+const getMockMatch = (overrides?: Partial<Match>): Match => ({
+  id: 'm1',
+  tournament_id: 't1',
+  round: 0,
+  idx: 0,
+  player_a: 'Léo',
+  player_b: 'Thibault',
+  player_a_id: 'pa',
+  player_b_id: 'pb',
+  score_a: 11,
+  score_b: 9,
+  done: true,
+  serve_start: 'a',
+  started_at: null,
+  ended_at: at(2026, 9, 10),
+  bracket: null,
+  match_key: null,
+  win_to: null,
+  win_slot: null,
+  lose_to: null,
+  lose_slot: null,
+  bye: false,
+  mb_saved_a: 0,
+  mb_saved_b: 0,
+  ...overrides,
+})
+
+const getMockRow = (overrides?: Partial<RatingRow>): RatingRow => ({
+  key: 'pa',
+  playerId: 'pa',
+  name: 'Léo',
+  rating: 1600,
+  rd: 80,
+  vol: 0.06,
+  games: 20,
+  peak: 1620,
+  lastPlayedAt: at(2026, 9, 10),
+  rank: 1,
+  provisional: false,
+  team: 'tech',
+  avatar_url: null,
+  trend: 4,
+  ...overrides,
+})
+
+describe('matchesInSeason', () => {
+  it('keeps matches inside the window and drops those outside', () => {
+    const inside = getMockMatch({ id: 'in', ended_at: at(2026, 9, 10) })
+    const before = getMockMatch({ id: 'before', ended_at: at(2026, 7, 20) })
+    const after = getMockMatch({ id: 'after', ended_at: at(2026, 11, 2) })
+    expect(matchesInSeason([inside, before, after], 'automne-2026').map((m) => m.id)).toEqual(['in'])
+  })
+
+  it('falls back to started_at when the match never ended', () => {
+    const m = getMockMatch({ id: 'live', ended_at: null, started_at: at(2026, 9, 3) })
+    expect(matchesInSeason([m], 'automne-2026').map((x) => x.id)).toEqual(['live'])
+  })
+
+  it('drops undated matches from every season', () => {
+    const m = getMockMatch({ ended_at: null, started_at: null })
+    expect(matchesInSeason([m], 'automne-2026')).toEqual([])
+  })
+
+  it('counts a match by when it ended, so one straddling midnight joins the new season', () => {
+    const m = getMockMatch({
+      id: 'straddle',
+      started_at: at(2026, 10, 30, 23),
+      ended_at: new Date(2026, 11, 1, 0, 5).toISOString(),
+    })
+    expect(matchesInSeason([m], 'automne-2026')).toEqual([])
+    expect(matchesInSeason([m], 'hiver-2026').map((x) => x.id)).toEqual(['straddle'])
+  })
+
+  it('opens the window at midnight and closes it the instant the next season starts', () => {
+    const opener = getMockMatch({ id: 'opener', ended_at: new Date(2026, 8, 1).toISOString() })
+    const closer = getMockMatch({ id: 'closer', ended_at: new Date(2026, 11, 1).toISOString() })
+    expect(matchesInSeason([opener, closer], 'automne-2026').map((m) => m.id)).toEqual(['opener'])
+  })
+
+  it('returns nothing for an unknown season id', () => {
+    expect(matchesInSeason([getMockMatch()], 'nawak-2026')).toEqual([])
+  })
+})
+
+describe('seasonChampion', () => {
+  it('crowns the highest-rated eligible player', () => {
+    const rows = [getMockRow({ key: 'a', rating: 1600 }), getMockRow({ key: 'b', rating: 1550 })]
+    expect(seasonChampion(rows)?.key).toBe('a')
+  })
+
+  it('skips a provisional player sitting at the top of the table', () => {
+    const rows = [
+      getMockRow({ key: 'hot', rating: 1650, games: 4, provisional: true }),
+      getMockRow({ key: 'regular', rating: 1580, games: 32, provisional: false }),
+    ]
+    expect(seasonChampion(rows)?.key).toBe('regular')
+  })
+
+  it('crowns nobody when every player is provisional', () => {
+    expect(seasonChampion([getMockRow({ games: 3, provisional: true })])).toBeNull()
+  })
+
+  it('crowns nobody on an empty ladder', () => {
+    expect(seasonChampion([])).toBeNull()
+  })
+})
+
+const getMockBannerInput = (overrides?: Partial<SeasonBannerInput>): SeasonBannerInput => ({
+  season: seasonById('automne-2026'),
+  now: new Date(2026, 9, 15),
+  ratedCount: 40,
+  leader: getMockRow({ games: 20, provisional: false }),
+  ...overrides,
+})
+
+describe('seasonBannerState', () => {
+  it('is pre-season when no season has started', () => {
+    expect(seasonBannerState(getMockBannerInput({ season: null }))).toBe('pre')
+  })
+
+  it('is empty when the window holds no rated match', () => {
+    expect(seasonBannerState(getMockBannerInput({ ratedCount: 0, leader: null }))).toBe('empty')
+  })
+
+  it('is empty when every match in the window was unranked, leaving no leader', () => {
+    // Guarding on the RAW match count here would dereference a null leader:
+    // « non classée » games and doubles are filtered out before the ladder is built.
+    expect(seasonBannerState(getMockBannerInput({ ratedCount: 0, leader: null }))).toBe('empty')
+  })
+
+  it('is empty when the ladder is bare even though the window holds rated matches', () => {
+    expect(seasonBannerState(getMockBannerInput({ ratedCount: 12, leader: null }))).toBe('empty')
+  })
+
+  it('is empty when no rated match was played, whatever the ladder says', () => {
+    expect(seasonBannerState(getMockBannerInput({ ratedCount: 0 }))).toBe('empty')
+  })
+
+  it('is noleader while the leader has not cleared the gate', () => {
+    const leader = getMockRow({ games: 6, provisional: true })
+    expect(seasonBannerState(getMockBannerInput({ leader }))).toBe('noleader')
+  })
+
+  it('is final in the last week when someone is eligible', () => {
+    expect(seasonBannerState(getMockBannerInput({ now: new Date(2026, 10, 28) }))).toBe('final')
+  })
+
+  it('stays noleader in the last week when nobody is eligible', () => {
+    const leader = getMockRow({ games: 6, provisional: true })
+    expect(seasonBannerState(getMockBannerInput({ now: new Date(2026, 10, 28), leader }))).toBe(
+      'noleader',
+    )
+  })
+
+  it('turns final exactly FINAL_DAYS out, not a day later', () => {
+    expect(seasonBannerState(getMockBannerInput({ now: new Date(2026, 10, 24) }))).toBe('final')
+    expect(seasonBannerState(getMockBannerInput({ now: new Date(2026, 10, 23) }))).toBe('running')
+  })
+
+  it('is running in the ordinary middle of a season', () => {
+    expect(seasonBannerState(getMockBannerInput())).toBe('running')
+  })
+
+  it('is champion once closed with an eligible winner', () => {
+    expect(seasonBannerState(getMockBannerInput({ now: new Date(2026, 11, 5) }))).toBe('champion')
+  })
+
+  it('is nochamp once closed with nobody eligible', () => {
+    const leader = getMockRow({ games: 4, provisional: true })
+    expect(seasonBannerState(getMockBannerInput({ now: new Date(2026, 11, 5), leader }))).toBe(
+      'nochamp',
+    )
   })
 })
