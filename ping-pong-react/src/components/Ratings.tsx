@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { IconArrowLeft, IconInfoCircle, IconRefresh, IconSearch } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
-import { RATING } from '../lib/rating'
+import { RATING, rankRatings, ratedMatches, replayRatings } from '../lib/rating'
 import {
   STREAK_BADGE_MIN,
   filterRatingRows,
@@ -22,6 +22,15 @@ import EloModal from './EloModal'
 import { playerHistory } from '../lib/playerHistory'
 import Avatar from './Avatar'
 import PlayerModal from './PlayerModal'
+import SeasonScope from './SeasonScope'
+import {
+  ladderIdentity,
+  matchesInSeason,
+  isClosed,
+  seasonChampion,
+  seasonsUpTo,
+  type LadderScope,
+} from '../lib/seasons'
 
 function Trend({ delta }: { delta: number }) {
   const v = Math.round(delta)
@@ -74,6 +83,9 @@ function LogLine({ e, win }: { e: RatingEvent; win: boolean }) {
 }
 
 interface Props {
+  /** Owned by the router, not the page: the scope lives in the URL. */
+  scope: LadderScope
+  onScopeChange: (scope: LadderScope) => void
   onHome: () => void
   onStats: () => void
   onPlayers: () => void
@@ -81,8 +93,17 @@ interface Props {
   onNewGame: () => void
 }
 
-export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }: Props) {
-  const { rows, events, matchCount, loading, error, recompute } = useRatings()
+export default function Ratings({
+  scope,
+  onScopeChange,
+  onHome,
+  onStats,
+  onPlayers,
+  onNew,
+  onNewGame,
+}: Props) {
+  const { rows, events, matches, players, tournaments, matchCount, loading, error, recompute } =
+    useRatings(scope)
   const [mode, setMode] = useState<'board' | 'log'>('board')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -99,6 +120,45 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  const now = useMemo(() => new Date(), [])
+  const seasons = useMemo(() => seasonsUpTo(now), [now])
+
+  // One replay per season. Each match belongs to exactly one window, so the total
+  // work is roughly a single full replay however many seasons have been played.
+  const championById = useMemo(() => {
+    const targetByTournament = new Map(tournaments.map((t) => [t.id, t.target]))
+    return new Map(
+      seasons.map((s) => {
+        const scoped = ratedMatches(matchesInSeason(matches, s.id), tournaments)
+        const seasonRows = rankRatings(
+          replayRatings(scoped, players, { targetByTournament }),
+          players,
+        )
+        return [s.id, seasonChampion(seasonRows)?.name ?? null]
+      }),
+    )
+  }, [matches, players, tournaments, seasons])
+
+  const scopedMatchCount = useMemo(
+    () =>
+      scope.kind === 'all'
+        ? ratedMatches(matches, tournaments).length
+        : ratedMatches(matchesInSeason(matches, scope.id), tournaments).length,
+    [matches, tournaments, scope],
+  )
+
+  const identity = ladderIdentity({
+    scope,
+    now,
+    matchCount: scopedMatchCount,
+    champion: scope.kind === 'season' ? (championById.get(scope.id) ?? null) : null,
+    eligibilityGames: RATING.provisionalGames,
+  })
+
+  const scopedSeason =
+    scope.kind === 'season' ? (seasons.find((s) => s.id === scope.id) ?? null) : null
+  const archived = scopedSeason !== null && isClosed(scopedSeason, now)
 
   const leader = rows.find((r) => !r.provisional) ?? rows[0]
   const ranked = rows.filter((r) => !r.provisional)
@@ -193,6 +253,14 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
             Classement général
             {updatedAt && ` · dernière mise à jour ${relativeTime(updatedAt, new Date())}`}
           </p>
+          <SeasonScope
+            value={scope}
+            seasons={seasons}
+            championById={championById}
+            now={now}
+            onChange={onScopeChange}
+          />
+          <p className="sn-identity">{identity}</p>
         </div>
         {rows.length > 0 && (
           <label className="cl-search">
@@ -212,7 +280,9 @@ export default function Ratings({ onHome, onStats, onPlayers, onNew, onNewGame }
       {rows.length === 0 ? (
         <section>
           <div className="empty">
-            Pas encore de classement. Joue quelques matchs pour démarrer les notes Elo !
+            {archived
+              ? 'Aucune partie classée pendant cette saison.'
+              : 'Pas encore de classement. Joue quelques matchs pour démarrer les notes Elo !'}
           </div>
           <div className="footer-row">
             <span />

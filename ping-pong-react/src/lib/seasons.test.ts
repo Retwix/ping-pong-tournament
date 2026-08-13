@@ -12,9 +12,15 @@ import {
   seasonChampion,
   seasonWindowLabel,
   seasonsUpTo,
+  ladderIdentity,
+  ladderScopeSearch,
+  parseLadderScope,
+  type LadderIdentityInput,
+  type LadderScope,
   type SeasonBannerInput,
 } from './seasons'
-import type { Match } from '../types'
+import { rankRatings, ratedMatches, replayRatings, RATING } from './rating'
+import type { Match, Player, Tournament } from '../types'
 import type { RatingRow } from './rating'
 
 const at = (y: number, m: number, d: number, h = 12): string =>
@@ -340,6 +346,233 @@ describe('seasonBannerState', () => {
     const leader = getMockRow({ games: 4, provisional: true })
     expect(seasonBannerState(getMockBannerInput({ now: new Date(2026, 11, 5), leader }))).toBe(
       'nochamp',
+    )
+  })
+})
+
+const getMockPlayer = (overrides?: Partial<Player>): Player => ({
+  id: 'pa',
+  created_at: at(2026, 0, 1),
+  name: 'Léo',
+  team: 'tech',
+  slack_user_id: null,
+  avatar_url: null,
+  ...overrides,
+})
+
+const getMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
+  id: 't1',
+  created_at: at(2026, 8, 1),
+  name: 'Tournoi',
+  target: 11,
+  players: ['Léo', 'Thibault'],
+  status: 'done',
+  kind: 'tournament',
+  format: 'round_robin',
+  champion: null,
+  is_active: false,
+  slack_channel: null,
+  slack_thread_ts: null,
+  result_notified: false,
+  unranked: false,
+  doubles: false,
+  teams: null,
+  chaos_enabled: false,
+  chaos_interval: 2,
+  chaos_intensity: 'full',
+  chaos_legendary: true,
+  ...overrides,
+})
+
+describe('scoped replay', () => {
+  const players = [
+    getMockPlayer({ id: 'pa', name: 'Léo' }),
+    getMockPlayer({ id: 'pb', name: 'Thibault' }),
+  ]
+
+  it('starts everyone at 1500 with maximum RD in a new season, ignoring earlier form', () => {
+    const autumn = Array.from({ length: 8 }, (_, i) =>
+      getMockMatch({ id: `a${i}`, ended_at: at(2026, 9, 1 + i) }),
+    )
+    const winterOpener = getMockMatch({ id: 'w0', ended_at: at(2026, 11, 3) })
+    const winter = replayRatings(matchesInSeason([...autumn, winterOpener], 'hiver-2026'), players)
+
+    expect(winter.events).toHaveLength(2)
+    expect(winter.events[0].ratingBefore).toBe(RATING.R0)
+    expect(winter.events[0].rdBefore).toBe(RATING.RD0)
+    expect([...winter.states.values()].find((s) => s.playerId === 'pa')?.games).toBe(1)
+  })
+
+  it('carries no RD decay across the boundary', () => {
+    const autumn = getMockMatch({ id: 'a', ended_at: at(2026, 8, 2) })
+    const winter = getMockMatch({ id: 'w', ended_at: at(2027, 1, 20) })
+    const scoped = replayRatings(matchesInSeason([autumn, winter], 'hiver-2026'), players)
+    // Five months of inactivity would have inflated RD had the boundary been crossed.
+    expect(scoped.events[0].rdBefore).toBe(RATING.RD0)
+  })
+
+  it('excludes an unranked tournament inside the window from season Elo', () => {
+    const tournaments = [
+      getMockTournament({ id: 't1', unranked: false }),
+      getMockTournament({ id: 't2', unranked: true }),
+    ]
+    const ranked = getMockMatch({ id: 'r', tournament_id: 't1', ended_at: at(2026, 9, 4) })
+    const unranked = getMockMatch({ id: 'u', tournament_id: 't2', ended_at: at(2026, 9, 5) })
+
+    // Season window first, then ratedMatches — the order the spec fixes.
+    const scoped = ratedMatches(matchesInSeason([ranked, unranked], 'automne-2026'), tournaments)
+    expect(scoped.map((m) => m.id)).toEqual(['r'])
+    expect(replayRatings(scoped, players).events).toHaveLength(2)
+  })
+
+  it('produces a bare ladder when every match in the window is unranked', () => {
+    const tournaments = [getMockTournament({ id: 't2', unranked: true })]
+    const unranked = getMockMatch({ id: 'u', tournament_id: 't2', ended_at: at(2026, 9, 5) })
+    const scoped = ratedMatches(matchesInSeason([unranked], 'automne-2026'), tournaments)
+    expect(scoped).toEqual([])
+    expect(rankRatings(replayRatings(scoped, players), players)).toEqual([])
+  })
+})
+
+describe('parseLadderScope', () => {
+  const now = new Date(2026, 9, 15)
+
+  it('defaults to the current season', () => {
+    expect(parseLadderScope('', now)).toEqual({ kind: 'season', id: 'automne-2026' })
+  })
+
+  it('reads an explicit season', () => {
+    expect(parseLadderScope('?s=automne-2026', now)).toEqual({
+      kind: 'season',
+      id: 'automne-2026',
+    })
+  })
+
+  it('reads all-time', () => {
+    expect(parseLadderScope('?s=all', now)).toEqual({ kind: 'all' })
+  })
+
+  it('falls back to the current season for an unknown id', () => {
+    expect(parseLadderScope('?s=nawak-1999', now)).toEqual({ kind: 'season', id: 'automne-2026' })
+  })
+
+  it('falls back to all-time before any season has started', () => {
+    expect(parseLadderScope('?s=nawak-1999', new Date(2026, 7, 1))).toEqual({ kind: 'all' })
+  })
+})
+
+describe('ladderScopeSearch', () => {
+  const now = new Date(2026, 9, 15)
+
+  it('writes nothing for the default scope', () => {
+    expect(ladderScopeSearch({ kind: 'season', id: 'automne-2026' }, now)).toBe('')
+  })
+
+  it('writes a past season and all-time', () => {
+    expect(ladderScopeSearch({ kind: 'season', id: 'ete-2027' }, now)).toBe('?s=ete-2027')
+    expect(ladderScopeSearch({ kind: 'all' }, now)).toBe('?s=all')
+  })
+
+  it('writes nothing for all-time before any season has started', () => {
+    expect(ladderScopeSearch({ kind: 'all' }, new Date(2026, 7, 1))).toBe('')
+  })
+
+  it('round-trips every scope it writes', () => {
+    const scopes: LadderScope[] = [
+      { kind: 'season', id: 'automne-2026' },
+      { kind: 'season', id: 'ete-2027' },
+      { kind: 'all' },
+    ]
+    for (const scope of scopes) {
+      expect(parseLadderScope(ladderScopeSearch(scope, now), now)).toEqual(scope)
+    }
+  })
+})
+
+const getMockIdentityInput = (
+  overrides?: Partial<LadderIdentityInput>,
+): LadderIdentityInput => ({
+  scope: { kind: 'season', id: 'automne-2026' },
+  now: new Date(2026, 9, 15),
+  matchCount: 24,
+  champion: null,
+  eligibilityGames: RATING.provisionalGames,
+  ...overrides,
+})
+
+describe('ladderIdentity', () => {
+  it('tells a running season what it is and how long is left', () => {
+    expect(ladderIdentity(getMockIdentityInput())).toBe(
+      '1 septembre → 30 novembre 2026 · reparti de 1500 · J-47',
+    )
+  })
+
+  it('says an open season is still empty rather than showing a countdown', () => {
+    expect(ladderIdentity(getMockIdentityInput({ matchCount: 0 }))).toBe(
+      "1 septembre → 30 novembre 2026 · aucune partie jouée pour l'instant",
+    )
+  })
+
+  it('names the champion of a closed season', () => {
+    const input = getMockIdentityInput({ now: new Date(2026, 11, 20), champion: 'Léo' })
+    expect(ladderIdentity(input)).toBe('Archive · 1 septembre → 30 novembre 2026 · champion Léo')
+  })
+
+  it('says why a closed season crowned nobody, naming the real gate', () => {
+    const input = getMockIdentityInput({ now: new Date(2026, 11, 20), champion: null })
+    expect(ladderIdentity(input)).toBe(
+      "Archive · 1 septembre → 30 novembre 2026 · aucun champion — personne n'a atteint 10 parties",
+    )
+  })
+
+  it('does not blame anyone for a closed season nobody played', () => {
+    const input = getMockIdentityInput({ now: new Date(2026, 11, 20), matchCount: 0 })
+    expect(ladderIdentity(input)).toBe(
+      'Archive · 1 septembre → 30 novembre 2026 · aucune partie jouée',
+    )
+  })
+
+  it('describes the all-time ladder as the one that never resets', () => {
+    const input = getMockIdentityInput({ scope: { kind: 'all' }, matchCount: 312 })
+    expect(ladderIdentity(input)).toBe(
+      'Depuis le tout premier match · 312 parties · aucune remise à zéro',
+    )
+  })
+
+  it('explains that all-time stands in until the first season opens', () => {
+    const input = getMockIdentityInput({ scope: { kind: 'all' }, now: new Date(2026, 5, 1) })
+    expect(ladderIdentity(input)).toBe(
+      "Aucune saison en cours — le classement de tous les temps fait foi jusqu'au 1er septembre.",
+    )
+  })
+
+  it('falls back to the all-time sentence for a scope naming no real season', () => {
+    const input = getMockIdentityInput({ scope: { kind: 'season', id: 'nawak-1999' } })
+    expect(ladderIdentity(input)).toBe(
+      'Depuis le tout premier match · 24 parties · aucune remise à zéro',
+    )
+  })
+})
+
+describe('daysLeft across the clock change', () => {
+  it('counts calendar days, so the October change does not add a phantom day', () => {
+    // 15 Oct → 1 Dec is 47 days; the raw millisecond gap is 47 days and an hour.
+    expect(daysLeft(seasonById('automne-2026')!, new Date(2026, 9, 15))).toBe(47)
+  })
+
+  it('shows J-1 all through the closing day, whatever the hour', () => {
+    const s = seasonById('automne-2026')!
+    expect(daysLeft(s, new Date(2026, 10, 30, 0, 1))).toBe(1)
+    expect(daysLeft(s, new Date(2026, 10, 30, 23, 59))).toBe(1)
+  })
+})
+
+describe('ladderScopeSearch before the first season', () => {
+  it('still writes a season into the URL when none is running yet', () => {
+    // ?s=<future season> is reachable from a shared link: parseLadderScope accepts
+    // any well-formed id, started or not.
+    expect(ladderScopeSearch({ kind: 'season', id: 'ete-2027' }, new Date(2026, 7, 1))).toBe(
+      '?s=ete-2027',
     )
   })
 })

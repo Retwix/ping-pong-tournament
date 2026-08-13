@@ -3,7 +3,9 @@
 // docs/superpowers/specs/2026-08-12-seasons-design.md.
 //
 // Boundaries are LOCAL midnight, matching statsPage.ts:startOfWeek. Everyone
-// plays in Paris, so local is Paris and DST never enters the arithmetic.
+// plays in Paris, so local is Paris — but DST does enter the arithmetic: an
+// autumn window crosses the October clock change, so anything counting days
+// works in calendar days rather than dividing elapsed milliseconds.
 
 import type { Match } from '../types'
 import type { RatingRow } from './rating'
@@ -138,9 +140,18 @@ export function seasonsUpTo(now: Date): Season[] {
   return out.reverse()
 }
 
-/** Whole days until the window closes. Zero once closed — never negative. */
+const startOfDay = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+
+/**
+ * Whole days until the window closes, counted in calendar days from today.
+ * Zero once closed — never negative.
+ *
+ * Rounds rather than divides exactly: every autumn season spans the October
+ * clock change, so the raw millisecond gap is 47 days and one hour and a
+ * ceiling would announce J-48 for five weeks running.
+ */
 export function daysLeft(s: Season, now: Date): number {
-  return Math.max(0, Math.ceil((s.end.getTime() - now.getTime()) / DAY_MS))
+  return Math.max(0, Math.round((s.end.getTime() - startOfDay(now).getTime()) / DAY_MS))
 }
 
 export function isClosed(s: Season, now: Date): boolean {
@@ -224,4 +235,73 @@ export function seasonBannerState(input: SeasonBannerInput): SeasonBannerState {
   }
 
   return leader.provisional ? 'nochamp' : 'champion'
+}
+
+/**
+ * Which ladder the Classement shows. A discriminated union rather than an
+ * optional id: « current » and « past » are both a season, told apart by
+ * isClosed, so there is no state where an id is required but absent.
+ */
+export type LadderScope = { kind: 'season'; id: string } | { kind: 'all' }
+
+export const ALL_TIME: LadderScope = { kind: 'all' }
+
+/** Read a ladder scope from a query string: ?s=<id> | ?s=all. */
+export function parseLadderScope(search: string, now: Date): LadderScope {
+  const raw = new URLSearchParams(search).get('s')
+  if (raw === 'all') return ALL_TIME
+  if (raw !== null && seasonById(raw) !== null) return { kind: 'season', id: raw }
+  const s = currentSeason(now)
+  return s === null ? ALL_TIME : { kind: 'season', id: s.id }
+}
+
+/**
+ * The query string for a scope — '' for the default (the current season).
+ * The `kind` guard below is a type gate rather than a behaviour one: dropping it
+ * would return '' for the same inputs, but `scope.id` does not exist on all-time.
+ */
+export function ladderScopeSearch(scope: LadderScope, now: Date): string {
+  const current = currentSeason(now)
+  if (scope.kind === 'season' && scope.id === current?.id) return ''
+  if (scope.kind === 'all' && current === null) return ''
+  return `?s=${scope.kind === 'all' ? 'all' : scope.id}`
+}
+
+export interface LadderIdentityInput {
+  scope: LadderScope
+  now: Date
+  /** Rated matches counted inside the scope currently shown. */
+  matchCount: number
+  /** The scoped season's champion. null = the season crowned nobody. */
+  champion: string | null
+  /** RATING.provisionalGames — passed in so the gate is never written twice. */
+  eligibilityGames: number
+}
+
+/**
+ * One sentence saying which ladder you are looking at. An archive is read-only by
+ * wording alone — « Archive », the past tense, the named champion — which is why
+ * there is no warning banner and no greyed table: people open an archive to read it.
+ */
+export function ladderIdentity(input: LadderIdentityInput): string {
+  const { scope, now, matchCount, champion, eligibilityGames } = input
+  const season = scope.kind === 'season' ? seasonById(scope.id) : null
+
+  if (season === null) {
+    if (currentSeason(now) === null) {
+      return "Aucune saison en cours — le classement de tous les temps fait foi jusqu'au 1er septembre."
+    }
+    return `Depuis le tout premier match · ${matchCount} parties · aucune remise à zéro`
+  }
+
+  const window = seasonWindowLabel(season)
+
+  if (!isClosed(season, now)) {
+    if (matchCount === 0) return `${window} · aucune partie jouée pour l'instant`
+    return `${window} · reparti de 1500 · J-${daysLeft(season, now)}`
+  }
+
+  if (matchCount === 0) return `Archive · ${window} · aucune partie jouée`
+  if (champion !== null) return `Archive · ${window} · champion ${champion}`
+  return `Archive · ${window} · aucun champion — personne n'a atteint ${eligibilityGames} parties`
 }
