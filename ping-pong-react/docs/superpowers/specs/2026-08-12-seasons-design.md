@@ -212,7 +212,7 @@ brief is [`docs/design/seasons-brief.md`](../../design/seasons-brief.md)).
 | Season banner — home | `src/components/Home.tsx` | New. Full-width band under `LiveHero`, as the first row of the 2fr/1fr grid (`grid-column: 1 / -1`). Five visual forms across seven states |
 | Season header — ladder | `src/components/Ratings.tsx` | New. Status badge + identity sentence, one per scope |
 | Scope selector — ladder | `src/components/Ratings.tsx` | New. Dropdown: current season · past seasons (scrollable) · « Tous les temps » (pinned) |
-| **« Course au titre » rail card** | `src/components/Ratings.tsx` | New. Per-player progress toward the 10-game bar. Current-season scope only |
+| Title-race progress | `src/components/Ratings.tsx` | Extends the existing table: games column reads `14 / 10` and turns green at 10. Current-season scope only. (Trimmed from the handoff's separate rail card — see [Fidelity](#fidelity-the-handoff-is-direction-not-a-pixel-spec)) |
 | Period filter — stats | `src/lib/statsPage.ts`, `src/components/Stats.tsx` | One added option: `Tout · Cette saison · Ce mois-ci · Cette semaine` |
 | Eligibility copy | `src/components/Ratings.tsx` | Table footer rewritten (see [Eligibility copy](#eligibility-copy-is-currently-wrong)) |
 
@@ -223,6 +223,29 @@ right, which makes the archive double as the palmarès that is out of scope as a
 
 « Cette saison » resolves to `currentSeason(now)` — the **season window**, not "the last 90 days".
 Before 1 Sep 2026 there is no current season, so the option is hidden rather than shown empty.
+
+### Fidelity: the handoff is direction, not a pixel spec
+
+Build the gist, not the geometry. Colours, radii and shadows come from the codebase's existing
+tokens; the handoff's hex values are intent, not values — the one genuine addition is the gold
+`#E8B53A`, already used for first place and promoted here to a title accent.
+
+**What ships in v1**, trimmed from the handoff's five forms plus a new rail card down to two new
+components:
+
+| Handoff element | Decision |
+|---|---|
+| Band, forms A/B/C/D | **Keep.** One component, four data-driven forms: pre-season, running, champion, closed-without-champion |
+| States 2 and 4 ("no eligible leader", "final days") | **Keep as variants, not states.** Both are form A with a different leader line and pill colour — the handoff says so itself |
+| Scope selector + identity sentence | **Keep.** The archive is unreachable without the first, the table ambiguous without the second |
+| Champion per row in the dropdown | **Keep.** It is the palmarès, for free, with no new page |
+| Gold accent, `CHAMPION · <SAISON>` badge, podium, "here's when it restarts" line | **Keep.** This is the celebration |
+| « Cette saison » chip | **Keep.** One entry in `PERIOD_OPTIONS` |
+| Footer copy | **Keep** — it corrects a real inaccuracy (below) |
+| Form E: bespoke dashed-border empty season | **Trim.** State 9 needs a sentence, not its own visual language. Fold into the neutral card |
+| Progress pill inside the banner (§5b) | **Trim.** Duplicates the progress affordance and appears in one state only |
+| « Course au titre » rail card (§5a) | **Trim into the existing table.** Show the 10-game progress in the games column — `14 / 10`, turning green at 10 — where people already look. The rail card stays an easy follow-up if that doesn't land |
+| Radial halo, three-stop gradients, duplicated light/dark trees | **Trim.** Token work, not design work |
 
 ### Design decisions taken in the handoff
 
