@@ -225,3 +225,12 @@ export function seasonBannerState(input: SeasonBannerInput): SeasonBannerState {
 
   return leader.provisional ? 'nochamp' : 'champion'
 }
+
+/**
+ * Which ladder the Classement shows. A discriminated union rather than an
+ * optional id: « current » and « past » are both a season, told apart by
+ * isClosed, so there is no state where an id is required but absent.
+ */
+export type LadderScope = { kind: 'season'; id: string } | { kind: 'all' }
+
+export const ALL_TIME: LadderScope = { kind: 'all' }
