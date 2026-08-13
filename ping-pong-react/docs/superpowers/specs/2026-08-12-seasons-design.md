@@ -203,22 +203,115 @@ top provisional player. Ties are already deterministic: `rankRatings` breaks by 
 
 ## Surfaces
 
-Detailed states, layout, and copy live in [`docs/design/seasons-brief.md`](../../design/seasons-brief.md).
+Design is **delivered**: prototype and full specification in
+[`docs/design/seasons-handoff/`](../../design/seasons-handoff/README.md) (the original request
+brief is [`docs/design/seasons-brief.md`](../../design/seasons-brief.md)).
 
 | Surface | File | Change |
 |---|---|---|
-| Season banner — home | `src/components/Home.tsx` | New. Current season, days left, leader; champion once closed |
-| Season header — ladder | `src/components/Ratings.tsx` | New. Identity of the selected scope |
-| Scope selector — ladder | `src/components/Ratings.tsx` | New. Current season · past seasons · « Tous les temps » |
-| Period filter — stats | `src/lib/statsPage.ts`, `src/components/Stats.tsx` | One added option, « Cette saison » |
-| Eligibility copy | `src/components/Ratings.tsx` | « provisoire » gains "can't win the title" microcopy |
+| Season banner — home | `src/components/Home.tsx` | New. Full-width band under `LiveHero`, as the first row of the 2fr/1fr grid (`grid-column: 1 / -1`). Five visual forms across seven states |
+| Season header — ladder | `src/components/Ratings.tsx` | New. Status badge + identity sentence, one per scope |
+| Scope selector — ladder | `src/components/Ratings.tsx` | New. Dropdown: current season · past seasons (scrollable) · « Tous les temps » (pinned) |
+| **« Course au titre » rail card** | `src/components/Ratings.tsx` | New. Per-player progress toward the 10-game bar. Current-season scope only |
+| Period filter — stats | `src/lib/statsPage.ts`, `src/components/Stats.tsx` | One added option: `Tout · Cette saison · Ce mois-ci · Cette semaine` |
+| Eligibility copy | `src/components/Ratings.tsx` | Table footer rewritten (see [Eligibility copy](#eligibility-copy-is-currently-wrong)) |
 
-The scope selector **grows over time** — four seasons a year means nine entries by late 2028 — so it
-must be a control that scales (a dropdown rather than a segmented control). Design decides the final
-form.
+The scope selector **grows over time** — nine entries by late 2028, ~20 by 2031, never shrinking.
+Design's answer: only the "past seasons" zone scrolls (`max-height: 216px`), while the current
+season and « Tous les temps » stay anchored. Each past-season row carries its champion on the
+right, which makes the archive double as the palmarès that is out of scope as a page.
 
-« Cette saison » resolves to `currentSeason(now)`. Before 1 Sep 2026 there is no current season, so
-the option is hidden rather than shown empty.
+« Cette saison » resolves to `currentSeason(now)` — the **season window**, not "the last 90 days".
+Before 1 Sep 2026 there is no current season, so the option is hidden rather than shown empty.
+
+### Design decisions taken in the handoff
+
+The three questions left open for design came back answered, with reasoning worth keeping:
+
+1. **Band, not rail card.** A season needs horizontal room (name + window + leader + Elo +
+   progress + countdown on one line, plus a podium when closed), and the rail is already dense.
+   Hierarchy is explicit: live match > season > everything else — the band is calm lavender and
+   sits *below* the saturated coral hero, so it never competes with a live match.
+2. **The champion state gets its own treatment, not the tournament's.** No confetti, no
+   `Champion.tsx`, no `FinalStandingsCard`. A tournament is won in front of witnesses and
+   celebrated for ten minutes; a season is won at midnight with nobody watching and then sits on
+   screen for three months. The chosen form is a deep-violet plaque with a gold rule and a
+   `CHAMPION · <SAISON>` badge, closing on the line « Saison Été 2028 · départ le 1er juin, tout le
+   monde à 1500 » — so an ageing banner still says what happens next, not only what happened.
+3. **« Cette saison » does not replace « Ce mois-ci ».** Three months and one month are genuinely
+   different granularities. Order is widest-to-narrowest, with « Cette saison » second because it
+   becomes the product's default frame of reference once seasons launch.
+
+### Banner state machine
+
+The handoff specifies an ordered derivation, which becomes a pure function —
+`seasonBannerState(...)` — and a direct TDD target:
+
+```
+phase === 'pre'                            -> 1  pre-season
+ratedCount === 0                           -> 9  season with no games
+phase === 'running' && leader.games < 10   -> 2  no eligible leader
+phase === 'running' && daysLeft <= 7       -> 4  final days
+phase === 'running'                        -> 3  leader known
+phase === 'closed' && champion             -> 5  champion crowned
+phase === 'closed'                         -> 6  closed, no champion
+```
+
+Two corrections to the handoff's version of this, both found while reconciling:
+
+- **The count must be of *rated* matches, not matches.** The handoff guards state 9 on
+  `matchCount === 0` and then reads `leader.games` in state 2. If every match in the window belongs
+  to a « non classée » tournament — or is a double, which is always unranked — then `matchCount > 0`
+  while the rated ladder is empty, `leader` is `null`, and state 2 dereferences null. The guard must
+  be the post-`ratedMatches` count, or equivalently `leader === null`.
+- **State 4 is unreachable while nobody is eligible.** State 2 is tested before state 4, so a season
+  whose final week still has no 10-game player shows a calm violet `J-2` rather than the urgency
+  pill. This is defensible — urgency about a title nobody can win is odd — but it follows from
+  ordering rather than from a stated intent, so it is recorded here as deliberate.
+
+### Eligibility copy is currently wrong
+
+`src/components/Ratings.tsx:426` reads « Un joueur entre au classement après
+{RATING.provisionalGames} matchs. Avant cela, son Elo provisoire s'affiche en gris. »
+
+That does not describe the code: `rankRatings` filters `s.games > 0` (`rating.ts:429`), so a player
+appears on the ladder from their **first** match and is merely labelled « Provisoire » and greyed
+below 10. There is no entry threshold at all.
+
+The handoff read that line, reasonably inferred two separate thresholds, and specified a footer
+describing entry at **5** games and the title at 10 (§5c). **No 5-game threshold exists anywhere in
+the codebase** — the only 5 in `classement.ts` is `lastFive`, the form dots.
+
+Correct model, to be written once in the new footer:
+
+- a player appears on the ladder from their first match;
+- below `RATING.provisionalGames` (10) the rating is « provisoire » and shown greyed;
+- 10 matches **within the season** are required to be eligible for the title.
+
+One threshold, two consequences. Fixing the pre-existing sentence is in scope for this work, since
+seasons are what make it actively misleading.
+
+### Scope type
+
+The handoff's view model uses `{ kind: 'current' | 'past' | 'lifetime'; seasonId?: string }`. The
+implementation keeps the discriminated union from [Hook change](#hook-change) instead — an optional
+`seasonId` that is required for exactly one variant is a state that shouldn't be representable.
+`'current'` and `'past'` both map to `{ kind: 'season'; id }`; the current/past distinction is
+derived from `isClosed`, not stored.
+
+### Additional helpers
+
+The handoff's banner needs two things the module did not yet expose:
+
+```ts
+nextSeason(s: Season): Season          // drives « départ le 1er juin » on the champion plaque
+seasonWindowLabel(s: Season): string   // « 1 mars → 31 mai 2028 »
+```
+
+The closed-season identity sentence reads « classement final, **figé** ». Under
+[Trade-off: recomputed, not frozen](#trade-off-recomputed-not-frozen) the ladder is recomputed, not
+frozen — "final" is accurate (no new matches land in a closed window), "figé" overstates it. Prefer
+« classement final » alone.
 
 ---
 
@@ -259,8 +352,14 @@ the option is hidden rather than shown empty.
 - no RD decay is carried across a boundary
 - an unranked tournament inside the window contributes nothing to season Elo
 
+**Banner state machine** — one test per branch of `seasonBannerState`, plus the two corrections:
+- a window containing only « non classée » / doubles matches yields state 9, not a null dereference
+- the final-week season with no eligible player yields state 2, not state 4 (pinning the ordering)
+- `nextSeason` crosses the year correctly: `ete-2027` → `automne-2027`, `automne-2026` → `hiver-2026`
+
 **`statsPage.test.ts`** — « Cette saison » round-trips through the URL and filters to the current
-window; the option is absent before 1 Sep 2026.
+season *window* (not a rolling 90 days); the option is absent before 1 Sep 2026; the chip order is
+`Tout · Cette saison · Ce mois-ci · Cette semaine`.
 
 Then Stryker over the new module, per the MUTATE step of the cycle.
 
@@ -268,8 +367,10 @@ Then Stryker over the new module, per the MUTATE step of the cycle.
 
 ## Open questions
 
-None blocking. Two to revisit after the first season closes:
+None blocking. Design's three questions came back answered (see
+[Design decisions taken in the handoff](#design-decisions-taken-in-the-handoff)). One to revisit
+after the first season closes:
 
-1. Does « Cette saison » make « Ce mois-ci » redundant on the stats page?
-2. Is 10 games the right eligibility bar for a three-month season, or should it scale with the
-   season's activity?
+- Is 10 games the right eligibility bar for a three-month season, or should it scale with the
+  season's activity? A quiet December could produce state 6 (« terminée sans champion ») more often
+  than intended, and only a real season's data will show it.

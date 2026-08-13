@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  .pl-l{
+    --ink:#17082B; --body:#4A4458; --muted:#847E96; --faint:#A49EB3;
+    --card:#FFFFFF; --card2:#FBF9FF; --line:#E8E4F2; --line2:#D0C3F3; --tint:#F2EFFB; --lav:#E4DDF8;
+    --purple:#4A2AA4; --purple2:#8663E9; --coral:#D74251; --coralbg:#FEE7EE;
+    --green:#2BA572; --greenbg:#E4F5EE; --red:#E54C4C; --gold:#E8B53A;
+    --field:#FFFFFF; --scrim:rgba(32,10,66,.42);
+    --sh-sm:0 2px 8px rgba(32,10,66,.05); --sh-md:0 8px 24px rgba(32,10,66,.07); --sh-lg:0 18px 44px rgba(32,10,66,.18);
+  }
+  .pl-d{
+    --ink:#FFFFFF; --body:#CFC6E6; --muted:#A99FC4; --faint:#8B82A8;
+    --card:#1E1138; --card2:#241543; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.2); --tint:rgba(255,255,255,.06); --lav:rgba(139,110,233,.28);
+    --purple:#C9B8FF; --purple2:#8B6EE9; --coral:#FF7A85; --coralbg:rgba(215,66,81,.18);
+    --green:#4BD69B; --greenbg:rgba(43,165,114,.18); --red:#FF7676; --gold:#F0C84B;
+    --field:rgba(255,255,255,.05); --scrim:rgba(10,3,22,.62);
+    --sh-sm:0 3px 12px rgba(0,0,0,.3); --sh-md:0 10px 26px rgba(0,0,0,.36); --sh-lg:0 20px 50px rgba(0,0,0,.5);
+  }
+  .plrow{ transition:background 160ms cubic-bezier(.2,.7,.2,1) }
+  .plrow:hover{ background:var(--tint) !important }
+  .plrow:hover .plact{ opacity:1 }
+  .plact{ opacity:.25; transition:opacity 160ms cubic-bezier(.2,.7,.2,1) }
+  .plinput{ font:600 14px 'DM Sans'; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:12px; padding:12px 14px; width:100%; box-sizing:border-box; outline:none; transition:border-color 140ms }
+  .plinput:focus{ border-color:var(--line2) }
+  .plinput::placeholder{ color:var(--faint) }
+  @keyframes plpop{ from{ opacity:0; transform:translateY(10px) scale(.985) } to{ opacity:1; transform:none } }
+  @keyframes plfade{ from{ opacity:0 } to{ opacity:1 } }
+</style>
+</helmet>
+
+<div class="{{ themeClass }}" style="font-family:'Outfit',sans-serif">
+
+  <div style="display:flex; align-items:flex-end; gap:20px; margin-top:16px">
+    <div style="flex:1; min-width:0">
+      <div style="font:800 32px/1 'Outfit'; letter-spacing:-.02em; color:var(--ink)">Joueurs</div>
+      <div style="margin-top:7px; font:600 14px 'DM Sans'; color:var(--muted)">{{ subtitle }}</div>
+    </div>
+    <div style="flex:none; display:flex; align-items:center; gap:10px">
+      <div style="display:flex; align-items:center; gap:10px; width:250px; background:var(--card); border:1px solid var(--line); border-radius:13px; padding:0 14px; box-shadow:var(--sh-sm)">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" style="color:var(--faint); flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+        <input class="plinput" value="{{ query }}" onChange="{{ setQuery }}" placeholder="Rechercher un joueur" style="border:none; background:transparent; padding:12px 0; box-shadow:none">
+      </div>
+      <div onClick="{{ addPlayer }}" style="display:inline-flex; align-items:center; gap:8px; font:800 14px 'Outfit'; color:#fff; background:#4A2AA4; border-radius:13px; padding:13px 17px; cursor:pointer; box-shadow:0 10px 24px rgba(74,42,164,.28)" style-hover="background:#3C2088"><span style="font:700 18px/.7 'Outfit'">+</span> Ajouter un joueur</div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:8px; margin-top:18px; flex-wrap:wrap">
+    <sc-for list="{{ teamFilters }}" as="t" hint-placeholder-count="5"><div onClick="{{ t.pick }}" style="font:700 13px 'Outfit'; border-radius:11px; padding:9px 15px; cursor:pointer; background:{{ t.bg }}; color:{{ t.fg }}; border:1px solid {{ t.bd }}">{{ t.label }}</div></sc-for>
+  </div>
+
+  <div style="margin-top:16px; background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--sh-sm); padding:6px 8px 10px">
+    <div style="display:flex; align-items:center; gap:14px; padding:12px 12px 9px; font:700 10.5px 'Outfit'; letter-spacing:.08em; color:var(--faint)">
+      <div style="width:42px; flex:none"></div>
+      <div style="flex:1">JOUEUR</div>
+      <div style="width:150px">ÉQUIPE</div>
+      <div style="width:70px; text-align:right">ELO</div>
+      <div style="width:90px; text-align:right">MATCHS</div>
+      <div style="width:78px; text-align:right">VICTOIRES</div>
+      <div style="width:74px; flex:none"></div>
+    </div>
+
+    <sc-for list="{{ rows }}" as="p" hint-placeholder-count="7">
+      <div class="plrow" style="display:flex; align-items:center; gap:14px; padding:11px 12px; border-radius:13px">
+        <div style="width:42px; height:42px; flex:none; border-radius:50%; overflow:hidden; background:{{ p.avaBg }}; color:{{ p.avaFg }}; display:flex; align-items:center; justify-content:center; font:800 14px 'Outfit'; background-image:{{ p.avaImg }}; background-size:cover; background-position:center">{{ p.avaText }}</div>
+        <div style="flex:1; min-width:0">
+          <div style="font:800 15px 'Outfit'; color:var(--ink)">{{ p.name }}</div>
+          <div style="margin-top:2px; font:600 12px 'DM Sans'; color:var(--muted)">{{ p.meta }}</div>
+        </div>
+        <div style="width:150px">
+          <span style="display:inline-block; font:700 12px 'Outfit'; border-radius:999px; padding:5px 11px; background:{{ p.teamBg }}; color:{{ p.teamFg }}">{{ p.team }}</span>
+        </div>
+        <div style="width:70px; text-align:right; font:800 15px 'Outfit'; color:var(--ink)">{{ p.elo }}</div>
+        <div style="width:90px; text-align:right; font:600 13px 'DM Sans'; color:var(--body)">{{ p.played }}</div>
+        <div style="width:78px; text-align:right; font:700 13px 'DM Sans'; color:{{ p.winFg }}">{{ p.winrate }}</div>
+        <div class="plact" style="width:74px; flex:none; display:flex; justify-content:flex-end; gap:4px">
+          <div onClick="{{ p.edit }}" title="Modifier" style="width:31px; height:31px; border-radius:9px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--purple); background:var(--tint)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"></path><path d="M14 6l4 4"></path></svg></div>
+          <sc-if value="{{ canDelete }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ p.remove }}" title="Retirer" style="width:31px; height:31px; border-radius:9px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--muted)" style-hover="color:var(--coral); background:var(--coralbg)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"></path></svg></div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-for>
+
+    <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:44px 12px; text-align:center">
+        <div style="font:800 15px 'Outfit'; color:var(--ink)">Aucun joueur trouvé</div>
+        <div style="margin-top:5px; font:600 13px 'DM Sans'; color:var(--muted)">Essaie un autre nom ou une autre équipe.</div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cancel }}" style="position:fixed; inset:0; z-index:120; background:var(--scrim); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:24px; animation:plfade 160ms ease-out both">
+      <div onClick="{{ stop }}" style="width:100%; max-width:520px; background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--sh-lg); padding:26px 26px 22px; animation:plpop 220ms cubic-bezier(.2,.7,.2,1) both">
+        <div style="display:flex; align-items:flex-start; gap:14px">
+          <div style="flex:1; min-width:0">
+            <div style="font:800 20px 'Outfit'; color:var(--ink)">{{ dialogTitle }}</div>
+            <div style="margin-top:4px; font:600 13px 'DM Sans'; color:var(--muted)">Nom, équipe et photo de profil.</div>
+          </div>
+          <div onClick="{{ cancel }}" style="width:32px; height:32px; flex:none; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--muted); background:var(--tint)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:18px; margin-top:22px; padding:16px; border-radius:16px; background:var(--card2); border:1px solid var(--line)">
+          <div onClick="{{ pickFile }}" title="Changer la photo" style="width:76px; height:76px; flex:none; position:relative; border-radius:50%; cursor:pointer; overflow:hidden; background:{{ formAvaBg }}; color:{{ formAvaFg }}; display:flex; align-items:center; justify-content:center; font:800 24px 'Outfit'; background-image:{{ formAvaImg }}; background-size:cover; background-position:center; box-shadow:0 8px 20px rgba(32,10,66,.16)">{{ formAvaText }}</div>
+          <div style="flex:1; min-width:0">
+            <div style="font:700 13px 'Outfit'; color:var(--ink)">Photo de profil</div>
+            <div style="margin-top:3px; font:600 12px/1.5 'DM Sans'; color:var(--muted)">JPG ou PNG, carré de préférence. Sans photo, les initiales sont utilisées.</div>
+            <div style="display:flex; gap:8px; margin-top:11px">
+              <div onClick="{{ pickFile }}" style="display:inline-flex; align-items:center; gap:7px; font:700 12.5px 'Outfit'; color:var(--purple); background:var(--tint); border-radius:10px; padding:9px 13px; cursor:pointer"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V6M8 10l4-4 4 4"></path><path d="M5 18h14"></path></svg>{{ uploadLabel }}</div>
+              <sc-if value="{{ hasPhoto }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ removePhoto }}" style="font:700 12.5px 'Outfit'; color:var(--muted); border-radius:10px; padding:9px 13px; cursor:pointer" style-hover="color:var(--coral); background:var(--coralbg)">Retirer</div>
+              </sc-if>
+            </div>
+            <input type="file" accept="image/*" ref="{{ fileRef }}" onChange="{{ onFile }}" style="display:none">
+          </div>
+        </div>
+
+        <div style="margin-top:18px">
+          <div style="font:700 11px 'Outfit'; letter-spacing:.08em; color:var(--faint); margin-bottom:7px">NOM</div>
+          <input class="plinput" value="{{ formName }}" onChange="{{ setName }}" placeholder="Prénom ou pseudo">
+        </div>
+
+        <div style="margin-top:18px">
+          <div style="font:700 11px 'Outfit'; letter-spacing:.08em; color:var(--faint); margin-bottom:7px">ÉQUIPE</div>
+          <div style="display:flex; gap:7px; flex-wrap:wrap">
+            <sc-for list="{{ teamOpts }}" as="t" hint-placeholder-count="5"><div onClick="{{ t.pick }}" style="font:700 13px 'Outfit'; border-radius:11px; padding:9px 14px; cursor:pointer; background:{{ t.bg }}; color:{{ t.fg }}; border:1px solid {{ t.bd }}">{{ t.label }}</div></sc-for>
+          </div>
+          <input class="plinput" value="{{ formTeam }}" onChange="{{ setTeam }}" placeholder="ou saisis une autre équipe" style="margin-top:9px; font-size:13px">
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-top:24px">
+          <div onClick="{{ cancel }}" style="flex:none; font:700 14px 'Outfit'; color:var(--body); background:var(--tint); border-radius:13px; padding:13px 18px; cursor:pointer">Annuler</div>
+          <div onClick="{{ save }}" style="flex:1; text-align:center; font:800 14px 'Outfit'; color:#fff; background:#4A2AA4; border-radius:13px; padding:13px 18px; cursor:pointer; box-shadow:0 10px 24px rgba(74,42,164,.28)" style-hover="background:#3C2088">Enregistrer</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;allowRemove&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const TEAMS = ['Design', 'Tech', 'Produit', 'Sales', 'Finance'];
+const SEED = [
+  { id: 1, name: 'Léo', team: 'Tech', elo: 1487, played: 24, wins: 17, photo: null },
+  { id: 2, name: 'Thibault', team: 'Sales', elo: 1442, played: 21, wins: 13, photo: null },
+  { id: 3, name: 'Candice', team: 'Design', elo: 1398, played: 19, wins: 11, photo: null },
+  { id: 4, name: 'Maxime', team: 'Tech', elo: 1356, played: 16, wins: 9, photo: null },
+  { id: 5, name: 'Sarah', team: 'Produit', elo: 1321, played: 18, wins: 9, photo: null },
+  { id: 6, name: 'Nicolas', team: 'Finance', elo: 1288, played: 14, wins: 5, photo: null },
+  { id: 7, name: 'Émilie', team: 'Design', elo: 1254, played: 12, wins: 4, photo: null }
+];
+
+class Component extends DCLogic {
+  state = { players: SEED, query: '', filter: 'all', editing: null, form: null };
+
+  componentDidMount() {
+    this._esc = e => { if (e.key === 'Escape' && this.state.editing) this.setState({ editing: null, form: null }); };
+    window.addEventListener('keydown', this._esc);
+    this.fileRef = React.createRef();
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._esc); }
+
+  dark() { return (this.props.theme || 'light') === 'dark'; }
+  initials(name) {
+    const parts = (name || '?').trim().split(/\s+/);
+    return (parts.length > 1 ? parts[0][0] + parts[1][0] : (parts[0] || '?').slice(0, 2)).toUpperCase();
+  }
+  avatar(i) {
+    const light = [['#4A2AA4', '#fff'], ['#E4DDF8', '#4A2AA4'], ['#FBD4D9', '#B33345'], ['#DCEEE6', '#22795A'], ['#E8E1FA', '#5B39C4']];
+    const dark = [['#8B6EE9', '#fff'], ['rgba(139,110,233,.3)', '#D6C9FF'], ['rgba(215,66,81,.28)', '#FF9EA8'], ['rgba(43,165,114,.26)', '#6FE0AC'], ['rgba(255,255,255,.1)', '#CFC6E6']];
+    return (this.dark() ? dark : light)[i % 5];
+  }
+  teamStyle(team) {
+    const idx = Math.max(0, TEAMS.indexOf(team));
+    const light = [['#F0ECFB', '#4A2AA4'], ['#E9F0FB', '#2F5AA8'], ['#EBF6F1', '#22795A'], ['#FDEEF1', '#B33345'], ['#FBF2E6', '#9A6A1C']];
+    const dark = [['rgba(139,110,233,.22)', '#CFC0FF'], ['rgba(80,130,220,.2)', '#A8C6F5'], ['rgba(43,165,114,.2)', '#78E0B0'], ['rgba(215,66,81,.2)', '#FF9EA8'], ['rgba(232,181,58,.18)', '#F0CE7A']];
+    return (this.dark() ? dark : light)[idx % 5];
+  }
+  openEdit(p) { this.setState({ editing: p.id, form: { name: p.name, team: p.team, photo: p.photo } }); }
+  save() {
+    const { editing, form } = this.state;
+    if (!form) return;
+    const name = (form.name || '').trim() || 'Sans nom';
+    this.setState({
+      players: this.state.players.map(p => p.id === editing ? { ...p, name, team: (form.team || '').trim() || '—', photo: form.photo } : p),
+      editing: null, form: null, pending: null
+    });
+  }
+  onFile(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => this.setState({ form: { ...this.state.form, photo: r.result } });
+    r.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  renderVals() {
+    const dark = this.dark();
+    const { players, query, filter, editing, form } = this.state;
+    const q = query.trim().toLowerCase();
+    const visible = players.filter(p => (filter === 'all' || p.team === filter) && (!q || p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q)));
+
+    const chip = active => active
+      ? { bg: '#4A2AA4', fg: '#fff', bd: '#4A2AA4' }
+      : { bg: dark ? 'transparent' : 'var(--card)', fg: 'var(--body)', bd: 'var(--line)' };
+
+    const teamFilters = [{ key: 'all', label: 'Tous · ' + players.length }].concat(
+      TEAMS.map(t => ({ key: t, label: t + ' · ' + players.filter(p => p.team === t).length }))
+    ).map(o => {
+      const c = chip(filter === o.key);
+      return { label: o.label, bg: c.bg, fg: c.fg, bd: c.bd, pick: () => this.setState({ filter: o.key }) };
+    });
+
+    const rows = visible.map((p, i) => {
+      const [avaBg, avaFg] = this.avatar(p.id - 1);
+      const [teamBg, teamFg] = this.teamStyle(p.team);
+      const rate = p.played ? Math.round((p.wins / p.played) * 100) : 0;
+      return {
+        name: p.name, team: p.team, elo: p.elo, played: p.played + ' matchs',
+        meta: p.wins + ' V · ' + (p.played - p.wins) + ' D',
+        winrate: rate + ' %', winFg: rate >= 50 ? 'var(--green)' : 'var(--muted)',
+        avaBg, avaFg, teamBg, teamFg,
+        avaText: p.photo ? '' : this.initials(p.name),
+        avaImg: p.photo ? 'url(' + p.photo + ')' : 'none',
+        edit: () => this.openEdit(p),
+        remove: () => this.setState({ players: this.state.players.filter(x => x.id !== p.id) })
+      };
+    });
+
+    const f = form || { name: '', team: '', photo: null };
+    const [fBg, fFg] = this.avatar((editing || 1) - 1);
+    const teamOpts = TEAMS.map(t => {
+      const c = chip(f.team === t);
+      return { label: t, bg: c.bg, fg: c.fg, bd: c.bd, pick: () => this.setState({ form: { ...this.state.form, team: t } }) };
+    });
+
+    return {
+      themeClass: dark ? 'pl-d' : 'pl-l',
+      subtitle: players.length + ' joueurs inscrits · modifie un profil en un clic',
+      query, setQuery: e => this.setState({ query: e.target.value }),
+      teamFilters, rows, empty: visible.length === 0,
+      canDelete: this.props.allowRemove ?? true,
+      editing: !!editing,
+      dialogTitle: this.state.pending ? 'Nouveau joueur' : 'Modifier ' + (f.name || 'le joueur'),
+      formName: f.name, formTeam: f.team,
+      formAvaBg: fBg, formAvaFg: fFg,
+      formAvaText: f.photo ? '' : this.initials(f.name),
+      formAvaImg: f.photo ? 'url(' + f.photo + ')' : 'none',
+      hasPhoto: !!f.photo,
+      uploadLabel: f.photo ? 'Remplacer' : 'Téléverser',
+      teamOpts,
+      setName: e => this.setState({ form: { ...this.state.form, name: e.target.value } }),
+      setTeam: e => this.setState({ form: { ...this.state.form, team: e.target.value } }),
+      fileRef: this.fileRef,
+      pickFile: () => this.fileRef && this.fileRef.current && this.fileRef.current.click(),
+      onFile: e => this.onFile(e),
+      removePhoto: () => this.setState({ form: { ...this.state.form, photo: null } }),
+      save: () => this.save(),
+      cancel: () => this.setState({
+        players: this.state.pending ? this.state.players.filter(p => p.id !== this.state.pending) : this.state.players,
+        editing: null, form: null, pending: null
+      }),
+      addPlayer: () => {
+        const id = Math.max(0, ...this.state.players.map(p => p.id)) + 1;
+        const np = { id, name: 'Nouveau joueur', team: 'Tech', elo: 1200, played: 0, wins: 0, photo: null };
+        this.setState({ players: this.state.players.concat([np]), editing: id, pending: id, form: { name: '', team: 'Tech', photo: null } });
+      },
+      stop: e => e.stopPropagation()
+    };
+  }
+}
+</script>
+</body>
+</html>
