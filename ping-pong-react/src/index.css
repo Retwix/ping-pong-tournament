@@ -974,7 +974,7 @@ td.elo.neg { color: var(--coral); }
   font-weight: 800; font-size: max(17px, calc(38 * var(--u)));
   overflow: hidden;
 }
-.tv-avatar img, .tv-step-avatar img {
+.tv-avatar img, .tv-step-avatar img, .tv-final-avatar img {
   width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block;
 }
 .tv-avatar--a {
@@ -1098,7 +1098,6 @@ td.elo.neg { color: var(--coral); }
   box-shadow: 0 30px 70px rgba(32, 10, 66, 0.22);
   animation: rise var(--dur) var(--ease);
 }
-.tv-panels .tv-podium:only-child { width: min(520px, 100%); }
 .tv-podium-label {
   font-weight: 800; font-size: 12px; letter-spacing: 0.22em;
   text-transform: uppercase; color: rgba(255, 255, 255, 0.7);
@@ -1135,6 +1134,76 @@ td.elo.neg { color: var(--coral); }
 .tv-step--2 .tv-step-bar { height: 90px; font-size: 30px; background: linear-gradient(180deg, #c7cdd6, #aeb6c0); }
 .tv-step--3 .tv-step-bar { height: 66px; font-size: 26px; background: linear-gradient(180deg, #d9a878, #cb8e5e); }
 
+/* --- end of tournament: the full classement, beside the podium --- */
+.tv-final {
+  flex: 1; max-width: 620px; min-width: 0; min-height: min(520px, 74vh);
+  display: flex; flex-direction: column; border-radius: 22px;
+  background:
+    radial-gradient(120% 120% at 0% 0%, #e9e2fa 0%, transparent 55%),
+    radial-gradient(120% 120% at 100% 0%, #fce1e8 0%, transparent 55%),
+    #fbf9ff;
+  border: 1px solid #e8e4f2; box-shadow: 0 30px 70px rgba(32, 10, 66, 0.12);
+  padding: 30px 24px;
+  animation: rise var(--dur) var(--ease);
+}
+[data-theme='dark'] .tv-final {
+  background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+.tv-final-label {
+  font-weight: 800; font-size: 12px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--tv-label);
+}
+.tv-final-title { font-weight: 900; font-size: 30px; color: var(--tv-ink); margin-top: 4px; }
+.tv-final-rows { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; flex: 1; min-height: 0; }
+.tv-final-row {
+  display: grid; align-items: center; gap: 10px;
+  grid-template-columns: 30px 1fr 58px 52px 58px 56px;
+  padding: 8px 10px; border-radius: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.tv-final-row--head {
+  margin-top: 18px; padding-bottom: 6px; border-bottom: 1px solid var(--tv-divider);
+  border-radius: 0; font-weight: 800; font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--tv-label);
+}
+.tv-final-row--champ { background: rgba(240, 200, 75, 0.16); }
+[data-theme='dark'] .tv-final-row--champ { background: rgba(240, 200, 75, 0.12); }
+.tv-final-place { font-weight: 900; font-size: 17px; color: var(--tv-label); text-align: center; }
+.tv-final-row--champ .tv-final-place { color: #d0a01e; }
+[data-theme='dark'] .tv-final-row--champ .tv-final-place { color: #f0c84b; }
+.tv-final-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tv-final-avatar {
+  width: 34px; height: 34px; flex: none; border-radius: 50%; overflow: hidden;
+  background: var(--purple); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px;
+}
+.tv-final-name {
+  font-weight: 800; font-size: 19px; color: var(--tv-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tv-final-exaequo {
+  flex: none; font-weight: 800; font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--tv-label);
+  border: 1px solid var(--tv-divider); border-radius: 999px; padding: 2px 6px;
+}
+.tv-final-wl { font-weight: 800; font-size: 16px; color: var(--tv-ink); text-align: right; }
+.tv-final-diff, .tv-final-elo {
+  font-family: var(--font-body); font-weight: 700; font-size: 14px;
+  color: var(--tv-muted); text-align: right;
+}
+.tv-final-delta { font-weight: 800; font-size: 16px; text-align: right; }
+.tv-final-delta--up { color: var(--tv-gain); }
+.tv-final-delta--down { color: var(--tv-loss); }
+.tv-final-delta--flat { color: var(--tv-label); }
+/* A long roster tightens instead of scrolling — a projector has nobody to scroll it. */
+.tv-final--dense .tv-final-row { padding: 4px 10px; }
+.tv-final--dense .tv-final-avatar { width: 26px; height: 26px; font-size: 11px; }
+.tv-final--dense .tv-final-name { font-size: 16px; }
+.tv-final--dense .tv-final-wl, .tv-final--dense .tv-final-delta { font-size: 14px; }
+.tv-final--dense .tv-final-place { font-size: 15px; }
+
 /* ===== animations ===== */
 @keyframes tvbounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 @keyframes tvserveglow {
@@ -1142,7 +1211,7 @@ td.elo.neg { color: var(--coral); }
   50% { box-shadow: 0 0 0 3px rgba(134, 99, 233, 0.7), 0 0 74px rgba(134, 99, 233, 0.55); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tv-live-dot, .tv-serve-ball, .tv-player, .tv-player.is-serving, .tv-next, .tv-podium, .tv-mp-flag { animation: none; }
+  .tv-live-dot, .tv-serve-ball, .tv-player, .tv-player.is-serving, .tv-next, .tv-podium, .tv-final, .tv-mp-flag { animation: none; }
 }
 
 /* ===== portrait / narrow: restack into player rows ===== */
@@ -1202,6 +1271,11 @@ td.elo.neg { color: var(--coral); }
   .tv-next-name { font-size: 21px; }
   .tv-next-vs { font-size: 30px; }
   .tv-podium { width: 100%; min-height: 0; }
+  .tv-final { width: 100%; max-width: none; min-height: 0; padding: 22px 16px; }
+  .tv-final-title { font-size: 24px; }
+  .tv-final-row { grid-template-columns: 24px 1fr 48px 50px; padding: 6px 6px; }
+  .tv-final-name { font-size: 16px; }
+  .tv-final-diff, .tv-final-elo { display: none; }
 }
 
 /* ===== celebration takeovers (5a / 6a / 4b) =====

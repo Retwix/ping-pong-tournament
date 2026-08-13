@@ -2,9 +2,15 @@ import { IconCrown, IconX } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import type { MatchRatings } from '../hooks/useRatingDeltas'
 import { isPlayable } from '../lib/doubleElim'
+import {
+  deltaTone,
+  finalStandings,
+  podiumOrder,
+  type FinalStandingRow,
+  type PlayerRating,
+} from '../lib/finalStandings'
 import { libelleFormat } from '../lib/format'
 import {
-  computeStandings,
   formatDuration,
   isWon,
   matchDuration,
@@ -27,6 +33,8 @@ interface Props {
   rows: RatingRow[]
   /** Real rating moves for a finished match (replaces the live projection). */
   ratingsFor: (m: Match | null | undefined) => MatchRatings
+  /** Net rating change per player over this tournament, for the classement. */
+  tournamentRatings?: PlayerRating[]
   onBack: () => void
   onRef?: () => void
   error?: string | null
@@ -68,10 +76,70 @@ function TvAvatar({
 }
 
 /**
+ * The whole classement at the end of a tournament: every player, their record and
+ * what the tournament did to their rating. It stands next to the podium so the
+ * room reads the full result off the projector — nobody has to touch the board.
+ */
+function TvFinalStandings({
+  rows,
+  ladder,
+  label,
+}: {
+  rows: FinalStandingRow[]
+  ladder: RatingRow[]
+  label: string
+}) {
+  // Past a full podium's worth of players the rows tighten rather than scroll:
+  // a projector has nobody to scroll it.
+  const dense = rows.length > 8
+  return (
+    <div className={`tv-final${dense ? ' tv-final--dense' : ''}`}>
+      <div className="tv-final-label">{label}</div>
+      <div className="tv-final-title">Classement final</div>
+      <div className="tv-final-row tv-final-row--head">
+        <div className="tv-final-place">#</div>
+        <div>Joueur</div>
+        <div className="tv-final-wl">V–D</div>
+        <div className="tv-final-diff">Diff</div>
+        <div className="tv-final-elo">Elo</div>
+        <div className="tv-final-delta">Δ</div>
+      </div>
+      <div className="tv-final-rows">
+        {rows.map((row) => (
+          <div
+            key={row.name}
+            className={`tv-final-row${row.place === 1 ? ' tv-final-row--champ' : ''}`}
+          >
+            <div className="tv-final-place">{row.place}</div>
+            <div className="tv-final-who">
+              <TvAvatar
+                className="tv-final-avatar"
+                name={row.name}
+                url={ladderAvatar(ladder, null, row.name)}
+              />
+              <span className="tv-final-name">{row.name}</span>
+              {row.exAequo && <span className="tv-final-exaequo">ex æquo</span>}
+            </div>
+            <div className="tv-final-wl">
+              {row.wins}–{row.losses}
+            </div>
+            <div className="tv-final-diff">{signed(row.diff)}</div>
+            <div className="tv-final-elo">{row.elo === null ? '—' : Math.round(row.elo)}</div>
+            <div className={`tv-final-delta tv-final-delta--${deltaTone(row.eloDelta)}`}>
+              {row.eloDelta === null ? '—' : signed(row.eloDelta)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
  * TV spectator view (/live): giant auto-following scoreboard for a projector,
  * restacking to a portrait layout on phones. Shows the match in progress with
  * serving emphasis, Elo stakes and the crowd's bets; a "next match" card
- * between matches; the podium once the tournament is over.
+ * between matches; the podium and the full classement once the tournament is over.
  */
 export default function SpectatorView({
   tournament,
@@ -79,6 +147,7 @@ export default function SpectatorView({
   match,
   rows,
   ratingsFor,
+  tournamentRatings,
   onBack,
   onRef,
   error,
@@ -121,6 +190,14 @@ export default function SpectatorView({
 
   const formatLabel = libelleFormat(tournament)
   const eloByName = new Map(rows.map((r) => [r.name, Math.round(r.rating)]))
+  // Same source as the board's final standings, so the TV and the tournament page
+  // can never disagree on who came where.
+  const classement = finalStandings({
+    players: tournament.players,
+    matches,
+    format: tournament.format,
+    ratings: tournamentRatings,
+  })
 
   const chrome = (
     <div className="tv-chrome">
@@ -143,43 +220,43 @@ export default function SpectatorView({
 
   const banner = error ? <div className="error-banner tv-error">⚠️ {error}</div> : null
 
-  const podiumCard = (label: string) => {
-    const top = computeStandings(tournament.players, matches)
-      .slice(0, 3)
-      .map((s, i) => ({ ...s, rank: i + 1, elo: eloByName.get(s.name) ?? null }))
-    // Visual order: 2nd — 1st — 3rd.
-    const columns = [top[1], top[0], top[2]].filter(Boolean)
-    return (
-      <div className="tv-podium">
-        <div className="tv-podium-label">{label}</div>
-        <div className="tv-podium-title">Le podium</div>
-        <div className="tv-podium-steps">
-          {columns.map((p) => (
-            <div key={p.name} className={`tv-step tv-step--${p.rank}`}>
-              {p.rank === 1 && <IconCrown className="tv-step-crown" size={30} stroke={1.6} />}
+  const podiumCard = (label: string) => (
+    <div className="tv-podium">
+      <div className="tv-podium-label">{label}</div>
+      <div className="tv-podium-title">Le podium</div>
+      <div className="tv-podium-steps">
+        {podiumOrder(classement).map((p) => {
+          // The ladder standing in until the tournament's own ratings have replayed.
+          const elo = p.elo === null ? (eloByName.get(p.name) ?? null) : Math.round(p.elo)
+          return (
+            <div key={p.name} className={`tv-step tv-step--${p.place}`}>
+              {p.place === 1 && <IconCrown className="tv-step-crown" size={30} stroke={1.6} />}
               <TvAvatar
                 className="tv-step-avatar"
                 name={p.name}
                 url={ladderAvatar(rows, null, p.name)}
               />
               <div className="tv-step-name">{p.name}</div>
-              {p.elo !== null && <div className="tv-step-elo">{p.elo} Elo</div>}
-              <div className="tv-step-bar">{p.rank}</div>
+              {elo !== null && <div className="tv-step-elo">{elo} Elo</div>}
+              <div className="tv-step-bar">{p.place}</div>
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
-    )
-  }
+    </div>
+  )
 
-  // ===== Tournament over: the podium =====
+  // ===== Tournament over: the podium and the full classement =====
 
   if (over) {
     return (
       <div className="tv tv--panels">
         {chrome}
         {banner}
-        <div className="tv-panels">{podiumCard(`${tournament.name} — terminé`)}</div>
+        <div className="tv-panels">
+          {podiumCard(`${tournament.name} — terminé`)}
+          <TvFinalStandings rows={classement} ladder={rows} label={formatLabel} />
+        </div>
       </div>
     )
   }

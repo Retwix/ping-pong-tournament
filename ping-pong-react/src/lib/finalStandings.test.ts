@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Match } from '../types'
 import {
+	deltaTone,
 	finalStandings,
 	podiumOrder,
 	type FinalStandingRow,
@@ -489,5 +490,22 @@ describe('podiumOrder', () => {
 		expect(podiumOrder(classement('Léo', 'Marc')).map((r) => r.name)).toEqual(['Marc', 'Léo'])
 		expect(podiumOrder(classement('Léo')).map((r) => r.name)).toEqual(['Léo'])
 		expect(podiumOrder([])).toEqual([])
+	})
+})
+
+describe('deltaTone', () => {
+	it('reads a gain as green and a real loss as red', () => {
+		expect(deltaTone(21)).toBe('up')
+		expect(deltaTone(-21)).toBe('down')
+	})
+
+	it('keeps a scratch loss quiet rather than alarming the room', () => {
+		expect(deltaTone(-5)).toBe('flat')
+		expect(deltaTone(-6)).toBe('down')
+	})
+
+	it('treats no rating movement, and none at all, as neutral', () => {
+		expect(deltaTone(0)).toBe('flat')
+		expect(deltaTone(null)).toBe('flat')
 	})
 })
