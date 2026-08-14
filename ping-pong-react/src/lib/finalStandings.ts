@@ -133,3 +133,32 @@ export function finalStandings({ players, matches, format, ratings }: Options): 
 		}
 	})
 }
+
+/** Podium steps, tallest in the middle: silver, gold, bronze. */
+const PODIUM_ORDER = [1, 0, 2]
+
+/**
+ * The top three of a classement in podium order, so the champion stands in the
+ * middle. Short rosters simply get fewer steps — never an empty placeholder.
+ */
+export function podiumOrder(rows: FinalStandingRow[]): FinalStandingRow[] {
+	return PODIUM_ORDER.flatMap((i) => {
+		const row = rows[i]
+		return row === undefined ? [] : [row]
+	})
+}
+
+export type DeltaTone = "up" | "down" | "flat"
+
+/** How far a rating can drop before it is worth colouring as a real loss. */
+const SCRATCH_LOSS = -5
+
+/**
+ * The tone a tournament Elo move reads in: gains green, real losses red, and a
+ * scratch loss (or no rating at all) left quiet.
+ */
+export function deltaTone(delta: number | null): DeltaTone {
+	if (delta === null) return "flat"
+	if (delta > 0) return "up"
+	return delta < SCRATCH_LOSS ? "down" : "flat"
+}
