@@ -47,6 +47,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
   const [saveError, setSaveError] = useState<string | null>(null)
   const [originalPhoto, setOriginalPhoto] = useState<string | null>(null)
   const [photo, setPhoto] = useState<PhotoDraft>({ kind: 'keep' })
+  const [leftAt, setLeftAt] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -69,6 +70,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     setForm({ name: r.name, team: r.team })
     setOriginalPhoto(r.avatarUrl)
     setPhoto({ kind: 'keep' })
+    setLeftAt(r.leftAt)
     setSaveError(null)
     setEditing(r.id)
   }
@@ -125,6 +127,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
       setForm({ name: '', team: 'tech' })
       setOriginalPhoto(null)
       setPhoto({ kind: 'keep' })
+      setLeftAt(null)
       setPending(p.id)
       setEditing(p.id)
     } catch (e) {
@@ -155,7 +158,8 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     setSaving(true)
     setSaveError(null)
     try {
-      const patch = normalizeJoueurForm(form)
+      const status: 'active' | 'alumni' = leftAt !== null ? 'alumni' : 'active'
+      const patch = { ...normalizeJoueurForm(form), status, left_at: leftAt }
       if (photo.kind === 'new') {
         const url = await uploadPlayerAvatar(editing, photo.blob)
         await updatePlayer(editing, { ...patch, avatar_url: url })
@@ -277,8 +281,14 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
         </div>
 
         {visible.map((r) => (
-          <div key={r.id} className="pl-tr pl-row">
-            <Avatar name={r.name} team={r.team} url={r.avatarUrl} className="pl-av" />
+          <div key={r.id} className={`pl-tr pl-row${r.status === 'alumni' ? ' alumnus' : ''}`}>
+            <Avatar
+              name={r.name}
+              team={r.team}
+              url={r.avatarUrl}
+              muted={r.status === 'alumni'}
+              className="pl-av"
+            />
             <div className="pl-c-name">
               <div className="pl-name">{r.name}</div>
               <div className="pl-meta">{r.meta}</div>
@@ -403,6 +413,27 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
                 placeholder="ou saisis une autre équipe"
                 maxLength={40}
               />
+            </div>
+
+            <div className="pl-field">
+              <label className="pl-archive-toggle">
+                <input
+                  type="checkbox"
+                  checked={leftAt !== null}
+                  onChange={(e) =>
+                    setLeftAt(e.target.checked ? new Date().toISOString().slice(0, 10) : null)
+                  }
+                />
+                A quitté l'entreprise
+              </label>
+              {leftAt !== null && (
+                <input
+                  type="date"
+                  className="pl-finput"
+                  value={leftAt}
+                  onChange={(e) => setLeftAt(e.target.value)}
+                />
+              )}
             </div>
 
             {saveError && <div className="error-banner pl-modal-error">{saveError}</div>}

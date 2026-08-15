@@ -9,6 +9,8 @@ function player(over: Partial<Player> & Pick<Player, 'name'>): Player {
 		team: 'tech',
 		slack_user_id: null,
 		avatar_url: null,
+		status: 'active',
+		left_at: null,
 		...over,
 	}
 }

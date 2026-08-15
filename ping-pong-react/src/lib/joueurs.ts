@@ -3,7 +3,7 @@
 // and records come from the same Glicko-2 replay as the Classement, so the
 // numbers on the two pages can never disagree.
 
-import type { Player } from '../types'
+import type { Player, PlayerStatus } from '../types'
 import { recordOf } from './classement'
 import { fold, matchesJoueur } from './fold'
 import { RATING, type RatingEvent, type RatingRow } from './rating'
@@ -22,6 +22,8 @@ export interface JoueurRow {
   matchsLabel: string
   winrate: string
   winrateStrong: boolean
+  status: PlayerStatus
+  leftAt: string | null
 }
 
 /**
@@ -56,9 +58,14 @@ export function joueurRows(
         matchsLabel: `${played} match${played >= 2 ? 's' : ''}`,
         winrate: `${rate} %`,
         winrateStrong: rate >= 50,
+        status: p.status,
+        leftAt: p.left_at,
       }
     })
-    .sort((a, b) => b.elo - a.elo || a.name.localeCompare(b.name, 'fr'))
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'alumni' ? 1 : -1
+      return b.elo - a.elo || a.name.localeCompare(b.name, 'fr')
+    })
 }
 
 /** « {n} joueurs inscrits · modifie un profil en un clic », singular below two. */
@@ -67,10 +74,20 @@ export function joueursSubtitle(count: number): string {
   return `${count} joueur${s} inscrit${s} · modifie un profil en un clic`
 }
 
-/** Accent-insensitive search on name + team label, combined with the team chip. */
+/**
+ * Accent-insensitive search on name + team label, combined with the team chip.
+ * The « Anciens » chip (`team === 'alumni'`) shows only alumni; every other
+ * chip — including « Tous » — hides them, matching the ladder's default view.
+ */
 export function filterJoueurs(rows: JoueurRow[], query: string, team: string): JoueurRow[] {
   const q = fold(query.trim())
-  return rows.filter((r) => (team === 'all' || r.team === team) && matchesJoueur(r, q))
+  const wantsAlumni = team === 'alumni'
+  return rows.filter(
+    (r) =>
+      (wantsAlumni ? r.status === 'alumni' : r.status !== 'alumni') &&
+      (wantsAlumni || team === 'all' || r.team === team) &&
+      matchesJoueur(r, q),
+  )
 }
 
 export interface JoueurForm {
@@ -124,7 +141,8 @@ export interface TeamChip {
 
 /**
  * « Tous · {n} » then every standard pôle (registry order, empty ones included)
- * then any free-text team present among players, in first-appearance order.
+ * then any free-text team present among players, in first-appearance order,
+ * then « Anciens » — only when at least one player has left.
  */
 export function teamChips(rows: JoueurRow[]): TeamChip[] {
   const countOf = (key: string) => rows.filter((r) => r.team === key).length
@@ -133,9 +151,11 @@ export function teamChips(rows: JoueurRow[]): TeamChip[] {
     .map((r) => r.team)
     .filter((t) => t !== '' && !standardKeys.has(t))
     .filter((t, i, all) => all.indexOf(t) === i)
+  const alumniCount = rows.filter((r) => r.status === 'alumni').length
   return [
     { key: 'all', label: 'Tous', count: rows.length },
     ...TEAMS.map((t) => ({ key: t.key, label: t.label, count: countOf(t.key) })),
     ...extras.map((t) => ({ key: t, label: teamLabel(t), count: countOf(t) })),
+    ...(alumniCount > 0 ? [{ key: 'alumni', label: 'Anciens', count: alumniCount }] : []),
   ]
 }

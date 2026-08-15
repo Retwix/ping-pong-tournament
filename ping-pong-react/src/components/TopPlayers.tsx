@@ -1,4 +1,5 @@
 import { useRatings } from '../hooks/useRatings'
+import { splitLadder } from '../lib/alumni'
 import { signed } from '../lib/format'
 import Avatar from './Avatar'
 
@@ -13,8 +14,9 @@ interface Props {
  * player's most recent match (hidden when it's exactly zero).
  */
 export default function TopPlayers({ onOpenClassement }: Props) {
-  const { rows } = useRatings()
-  const top = rows.slice(0, 5)
+  const { rows, players } = useRatings()
+  const { ranked } = splitLadder(rows, players)
+  const top = ranked.slice(0, 5)
 
   return (
     <div className="rv-card rv-top-card" onClick={onOpenClassement}>

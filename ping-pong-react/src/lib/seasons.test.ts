@@ -22,6 +22,7 @@ import {
 import { rankRatings, ratedMatches, replayRatings, RATING } from './rating'
 import type { Match, Player, Tournament } from '../types'
 import type { RatingRow } from './rating'
+import { splitLadder } from './alumni'
 
 const at = (y: number, m: number, d: number, h = 12): string =>
   new Date(y, m, d, h).toISOString()
@@ -305,8 +306,16 @@ describe('seasonBannerState', () => {
     expect(seasonBannerState(getMockBannerInput({ ratedCount: 0, leader: null }))).toBe('empty')
   })
 
-  it('is empty when the ladder is bare even though the window holds rated matches', () => {
-    expect(seasonBannerState(getMockBannerInput({ ratedCount: 12, leader: null }))).toBe('empty')
+  it('is vacant — not empty — when rated matches were played but nobody who played still ranks (an alumni-only season)', () => {
+    expect(seasonBannerState(getMockBannerInput({ ratedCount: 12, leader: null }))).toBe('vacant')
+  })
+
+  it('stays vacant once the season has closed, rather than blaming the provisional gate', () => {
+    expect(
+      seasonBannerState(
+        getMockBannerInput({ now: new Date(2026, 11, 5), ratedCount: 12, leader: null }),
+      ),
+    ).toBe('vacant')
   })
 
   it('is empty when no rated match was played, whatever the ladder says', () => {
@@ -357,6 +366,8 @@ const getMockPlayer = (overrides?: Partial<Player>): Player => ({
   team: 'tech',
   slack_user_id: null,
   avatar_url: null,
+  status: 'active',
+  left_at: null,
   ...overrides,
 })
 
@@ -431,6 +442,22 @@ describe('scoped replay', () => {
     const scoped = ratedMatches(matchesInSeason([unranked], 'automne-2026'), tournaments)
     expect(scoped).toEqual([])
     expect(rankRatings(replayRatings(scoped, players), players)).toEqual([])
+  })
+})
+
+describe('seasonChampion with alumni', () => {
+  it('crowns the highest-ranked active player when the raw leader is a season-excluded alumnus', () => {
+    const season = seasonById('automne-2026')!
+    const players = [
+      getMockPlayer({ id: 'pa', name: 'Léo' }),
+      getMockPlayer({ id: 'pb', name: 'Paul', status: 'alumni', left_at: '2026-10-01' }),
+    ]
+    const rows = [
+      getMockRow({ key: 'pb', playerId: 'pb', name: 'Paul', rating: 1650, provisional: false }),
+      getMockRow({ key: 'pa', playerId: 'pa', name: 'Léo', rating: 1500, provisional: false }),
+    ]
+    const { ranked } = splitLadder(rows, players, season)
+    expect(seasonChampion(ranked)?.name).toBe('Léo')
   })
 })
 

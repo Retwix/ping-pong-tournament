@@ -13,6 +13,12 @@ interface Props {
 	 * `hero` is the winner's own circle, which matches its gold-bordered treatment.
 	 */
 	fill?: "tint" | "solid" | "hero";
+	/**
+	 * Les anciens: desaturated, the way Slack greys a deactivated member. The
+	 * initials fallback swaps its team tint for neutral grey instead of being
+	 * filtered — greyscaling a coloured tint gives mud.
+	 */
+	muted?: boolean;
 }
 
 /**
@@ -20,9 +26,9 @@ interface Props {
  * two-letter initials. A photo that fails to load silently falls back to the
  * initials (brokenUrl resets by itself when the url changes).
  */
-export default function Avatar({ name, team, url, className, fill = "tint" }: Props) {
+export default function Avatar({ name, team, url, className, fill = "tint", muted = false }: Props) {
 	const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-	const color = teamColor(team ?? "");
+	const color = muted ? "#8E889C" : teamColor(team ?? "");
 	const showPhoto = url !== null && url !== brokenUrl;
 	const initials = playerInitials(name);
 	const FILLS = {
@@ -33,7 +39,7 @@ export default function Avatar({ name, team, url, className, fill = "tint" }: Pr
 	const fallbackFill = FILLS[fill];
 	return (
 		<span
-			className={`avatar${className ? ` ${className}` : ""}`}
+			className={`avatar${muted ? " muted" : ""}${className ? ` ${className}` : ""}`}
 			style={showPhoto ? undefined : fallbackFill}
 		>
 			{showPhoto ? (
