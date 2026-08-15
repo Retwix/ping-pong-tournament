@@ -3516,11 +3516,22 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
   [data-theme='dark'] .np-reg-row:hover { background: rgba(255, 255, 255, 0.05); }
 }
 .np-reg-name { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--fg-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.np-reg-row.ancien { opacity: 0.65; }
 .np-reg-add {
   flex: none; width: 26px; height: 26px; border-radius: 8px; background: #f0ecfb; color: #4a2aa4;
   display: inline-flex; align-items: center; justify-content: center;
 }
 [data-theme='dark'] .np-reg-add { background: rgba(122, 90, 224, 0.18); color: #c9b8ff; }
+.np-anciens-toggle {
+  margin-top: 10px; font-family: var(--font-body); font-weight: 600;
+  font-size: 12.5px; color: #847e96; background: none; border: 1px solid #e8e4f2;
+  border-radius: 999px; padding: 6px 12px; cursor: pointer; transition: all 160ms var(--ease);
+}
+.np-anciens-toggle:hover { color: #4a2aa4; border-color: #d0c3f3; }
+.np-anciens-toggle.active { background: #4a2aa4; color: #fff; border-color: #4a2aa4; }
+[data-theme='dark'] .np-anciens-toggle { color: #a99fc4; border-color: rgba(255, 255, 255, 0.09); }
+[data-theme='dark'] .np-anciens-toggle:hover { color: #c9b8ff; border-color: rgba(255, 255, 255, 0.2); }
+[data-theme='dark'] .np-anciens-toggle.active { background: #5b36c4; color: #fff; border-color: #5b36c4; }
 
 /* ===== quick-game full ===== */
 .np-full {
