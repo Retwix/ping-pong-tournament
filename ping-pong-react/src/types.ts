@@ -12,6 +12,9 @@ export type Bracket = 'W' | 'L' | 'GF'
 export const TBD = '__TBD__'
 export const BYE = '__BYE__'
 
+/** « Les anciens » : a player who has left the company keeps their history but no live rank. */
+export type PlayerStatus = 'active' | 'alumni'
+
 /** A registered player, used to build tournaments and (later) aggregate stats. */
 export interface Player {
   id: string
@@ -22,6 +25,10 @@ export interface Player {
   slack_user_id: string | null
   /** Public URL of the uploaded profile photo (with cache-buster). null = initial-letter avatar. */
   avatar_url: string | null
+  /** 'alumni' once they've left the company. Rows predating the migration read as 'active'. */
+  status: PlayerStatus
+  /** Departure date (YYYY-MM-DD), drives « parti·e en juin 2026 ». null on active players. */
+  left_at: string | null
 }
 
 export interface Tournament {

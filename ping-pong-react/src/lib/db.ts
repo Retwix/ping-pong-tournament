@@ -4,7 +4,7 @@ import { buildDoubleElim } from './doubleElim'
 import { RATING, ratedMatches, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
 import { avatarStoragePath, withCacheBuster } from './avatar'
-import type { Match, Player, Tournament, TournamentKind, TournamentFormat } from '../types'
+import type { Match, Player, PlayerStatus, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
 
@@ -30,7 +30,7 @@ export async function createPlayer(
   return data as Player
 }
 
-/** Update a player's name, team and/or avatar. */
+/** Update a player's name, team, avatar and/or archive status. */
 export async function updatePlayer(
   id: string,
   patch: {
@@ -38,6 +38,8 @@ export async function updatePlayer(
     team?: string
     slack_user_id?: string | null
     avatar_url?: string | null
+    status?: PlayerStatus
+    left_at?: string | null
   },
 ): Promise<void> {
   // Strip slack_user_id until the column exists in the DB schema.

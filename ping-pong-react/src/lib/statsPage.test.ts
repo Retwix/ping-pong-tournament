@@ -760,6 +760,8 @@ describe('team standings point diff', () => {
     team: 'tech',
     slack_user_id: null,
     avatar_url: null,
+    status: 'active',
+    left_at: null,
     ...overrides,
   })
 

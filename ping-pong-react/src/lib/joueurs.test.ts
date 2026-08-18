@@ -21,6 +21,8 @@ const getMockPlayer = (overrides?: Partial<Player>): Player => ({
   team: 'tech',
   slack_user_id: null,
   avatar_url: null,
+  status: 'active',
+  left_at: null,
   ...overrides,
 })
 
@@ -81,6 +83,8 @@ const getMockJoueurRow = (overrides?: Partial<JoueurRow>): JoueurRow => ({
   matchsLabel: '3 matchs',
   winrate: '67 %',
   winrateStrong: true,
+  status: 'active',
+  leftAt: null,
   ...overrides,
 })
 
@@ -223,6 +227,35 @@ describe('joueurRows', () => {
     )
     expect(rows.map((r) => r.name)).toEqual(['Émile', 'Zoé'])
   })
+
+  it('carries the registry status and departure date through as status and leftAt', () => {
+    const rows = joueurRows(
+      [getMockPlayer({ status: 'alumni', left_at: '2026-06-15' })],
+      [getMockRatingRow()],
+      [],
+    )
+    expect(rows[0]).toMatchObject({ status: 'alumni', leftAt: '2026-06-15' })
+  })
+
+  it('defaults an active player to a null leftAt', () => {
+    const rows = joueurRows([getMockPlayer()], [getMockRatingRow()], [])
+    expect(rows[0]).toMatchObject({ status: 'active', leftAt: null })
+  })
+
+  it('sorts every alumnus below every active player regardless of Elo', () => {
+    const rows = joueurRows(
+      [
+        getMockPlayer({ id: 'p1', name: 'Paul', status: 'alumni', left_at: '2026-06-01' }),
+        getMockPlayer({ id: 'p2', name: 'Léo' }),
+      ],
+      [
+        getMockRatingRow({ key: 'p1', playerId: 'p1', rating: 1700 }),
+        getMockRatingRow({ key: 'p2', playerId: 'p2', rating: 1200 }),
+      ],
+      [],
+    )
+    expect(rows.map((r) => r.name)).toEqual(['Léo', 'Paul'])
+  })
 })
 
 describe('joueursSubtitle', () => {
@@ -278,6 +311,23 @@ describe('filterJoueurs', () => {
   it('never matches an empty team through the query', () => {
     expect(filterJoueurs(annuaire, 'sam', 'all').map((r) => r.name)).toEqual(['Sam'])
     expect(filterJoueurs(annuaire, 'tech', 'all').map((r) => r.name)).toEqual(['Léo'])
+  })
+
+  it('excludes alumni from « Tous » and from every ordinary team filter', () => {
+    const withAlumnus = [
+      ...annuaire,
+      getMockJoueurRow({ id: 'p4', name: 'Paul', team: 'tech', status: 'alumni' }),
+    ]
+    expect(filterJoueurs(withAlumnus, '', 'all').map((r) => r.name)).not.toContain('Paul')
+    expect(filterJoueurs(withAlumnus, '', 'tech').map((r) => r.name)).not.toContain('Paul')
+  })
+
+  it('shows only alumni when the Anciens filter is selected', () => {
+    const withAlumnus = [
+      ...annuaire,
+      getMockJoueurRow({ id: 'p4', name: 'Paul', team: 'tech', status: 'alumni' }),
+    ]
+    expect(filterJoueurs(withAlumnus, '', 'alumni').map((r) => r.name)).toEqual(['Paul'])
   })
 })
 
@@ -408,5 +458,19 @@ describe('teamChips', () => {
       'business',
       'guests',
     ])
+  })
+
+  it('appends an Anciens chip with the alumni count when someone has left', () => {
+    const chips = teamChips([
+      getMockJoueurRow({ id: 'p1', team: 'tech' }),
+      getMockJoueurRow({ id: 'p2', team: 'tech', status: 'alumni' }),
+      getMockJoueurRow({ id: 'p3', team: 'sales', status: 'alumni' }),
+    ])
+    expect(chips[chips.length - 1]).toEqual({ key: 'alumni', label: 'Anciens', count: 2 })
+  })
+
+  it('omits the Anciens chip entirely when nobody has left', () => {
+    const chips = teamChips([getMockJoueurRow({ id: 'p1' }), getMockJoueurRow({ id: 'p2' })])
+    expect(chips.map((c) => c.key)).not.toContain('alumni')
   })
 })

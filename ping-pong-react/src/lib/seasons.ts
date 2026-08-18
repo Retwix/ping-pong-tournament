@@ -196,11 +196,15 @@ export function seasonChampion(rows: RatingRow[]): RatingRow | null {
 
 /**
  * Which form the season banner takes. `noleader` and `final` are variants of the
- * running form (different leader line and pill), not separate layouts.
+ * running form (different leader line and pill), not separate layouts. `vacant`
+ * is distinct from `empty`: real rated matches were played, but nobody who
+ * played still holds a rank in this season (an alumni-only window) — the copy
+ * must not blame the provisional gate for that.
  */
 export type SeasonBannerState =
   | 'pre'
   | 'empty'
+  | 'vacant'
   | 'noleader'
   | 'final'
   | 'running'
@@ -216,7 +220,7 @@ export interface SeasonBannerInput {
    * classée » games counts zero here, which is what keeps `leader` non-null below.
    */
   ratedCount: number
-  /** Top of the season ladder, eligible or not. null when the ladder is bare. */
+  /** Top of the season ladder among those who hold a rank. null when nobody does. */
   leader: RatingRow | null
 }
 
@@ -226,7 +230,8 @@ export const FINAL_DAYS = 7
 export function seasonBannerState(input: SeasonBannerInput): SeasonBannerState {
   const { season, now, ratedCount, leader } = input
   if (season === null) return 'pre'
-  if (ratedCount === 0 || leader === null) return 'empty'
+  if (ratedCount === 0) return 'empty'
+  if (leader === null) return 'vacant'
 
   if (!isClosed(season, now)) {
     if (leader.provisional) return 'noleader'

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { IconArrowLeft, IconInfoCircle, IconRefresh, IconSearch } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING, rankRatings, ratedMatches, replayRatings } from '../lib/rating'
+import { splitLadder } from '../lib/alumni'
 import {
   STREAK_BADGE_MIN,
   filterRatingRows,
@@ -15,7 +16,7 @@ import {
   weeklyDelta,
   winStreak,
 } from '../lib/classement'
-import { relativeTime } from '../lib/format'
+import { departureLabel, relativeTime } from '../lib/format'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import EloModal from './EloModal'
@@ -135,7 +136,8 @@ export default function Ratings({
           replayRatings(scoped, players, { targetByTournament }),
           players,
         )
-        return [s.id, seasonChampion(seasonRows)?.name ?? null]
+        const { ranked: seasonRanked } = splitLadder(seasonRows, players, s)
+        return [s.id, seasonChampion(seasonRanked)?.name ?? null]
       }),
     )
   }, [matches, players, tournaments, seasons])
@@ -160,24 +162,29 @@ export default function Ratings({
     scope.kind === 'season' ? (seasons.find((s) => s.id === scope.id) ?? null) : null
   const archived = scopedSeason !== null && isClosed(scopedSeason, now)
 
-  const leader = rows.find((r) => !r.provisional) ?? rows[0]
-  const ranked = rows.filter((r) => !r.provisional)
+  const { ranked, anciens } = useMemo(
+    () => splitLadder(rows, players, scopedSeason),
+    [rows, players, scopedSeason],
+  )
+
+  const leader = ranked.find((r) => !r.provisional) ?? ranked[0]
+  const qualified = ranked.filter((r) => !r.provisional)
   const updatedAt = lastRatedAt(events)
 
   const tableRows = useMemo(() => {
     const now = new Date()
-    return filterRatingRows(rows, query).map((r) => ({
+    return filterRatingRows(ranked, query).map((r) => ({
       ...r,
       record: recordOf(events, r.key),
       form: lastFive(events, r.key),
       streak: winStreak(events, r.key),
       delta7: weeklyDelta(events, r.key, now),
     }))
-  }, [rows, events, query])
+  }, [ranked, events, query])
 
-  const pod = useMemo(() => podium(rows, events, new Date()), [rows, events])
-  const gaps = useMemo(() => tightestGaps(rows), [rows])
-  const progs = useMemo(() => topProgressions(events, rows, new Date()), [events, rows])
+  const pod = useMemo(() => podium(ranked, events, new Date()), [ranked, events])
+  const gaps = useMemo(() => tightestGaps(ranked), [ranked])
+  const progs = useMemo(() => topProgressions(events, ranked, new Date()), [events, ranked])
   const example = useMemo(() => latestRatingExample(events), [events])
 
   // Group the two events of each match into one log entry, newest first.
@@ -338,7 +345,7 @@ export default function Ratings({
         <>
           <div className="cl-tiles">
             <div className="cl-tile">
-              <div className="cl-tile-num">{ranked.length}</div>
+              <div className="cl-tile-num">{qualified.length}</div>
               <div className="cl-tile-lbl">Joueurs classés</div>
             </div>
             <div className="cl-tile">
@@ -498,6 +505,33 @@ export default function Ratings({
                   — et il faut {RATING.provisionalGames} parties dans la saison pour pouvoir être
                   sacré champion.
                 </p>
+
+                {anciens.length > 0 && (
+                  <div className="cl-anciens">
+                    <div className="cl-anciens-head">Anciens</div>
+                    {anciens.map((r) => (
+                      <div
+                        key={r.key}
+                        className="cl-ancien-row"
+                        onClick={() => setSelectedKey(r.key)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setSelectedKey(r.key)
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`Voir l'historique de ${r.name}`}
+                      >
+                        <Avatar name={r.name} team={r.team} url={r.avatar_url} muted className="sm" />
+                        <span className="cl-ancien-name">{r.name}</span>
+                        <span className="cl-ancien-elo">{Math.round(r.rating)}</span>
+                        <span className="cl-ancien-departure">{departureLabel(r.leftAt)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             </div>
 

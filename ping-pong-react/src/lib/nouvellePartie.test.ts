@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   aideCamp,
   choisirJoueurDouble,
+  contientAncien,
+  enjeuEffectif,
   estDoublon,
   recapitulatifHasard,
   filterJoueurs,
@@ -207,6 +209,61 @@ describe('noteEnjeu', () => {
     expect(noteEnjeu(false, true)).toBe(
       'Les doubles sont non classés en v1 — pas encore d’Elo de paire.',
     )
+  })
+
+  it('explains that an ancien is playing, for a plain ranked game', () => {
+    expect(noteEnjeu(false, false, true)).toBe(
+      'Un ancien joue : la partie ne compte pas pour le classement.',
+    )
+  })
+
+  it('lets the ancien reason override the doubles wording when both are true', () => {
+    expect(noteEnjeu(false, true, true)).toBe(
+      'Un ancien joue : la partie ne compte pas pour le classement.',
+    )
+  })
+})
+
+describe('contientAncien', () => {
+  it('detects an alumnus among the selected rows', () => {
+    expect(contientAncien([{ status: 'active' }, { status: 'alumni' }])).toBe(true)
+  })
+
+  it('returns false when nobody selected has left', () => {
+    expect(contientAncien([{ status: 'active' }, { status: 'active' }])).toBe(false)
+  })
+
+  it('returns false for an empty selection', () => {
+    expect(contientAncien([])).toBe(false)
+  })
+})
+
+describe('enjeuEffectif', () => {
+  it('is ranked by default — no doubles, no manual choice, no ancien', () => {
+    expect(enjeuEffectif(false, false, false)).toBe(false)
+  })
+
+  it('is unranked when doubles, regardless of the manual choice', () => {
+    expect(enjeuEffectif(false, true, false)).toBe(true)
+  })
+
+  it('is unranked when the player chose it manually', () => {
+    expect(enjeuEffectif(true, false, false)).toBe(true)
+  })
+
+  it('is forced unranked the moment an ancien joins, even if nothing else forces it', () => {
+    expect(enjeuEffectif(false, false, true)).toBe(true)
+  })
+
+  it('releases back to the manual choice once the ancien leaves, not to classée', () => {
+    // The player had manually chosen « classée » before the ancien joined.
+    expect(enjeuEffectif(false, false, true)).toBe(true)
+    expect(enjeuEffectif(false, false, false)).toBe(false)
+
+    // The player had manually chosen « non classée » before the ancien joined —
+    // that choice must survive the ancien leaving, not reset to classée.
+    expect(enjeuEffectif(true, false, true)).toBe(true)
+    expect(enjeuEffectif(true, false, false)).toBe(true)
   })
 })
 

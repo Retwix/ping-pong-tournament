@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { libelleFormat, signed, relativeTime } from './format'
+import { departureLabel, libelleFormat, signed, relativeTime } from './format'
 
 describe('signed', () => {
   it('prefixes a positive value with a plus', () => {
@@ -91,5 +91,15 @@ describe('libelleFormat', () => {
     expect(libelleFormat({ kind: 'tournament', format: 'double_elim', doubles: false })).toBe(
       'Élimination directe',
     )
+  })
+})
+
+describe('departureLabel', () => {
+  it('reads a departure date as « parti·e en {month} {year} »', () => {
+    expect(departureLabel('2026-06-15')).toBe('parti·e en juin 2026')
+  })
+
+  it('returns null when there is no departure date', () => {
+    expect(departureLabel(null)).toBeNull()
   })
 })

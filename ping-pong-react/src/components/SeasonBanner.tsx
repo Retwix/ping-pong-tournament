@@ -1,11 +1,13 @@
 import { IconArrowRight, IconTrophy } from '@tabler/icons-react'
 import { useRatings } from '../hooks/useRatings'
+import { splitLadder } from '../lib/alumni'
 import { RATING, ratedMatches } from '../lib/rating'
 import { recordOf } from '../lib/classement'
 import {
   ALL_TIME,
   currentSeason,
   daysLeft,
+  isClosed,
   matchesInSeason,
   nextSeason,
   seasonBannerState,
@@ -32,11 +34,12 @@ export default function SeasonBanner({ onClassement, onNew }: Props) {
   const now = new Date()
   const season = currentSeason(now)
   const scope: LadderScope = season === null ? ALL_TIME : { kind: 'season', id: season.id }
-  const { rows, events, matches, tournaments } = useRatings(scope)
+  const { rows, events, matches, players, tournaments } = useRatings(scope)
 
   const ratedCount =
     season === null ? 0 : ratedMatches(matchesInSeason(matches, season.id), tournaments).length
-  const leader = rows[0] ?? null
+  const { ranked } = splitLadder(rows, players, season)
+  const leader = ranked[0] ?? null
   const state = seasonBannerState({ season, now, ratedCount, leader })
 
   if (state === 'pre') {
@@ -84,6 +87,40 @@ export default function SeasonBanner({ onClassement, onNew }: Props) {
     )
   }
 
+  if (state === 'vacant') {
+    const closed = isClosed(season, now)
+    return (
+      <section className="sn-banner sn-neutral">
+        <div className="sn-banner-main">
+          <div className="sn-banner-tile">
+            <IconTrophy size={22} stroke={1.8} />
+          </div>
+          <div className="sn-banner-text">
+            <div className="sn-banner-title">
+              {season.label}
+              {closed ? ' — terminée sans titre' : ''}
+            </div>
+            <div className="sn-banner-sub">
+              Seul·e·s des ancien·ne·s ont joué cette saison
+              {closed ? " : aucun titre n'est décerné." : " pour l'instant."}
+            </div>
+          </div>
+        </div>
+        <button className="sn-banner-cta" onClick={closed ? onClassement : onNew}>
+          {closed ? (
+            <>
+              Le classement <IconArrowRight size={15} stroke={2} />
+            </>
+          ) : (
+            <>
+              Lancer une partie <IconArrowRight size={15} stroke={2} />
+            </>
+          )}
+        </button>
+      </section>
+    )
+  }
+
   if (state === 'nochamp') {
     return (
       <section className="sn-banner sn-neutral">
@@ -108,7 +145,7 @@ export default function SeasonBanner({ onClassement, onNew }: Props) {
 
   if (state === 'champion' && leader !== null) {
     const record = recordOf(events, leader.key)
-    const runnersUp = rows.filter((r) => !r.provisional).slice(1, 3)
+    const runnersUp = ranked.filter((r) => !r.provisional).slice(1, 3)
     const upcoming = nextSeason(season)
     return (
       <section className="sn-plaque">
