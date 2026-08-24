@@ -137,7 +137,11 @@ function renderRoute(route: Route) {
           id={route.id}
           onBack={() => navigate('/')}
           onNew={() => navigate('/new')}
+          onNewGame={() => navigate('/game')}
           onOpen={(id) => navigate(`/t/${id}`)}
+          onClassement={() => navigate('/classement')}
+          onStats={() => navigate('/stats')}
+          onPlayers={() => navigate('/players')}
         />
       )
     case 'live':

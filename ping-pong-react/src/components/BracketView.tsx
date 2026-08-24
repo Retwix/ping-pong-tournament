@@ -1,160 +1,181 @@
 import { useState } from 'react'
-import { IconLayoutList, IconBinaryTree2 } from '@tabler/icons-react'
-import { formatDuration, matchDuration } from '../lib/pingpong'
-import { isPlayable, roundLabel } from '../lib/doubleElim'
-import { BYE, TBD } from '../types'
-import type { Bracket, Match } from '../types'
+import { IconBinaryTree2, IconChevronRight, IconLayoutList } from '@tabler/icons-react'
+import { formatDuration } from '../lib/pingpong'
+import {
+  avancement,
+  dureeTerminee,
+  etatNoeud,
+  groupesTableau,
+  noeudsVisibles,
+  nomAdversaire,
+  type EtatNoeud,
+} from '../lib/tournamentBoard'
+import type { Match } from '../types'
 
 interface Props {
   matches: Match[]
   onOpen: (id: string) => void
 }
 
-type ViewMode = 'list' | 'tree'
+/** « Tableau » is the default view; « Liste » is the flat fallback. */
+type ViewMode = 'tableau' | 'liste'
 
-function displayName(name: string): string {
-  if (name === TBD) return 'À venir'
-  if (name === BYE) return 'Bye'
-  return name
+const MODIFIER: Record<EtatNoeud, string> = {
+  Terminé: 'termine',
+  'En cours': 'encours',
+  Prêt: 'pret',
+  'En attente': 'attente',
 }
 
-/** One match cell, shared by both views. */
-function MatchCell({ m, onOpen }: { m: Match; onOpen: (id: string) => void }) {
-  const playable = isPlayable(m)
-  const aWin = m.done && m.score_a > m.score_b
-  const bWin = m.done && m.score_b > m.score_a
-  const live = !m.done && (m.score_a > 0 || m.score_b > 0)
-  const status = m.done ? 'Terminé' : live ? 'En cours' : playable ? 'À jouer' : 'En attente'
-  const showScore = m.done || m.score_a > 0 || m.score_b > 0
-  const cls = `match bracket-cell${m.done ? ' done' : live ? ' live' : ''}${playable ? ' playable' : ' pending'}`
+/** Only a match with both opponents known and no result yet can be scored. */
+const estJouable = (etat: EtatNoeud): boolean => etat === 'Prêt' || etat === 'En cours'
+
+/** A node shows a score once there is one to show. */
+const montreScore = (etat: EtatNoeud): boolean => etat === 'Terminé' || etat === 'En cours'
+
+function Noeud({ match, onOpen }: { match: Match; onOpen: (id: string) => void }) {
+  const etat = etatNoeud(match)
+  const jouable = estJouable(etat)
+  const gagneA = match.done && match.score_a > match.score_b
+  const gagneB = match.done && match.score_b > match.score_a
+  const inconnuA = nomAdversaire(match.player_a) !== match.player_a
+  const inconnuB = nomAdversaire(match.player_b) !== match.player_b
+
   return (
-    <div className={cls} onClick={playable ? () => onOpen(m.id) : undefined}>
-      <div className="match-players">
-        <span className={`mp ${aWin ? 'win' : m.done ? 'lose' : ''}${m.player_a === TBD ? ' tbd' : ''}`}>
-          {displayName(m.player_a)}
-          <span className="mp-score">{showScore ? m.score_a : ''}</span>
+    <div
+      className={`tb-noeud tb-noeud--${MODIFIER[etat]}${jouable ? ' tb-noeud--jouable' : ''}`}
+      onClick={jouable ? () => onOpen(match.id) : undefined}
+    >
+      <div className="tb-noeud-ligne">
+        <span
+          className={`tb-noeud-nom${gagneB ? ' tb-noeud-nom--perdant' : ''}${
+            inconnuA ? ' tb-noeud-nom--inconnu' : ''
+          }`}
+        >
+          {nomAdversaire(match.player_a)}
         </span>
-        <span className={`mp ${bWin ? 'win' : m.done ? 'lose' : ''}${m.player_b === TBD ? ' tbd' : ''}`}>
-          {displayName(m.player_b)}
-          <span className="mp-score">{showScore ? m.score_b : ''}</span>
+        <span className="tb-noeud-score">{montreScore(etat) ? match.score_a : ''}</span>
+      </div>
+      <div className="tb-noeud-ligne">
+        <span
+          className={`tb-noeud-nom${gagneA ? ' tb-noeud-nom--perdant' : ''}${
+            inconnuB ? ' tb-noeud-nom--inconnu' : ''
+          }`}
+        >
+          {nomAdversaire(match.player_b)}
         </span>
+        <span className="tb-noeud-score">{montreScore(etat) ? match.score_b : ''}</span>
       </div>
-      <div className="match-status">
-        <span className="dot" />
-        {status}
-        {m.done ? ` · ${formatDuration(matchDuration(m))}` : ''}
-      </div>
+      <div className="tb-noeud-etat">{etat}</div>
     </div>
   )
 }
 
-function maxRound(matches: Match[], bracket: Bracket): number {
-  return matches.filter((m) => m.bracket === bracket).reduce((mx, m) => Math.max(mx, m.round), 0)
+/** The right-hand note on a list row: how long it took, or what it waits for. */
+function noteDeLigne(match: Match, etat: EtatNoeud): string {
+  if (etat === 'En attente') return 'attend un résultat'
+  const ms = dureeTerminee(match)
+  return ms === null ? '' : formatDuration(ms)
 }
 
-function roundsOf(matches: Match[], bracket: Bracket): { round: number; items: Match[] }[] {
-  const map = new Map<number, Match[]>()
-  for (const m of matches) {
-    if (m.bracket !== bracket) continue
-    const arr = map.get(m.round) ?? []
-    arr.push(m)
-    map.set(m.round, arr)
-  }
-  return [...map.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([round, items]) => ({ round, items: items.sort((x, y) => x.idx - y.idx) }))
+function LigneNoeud({ match, onOpen }: { match: Match; onOpen: (id: string) => void }) {
+  const etat = etatNoeud(match)
+  const jouable = estJouable(etat)
+  const gagneA = match.done && match.score_a > match.score_b
+  const gagneB = match.done && match.score_b > match.score_a
+
+  return (
+    <div
+      className={`tb-row tb-row--${MODIFIER[etat]}${jouable ? '' : ' tb-row--inerte'}`}
+      onClick={jouable ? () => onOpen(match.id) : undefined}
+    >
+      <span className="tb-row-dot" />
+      <span className="tb-row-etat tb-row-etat--large">{etat}</span>
+      <span className={`tb-row-nom tb-row-nom--a${gagneB ? ' tb-row-nom--perdant' : ''}`}>
+        {nomAdversaire(match.player_a)}
+      </span>
+      <span className="tb-row-score">
+        {montreScore(etat) ? `${match.score_a} – ${match.score_b}` : '—'}
+      </span>
+      <span className={`tb-row-nom${gagneA ? ' tb-row-nom--perdant' : ''}`}>
+        {nomAdversaire(match.player_b)}
+      </span>
+      <span className="tb-row-note">{noteDeLigne(match, etat)}</span>
+      <IconChevronRight size={15} stroke={2} className="tb-row-chev" />
+    </div>
+  )
 }
 
 export default function BracketView({ matches, onOpen }: Props) {
-  const [view, setView] = useState<ViewMode>('list')
-
-  // Hide auto-completed walkovers (BYEs): they aren't games anyone plays.
-  const visible = matches.filter((m) => !m.bye)
-  const maxW = maxRound(visible, 'W')
-  const maxL = maxRound(visible, 'L')
-  const doneCount = visible.filter((m) => m.done).length
-
-  const wRounds = roundsOf(visible, 'W')
-  const lRounds = roundsOf(visible, 'L')
-  const gf = visible.filter((m) => m.bracket === 'GF')
-
-  const Column = ({ round, items, bracket }: { round: number; items: Match[]; bracket: Bracket }) => (
-    <div className="bracket-col">
-      <div className="bracket-col-head">{roundLabel(bracket, round, maxW, maxL)}</div>
-      <div className="bracket-col-body">
-        {items.map((m) => (
-          <MatchCell key={m.id} m={m} onOpen={onOpen} />
-        ))}
-      </div>
-    </div>
-  )
+  const [view, setView] = useState<ViewMode>('tableau')
+  const { joues, total, ratio } = avancement(noeudsVisibles(matches))
+  const groupes = groupesTableau(matches)
 
   return (
-    <section>
-      <div className="section-title with-toggle">
-        Tableau <span className="count">{doneCount}/{visible.length} joués</span>
-        <div className="view-toggle">
+    <section className="tb-matchs">
+      <div className="tb-sec-head">
+        <h2 className="tb-sec-title">Le tableau</h2>
+        <div className="tb-progress">
+          <span className="tb-progress-track">
+            <span className="tb-progress-fill" style={{ width: `${ratio * 100}%` }} />
+          </span>
+          <span className="tb-progress-count">
+            {joues}/{total} joués
+          </span>
+        </div>
+        <div className="tb-toggle">
           <button
-            className={view === 'list' ? 'active' : ''}
-            onClick={() => setView('list')}
-            title="Vue liste"
-            aria-label="Vue liste"
-          >
-            <IconLayoutList size={17} stroke={1.8} />
-          </button>
-          <button
-            className={view === 'tree' ? 'active' : ''}
-            onClick={() => setView('tree')}
+            className={view === 'tableau' ? 'active' : ''}
+            onClick={() => setView('tableau')}
             title="Vue tableau"
             aria-label="Vue tableau"
           >
             <IconBinaryTree2 size={17} stroke={1.8} />
           </button>
+          <button
+            className={view === 'liste' ? 'active' : ''}
+            onClick={() => setView('liste')}
+            title="Vue liste"
+            aria-label="Vue liste"
+          >
+            <IconLayoutList size={17} stroke={1.8} />
+          </button>
         </div>
       </div>
 
-      {view === 'list' ? (
-        <div className="bracket-list">
-          {[...wRounds.map((r) => ({ ...r, bracket: 'W' as Bracket })),
-            ...lRounds.map((r) => ({ ...r, bracket: 'L' as Bracket })),
-            ...gf.map((m) => ({ round: m.round, items: [m], bracket: 'GF' as Bracket }))].map((grp) => (
-            <div key={`${grp.bracket}-${grp.round}`}>
-              <div className="round-label">{roundLabel(grp.bracket, grp.round, maxW, maxL)}</div>
-              {grp.items.map((m) => (
-                <MatchCell key={m.id} m={m} onOpen={onOpen} />
-              ))}
+      {view === 'tableau' ? (
+        <div className="tb-tableau">
+          {groupes.map((groupe) => (
+            <div key={groupe.groupe} className={`tb-groupe tb-groupe--${groupe.groupe}`}>
+              <div className="tb-groupe-titre">{groupe.titre}</div>
+              <div className="tb-colonnes">
+                {groupe.colonnes.map((colonne) => (
+                  <div key={colonne.titre} className="tb-colonne">
+                    <div className="tb-colonne-titre">{colonne.titre}</div>
+                    <div className="tb-colonne-corps">
+                      {colonne.noeuds.map((match) => (
+                        <Noeud key={match.id} match={match} onOpen={onOpen} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="bracket-tree">
-          {wRounds.length > 0 && (
-            <div className="bracket-region">
-              <div className="bracket-region-title">Tableau des gagnants</div>
-              <div className="bracket-cols">
-                {wRounds.map((r) => (
-                  <Column key={`W${r.round}`} round={r.round} items={r.items} bracket="W" />
-                ))}
+        <div className="tb-liste">
+          {groupes.flatMap((groupe) =>
+            groupe.colonnes.map((colonne) => (
+              <div key={`${groupe.groupe}-${colonne.titre}`} className="tb-tour">
+                <div className="tb-tour-head">{colonne.titre}</div>
+                <div className="tb-tour-card">
+                  {colonne.noeuds.map((match) => (
+                    <LigneNoeud key={match.id} match={match} onOpen={onOpen} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          {lRounds.length > 0 && (
-            <div className="bracket-region">
-              <div className="bracket-region-title">Tableau des perdants</div>
-              <div className="bracket-cols">
-                {lRounds.map((r) => (
-                  <Column key={`L${r.round}`} round={r.round} items={r.items} bracket="L" />
-                ))}
-              </div>
-            </div>
-          )}
-          {gf.length > 0 && (
-            <div className="bracket-region">
-              <div className="bracket-region-title">Grande finale</div>
-              <div className="bracket-cols">
-                <Column round={1} items={gf} bracket="GF" />
-              </div>
-            </div>
+            )),
           )}
         </div>
       )}
