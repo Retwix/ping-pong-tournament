@@ -148,6 +148,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
         match={matches.find((m) => m.id === shownId) ?? null}
         rows={rows}
         ratingsFor={ratingsFor}
+        tournamentRatings={ratingsForTournament(matches)}
         onBack={onBack}
         onRef={onRef}
         error={error}
