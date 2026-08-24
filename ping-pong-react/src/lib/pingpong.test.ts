@@ -202,6 +202,21 @@ describe('firstPointPatch', () => {
 		).toEqual({ first_point_at: '2026-08-24T10:00:00.000Z' })
 	})
 
+	it('leaves a match played before first_point_at existed on its own chrono', () => {
+		// Its chrono lives in started_at; stamping first_point_at now would restart it.
+		expect(
+			firstPointPatch(
+				{
+					started_at: '2026-08-24T09:50:00.000Z',
+					first_point_at: null,
+					score_a: 2,
+					score_b: 4,
+				},
+				'2026-08-24T10:06:00.000Z',
+			),
+		).toEqual({})
+	})
+
 	it('never moves the chrono once the match is under way', () => {
 		expect(
 			firstPointPatch(
