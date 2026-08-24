@@ -26,6 +26,7 @@ import { TEAMS, teamBadgeStyle, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
+import { Loader } from './Loader'
 
 interface Props {
   onHome: () => void
@@ -220,7 +221,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     return (
       <div className="rv-page">
         {nav}
-        <p className="empty">Chargement…</p>
+        <Loader />
         {tabbar}
       </div>
     )
