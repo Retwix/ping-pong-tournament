@@ -25,6 +25,8 @@ import { melangerEquipes, nomPaire, tirerEquipes } from '../lib/doubles'
 import {
   aideCamp,
   choisirJoueurDouble,
+  contientAncien,
+  enjeuEffectif,
   estDoublon,
   filterJoueurs,
   noteEnjeu,
@@ -42,6 +44,7 @@ import type { TournamentFormat } from '../types'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
+import { Loader } from './Loader'
 
 function slugify(s: string, fallback: string): string {
   return (
@@ -105,6 +108,7 @@ export default function NouvellePartie({
   const [dbl, setDbl] = useState(false)
   const [selDouble, setSelDouble] = useState<SelectionDouble>(SELECTION_DOUBLE_VIDE)
   const [hasard, setHasard] = useState(false)
+  const [showAnciens, setShowAnciens] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const isDouble = isGame && dbl
@@ -140,14 +144,16 @@ export default function NouvellePartie({
     }),
     [selDouble, annuaire],
   )
+  const alumniCount = useMemo(() => annuaire.filter((r) => r.status === 'alumni').length, [annuaire])
   const available = useMemo(
     () =>
-      annuaire.filter((r) =>
-        isDouble && !hasard
+      annuaire.filter((r) => {
+        if (!showAnciens && r.status === 'alumni') return false
+        return isDouble && !hasard
           ? !selDouble.a.includes(r.id) && !selDouble.b.includes(r.id)
-          : !selected.includes(r.id),
-      ),
-    [annuaire, isDouble, hasard, selDouble, selected],
+          : !selected.includes(r.id)
+      }),
+    [annuaire, isDouble, hasard, selDouble, selected, showAnciens],
   )
   const visible = useMemo(() => filterJoueurs(available, query), [available, query])
 
@@ -171,8 +177,12 @@ export default function NouvellePartie({
           name,
           target,
         })
-  // Doubles have no pair Elo in v1: the enjeu is locked on « Non classée ».
-  const unrankedEffectif = isDouble || unranked
+  // Whichever rows are actually selected right now, matching the add/remove branching below.
+  const selectedRows = isDouble && !hasard ? [...teamRows.a, ...teamRows.b] : selRows
+  const ancienSelectionne = contientAncien(selectedRows)
+  // Doubles have no pair Elo in v1, and an ancien must never move a rating in a
+  // ladder they no longer appear in — both lock the enjeu on « Non classée ».
+  const unrankedEffectif = enjeuEffectif(unranked, isDouble, ancienSelectionne)
 
   const basculerMode = (double: boolean) => {
     if (double === dbl) return
@@ -625,6 +635,15 @@ export default function NouvellePartie({
                   </button>
                 </div>
 
+                {alumniCount > 0 && (
+                  <button
+                    className={`np-anciens-toggle${showAnciens ? ' active' : ''}`}
+                    onClick={() => setShowAnciens((v) => !v)}
+                  >
+                    Voir les anciens · {alumniCount}
+                  </button>
+                )}
+
                 {newOpen && (
                   <div className="np-new">
                     <div className="np-label">Nouveau joueur</div>
@@ -689,7 +708,7 @@ export default function NouvellePartie({
                         <span className="np-skel-line" style={{ width: w }} />
                       </div>
                     ))}
-                    <div className="np-skel-note">Chargement…</div>
+                    <Loader height={40} />
                   </div>
                 ) : annuaire.length === 0 ? (
                   <div className="np-reg-empty">
@@ -699,8 +718,18 @@ export default function NouvellePartie({
                 ) : (
                   <div className="np-reg">
                     {visible.map((r) => (
-                      <button className="np-reg-row" key={r.id} onClick={() => add(r.id)}>
-                        <Avatar className="np-av" name={r.name} team={r.team} url={r.avatarUrl} />
+                      <button
+                        className={`np-reg-row${r.status === 'alumni' ? ' ancien' : ''}`}
+                        key={r.id}
+                        onClick={() => add(r.id)}
+                      >
+                        <Avatar
+                          className="np-av"
+                          name={r.name}
+                          team={r.team}
+                          url={r.avatarUrl}
+                          muted={r.status === 'alumni'}
+                        />
                         <span className="np-reg-name">{r.name}</span>
                         <span className="np-poletag" style={teamBadgeStyle(r.team)}>
                           {teamLabel(r.team)}
@@ -884,7 +913,7 @@ export default function NouvellePartie({
             <div className="np-enjeu">
               <div className="np-enjeu-head">
                 <div className="np-label">L’enjeu</div>
-                {isDouble && (
+                {(isDouble || ancienSelectionne) && (
                   <span className="np-verrou">
                     <IconLock size={12} stroke={2.2} />
                     verrouillé
@@ -894,19 +923,22 @@ export default function NouvellePartie({
               <div className="np-enjeu-seg">
                 <button
                   className={`np-enjeu-btn${unrankedEffectif ? '' : ' active'}`}
-                  disabled={isDouble}
+                  disabled={isDouble || ancienSelectionne}
                   onClick={() => setUnranked(false)}
                 >
                   Classée
                 </button>
                 <button
                   className={`np-enjeu-btn${unrankedEffectif ? ' active' : ''}`}
+                  disabled={isDouble || ancienSelectionne}
                   onClick={() => setUnranked(true)}
                 >
                   Non classée
                 </button>
               </div>
-              <div className="np-enjeu-note">{noteEnjeu(unrankedEffectif, isDouble)}</div>
+              <div className="np-enjeu-note">
+                {noteEnjeu(unrankedEffectif, isDouble, ancienSelectionne)}
+              </div>
             </div>
 
             <div className="np-actions">

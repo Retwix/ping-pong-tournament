@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="90" height="120" viewBox="-5 -19 40 53" fill="none" role="img" aria-label="Chargement en cours" class="rv-loader">
+<!--
+  Recovr loading animation v2, self-contained (CSS keyframes, no JS).
+  Two-beat juggle loop, 1.36s: hit A sends the ball up-right (launch 11 deg off
+  vertical), hit B sends it back. Ballistic flight: horizontal at constant
+  velocity (linear), vertical is a sampled parabola with linear segments.
+  Racket rises to meet the ball (contact at 70% of the upward stroke), rotates
+  about the wrist pivot at the handle butt, with a 4-deg wind-up and 7-deg
+  rotational follow-through settling on cubic-bezier(0.2,0.7,0.2,1).
+  Size: set width/height on the root; aspect ratio is 40:53.
+  Colors (override via CSS custom properties on the root or an ancestor):
+    * rv-loader-paddle   default #F35E68
+    * rv-loader-edge     default #B7333F   (paddle thickness edge)
+    * rv-loader-handle   default #C98F5F   (wooden handle)
+    * rv-loader-ball     default #FFF3D6
+    * rv-loader-outline  default rgba(183,51,63,.45)  (set to transparent on coral/dark surfaces)
+    * rv-loader-shadow   default #F35E68
+    * rv-loader-dur      default 1.36s
+  Small sizes (48px tall or less): add data-size="sm" on the root to drop the
+  ground shadow, impact rings and ball drop-shadow.
+  On a coral button: set the paddle property to #FFFFFF and the outline to transparent.
+  Reduced motion: resting pose (racket at -30 deg, ball on the paddle face) with
+  a gentle opacity pulse.
+-->
+<style>
+.rv-a{animation-duration:var(--rv-loader-dur,1.36s);animation-iteration-count:infinite;animation-timing-function:linear;}
+.rv-shadow-x{animation-name:rvShadowX;}
+.rv-shadow{fill:var(--rv-loader-shadow,#F35E68);opacity:0.3;filter:blur(1.2px);transform-origin:15px 30px;transform:translateX(-6px) scale(0.8);animation-name:rvShadowS;}
+.rv-carriage{animation-name:rvCarriage;}
+.rv-stroke{animation-name:rvStroke;}
+.rv-tilt{transform-origin:15px 27.8px;transform:rotate(-30deg);animation-name:rvTilt;}
+.rv-ring{stroke:var(--rv-loader-paddle,#F35E68);opacity:0;animation-name:rvRingF;}
+.rv-ring-a{transform-origin:5.9px 11.39px;}
+.rv-ring-b{transform-origin:24.1px 11.39px;animation-delay:calc(var(--rv-loader-dur,1.36s)/-2);}
+.rv-ball-x{transform:translate(-7.6px,3.25px);animation-name:rvBallX;}
+.rv-ball-y{animation-name:rvBallY;}
+.rv-squash{transform-origin:15px 11.39px;animation-name:rvBallSq;}
+.rv-spin{transform-origin:15px 11.39px;animation-name:rvSpin;}
+.rv-paddle{fill:var(--rv-loader-paddle,#F35E68);}.rv-handle{fill:var(--rv-loader-handle,#C98F5F);}
+.rv-edge{fill:var(--rv-loader-edge,#B7333F);}
+.rv-face{fill:#FFFFFF;opacity:0.1;}
+.rv-rim{stroke:#FFFFFF;stroke-opacity:0.18;stroke-width:1;}
+.rv-ball{fill:var(--rv-loader-ball,#FFF3D6);stroke:var(--rv-loader-outline,rgba(183,51,63,0.45));stroke-width:0.5;filter:drop-shadow(0 0.5px 0.8px rgba(23,8,43,0.28));}
+[data-size="sm"] .rv-fx{display:none;}
+[data-size="sm"] .rv-ball{filter:none;}
+@keyframes rvBallX{0%{transform:translateX(-9.1px);}50%{transform:translateX(9.1px);}100%{transform:translateX(-9.1px);}}
+@keyframes rvBallY{0%,50%,100%{transform:translateY(0);}2.5%,47.5%,52.5%,97.5%{transform:translateY(-4.62px);}5%,45%,55%,95%{transform:translateY(-8.75px);}7.5%,42.5%,57.5%,92.5%{transform:translateY(-12.39px);}10%,40%,60%,90%{transform:translateY(-15.55px);}12.5%,37.5%,62.5%,87.5%{transform:translateY(-18.23px);}15%,35%,65%,85%{transform:translateY(-20.41px);}17.5%,32.5%,67.5%,82.5%{transform:translateY(-22.11px);}20%,30%,70%,80%{transform:translateY(-23.33px);}22.5%,27.5%,72.5%,77.5%{transform:translateY(-24.06px);}25%,75%{transform:translateY(-24.3px);}}
+@keyframes rvBallSq{0%{transform:scale(1.18,0.86);}2%{transform:scale(0.94,1.1);}6%,46%{transform:scale(1,1);}48%{transform:scale(0.95,1.07);}50%{transform:scale(1.18,0.86);}52%{transform:scale(0.94,1.1);}56%,96%{transform:scale(1,1);}98%{transform:scale(0.95,1.07);}100%{transform:scale(1.18,0.86);}}
+@keyframes rvSpin{0%{transform:rotate(0deg);}50%{transform:rotate(300deg);}100%{transform:rotate(0deg);}}
+@keyframes rvTilt{0%{transform:rotate(11deg);animation-timing-function:cubic-bezier(0.2,0.8,0.4,1);}6.6%{transform:rotate(18deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}14%{transform:rotate(11.5deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}19.1%{transform:rotate(9.5deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}23.5%{transform:rotate(10.4deg);animation-timing-function:cubic-bezier(0.45,0,0.25,1);}36.8%{transform:rotate(-7deg);animation-timing-function:linear;}41.2%{transform:rotate(-7deg);animation-timing-function:cubic-bezier(0.4,0,0.8,0.5);}50%{transform:rotate(-11deg);animation-timing-function:cubic-bezier(0.2,0.8,0.4,1);}56.6%{transform:rotate(-18deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}64%{transform:rotate(-11.5deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}69.1%{transform:rotate(-9.5deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}73.5%{transform:rotate(-10.4deg);animation-timing-function:cubic-bezier(0.45,0,0.25,1);}86.8%{transform:rotate(7deg);animation-timing-function:linear;}91.2%{transform:rotate(7deg);animation-timing-function:cubic-bezier(0.4,0,0.8,0.5);}100%{transform:rotate(11deg);}}
+@keyframes rvStroke{0%{transform:translateY(-1.49px);animation-timing-function:cubic-bezier(0.3,0.6,0.6,1);}4.4%{transform:translateY(-2.13px);animation-timing-function:ease-in-out;}6.6%{transform:translateY(-2.25px);animation-timing-function:cubic-bezier(0.45,0,0.7,0.4);}14.7%{transform:translateY(0.15px);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}19.1%{transform:translateY(0);animation-timing-function:linear;}41.2%{transform:translateY(0);animation-timing-function:cubic-bezier(0.55,0,0.85,0.45);}50%{transform:translateY(-1.49px);animation-timing-function:cubic-bezier(0.3,0.6,0.6,1);}54.4%{transform:translateY(-2.13px);animation-timing-function:ease-in-out;}56.6%{transform:translateY(-2.25px);animation-timing-function:cubic-bezier(0.45,0,0.7,0.4);}64.7%{transform:translateY(0.15px);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}69.1%{transform:translateY(0);animation-timing-function:linear;}91.2%{transform:translateY(0);animation-timing-function:cubic-bezier(0.55,0,0.85,0.45);}100%{transform:translateY(-1.49px);}}
+@keyframes rvCarriage{0%{transform:translateX(-12px);}14.7%{transform:translateX(-12px);animation-timing-function:cubic-bezier(0.45,0,0.25,1);}32.4%{transform:translateX(12px);}64.7%{transform:translateX(12px);animation-timing-function:cubic-bezier(0.45,0,0.25,1);}82.4%{transform:translateX(-12px);}100%{transform:translateX(-12px);}}
+@keyframes rvShadowX{0%{transform:translateX(-9.1px);}50%{transform:translateX(9.1px);}100%{transform:translateX(-9.1px);}}
+@keyframes rvShadowS{0%,50%,100%{transform:scale(0.72);opacity:0.34;}25%,75%{transform:scale(1.18);opacity:0.14;}}
+@keyframes rvRingF{0%{opacity:0.45;transform:scale(0.7);}6%{opacity:0;transform:scale(1.6);}100%{opacity:0;transform:scale(1.6);}}
+@keyframes rvPulse{0%,100%{opacity:1;}50%{opacity:0.55;}}
+@media (prefers-reduced-motion:reduce){.rv-a{animation:none;}.rv-loader{animation:rvPulse 2.4s ease-in-out infinite;}}
+</style>
+<g class="rv-a rv-shadow-x"><ellipse class="rv-a rv-shadow rv-fx" cx="15" cy="30" rx="7" ry="1.7"/></g>
+<g class="rv-a rv-carriage"><g class="rv-a rv-stroke"><g class="rv-a rv-tilt">
+<ellipse class="rv-edge" cx="15" cy="17.9" rx="7.6" ry="4.8"/>
+<ellipse class="rv-paddle" cx="15" cy="16.8" rx="7.6" ry="4.8"/>
+<ellipse class="rv-rim" cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none"/>
+<ellipse class="rv-face" cx="15" cy="16.3" rx="6" ry="3.5"/>
+<rect class="rv-handle" x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6"/>
+</g></g></g>
+<circle class="rv-a rv-ring rv-ring-a rv-fx" cx="5.9" cy="11.39" r="3.4" fill="none" stroke-width="0.5"/>
+<circle class="rv-a rv-ring rv-ring-b rv-fx" cx="24.1" cy="11.39" r="3.4" fill="none" stroke-width="0.5"/>
+<g class="rv-a rv-ball-x"><g class="rv-a rv-ball-y"><g class="rv-a rv-squash"><g class="rv-a rv-spin">
+<circle class="rv-ball" cx="15" cy="11.39" r="2.9"/>
+<circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"/>
+</g></g></g></g>
+</svg>

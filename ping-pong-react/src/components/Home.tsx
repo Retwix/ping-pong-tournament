@@ -6,9 +6,11 @@ import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
 import RecentResults from './RecentResults'
+import SeasonBanner from './SeasonBanner'
 import RecordsCard from './RecordsCard'
 import TopPlayers from './TopPlayers'
 import TournamentCard from './TournamentCard'
+import { Loader } from './Loader'
 
 /**
  * The tournaments grid shows a fixed two rows on desktop, filled with the most
@@ -64,6 +66,8 @@ export default function Home({
 
       <LiveHero onWatch={onLive} onRef={onRef} onNew={onNew} />
 
+      <SeasonBanner onClassement={onClassement} onNew={onNew} />
+
       {error && <div className="error-banner">Erreur : {error}</div>}
 
       <div className="rv-grid">
@@ -77,7 +81,7 @@ export default function Home({
             </div>
 
             {loading ? (
-              <div className="empty">Chargement…</div>
+              <Loader height={96} />
             ) : tournaments.length === 0 ? (
               <div className="empty">Aucun tournoi pour l'instant. Crée le premier !</div>
             ) : (

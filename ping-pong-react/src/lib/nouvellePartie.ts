@@ -2,7 +2,7 @@ import { nomPaire } from './doubles'
 import { fold, matchesJoueur } from './fold'
 import { doubleElimMatchCount, MIN_DE_PLAYERS } from './doubleElim'
 import { matchCount, roundCount } from './roundRobin'
-import type { TournamentFormat } from '../types'
+import type { PlayerStatus, TournamentFormat } from '../types'
 
 /** Everything the recap rail needs to know about the form, independent of the UI. */
 export interface CreationState {
@@ -137,12 +137,34 @@ export function aideCamp(sel: SelectionDouble): string {
   return `Les joueurs choisis rejoignent l’équipe ${sel.camp} — clique l’autre carte pour changer de camp.`
 }
 
-/** One-line stakes note under the « L'enjeu » control: what this choice does to Elo. */
-export function noteEnjeu(unranked: boolean, doubles = false): string {
+/**
+ * One-line stakes note under the « L'enjeu » control: what this choice does to
+ * Elo. An ancien playing takes precedence over the doubles wording — it is the
+ * more specific and more surprising reason the game won't count.
+ */
+export function noteEnjeu(unranked: boolean, doubles = false, ancien = false): string {
+  if (ancien) return 'Un ancien joue : la partie ne compte pas pour le classement.'
   if (doubles) return 'Les doubles sont non classés en v1 — pas encore d’Elo de paire.'
   return unranked
     ? 'Aucun impact sur le classement Elo. La partie reste visible dans les parties.'
     : 'Le résultat déplace l’Elo des joueurs et compte dans « Le classement ».'
+}
+
+/** Whether any selected row belongs to an ancien — forces the partie « non classée ». */
+export function contientAncien(rows: { status: PlayerStatus }[]): boolean {
+  return rows.some((r) => r.status === 'alumni')
+}
+
+/**
+ * The enjeu actually applied. Doubles have no pair Elo yet, and an ancien
+ * playing must never move a rating in a ladder they no longer appear in —
+ * both force « non classée » regardless of the player's manual choice. The
+ * manual choice itself is never overwritten, so releasing the lock (the
+ * ancien is deselected, or doubles is turned off) reveals whatever the player
+ * had chosen before, rather than resetting to « classée ».
+ */
+export function enjeuEffectif(manualUnranked: boolean, doubles: boolean, ancien: boolean): boolean {
+  return doubles || manualUnranked || ancien
 }
 
 /** Accent- and case-insensitive duplicate check against the registry (« Leo » = « Léo »). */

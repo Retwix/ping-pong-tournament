@@ -1,6 +1,7 @@
 import { useCurrentTournament } from "../hooks/useCurrentTournament";
 import LiveView from "./LiveView";
 import ThemeToggle from "./ThemeToggle";
+import { Loader } from './Loader'
 
 interface Props {
 	/** false = referee mode (scorable), true = spectator mode. */
@@ -22,7 +23,7 @@ export default function CurrentView({ readOnly, onHome, onRef }: Props) {
 	if (loading) {
 		return (
 			<div className="wrap">
-				<p className="empty">Chargement…</p>
+				<Loader />
 			</div>
 		);
 	}

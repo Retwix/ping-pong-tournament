@@ -42,3 +42,11 @@ export function relativeTime(iso: string | null, now: Date): string {
     month: 'short',
   })
 }
+
+/** « parti·e en juin 2026 » from a departure date, or null when nobody has left. */
+export function departureLabel(leftAt: string | null): string | null {
+  if (leftAt === null) return null
+  const date = new Date(`${leftAt}T00:00:00Z`)
+  const month = date.toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' })
+  return `parti·e en ${month} ${date.getUTCFullYear()}`
+}

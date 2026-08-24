@@ -16,8 +16,9 @@ import {
   type PlayerStat,
   type Rivalry,
 } from './stats'
+import { currentSeason } from './seasons'
 
-export type StatsPeriod = 'tout' | 'mois' | 'semaine'
+export type StatsPeriod = 'tout' | 'saison' | 'mois' | 'semaine'
 export type StatsType = 'tout' | 'tournois' | 'rapides'
 
 export interface StatsFilters {
@@ -27,6 +28,7 @@ export interface StatsFilters {
 
 export const PERIOD_OPTIONS: ReadonlyArray<{ value: StatsPeriod; label: string }> = [
   { value: 'tout', label: 'Tout' },
+  { value: 'saison', label: 'Cette saison' },
   { value: 'mois', label: 'Ce mois-ci' },
   { value: 'semaine', label: 'Cette semaine' },
 ]
@@ -36,6 +38,15 @@ export const TYPE_OPTIONS: ReadonlyArray<{ value: StatsType; label: string }> = 
   { value: 'tournois', label: 'Tournois' },
   { value: 'rapides', label: 'Parties rapides' },
 ]
+
+/**
+ * Whether a period can be chosen right now. « Cette saison » is shown before
+ * 1 September but not selectable: hiding it made people ask for a filter that
+ * already existed, and a greyed chip answers the question the absent one raised.
+ */
+export function isPeriodAvailable(period: StatsPeriod, now: Date): boolean {
+  return period !== 'saison' || currentSeason(now) !== null
+}
 
 const periodLabel = (p: StatsPeriod): string =>
   PERIOD_OPTIONS.find((o) => o.value === p)?.label ?? p
@@ -48,7 +59,7 @@ export function parseStatsFilters(search: string): StatsFilters {
   const p = q.get('p')
   const t = q.get('t')
   return {
-    period: p === 'mois' || p === 'semaine' ? p : 'tout',
+    period: p === 'saison' || p === 'mois' || p === 'semaine' ? p : 'tout',
     type: t === 'tournois' || t === 'rapides' ? t : 'tout',
   }
 }
@@ -73,6 +84,12 @@ function startOfWeek(now: Date): Date {
 
 function inPeriod(iso: string, period: StatsPeriod, now: Date): boolean {
   const d = new Date(iso)
+  // The season window, never a rolling ninety days: « cette saison » has to mean
+  // the same three months everyone else's ladder is scored over.
+  if (period === 'saison') {
+    const s = currentSeason(now)
+    return s !== null && d >= s.start && d < s.end
+  }
   if (period === 'mois')
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
   const start = startOfWeek(now)
@@ -81,8 +98,9 @@ function inPeriod(iso: string, period: StatsPeriod, now: Date): boolean {
 }
 
 /**
- * The match list every section reads: period is the current calendar month or
- * Monday-start week around `now` (untimed matches only appear on « tout »),
+ * The match list every section reads: period is the running season, the current
+ * calendar month, or the Monday-start week around `now` (untimed matches only
+ * appear on « tout »),
  * type follows the owning tournament's kind (unknown → only on « tout »).
  */
 export function scopeMatches(

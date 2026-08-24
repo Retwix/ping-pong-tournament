@@ -1,6 +1,7 @@
 import { useLeaderboard } from '../hooks/useLeaderboard'
 import TopBack from './TopBack'
 import ThemeToggle from './ThemeToggle'
+import { Loader } from './Loader'
 
 interface Props {
   onBack: () => void
@@ -35,7 +36,7 @@ export default function Leaderboard({ onBack }: Props) {
 
       <section>
         {loading ? (
-          <div className="empty">Chargement…</div>
+          <Loader height={96} />
         ) : rows.length === 0 ? (
           <div className="empty">
             Aucun prono pour l'instant. Ouvre un tournoi et lance les paris !
