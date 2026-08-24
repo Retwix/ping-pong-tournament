@@ -6,9 +6,14 @@ import {
   etatMatch,
   extremesDuree,
   lignesClassement,
+  etatNoeud,
+  groupesTableau,
+  nomAdversaire,
+  noeudsVisibles,
   toursDuTournoi,
 } from './tournamentBoard'
 import type { TournamentRating } from '../hooks/useRatingDeltas'
+import { BYE, TBD } from '../types'
 import type { Match, Tournament } from '../types'
 
 const getMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
@@ -549,5 +554,182 @@ describe('lignesClassement', () => {
       [3, 'Thibault'],
     ])
     expect(rows[1]).toMatchObject({ name: 'Candice', played: 0, wins: 0, diff: 0 })
+  })
+})
+
+/** A bracket node. `idx` orders nodes inside a round. */
+const noeud = (
+  bracket: 'W' | 'L' | 'GF',
+  round: number,
+  idx: number,
+  overrides?: Partial<Match>,
+): Match =>
+  getMockMatch({
+    id: `${bracket}${round}-${idx}`,
+    match_key: `${bracket}${round}-${idx}`,
+    bracket,
+    round,
+    idx,
+    ...overrides,
+  })
+
+describe('nomAdversaire', () => {
+  it('names an opponent who is already known', () => {
+    expect(nomAdversaire('Léo')).toBe('Léo')
+  })
+
+  it('reads an unresolved slot as à déterminer', () => {
+    expect(nomAdversaire(TBD)).toBe('À déterminer')
+  })
+
+  it('names a walkover slot as a bye', () => {
+    expect(nomAdversaire(BYE)).toBe('Bye')
+  })
+})
+
+describe('etatNoeud', () => {
+  it('reads a finished node as terminé', () => {
+    expect(etatNoeud(noeud('W', 1, 0, { done: true, score_a: 11, score_b: 6 }))).toBe('Terminé')
+  })
+
+  it('reads a node with points on the board as en cours', () => {
+    expect(etatNoeud(noeud('W', 1, 0, { score_a: 4 }))).toBe('En cours')
+  })
+
+  it('reads a node with both opponents known as prêt', () => {
+    expect(etatNoeud(noeud('W', 1, 0, { player_a: 'Léo', player_b: 'Inès' }))).toBe('Prêt')
+  })
+
+  it('reads a node still waiting on a feeder as en attente, not prêt', () => {
+    expect(etatNoeud(noeud('W', 2, 0, { player_a: 'Léo', player_b: TBD }))).toBe('En attente')
+  })
+
+  it('waits when neither opponent is known yet', () => {
+    expect(etatNoeud(noeud('L', 1, 0, { player_a: TBD, player_b: TBD }))).toBe('En attente')
+  })
+
+  it('does not call a walkover slot playable', () => {
+    expect(etatNoeud(noeud('W', 1, 0, { player_a: 'Léo', player_b: BYE }))).toBe('En attente')
+  })
+})
+
+describe('noeudsVisibles', () => {
+  it('hides auto-completed walkovers, which nobody plays', () => {
+    const reel = noeud('W', 1, 0, { player_a: 'Léo', player_b: 'Inès' })
+    const walkover = noeud('W', 1, 1, { player_b: BYE, bye: true, done: true })
+
+    expect(noeudsVisibles([reel, walkover]).map((m) => m.id)).toEqual([reel.id])
+  })
+
+  it('keeps every real node', () => {
+    const nodes = [noeud('W', 1, 0), noeud('L', 1, 0), noeud('GF', 1, 0)]
+
+    expect(noeudsVisibles(nodes)).toHaveLength(3)
+  })
+})
+
+describe('groupesTableau', () => {
+  it('splits the bracket into main, losers and grand final', () => {
+    const nodes = [
+      noeud('W', 1, 0, { player_a: 'Léo', player_b: 'Inès' }),
+      noeud('L', 1, 0, { player_a: 'Marc', player_b: 'Zoé' }),
+      noeud('GF', 1, 0),
+    ]
+
+    expect(groupesTableau(nodes).map((g) => g.titre)).toEqual([
+      'Tableau principal',
+      'Tableau des perdants',
+      'Grande finale',
+    ])
+  })
+
+  it('omits the losers group entirely when there is none', () => {
+    const nodes = [noeud('W', 1, 0), noeud('GF', 1, 0)]
+
+    expect(groupesTableau(nodes).map((g) => g.groupe)).toEqual(['principal', 'finale'])
+  })
+
+  it('omits the grand final until that node exists', () => {
+    expect(groupesTableau([noeud('W', 1, 0)]).map((g) => g.groupe)).toEqual(['principal'])
+  })
+
+  it('has nothing to show for an empty bracket', () => {
+    expect(groupesTableau([])).toEqual([])
+  })
+
+  it('orders each group into columns by round', () => {
+    const nodes = [
+      noeud('W', 2, 0, { player_a: 'Léo', player_b: TBD }),
+      noeud('W', 1, 0, { player_a: 'Léo', player_b: 'Inès' }),
+      noeud('W', 1, 1, { player_a: 'Marc', player_b: 'Zoé' }),
+    ]
+
+    const [principal] = groupesTableau(nodes)
+
+    expect(principal.colonnes).toHaveLength(2)
+    expect(principal.colonnes[0].noeuds.map((m) => m.id)).toEqual(['W1-0', 'W1-1'])
+    expect(principal.colonnes[1].noeuds.map((m) => m.id)).toEqual(['W2-0'])
+  })
+
+  it('sorts nodes inside a column by their bracket position', () => {
+    const nodes = [noeud('W', 1, 2), noeud('W', 1, 0), noeud('W', 1, 1)]
+
+    expect(groupesTableau(nodes)[0].colonnes[0].noeuds.map((m) => m.idx)).toEqual([0, 1, 2])
+  })
+
+  it('titles the last winners round the final, and the one before it the semi', () => {
+    const nodes = [noeud('W', 1, 0), noeud('W', 2, 0), noeud('W', 3, 0)]
+
+    expect(groupesTableau(nodes)[0].colonnes.map((c) => c.titre)).toEqual([
+      'Gagnants · tour 1',
+      'Demi-finale gagnants',
+      'Finale gagnants',
+    ])
+  })
+
+  it('titles the last losers round the losers final', () => {
+    const nodes = [noeud('L', 1, 0), noeud('L', 2, 0)]
+
+    expect(groupesTableau(nodes)[0].colonnes.map((c) => c.titre)).toEqual([
+      'Perdants · tour 1',
+      'Finale perdants',
+    ])
+  })
+
+  it('leaves walkovers out of the columns', () => {
+    const nodes = [
+      noeud('W', 1, 0, { player_a: 'Léo', player_b: 'Inès' }),
+      noeud('W', 1, 1, { player_b: BYE, bye: true, done: true }),
+    ]
+
+    expect(groupesTableau(nodes)[0].colonnes[0].noeuds).toHaveLength(1)
+  })
+})
+
+describe('bracket depth', () => {
+  it('reads a node as en cours when only the second player has scored', () => {
+    expect(etatNoeud(noeud('W', 1, 0, { score_a: 0, score_b: 3 }))).toBe('En cours')
+  })
+
+  it('measures each bracket depth separately, so a deep losers side does not retitle the winners final', () => {
+    const nodes = [
+      noeud('W', 1, 0),
+      noeud('W', 2, 0),
+      noeud('L', 1, 0),
+      noeud('L', 2, 0),
+      noeud('L', 3, 0),
+    ]
+
+    const [principal, perdants] = groupesTableau(nodes)
+
+    expect(principal.colonnes.map((c) => c.titre)).toEqual([
+      'Demi-finale gagnants',
+      'Finale gagnants',
+    ])
+    expect(perdants.colonnes.map((c) => c.titre)).toEqual([
+      'Perdants · tour 1',
+      'Perdants · tour 2',
+      'Finale perdants',
+    ])
   })
 })

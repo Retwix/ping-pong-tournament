@@ -1,7 +1,9 @@
 import { libelleFormat } from './format'
+import { isPlayable, roundLabel } from './doubleElim'
 import { computeStandings, matchDuration } from './pingpong'
 import type { TournamentRating } from '../hooks/useRatingDeltas'
-import type { Match, StandingRow, Tournament } from '../types'
+import { BYE, TBD } from '../types'
+import type { Bracket, Match, StandingRow, Tournament } from '../types'
 
 /** The three derived pieces of the tournament board's page header. */
 export interface EnteteTournoi {
@@ -206,4 +208,99 @@ export function lignesClassement({
     afficherElo: !unranked && ratings.length > 0,
     note: unranked ? NOTE_NON_CLASSE : null,
   }
+}
+
+/** How a bracket slot reads when the player filling it is not yet known. */
+export function nomAdversaire(nom: string): string {
+  if (nom === TBD) return 'À déterminer'
+  if (nom === BYE) return 'Bye'
+  return nom
+}
+
+/**
+ * Where a bracket node stands. « En attente » is the one the round-robin list
+ * has no equivalent for: the match exists, but a feeder result is missing, so
+ * it cannot be played yet.
+ */
+export type EtatNoeud = 'Terminé' | 'En cours' | 'Prêt' | 'En attente'
+
+export function etatNoeud(match: Match): EtatNoeud {
+  if (match.done) return 'Terminé'
+  if (match.score_a > 0 || match.score_b > 0) return 'En cours'
+  return isPlayable(match) ? 'Prêt' : 'En attente'
+}
+
+/**
+ * Auto-completed walkovers are not games anyone plays, so they are hidden from
+ * the bracket and left out of the progress count.
+ */
+export function noeudsVisibles(matches: Match[]): Match[] {
+  return matches.filter((match) => !match.bye)
+}
+
+/** One round of a bracket group, rendered as a column. */
+export interface ColonneTableau {
+  titre: string
+  noeuds: Match[]
+}
+
+export type GroupeId = 'principal' | 'perdants' | 'finale'
+
+export interface GroupeTableau {
+  groupe: GroupeId
+  titre: string
+  colonnes: ColonneTableau[]
+}
+
+const TITRE_GROUPE: Record<GroupeId, string> = {
+  principal: 'Tableau principal',
+  perdants: 'Tableau des perdants',
+  finale: 'Grande finale',
+}
+
+const ORDRE_GROUPES: Array<[GroupeId, Bracket]> = [
+  ['principal', 'W'],
+  ['perdants', 'L'],
+  ['finale', 'GF'],
+]
+
+const dernierTour = (matches: Match[], bracket: Bracket): number =>
+  matches
+    .filter((match) => match.bracket === bracket)
+    .reduce((max, match) => Math.max(max, match.round), 0)
+
+function colonnesDe(
+  matches: Match[],
+  bracket: Bracket,
+  maxW: number,
+  maxL: number,
+): ColonneTableau[] {
+  const parTour = new Map<number, Match[]>()
+  for (const match of matches) {
+    if (match.bracket !== bracket) continue
+    parTour.set(match.round, [...(parTour.get(match.round) ?? []), match])
+  }
+
+  return [...parTour.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([round, noeuds]) => ({
+      titre: roundLabel(bracket, round, maxW, maxL),
+      noeuds: [...noeuds].sort((x, y) => x.idx - y.idx),
+    }))
+}
+
+/**
+ * The bracket as three stacked groups of round columns. A group with no nodes
+ * is dropped rather than rendered empty — a 3-player bracket has no losers
+ * final, and the grande finale does not exist until it is generated.
+ */
+export function groupesTableau(matches: Match[]): GroupeTableau[] {
+  const visibles = noeudsVisibles(matches)
+  const maxW = dernierTour(visibles, 'W')
+  const maxL = dernierTour(visibles, 'L')
+
+  return ORDRE_GROUPES.flatMap(([groupe, bracket]) => {
+    const colonnes = colonnesDe(visibles, bracket, maxW, maxL)
+    return colonnes.length === 0 ? [] : [{ groupe, titre: TITRE_GROUPE[groupe], colonnes }]
+  })
 }
