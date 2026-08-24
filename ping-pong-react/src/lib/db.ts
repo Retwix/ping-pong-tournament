@@ -92,6 +92,7 @@ function blankMatch(
     done: false,
     serve_start: 'a',
     started_at: null,
+    first_point_at: null,
     ended_at: null,
     mb_saved_a: 0,
     mb_saved_b: 0,

@@ -24,6 +24,7 @@ function match(over: Partial<Match>): Match {
 		done: true,
 		serve_start: 'a',
 		started_at: null,
+		first_point_at: null,
 		ended_at: null,
 		bracket: null,
 		match_key: null,

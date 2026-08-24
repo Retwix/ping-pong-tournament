@@ -88,6 +88,13 @@ export interface Match {
   done: boolean
   serve_start: MatchSide
   started_at: string | null
+  /**
+   * When the first point was scored — the match chrono, kept apart from
+   * `started_at` so a match the referee has put on the table reads as live at
+   * 0–0 without its clock running. Null on rows written before this column
+   * existed, where `started_at` was itself stamped on the first point.
+   */
+  first_point_at: string | null
   ended_at: string | null
   /**
    * Double-elimination bracket fields (all null/false for round-robin matches).
