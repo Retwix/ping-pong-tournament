@@ -3,6 +3,7 @@ import {
   avancement,
   dureeTerminee,
   enteteTournoi,
+  etatChargement,
   etatMatch,
   extremesDuree,
   lignesClassement,
@@ -731,5 +732,52 @@ describe('bracket depth', () => {
       'Perdants · tour 2',
       'Finale perdants',
     ])
+  })
+})
+
+describe('etatChargement', () => {
+  it('shows the loader while the tournament is still being fetched', () => {
+    expect(etatChargement({ loading: true, tournament: null, error: null })).toEqual({
+      etat: 'loading',
+      banniere: false,
+    })
+  })
+
+  it('keeps showing the loader even when a stale tournament is already in hand', () => {
+    expect(
+      etatChargement({ loading: true, tournament: getMockTournament(), error: null }),
+    ).toEqual({ etat: 'loading', banniere: false })
+  })
+
+  it('does not raise a banner over the loader', () => {
+    expect(
+      etatChargement({ loading: true, tournament: getMockTournament(), error: 'hors ligne' }),
+    ).toEqual({ etat: 'loading', banniere: false })
+  })
+
+  it('reports a tournament that does not exist once loading is done', () => {
+    expect(etatChargement({ loading: false, tournament: null, error: null })).toEqual({
+      etat: 'notfound',
+      banniere: false,
+    })
+  })
+
+  it('prefers not-found over a banner when the load failed and nothing arrived', () => {
+    expect(etatChargement({ loading: false, tournament: null, error: 'hors ligne' })).toEqual({
+      etat: 'notfound',
+      banniere: false,
+    })
+  })
+
+  it('renders the board plainly when everything is fine', () => {
+    expect(
+      etatChargement({ loading: false, tournament: getMockTournament(), error: null }),
+    ).toEqual({ etat: 'ok', banniere: false })
+  })
+
+  it('renders the board and warns when sync broke but the data is there', () => {
+    expect(
+      etatChargement({ loading: false, tournament: getMockTournament(), error: 'hors ligne' }),
+    ).toEqual({ etat: 'ok', banniere: true })
   })
 })

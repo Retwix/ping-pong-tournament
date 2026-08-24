@@ -4671,3 +4671,98 @@ header h1 .badge-nc { margin-left: 10px; }
   font-family: var(--font-body); font-weight: 600; font-size: 12px; color: #a49eb3;
 }
 [data-theme='dark'] .tb-row-note { color: #8b82a8; }
+
+/* --- Tournament board · load, not-found and sync states (slice 5) --- */
+
+.tb-etat-carte {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 88px 24px; text-align: center;
+  background: var(--surface); border: 1px solid #e8e4f2; border-radius: 18px;
+  box-shadow: 0 3px 12px rgba(32, 10, 66, 0.05);
+}
+[data-theme='dark'] .tb-etat-carte {
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 3px 12px rgba(6, 2, 16, 0.35);
+}
+.tb-etat-titre {
+  margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 20px;
+  color: var(--fg-1);
+}
+.tb-etat-sub {
+  margin: 0; max-width: 380px; text-wrap: pretty;
+  font-family: var(--font-body); font-weight: 600; font-size: 13.5px; line-height: 1.5;
+  color: #847e96;
+}
+[data-theme='dark'] .tb-etat-sub { color: #a99fc4; }
+.tb-etat-cta {
+  margin-top: 6px; cursor: pointer;
+  font-family: var(--font-display); font-weight: 700; font-size: 13.5px; color: #fff;
+  background: #4a2aa4; border: 0; border-radius: 13px; padding: 12px 18px;
+  box-shadow: 0 10px 24px rgba(74, 42, 164, 0.28);
+  transition: background 160ms var(--ease);
+}
+.tb-etat-cta:hover { background: #3a2080; }
+[data-theme='dark'] .tb-etat-cta { background: #5b39c4; }
+[data-theme='dark'] .tb-etat-cta:hover { background: #6f4bd6; }
+
+.tb-banniere {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #fee7ee; border: 1px solid #fbd4d9; border-radius: 14px; padding: 12px 14px;
+  font-family: var(--font-body); font-weight: 600; font-size: 13px; color: #93283a;
+}
+[data-theme='dark'] .tb-banniere {
+  background: rgba(215, 66, 81, 0.16); border-color: rgba(215, 66, 81, 0.32); color: #f2a5ae;
+}
+.tb-banniere span { flex: 1; min-width: 200px; }
+.tb-banniere-retry {
+  flex: none; cursor: pointer;
+  font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: #93283a;
+  background: rgba(255, 255, 255, 0.6); border: 1px solid #fbd4d9; border-radius: 10px;
+  padding: 8px 12px; transition: background 160ms var(--ease);
+}
+.tb-banniere-retry:hover { background: #fff; }
+[data-theme='dark'] .tb-banniere-retry {
+  color: #f2a5ae; background: rgba(255, 255, 255, 0.06); border-color: rgba(215, 66, 81, 0.32);
+}
+[data-theme='dark'] .tb-banniere-retry:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* --- Tournament board · responsive (820px house breakpoint, then phones) --- */
+
+@media (max-width: 820px) {
+  .tb-head { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .tb-head-actions { width: 100%; }
+  .tb-share { flex: 1; min-width: 0; }
+  .tb-share-url { flex: 1; min-width: 0; max-width: none; }
+
+  /* Status label and duration are the first things to go: the names, the
+     score and the tap target are what the row is for. */
+  .tb-row { gap: 9px; padding: 12px 9px; }
+  .tb-row-etat, .tb-row-etat--large { display: none; }
+  .tb-row-duree, .tb-row-note { display: none; }
+  .tb-row-score { width: 62px; }
+
+  .tb-sec-head { gap: 10px; }
+  .tb-progress-track { width: 120px; }
+
+  .tb-tableau { padding: 16px 14px; }
+  .tb-colonnes { min-width: 620px; }
+  .tb-colonne { min-width: 180px; }
+
+  .tb-etat-carte { padding: 64px 18px; }
+}
+
+@media (max-width: 520px) {
+  .tb-head-actions { flex-direction: column; align-items: stretch; }
+  .tb-share { width: 100%; }
+  .tb-ghost { justify-content: center; }
+
+  .tb-title { gap: 8px; }
+  .tb-row-nom { font-size: 13.5px; }
+  .tb-row-score { width: 54px; font-size: 14px; }
+  .tb-row-chev { display: none; }
+
+  .tb-cl-row { gap: 6px; padding: 10px 4px; font-size: 12.5px; }
+  .tb-cl-pts { display: none; }
+
+  .tb-banniere span { min-width: 0; }
+}

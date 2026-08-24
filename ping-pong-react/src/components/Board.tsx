@@ -1,5 +1,11 @@
-import { useMemo, useState } from 'react'
-import { IconChevronLeft, IconCopy, IconDeviceTv, IconGavel } from '@tabler/icons-react'
+import { useMemo, useState, type ReactNode } from 'react'
+import {
+  IconAlertCircle,
+  IconChevronLeft,
+  IconCopy,
+  IconDeviceTv,
+  IconGavel,
+} from '@tabler/icons-react'
 import { usePlayers } from '../hooks/usePlayers'
 import { useRatingDeltas } from '../hooks/useRatingDeltas'
 import { useTournament } from '../hooks/useTournament'
@@ -9,7 +15,7 @@ import { libelleFormat } from '../lib/format'
 import { playerLookup } from '../lib/playerLookup'
 import { navigate } from '../lib/router'
 import { isCapot, winnerLoser } from '../lib/stats'
-import { enteteTournoi } from '../lib/tournamentBoard'
+import { enteteTournoi, etatChargement } from '../lib/tournamentBoard'
 import type { Match } from '../types'
 import CapotScreen from './CapotScreen'
 import Champion from './Champion'
@@ -43,7 +49,7 @@ export default function Board({
   onStats,
   onPlayers,
 }: Props) {
-  const { tournament, matches, loading, error, patchMatch } = useTournament(id)
+  const { tournament, matches, loading, error, patchMatch, reload } = useTournament(id)
   const { players: registry } = usePlayers()
   const {
     forMatch: ratingsForMatch,
@@ -55,21 +61,50 @@ export default function Board({
   const [dismissedChampion, setDismissedChampion] = useState(false)
   const [capotMatch, setCapotMatch] = useState<Match | null>(null)
 
-  if (loading) {
-    return (
-      <div className="wrap">
+  const chargement = etatChargement({ loading, tournament, error })
+
+  // The shell wraps every state, so a slow load or a dead link still looks
+  // like the app rather than falling back to the old standalone layout.
+  const coquille = (contenu: ReactNode) => (
+    <div className="rv-page">
+      <DashboardNav
+        onHome={onBack}
+        onClassement={onClassement}
+        onStats={onStats}
+        onPlayers={onPlayers}
+        onNew={onNew}
+        onNewGame={onNewGame}
+      />
+      {contenu}
+      <DashboardTabBar
+        onHome={onBack}
+        onClassement={onClassement}
+        onStats={onStats}
+        onPlayers={onPlayers}
+        onNew={onNew}
+        onNewGame={onNewGame}
+      />
+    </div>
+  )
+
+  if (chargement.etat === 'loading') {
+    return coquille(
+      <div className="tb-etat-carte">
         <Loader />
-      </div>
+      </div>,
     )
   }
-  if (!tournament) {
-    return (
-      <div className="wrap">
-        <div className="error-banner">Tournoi introuvable.</div>
-        <button className="link-btn" onClick={onBack}>
-          ← Tous les tournois
+  if (chargement.etat === 'notfound' || !tournament) {
+    return coquille(
+      <div className="tb-etat-carte">
+        <p className="tb-etat-titre">Tournoi introuvable.</p>
+        <p className="tb-etat-sub">
+          Ce lien ne mène à aucun tournoi — il a peut-être été supprimé.
+        </p>
+        <button className="tb-etat-cta" onClick={onBack}>
+          Tous les tournois
         </button>
-      </div>
+      </div>,
     )
   }
 
@@ -163,7 +198,15 @@ export default function Board({
         onNewGame={onNewGame}
       />
 
-      {error && <div className="error-banner">{error}</div>}
+      {chargement.banniere && (
+        <div className="tb-banniere">
+          <IconAlertCircle size={17} stroke={2} />
+          <span>Synchronisation interrompue — les scores affichés peuvent être en retard.</span>
+          <button className="tb-banniere-retry" onClick={() => void reload()}>
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {retour}
 

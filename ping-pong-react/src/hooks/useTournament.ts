@@ -271,5 +271,5 @@ export function useTournament(id: string | null) {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [matches, tournament])
 
-  return { tournament, matches, loading, error, patchMatch }
+  return { tournament, matches, loading, error, patchMatch, reload }
 }

@@ -304,3 +304,32 @@ export function groupesTableau(matches: Match[]): GroupeTableau[] {
     return colonnes.length === 0 ? [] : [{ groupe, titre: TITRE_GROUPE[groupe], colonnes }]
   })
 }
+
+/** Which of the board's three top-level renderings applies. */
+export type EtatChargement = 'loading' | 'notfound' | 'ok'
+
+export interface ChargementBoard {
+  etat: EtatChargement
+  /** The sync-failure banner, which only ever appears above a rendered board. */
+  banniere: boolean
+}
+
+/**
+ * Load precedence for the board. Fetching wins over everything, so a refresh
+ * never flashes « introuvable ». A failure that still left us with a tournament
+ * is a sync problem, not a missing page: the board renders and the banner warns
+ * that scores may be stale. A failure with nothing in hand is simply not found.
+ */
+export function etatChargement({
+  loading,
+  tournament,
+  error,
+}: {
+  loading: boolean
+  tournament: Tournament | null
+  error: string | null
+}): ChargementBoard {
+  if (loading) return { etat: 'loading', banniere: false }
+  if (tournament === null) return { etat: 'notfound', banniere: false }
+  return { etat: 'ok', banniere: error !== null }
+}
