@@ -4381,3 +4381,102 @@ header h1 .badge-nc { margin-left: 10px; }
   color: #c9b8ff; border-color: rgba(255, 255, 255, 0.09);
 }
 [data-theme='dark'] .tb-ghost:hover { border-color: rgba(134, 99, 233, 0.5); }
+
+/* --- Tournament board · round-robin match list (slice 2) --- */
+
+.tb-matchs { display: flex; flex-direction: column; gap: 14px; }
+
+.tb-sec-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.tb-sec-title {
+  font-family: var(--font-display); font-weight: 800; font-size: 18px;
+  color: var(--fg-1); margin: 0;
+}
+.tb-progress { display: inline-flex; align-items: center; gap: 10px; }
+.tb-progress-track {
+  display: block; width: 180px; max-width: 180px; height: 5px;
+  background: #ede8f8; border-radius: 999px; overflow: hidden;
+}
+[data-theme='dark'] .tb-progress-track { background: rgba(255, 255, 255, 0.1); }
+.tb-progress-fill {
+  display: block; height: 100%; background: #4a2aa4; border-radius: 999px;
+  transition: width 220ms var(--ease);
+}
+[data-theme='dark'] .tb-progress-fill { background: #8663e9; }
+.tb-progress-count {
+  font-family: var(--font-body); font-weight: 700; font-size: 12.5px; color: #847e96;
+}
+[data-theme='dark'] .tb-progress-count { color: #a99fc4; }
+
+.tb-tour { display: flex; flex-direction: column; gap: 7px; }
+.tb-tour-head {
+  display: flex; align-items: baseline; gap: 9px;
+  font-family: var(--font-display); font-weight: 800; font-size: 13px; color: var(--fg-1);
+}
+.tb-tour-bye {
+  font-family: var(--font-body); font-weight: 600; font-size: 12px; color: #a49eb3;
+}
+[data-theme='dark'] .tb-tour-bye { color: #8b82a8; }
+
+.tb-tour-card {
+  background: var(--surface); border: 1px solid #e8e4f2; border-radius: 16px;
+  padding: 5px 7px; box-shadow: 0 3px 12px rgba(32, 10, 66, 0.05);
+}
+[data-theme='dark'] .tb-tour-card {
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 3px 12px rgba(6, 2, 16, 0.35);
+}
+
+.tb-row {
+  display: flex; align-items: center; gap: 13px;
+  padding: 13px 11px; border-radius: 12px; cursor: pointer;
+  transition: background 160ms var(--ease);
+}
+.tb-row:hover { background: #f2effb; }
+[data-theme='dark'] .tb-row:hover { background: rgba(255, 255, 255, 0.05); }
+
+.tb-row-dot {
+  flex: none; width: 8px; height: 8px; border-radius: 999px; background: #dcd6ea;
+}
+[data-theme='dark'] .tb-row-dot { background: rgba(255, 255, 255, 0.2); }
+.tb-row-etat {
+  flex: none; width: 76px;
+  font-family: var(--font-body); font-weight: 700; font-size: 11.5px; color: #a49eb3;
+}
+.tb-row--termine .tb-row-dot, .tb-row--termine .tb-row-etat { color: #2ba572; }
+.tb-row--termine .tb-row-dot { background: #2ba572; }
+.tb-row--encours .tb-row-dot, .tb-row--encours .tb-row-etat { color: #d74251; }
+.tb-row--encours .tb-row-dot { background: #d74251; }
+[data-theme='dark'] .tb-row--termine .tb-row-etat { color: #5fd9a6; }
+[data-theme='dark'] .tb-row--termine .tb-row-dot { background: #5fd9a6; }
+[data-theme='dark'] .tb-row--encours .tb-row-etat { color: #f2818f; }
+[data-theme='dark'] .tb-row--encours .tb-row-dot { background: #f2818f; }
+[data-theme='dark'] .tb-row--ajouer .tb-row-etat { color: #8b82a8; }
+
+.tb-row-nom {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: var(--fg-1);
+}
+.tb-row-nom--a { text-align: right; }
+.tb-row-nom--perdant { color: #847e96; }
+[data-theme='dark'] .tb-row-nom--perdant { color: #a99fc4; }
+
+.tb-row-score {
+  flex: none; width: 74px; text-align: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--fg-1);
+}
+
+.tb-row-duree {
+  flex: none; width: 64px; text-align: right;
+  font-family: var(--font-body); font-weight: 600; font-size: 12px; color: #a49eb3;
+}
+[data-theme='dark'] .tb-row-duree { color: #8b82a8; }
+
+.tb-row-chev { flex: none; color: #cbc3dd; }
+[data-theme='dark'] .tb-row-chev { color: rgba(255, 255, 255, 0.28); }
+
+.tb-extremes {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 600; font-size: 12.5px; color: #847e96;
+}
+.tb-extremes b { font-weight: 700; color: var(--fg-2); }
+[data-theme='dark'] .tb-extremes { color: #a99fc4; }
