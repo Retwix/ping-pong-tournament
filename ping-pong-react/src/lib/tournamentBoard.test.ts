@@ -5,8 +5,10 @@ import {
   enteteTournoi,
   etatMatch,
   extremesDuree,
+  lignesClassement,
   toursDuTournoi,
 } from './tournamentBoard'
+import type { TournamentRating } from '../hooks/useRatingDeltas'
 import type { Match, Tournament } from '../types'
 
 const getMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
@@ -393,5 +395,159 @@ describe('dureeTerminee', () => {
 
   it('has no duration for an untouched match', () => {
     expect(dureeTerminee(getMockMatch())).toBeNull()
+  })
+})
+
+const getMockRating = (overrides?: Partial<TournamentRating>): TournamentRating => ({
+  key: 'pa',
+  name: 'Léo',
+  startRating: 1500,
+  endRating: 1532,
+  netDelta: 32,
+  games: 2,
+  rank: 1,
+  provisional: false,
+  ...overrides,
+})
+
+/** A finished match, winner first. */
+const gagne = (vainqueur: string, perdant: string, sa: number, sb: number, id: string): Match =>
+  getMockMatch({ id, done: true, player_a: vainqueur, player_b: perdant, score_a: sa, score_b: sb })
+
+describe('lignesClassement', () => {
+  it('ranks players by wins, then by point difference', () => {
+    const players = ['Léo', 'Thibault', 'Inès']
+    const matches = [
+      gagne('Léo', 'Thibault', 11, 2, 'm1'),
+      gagne('Inès', 'Thibault', 11, 9, 'm2'),
+      gagne('Léo', 'Inès', 11, 5, 'm3'),
+    ]
+
+    const { rows } = lignesClassement({ players, matches, ratings: [], unranked: false })
+
+    expect(rows.map((r) => [r.rang, r.name])).toEqual([
+      [1, 'Léo'],
+      [2, 'Inès'],
+      [3, 'Thibault'],
+    ])
+  })
+
+  it('numbers the ranks from one', () => {
+    const { rows } = lignesClassement({
+      players: ['Léo', 'Thibault'],
+      matches: [gagne('Léo', 'Thibault', 11, 3, 'm1')],
+      ratings: [],
+      unranked: false,
+    })
+
+    expect(rows.map((r) => r.rang)).toEqual([1, 2])
+  })
+
+  it('carries each player record through to the row', () => {
+    const { rows } = lignesClassement({
+      players: ['Léo', 'Thibault'],
+      matches: [gagne('Léo', 'Thibault', 11, 3, 'm1')],
+      ratings: [],
+      unranked: false,
+    })
+
+    expect(rows[0]).toMatchObject({
+      name: 'Léo',
+      played: 1,
+      wins: 1,
+      pointsFor: 11,
+      pointsAgainst: 3,
+      diff: 8,
+    })
+    expect(rows[1]).toMatchObject({ name: 'Thibault', wins: 0, diff: -8 })
+  })
+
+  it('shows the Elo column on a ranked tournament that has ratings', () => {
+    const result = lignesClassement({
+      players: ['Léo', 'Thibault'],
+      matches: [gagne('Léo', 'Thibault', 11, 3, 'm1')],
+      ratings: [getMockRating()],
+      unranked: false,
+    })
+
+    expect(result.afficherElo).toBe(true)
+    expect(result.note).toBeNull()
+  })
+
+  it('hides the Elo column entirely on an unranked tournament', () => {
+    const result = lignesClassement({
+      players: ['Léo', 'Thibault'],
+      matches: [gagne('Léo', 'Thibault', 11, 3, 'm1')],
+      ratings: [getMockRating()],
+      unranked: true,
+    })
+
+    expect(result.afficherElo).toBe(false)
+    expect(result.note).toBe('Tournoi non classé — les résultats ne changent aucun Elo.')
+  })
+
+  it('hides the Elo column before any rating has been recorded', () => {
+    const result = lignesClassement({
+      players: ['Léo', 'Thibault'],
+      matches: [],
+      ratings: [],
+      unranked: false,
+    })
+
+    expect(result.afficherElo).toBe(false)
+    expect(result.note).toBeNull()
+  })
+
+  it('attaches a player their entry and exit rating', () => {
+    const { rows } = lignesClassement({
+      players: ['Léo', 'Thibault'],
+      matches: [gagne('Léo', 'Thibault', 11, 3, 'm1')],
+      ratings: [getMockRating({ name: 'Léo', startRating: 1500, endRating: 1532, netDelta: 32 })],
+      unranked: false,
+    })
+
+    expect(rows[0].elo).toEqual({ net: 32, depart: 1500, arrivee: 1532 })
+  })
+
+  it('leaves a player without a rating entry with no Elo at all', () => {
+    const { rows } = lignesClassement({
+      players: ['Léo', 'Thibault'],
+      matches: [gagne('Léo', 'Thibault', 11, 3, 'm1')],
+      ratings: [getMockRating({ name: 'Léo' })],
+      unranked: false,
+    })
+
+    expect(rows[1].name).toBe('Thibault')
+    expect(rows[1].elo).toBeNull()
+  })
+
+  it('rounds fractional Glicko movement to whole points', () => {
+    const { rows } = lignesClassement({
+      players: ['Léo', 'Thibault'],
+      matches: [gagne('Léo', 'Thibault', 11, 3, 'm1')],
+      ratings: [
+        getMockRating({ name: 'Léo', startRating: 1499.6, endRating: 1531.4, netDelta: 31.8 }),
+      ],
+      unranked: false,
+    })
+
+    expect(rows[0].elo).toEqual({ net: 32, depart: 1500, arrivee: 1531 })
+  })
+
+  it('keeps a player who has not played yet, and ranks their nil record above a heavy defeat', () => {
+    const { rows } = lignesClassement({
+      players: ['Léo', 'Thibault', 'Candice'],
+      matches: [gagne('Léo', 'Thibault', 11, 3, 'm1')],
+      ratings: [],
+      unranked: false,
+    })
+
+    expect(rows).toHaveLength(3)
+    expect(rows.map((r) => [r.rang, r.name])).toEqual([
+      [1, 'Léo'],
+      [2, 'Candice'],
+      [3, 'Thibault'],
+    ])
+    expect(rows[1]).toMatchObject({ name: 'Candice', played: 0, wins: 0, diff: 0 })
   })
 })

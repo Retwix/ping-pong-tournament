@@ -18,8 +18,8 @@ import DashboardTabBar from './DashboardTabBar'
 import GameResult from './GameResult'
 import LiveScorer from './LiveScorer'
 import MatchList from './MatchList'
+import BoardStandings from './BoardStandings'
 import BracketView from './BracketView'
-import Standings from './Standings'
 import { Loader } from './Loader'
 
 interface Props {
@@ -215,20 +215,21 @@ export default function Board({
         </>
       ) : (
         <>
-          <MatchList tournament={tournament} matches={matches} onOpen={setOpenId} />
-
-          <section>
-            <div className="section-title">Classement</div>
-            <Standings
-              players={tournament.players}
-              matches={matches}
-              ratings={ratingsForTournament(matches)}
-            />
-            <div className="footer-row">
-              <span className="hint">Départage : victoires, puis différence de points.</span>
-              {retour}
+          <div className="tb-grid">
+            <div className="tb-grid-matchs">
+              <MatchList tournament={tournament} matches={matches} onOpen={setOpenId} />
             </div>
-          </section>
+            <aside className="tb-grid-classement">
+              <h2 className="tb-sec-title">Classement</h2>
+              <BoardStandings
+                players={tournament.players}
+                matches={matches}
+                ratings={ratingsForTournament(matches)}
+                unranked={entete.nonClasse}
+              />
+            </aside>
+          </div>
+          <div className="footer-row">{retour}</div>
         </>
       )}
 

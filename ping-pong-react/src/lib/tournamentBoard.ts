@@ -1,6 +1,7 @@
 import { libelleFormat } from './format'
-import { matchDuration } from './pingpong'
-import type { Match, Tournament } from '../types'
+import { computeStandings, matchDuration } from './pingpong'
+import type { TournamentRating } from '../hooks/useRatingDeltas'
+import type { Match, StandingRow, Tournament } from '../types'
 
 /** The three derived pieces of the tournament board's page header. */
 export interface EnteteTournoi {
@@ -138,4 +139,71 @@ export function extremesDuree(matches: Match[]): ExtremesDuree | null {
 export function dureeTerminee(match: Match): number | null {
   if (!match.done || match.started_at === null || match.ended_at === null) return null
   return matchDuration(match)
+}
+
+/** A player's Elo movement across this tournament, rounded for display. */
+export interface EloTournoi {
+  net: number
+  depart: number
+  arrivee: number
+}
+
+/** One row of the board's « Classement » card. */
+export interface LigneClassement extends StandingRow {
+  rang: number
+  /** null when the player has no rating event in this tournament. */
+  elo: EloTournoi | null
+}
+
+export interface Classement {
+  rows: LigneClassement[]
+  /** The ÉLO column is dropped whenever it would say nothing true. */
+  afficherElo: boolean
+  /** Shown under the card in place of the column, on unranked tournaments. */
+  note: string | null
+}
+
+const NOTE_NON_CLASSE = 'Tournoi non classé — les résultats ne changent aucun Elo.'
+
+/**
+ * The board's standings, derived from played matches — never stored. Ordering
+ * (wins, then point difference) comes from `computeStandings`, so the card and
+ * the champion screen always agree.
+ *
+ * An unranked tournament moves no Elo, so showing the column would imply an
+ * effect that does not exist: it is hidden and replaced by a note.
+ */
+export function lignesClassement({
+  players,
+  matches,
+  ratings,
+  unranked,
+}: {
+  players: string[]
+  matches: Match[]
+  ratings: TournamentRating[]
+  unranked: boolean
+}): Classement {
+  const parNom = new Map(ratings.map((rating) => [rating.name, rating]))
+
+  const rows = computeStandings(players, matches).map((standing, index) => {
+    const rating = parNom.get(standing.name)
+    return {
+      ...standing,
+      rang: index + 1,
+      elo: rating
+        ? {
+            net: Math.round(rating.netDelta),
+            depart: Math.round(rating.startRating),
+            arrivee: Math.round(rating.endRating),
+          }
+        : null,
+    }
+  })
+
+  return {
+    rows,
+    afficherElo: !unranked && ratings.length > 0,
+    note: unranked ? NOTE_NON_CLASSE : null,
+  }
 }
