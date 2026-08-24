@@ -30,6 +30,7 @@ import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import NewMenu from './NewMenu'
+import { Loader } from './Loader'
 
 const finDate = (at: string): string =>
   new Date(at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
@@ -347,7 +348,7 @@ export default function Parties({
     return (
       <div className="rv-page">
         {nav}
-        <p className="empty">Chargement…</p>
+        <Loader />
         {tabbar}
       </div>
     )

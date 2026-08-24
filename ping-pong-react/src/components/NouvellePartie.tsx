@@ -42,6 +42,7 @@ import type { TournamentFormat } from '../types'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
+import { Loader } from './Loader'
 
 function slugify(s: string, fallback: string): string {
   return (
@@ -689,7 +690,7 @@ export default function NouvellePartie({
                         <span className="np-skel-line" style={{ width: w }} />
                       </div>
                     ))}
-                    <div className="np-skel-note">Chargement…</div>
+                    <Loader height={40} />
                   </div>
                 ) : annuaire.length === 0 ? (
                   <div className="np-reg-empty">

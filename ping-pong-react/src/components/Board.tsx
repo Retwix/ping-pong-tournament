@@ -18,6 +18,7 @@ import BracketView from './BracketView'
 import Standings from './Standings'
 import ThemeToggle from './ThemeToggle'
 import TopBack from './TopBack'
+import { Loader } from './Loader'
 
 interface Props {
   id: string
@@ -42,7 +43,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
   if (loading) {
     return (
       <div className="wrap">
-        <p className="empty">Chargement…</p>
+        <Loader />
       </div>
     )
   }
@@ -64,7 +65,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
     if (!match) {
       return (
         <div className="wrap">
-          <p className="empty">Chargement…</p>
+          <Loader />
         </div>
       )
     }

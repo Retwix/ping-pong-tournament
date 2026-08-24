@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&amp;family=DM+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E6F0;font-family:'DM Sans',sans-serif;}
+a{color:#4A2AA4;}a:hover{color:#200A42;}
+@keyframes rvBallX{0%{transform:translateX(-9.1px);}50%{transform:translateX(9.1px);}100%{transform:translateX(-9.1px);}}
+@keyframes rvBallY{0%,50%,100%{transform:translateY(0);}2.5%,47.5%,52.5%,97.5%{transform:translateY(-4.62px);}5%,45%,55%,95%{transform:translateY(-8.75px);}7.5%,42.5%,57.5%,92.5%{transform:translateY(-12.39px);}10%,40%,60%,90%{transform:translateY(-15.55px);}12.5%,37.5%,62.5%,87.5%{transform:translateY(-18.23px);}15%,35%,65%,85%{transform:translateY(-20.41px);}17.5%,32.5%,67.5%,82.5%{transform:translateY(-22.11px);}20%,30%,70%,80%{transform:translateY(-23.33px);}22.5%,27.5%,72.5%,77.5%{transform:translateY(-24.06px);}25%,75%{transform:translateY(-24.3px);}}
+@keyframes rvBallSq{0%{transform:scale(1.18,0.86);}2%{transform:scale(0.94,1.1);}6%,46%{transform:scale(1,1);}48%{transform:scale(0.95,1.07);}50%{transform:scale(1.18,0.86);}52%{transform:scale(0.94,1.1);}56%,96%{transform:scale(1,1);}98%{transform:scale(0.95,1.07);}100%{transform:scale(1.18,0.86);}}
+@keyframes rvSpin{0%{transform:rotate(0deg);}50%{transform:rotate(300deg);}100%{transform:rotate(0deg);}}
+@keyframes rvTilt{0%{transform:rotate(11deg);animation-timing-function:cubic-bezier(0.2,0.8,0.4,1);}6.6%{transform:rotate(18deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}14%{transform:rotate(11.5deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}19.1%{transform:rotate(9.5deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}23.5%{transform:rotate(10.4deg);animation-timing-function:cubic-bezier(0.45,0,0.25,1);}36.8%{transform:rotate(-7deg);animation-timing-function:linear;}41.2%{transform:rotate(-7deg);animation-timing-function:cubic-bezier(0.4,0,0.8,0.5);}50%{transform:rotate(-11deg);animation-timing-function:cubic-bezier(0.2,0.8,0.4,1);}56.6%{transform:rotate(-18deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}64%{transform:rotate(-11.5deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}69.1%{transform:rotate(-9.5deg);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}73.5%{transform:rotate(-10.4deg);animation-timing-function:cubic-bezier(0.45,0,0.25,1);}86.8%{transform:rotate(7deg);animation-timing-function:linear;}91.2%{transform:rotate(7deg);animation-timing-function:cubic-bezier(0.4,0,0.8,0.5);}100%{transform:rotate(11deg);}}
+@keyframes rvStroke{0%{transform:translateY(-1.49px);animation-timing-function:cubic-bezier(0.3,0.6,0.6,1);}4.4%{transform:translateY(-2.13px);animation-timing-function:ease-in-out;}6.6%{transform:translateY(-2.25px);animation-timing-function:cubic-bezier(0.45,0,0.7,0.4);}14.7%{transform:translateY(0.15px);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}19.1%{transform:translateY(0);animation-timing-function:linear;}41.2%{transform:translateY(0);animation-timing-function:cubic-bezier(0.55,0,0.85,0.45);}50%{transform:translateY(-1.49px);animation-timing-function:cubic-bezier(0.3,0.6,0.6,1);}54.4%{transform:translateY(-2.13px);animation-timing-function:ease-in-out;}56.6%{transform:translateY(-2.25px);animation-timing-function:cubic-bezier(0.45,0,0.7,0.4);}64.7%{transform:translateY(0.15px);animation-timing-function:cubic-bezier(0.2,0.7,0.2,1);}69.1%{transform:translateY(0);animation-timing-function:linear;}91.2%{transform:translateY(0);animation-timing-function:cubic-bezier(0.55,0,0.85,0.45);}100%{transform:translateY(-1.49px);}}
+@keyframes rvCarriage{0%{transform:translateX(-12px);}14.7%{transform:translateX(-12px);animation-timing-function:cubic-bezier(0.45,0,0.25,1);}32.4%{transform:translateX(12px);}64.7%{transform:translateX(12px);animation-timing-function:cubic-bezier(0.45,0,0.25,1);}82.4%{transform:translateX(-12px);}100%{transform:translateX(-12px);}}
+@keyframes rvShadowX{0%{transform:translateX(-9.1px);}50%{transform:translateX(9.1px);}100%{transform:translateX(-9.1px);}}
+@keyframes rvShadowS{0%,50%,100%{transform:scale(0.72);opacity:0.34;}25%,75%{transform:scale(1.18);opacity:0.14;}}
+@keyframes rvRingF{0%{opacity:0.45;transform:scale(0.7);}6%{opacity:0;transform:scale(1.6);}100%{opacity:0;transform:scale(1.6);}}
+@keyframes rvPulse{0%,100%{opacity:1;}50%{opacity:0.55;}}
+@media (prefers-reduced-motion:reduce){[data-rv-anim]{animation:none !important;}[data-rv-pulse]{animation:rvPulse 2.4s ease-in-out infinite !important;}}
+</style>
+</helmet>
+<section data-screen-label="Loader Recovr v2" style="display:flex;flex-wrap:wrap;gap:36px;padding:44px;align-items:stretch;">
+
+  <div data-screen-label="01 Boucle theme clair v2" style="width:480px;display:flex;flex-direction:column;gap:16px;background:#F5F5F8;border-radius:20px;padding:26px 28px 22px;">
+    <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;color:#8E889C;">01 · La boucle v2 — thème clair (#F5F5F8)</div>
+    <div style="display:flex;align-items:flex-end;justify-content:center;height:190px;padding-bottom:6px;">
+      <svg data-rv-pulse="" width="90" height="120" viewBox="-5 -19 40 53" fill="none">
+        <g data-rv-anim="" style="animation:rvShadowX 1.36s linear infinite;"><ellipse data-rv-anim="" data-rv-fx="" cx="15" cy="30" rx="7" ry="1.7" fill="#F35E68" opacity="0.3" style="filter:blur(1.2px);transform-origin:15px 30px;transform:translateX(-6px) scale(0.8);animation:rvShadowS 1.36s linear infinite;"></ellipse></g>
+        <g data-rv-anim="" style="animation:rvCarriage 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvStroke 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 27.8px;transform:rotate(-30deg);animation:rvTilt 1.36s linear infinite;"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g></g>
+        <circle data-rv-anim="" data-rv-fx="" cx="5.9" cy="11.39" r="3.4" fill="none" stroke="#F35E68" stroke-width="0.5" style="opacity:0;transform-origin:5.9px 11.39px;animation:rvRingF 1.36s linear infinite;"></circle>
+        <circle data-rv-anim="" data-rv-fx="" data-rv-half="" cx="24.1" cy="11.39" r="3.4" fill="none" stroke="#F35E68" stroke-width="0.5" style="opacity:0;transform-origin:24.1px 11.39px;animation:rvRingF 1.36s linear infinite;animation-delay:-0.68s;"></circle>
+        <g data-rv-anim="" style="transform:translate(-7.6px,3.25px);animation:rvBallX 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvBallY 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvBallSq 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvSpin 1.36s linear infinite;"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.45" stroke-width="0.5" style="filter:drop-shadow(0 0.5px 0.8px rgba(23,8,43,0.28));"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g></g></g></g>
+      </svg>
+    </div>
+    <div style="display:flex;gap:6px;justify-content:space-between;border-top:1px solid #E8E4F2;padding-top:14px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="7.3" ry="1.6" fill="#F35E68" opacity="0.18" transform="translate(-4.29 0)" style="filter:blur(1.2px);"></ellipse>
+          <g transform="translate(-12 0)"><g transform="rotate(7 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <g transform="translate(-4.29 -18.88)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.45" stroke-width="0.5"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:#8E889C;">−180 ms</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="5" ry="1.6" fill="#F35E68" opacity="0.34" transform="translate(-9.1 0)" style="filter:blur(1.2px);"></ellipse>
+          <g transform="translate(-12 -1.49)"><g transform="rotate(11 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <circle cx="5.9" cy="11.39" r="3.4" fill="none" stroke="#F35E68" stroke-width="0.5" opacity="0.45"></circle>
+          <g transform="translate(-9.1 0) translate(15 11.39) scale(1.18 0.86) translate(-15 -11.39)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.45" stroke-width="0.5"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:#8E889C;">contact</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="5.6" ry="1.6" fill="#F35E68" opacity="0.3" transform="translate(-7.5 0)" style="filter:blur(1.2px);"></ellipse>
+          <g transform="translate(-12 -2.13)"><g transform="rotate(16 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <g transform="translate(-7.5 -7.8) translate(15 11.39) scale(0.96 1.06) translate(-15 -11.39)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.45" stroke-width="0.5"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:#8E889C;">+60 ms</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="6.8" ry="1.6" fill="#F35E68" opacity="0.2" transform="translate(-4.55 0)" style="filter:blur(1.2px);"></ellipse>
+          <g transform="translate(-12 -0.8)"><g transform="rotate(12.5 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <g transform="translate(-4.55 -18.23)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.45" stroke-width="0.5"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:#8E889C;">25 % du vol</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="8.2" ry="1.6" fill="#F35E68" opacity="0.14" style="filter:blur(1.2px);"></ellipse>
+          <g transform="translate(2.4 0)"><g transform="rotate(10.4 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <g transform="translate(0 -24.3)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.45" stroke-width="0.5"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:#8E889C;">apogée</div>
+      </div>
+    </div>
+  </div>
+
+  <div data-screen-label="02 Boucle theme sombre v2" style="width:480px;display:flex;flex-direction:column;gap:16px;background:#14181F;border-radius:20px;padding:26px 28px 22px;">
+    <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;color:rgba(255,255,255,0.5);">02 · La boucle v2 — thème sombre (#14181F)</div>
+    <div style="display:flex;align-items:flex-end;justify-content:center;height:190px;padding-bottom:6px;">
+      <svg data-rv-pulse="" width="90" height="120" viewBox="-5 -19 40 53" fill="none">
+        <g data-rv-anim="" style="animation:rvShadowX 1.36s linear infinite;"><ellipse data-rv-anim="" data-rv-fx="" cx="15" cy="30" rx="7" ry="1.7" fill="#F35E68" opacity="0.3" style="filter:blur(1.4px);transform-origin:15px 30px;transform:translateX(-6px) scale(0.8);animation:rvShadowS 1.36s linear infinite;"></ellipse></g>
+        <g data-rv-anim="" style="animation:rvCarriage 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvStroke 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 27.8px;transform:rotate(-30deg);animation:rvTilt 1.36s linear infinite;"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g></g>
+        <circle data-rv-anim="" data-rv-fx="" cx="5.9" cy="11.39" r="3.4" fill="none" stroke="#F35E68" stroke-width="0.5" style="opacity:0;transform-origin:5.9px 11.39px;animation:rvRingF 1.36s linear infinite;"></circle>
+        <circle data-rv-anim="" data-rv-fx="" data-rv-half="" cx="24.1" cy="11.39" r="3.4" fill="none" stroke="#F35E68" stroke-width="0.5" style="opacity:0;transform-origin:24.1px 11.39px;animation:rvRingF 1.36s linear infinite;animation-delay:-0.68s;"></circle>
+        <g data-rv-anim="" style="transform:translate(-7.6px,3.25px);animation:rvBallX 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvBallY 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvBallSq 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvSpin 1.36s linear infinite;"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.35" stroke-width="0.5"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g></g></g></g>
+      </svg>
+    </div>
+    <div style="display:flex;gap:6px;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.12);padding-top:14px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="7.3" ry="1.6" fill="#F35E68" opacity="0.18" transform="translate(-4.29 0)" style="filter:blur(1.4px);"></ellipse>
+          <g transform="translate(-12 0)"><g transform="rotate(7 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <g transform="translate(-4.29 -18.88)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);">−180 ms</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="5" ry="1.6" fill="#F35E68" opacity="0.34" transform="translate(-9.1 0)" style="filter:blur(1.4px);"></ellipse>
+          <g transform="translate(-12 -1.49)"><g transform="rotate(11 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <circle cx="5.9" cy="11.39" r="3.4" fill="none" stroke="#F35E68" stroke-width="0.5" opacity="0.45"></circle>
+          <g transform="translate(-9.1 0) translate(15 11.39) scale(1.18 0.86) translate(-15 -11.39)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);">contact</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="5.6" ry="1.6" fill="#F35E68" opacity="0.3" transform="translate(-7.5 0)" style="filter:blur(1.4px);"></ellipse>
+          <g transform="translate(-12 -2.13)"><g transform="rotate(16 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <g transform="translate(-7.5 -7.8) translate(15 11.39) scale(0.96 1.06) translate(-15 -11.39)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);">+60 ms</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="6.8" ry="1.6" fill="#F35E68" opacity="0.2" transform="translate(-4.55 0)" style="filter:blur(1.4px);"></ellipse>
+          <g transform="translate(-12 -0.8)"><g transform="rotate(12.5 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <g transform="translate(-4.55 -18.23)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);">25 % du vol</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <svg width="59" height="78" viewBox="-5 -19 40 53" fill="none">
+          <ellipse cx="15" cy="30" rx="8.2" ry="1.6" fill="#F35E68" opacity="0.14" style="filter:blur(1.4px);"></ellipse>
+          <g transform="translate(2.4 0)"><g transform="rotate(10.4 15 27.8)"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g>
+          <g transform="translate(0 -24.3)"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g>
+        </svg>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);">apogée</div>
+      </div>
+    </div>
+  </div>
+
+  <div data-screen-label="03 En contexte v2" style="width:480px;display:flex;flex-direction:column;gap:18px;background:#F5F5F8;border-radius:20px;padding:26px 28px 24px;">
+    <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;color:#8E889C;">03 · En contexte</div>
+    <div style="background:#FFFFFF;border:1px solid #ECEAF1;border-radius:16px;box-shadow:0 12px 32px rgba(32,10,66,0.10);padding:40px 32px 28px;display:flex;flex-direction:column;align-items:center;gap:18px;">
+      <svg data-rv-pulse="" width="90" height="120" viewBox="-5 -19 40 53" fill="none">
+        <g data-rv-anim="" style="animation:rvShadowX 1.36s linear infinite;"><ellipse data-rv-anim="" data-rv-fx="" cx="15" cy="30" rx="7" ry="1.7" fill="#F35E68" opacity="0.3" style="filter:blur(1.2px);transform-origin:15px 30px;transform:translateX(-6px) scale(0.8);animation:rvShadowS 1.36s linear infinite;"></ellipse></g>
+        <g data-rv-anim="" style="animation:rvCarriage 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvStroke 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 27.8px;transform:rotate(-30deg);animation:rvTilt 1.36s linear infinite;"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g></g>
+        <circle data-rv-anim="" data-rv-fx="" cx="5.9" cy="11.39" r="3.4" fill="none" stroke="#F35E68" stroke-width="0.5" style="opacity:0;transform-origin:5.9px 11.39px;animation:rvRingF 1.36s linear infinite;"></circle>
+        <circle data-rv-anim="" data-rv-fx="" data-rv-half="" cx="24.1" cy="11.39" r="3.4" fill="none" stroke="#F35E68" stroke-width="0.5" style="opacity:0;transform-origin:24.1px 11.39px;animation:rvRingF 1.36s linear infinite;animation-delay:-0.68s;"></circle>
+        <g data-rv-anim="" style="transform:translate(-7.6px,3.25px);animation:rvBallX 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvBallY 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvBallSq 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvSpin 1.36s linear infinite;"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.45" stroke-width="0.5" style="filter:drop-shadow(0 0.5px 0.8px rgba(23,8,43,0.28));"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g></g></g></g>
+      </svg>
+      <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:15px;color:#8E889C;letter-spacing:0.01em;">Chargement…</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <button type="button" style="display:inline-flex;align-items:center;gap:12px;background:#D74251;color:#FFFFFF;border:none;border-radius:999px;padding:8px 22px 8px 14px;font-family:'Outfit',sans-serif;font-weight:600;font-size:15px;box-shadow:0 8px 20px rgba(183,51,63,0.28);cursor:default;">
+        <svg data-rv-pulse="" width="30" height="40" viewBox="-5 -19 40 53" fill="none">
+          <g data-rv-anim="" style="animation:rvCarriage 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvStroke 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 27.8px;transform:rotate(-30deg);animation:rvTilt 1.36s linear infinite;"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#FFFFFF" opacity="0.55"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#FFFFFF"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#B7333F" stroke-opacity="0.22" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#B7333F" opacity="0.06"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g></g>
+          <g data-rv-anim="" style="transform:translate(-7.6px,3.25px);animation:rvBallX 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvBallY 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvBallSq 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvSpin 1.36s linear infinite;"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g></g></g></g>
+        </svg>
+        <span>Recherche…</span>
+      </button>
+    </div>
+    <div style="background:#FFFFFF;border:1px solid #ECEAF1;border-radius:12px;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:14px;font-weight:500;color:#17082B;">Tableau des scores</div>
+        <div style="font-size:12px;color:#8E889C;">Chargement des données…</div>
+      </div>
+      <svg data-rv-pulse="" width="30" height="40" viewBox="-5 -19 40 53" fill="none">
+        <g data-rv-anim="" style="animation:rvCarriage 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvStroke 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 27.8px;transform:rotate(-30deg);animation:rvTilt 1.36s linear infinite;"><ellipse cx="15" cy="17.9" rx="7.6" ry="4.8" fill="#B7333F"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="#F35E68"></ellipse><ellipse cx="15" cy="16.8" rx="7.6" ry="4.8" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1"></ellipse><ellipse cx="15" cy="16.3" rx="6" ry="3.5" fill="#FFFFFF" opacity="0.1"></ellipse><rect x="13.4" y="20.4" width="3.2" height="7.4" rx="1.6" fill="#C98F5F"></rect></g></g></g>
+        <g data-rv-anim="" style="transform:translate(-7.6px,3.25px);animation:rvBallX 1.36s linear infinite;"><g data-rv-anim="" style="animation:rvBallY 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvBallSq 1.36s linear infinite;"><g data-rv-anim="" style="transform-origin:15px 11.39px;animation:rvSpin 1.36s linear infinite;"><circle cx="15" cy="11.39" r="2.9" fill="#FFF3D6" stroke="#B7333F" stroke-opacity="0.45" stroke-width="0.5"></circle><circle cx="16" cy="10.39" r="0.7" fill="#FFFFFF" opacity="0.6"></circle></g></g></g></g>
+      </svg>
+    </div>
+    <div style="font-size:12px;color:#8E889C;line-height:1.5;">Version implémentable : <a href="recovr-loader.svg.txt" target="_blank">recovr-loader.svg.txt</a> (renommer en .svg) — SVG autonome, keyframes CSS, sans JS. Boucle 1,36 s à deux frappes : parabole échantillonnée linéaire, horizontale à vitesse constante, pivot au poignet, frappe montante (contact à 70 % de la course), follow-through 4° entrant / 7° sortant, spin inversé à chaque frappe.</div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;speed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1.36,&quot;min&quot;:1,&quot;max&quot;:1.8,&quot;step&quot;:0.02,&quot;unit&quot;:&quot;s&quot;,&quot;section&quot;:&quot;Animation&quot;},&quot;effects&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Animation&quot;}}">
+class Component extends DCLogic {
+  componentDidMount(){ this.apply(); }
+  componentDidUpdate(){ this.apply(); }
+  apply(){
+    const d = this.props.speed ?? 1.36;
+    document.querySelectorAll('[data-rv-anim]').forEach(el => { el.style.animationDuration = d + 's'; });
+    document.querySelectorAll('[data-rv-half]').forEach(el => { el.style.animationDelay = (-d/2) + 's'; });
+    const fx = this.props.effects ?? true;
+    document.querySelectorAll('[data-rv-fx]').forEach(el => { el.style.visibility = fx ? 'visible' : 'hidden'; });
+  }
+  renderVals(){ return {}; }
+}
+</script>
+</body>
+</html>

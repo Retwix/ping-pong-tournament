@@ -31,6 +31,7 @@ import {
   seasonsUpTo,
   type LadderScope,
 } from '../lib/seasons'
+import { Loader } from './Loader'
 
 function Trend({ delta }: { delta: number }) {
   const v = Math.round(delta)
@@ -234,7 +235,7 @@ export default function Ratings({
     return (
       <div className="rv-page">
         {nav}
-        <p className="empty">Chargement…</p>
+        <Loader />
         {tabbar}
       </div>
     )
