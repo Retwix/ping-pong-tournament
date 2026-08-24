@@ -782,3 +782,15 @@ describe('etatChargement', () => {
     ).toEqual({ etat: 'ok', banniere: true })
   })
 })
+
+describe('etatMatch — mis sur la table', () => {
+  it('reads a match started by the referee as en cours, before the first point', () => {
+    expect(etatMatch(getMockMatch({ started_at: '2026-08-24T10:00:00.000Z' }))).toBe('En cours')
+  })
+})
+
+describe('etatNoeud — mis sur la table', () => {
+  it('reads a bracket node started by the referee as en cours, before the first point', () => {
+    expect(etatNoeud(getMockMatch({ started_at: '2026-08-24T10:00:00.000Z' }))).toBe('En cours')
+  })
+})
