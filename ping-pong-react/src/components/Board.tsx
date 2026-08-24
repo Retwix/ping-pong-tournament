@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { IconChevronLeft, IconCopy, IconDeviceTv, IconGavel } from '@tabler/icons-react'
 import { usePlayers } from '../hooks/usePlayers'
 import { useRatingDeltas } from '../hooks/useRatingDeltas'
 import { useTournament } from '../hooks/useTournament'
@@ -8,26 +9,40 @@ import { libelleFormat } from '../lib/format'
 import { playerLookup } from '../lib/playerLookup'
 import { navigate } from '../lib/router'
 import { isCapot, winnerLoser } from '../lib/stats'
+import { enteteTournoi } from '../lib/tournamentBoard'
 import type { Match } from '../types'
 import CapotScreen from './CapotScreen'
 import Champion from './Champion'
+import DashboardNav from './DashboardNav'
+import DashboardTabBar from './DashboardTabBar'
 import GameResult from './GameResult'
 import LiveScorer from './LiveScorer'
 import MatchList from './MatchList'
 import BracketView from './BracketView'
 import Standings from './Standings'
-import ThemeToggle from './ThemeToggle'
-import TopBack from './TopBack'
 import { Loader } from './Loader'
 
 interface Props {
   id: string
   onBack: () => void
   onNew: () => void
+  onNewGame: () => void
   onOpen: (id: string) => void
+  onClassement: () => void
+  onStats: () => void
+  onPlayers: () => void
 }
 
-export default function Board({ id, onBack, onNew, onOpen }: Props) {
+export default function Board({
+  id,
+  onBack,
+  onNew,
+  onNewGame,
+  onOpen,
+  onClassement,
+  onStats,
+  onPlayers,
+}: Props) {
   const { tournament, matches, loading, error, patchMatch } = useTournament(id)
   const { players: registry } = usePlayers()
   const {
@@ -116,6 +131,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
   }
 
   const isDouble = tournament.format === 'double_elim'
+  const entete = enteteTournoi(tournament)
   const openMatch = matches.find((m) => m.id === openId) ?? null
   const capot = capotMatch ? winnerLoser(capotMatch) : null
   // Capot celebration takes precedence over the champion screen, so they don't stack.
@@ -128,48 +144,64 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
       /* clipboard unavailable */
     }
   }
+
+  const retour = (
+    <button className="tb-crumb" onClick={onBack}>
+      <IconChevronLeft size={14} stroke={2.4} />
+      Tous les tournois
+    </button>
+  )
+
   return (
-    <div className="wrap">
-      <TopBack onClick={onBack} label="Tous les tournois" />
-      <header>
-        <ThemeToggle className="header-toggle" />
-        <div className="kicker">
-          {libelleFormat(tournament)} · {tournament.players.length} joueurs · jeu en{' '}
-          {tournament.target}
+    <div className="rv-page">
+      <DashboardNav
+        onHome={onBack}
+        onClassement={onClassement}
+        onStats={onStats}
+        onPlayers={onPlayers}
+        onNew={onNew}
+        onNewGame={onNewGame}
+      />
+
+      {error && <div className="error-banner">{error}</div>}
+
+      {retour}
+
+      <div className="tb-head">
+        <div className="tb-head-text">
+          <div className="tb-kicker">{entete.kicker}</div>
+          <h1 className="tb-title">
+            {tournament.name}
+            {entete.nonClasse && <span className="tb-badge-nc">Non classé</span>}
+          </h1>
+          <p className="tb-sub">{entete.sousTitre}</p>
         </div>
-        <h1>
-          {tournament.name}
-          {tournament.unranked && <span className="badge-nc">Non classé</span>}
-        </h1>
-        <p className="subtitle">
-          {isDouble
-            ? 'Le gagnant avance, le perdant tombe dans le tableau des perdants. Tape un match prêt pour le marquer.'
-            : 'Tape un match pour ouvrir le marqueur. Tout se synchronise en direct.'}
-          {tournament.unranked && ' Aucun impact sur le classement Elo.'}
-        </p>
-        <div className="share-bar">
-          <span className="url">{window.location.href}</span>
-          <button className="link-btn" onClick={copyLink}>
-            Copier le lien
-          </button>
+        <div className="tb-head-actions">
+          <div className="tb-share">
+            <span className="tb-share-url">{window.location.href}</span>
+            <button className="tb-share-copy" onClick={copyLink}>
+              <IconCopy size={15} stroke={2} />
+              Copier le lien
+            </button>
+          </div>
           <button
-            className="link-btn"
+            className="tb-ghost"
             onClick={() => navigate('/live')}
             title="Affichage spectateur (lien fixe) : suit automatiquement le match en cours"
           >
-            📺 Mode live
+            <IconDeviceTv size={16} stroke={2} />
+            Mode live
           </button>
           <button
-            className="link-btn"
+            className="tb-ghost"
             onClick={() => navigate('/ref')}
             title="Mode arbitre (lien fixe) : marque le match en cours"
           >
-            🧑‍⚖️ Mode arbitre
+            <IconGavel size={16} stroke={2} />
+            Mode arbitre
           </button>
         </div>
-      </header>
-
-      {error && <div className="error-banner">{error}</div>}
+      </div>
 
       {isDouble ? (
         <>
@@ -178,9 +210,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
             <span className="hint">
               Tableau à double élimination : il faut perdre 2 fois pour être éliminé.
             </span>
-            <button className="link-btn" onClick={onBack}>
-              ← Tous les tournois
-            </button>
+            {retour}
           </div>
         </>
       ) : (
@@ -196,9 +226,7 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
             />
             <div className="footer-row">
               <span className="hint">Départage : victoires, puis différence de points.</span>
-              <button className="link-btn" onClick={onBack}>
-                ← Tous les tournois
-              </button>
+              {retour}
             </div>
           </section>
         </>
@@ -240,6 +268,15 @@ export default function Board({ id, onBack, onNew, onOpen }: Props) {
           onNew={onNew}
         />
       )}
+
+      <DashboardTabBar
+        onHome={onBack}
+        onClassement={onClassement}
+        onStats={onStats}
+        onPlayers={onPlayers}
+        onNew={onNew}
+        onNewGame={onNewGame}
+      />
     </div>
   )
 }

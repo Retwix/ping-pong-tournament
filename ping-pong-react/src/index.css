@@ -4289,3 +4289,95 @@ header h1 .badge-nc { margin-left: 10px; }
   .rv-a { animation: none; }
   .rv-loader { animation: rvlLoaderPulse 2.4s ease-in-out infinite; }
 }
+
+/* ============================================================
+   Tournament board (/t/:id) — « tb- » — design handoff
+   docs/design/tournament-board-handoff/. Slice 1: shell + header.
+   ============================================================ */
+
+.tb-crumb {
+  display: inline-flex; align-items: center; gap: 4px; align-self: flex-start;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: #847e96;
+  transition: color 160ms var(--ease);
+}
+.tb-crumb:hover { color: #4a2aa4; }
+[data-theme='dark'] .tb-crumb { color: #a99fc4; }
+[data-theme='dark'] .tb-crumb:hover { color: #c9b8ff; }
+
+.tb-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.tb-head-text { min-width: 0; }
+
+.tb-kicker {
+  font-family: var(--font-display); font-weight: 800; font-size: 11.5px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #4a2aa4;
+  margin-bottom: 9px;
+}
+[data-theme='dark'] .tb-kicker { color: #c9b8ff; }
+
+.tb-title {
+  display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(24px, 5vw, 32px); line-height: 1; letter-spacing: -0.02em;
+  color: var(--fg-1); margin: 0;
+}
+
+.tb-badge-nc {
+  font-family: var(--font-display); font-weight: 800; font-size: 10px;
+  letter-spacing: 0.09em; color: #847e96;
+  background: #f7f5fd; border: 1px solid #e8e4f2; border-radius: 999px;
+  padding: 6px 11px;
+}
+[data-theme='dark'] .tb-badge-nc {
+  color: #a99fc4; background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.tb-sub {
+  font-family: var(--font-body); font-weight: 600; font-size: 14px; line-height: 1.5;
+  color: #847e96; margin: 10px 0 0; max-width: 600px; text-wrap: pretty;
+}
+[data-theme='dark'] .tb-sub { color: #a99fc4; }
+
+.tb-head-actions { display: inline-flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+.tb-share {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: var(--surface); border: 1px solid #e8e4f2; border-radius: 13px;
+  padding: 5px 5px 5px 12px;
+  box-shadow: 0 3px 12px rgba(32, 10, 66, 0.05);
+}
+[data-theme='dark'] .tb-share {
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 3px 12px rgba(6, 2, 16, 0.35);
+}
+.tb-share-url {
+  font-family: var(--font-body); font-weight: 600; font-size: 12.5px; color: #847e96;
+  max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+[data-theme='dark'] .tb-share-url { color: #a99fc4; }
+.tb-share-copy {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: #4a2aa4;
+  background: #f0ecfb; border: 0; border-radius: 10px; padding: 9px 12px; cursor: pointer;
+  transition: background 160ms var(--ease);
+}
+.tb-share-copy:hover { background: #e4ddf8; }
+[data-theme='dark'] .tb-share-copy { color: #c9b8ff; background: rgba(134, 99, 233, 0.18); }
+[data-theme='dark'] .tb-share-copy:hover { background: rgba(134, 99, 233, 0.28); }
+
+.tb-ghost {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-display); font-weight: 700; font-size: 13.5px; color: #4a2aa4;
+  background: var(--surface); border: 1px solid #e8e4f2; border-radius: 13px;
+  padding: 12px 15px; cursor: pointer;
+  transition: border-color 160ms var(--ease);
+}
+.tb-ghost:hover { border-color: #d0c3f3; }
+[data-theme='dark'] .tb-ghost {
+  color: #c9b8ff; border-color: rgba(255, 255, 255, 0.09);
+}
+[data-theme='dark'] .tb-ghost:hover { border-color: rgba(134, 99, 233, 0.5); }
