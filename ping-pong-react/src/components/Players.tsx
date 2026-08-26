@@ -11,6 +11,7 @@ import {
 } from '../lib/db'
 import {
   avatarAction,
+  avatarZoom,
   dialogTitle,
   filterJoueurs,
   joueurRows,
@@ -18,6 +19,7 @@ import {
   normalizeJoueurForm,
   photoShown,
   teamChips,
+  type AvatarZoom,
   type JoueurForm,
   type JoueurRow,
   type PhotoDraft,
@@ -49,6 +51,7 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
   const [originalPhoto, setOriginalPhoto] = useState<string | null>(null)
   const [photo, setPhoto] = useState<PhotoDraft>({ kind: 'keep' })
   const [leftAt, setLeftAt] = useState<string | null>(null)
+  const [zoom, setZoom] = useState<AvatarZoom | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -192,6 +195,15 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     return () => window.removeEventListener('keydown', onKey)
   }, [editing])
 
+  useEffect(() => {
+    if (zoom === null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoom(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoom])
+
   const annuaire = useMemo(() => joueurRows(players, rows, events), [players, rows, events])
   const visible = useMemo(() => filterJoueurs(annuaire, query, team), [annuaire, query, team])
   const chips = useMemo(() => teamChips(annuaire), [annuaire])
@@ -281,8 +293,9 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
           <div />
         </div>
 
-        {visible.map((r) => (
-          <div key={r.id} className={`pl-tr pl-row${r.status === 'alumni' ? ' alumnus' : ''}`}>
+        {visible.map((r) => {
+          const photo = avatarZoom(r)
+          const avatar = (
             <Avatar
               name={r.name}
               team={r.team}
@@ -290,38 +303,76 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
               muted={r.status === 'alumni'}
               className="pl-av"
             />
-            <div className="pl-c-name">
-              <div className="pl-name">{r.name}</div>
-              <div className="pl-meta">{r.meta}</div>
+          )
+          return (
+            <div
+              key={r.id}
+              className={`pl-tr pl-row${r.status === 'alumni' ? ' alumnus' : ''}`}
+              role="button"
+              tabIndex={0}
+              aria-label={`Modifier ${r.name}`}
+              onClick={() => openEdit(r)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return
+                if (e.key !== 'Enter' && e.key !== ' ') return
+                e.preventDefault()
+                openEdit(r)
+              }}
+            >
+              {photo === null ? (
+                avatar
+              ) : (
+                <button
+                  className="pl-av-btn"
+                  title="Voir la photo"
+                  aria-label={`Agrandir la photo de ${r.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setZoom(photo)
+                  }}
+                >
+                  {avatar}
+                </button>
+              )}
+              <div className="pl-c-name">
+                <div className="pl-name">{r.name}</div>
+                <div className="pl-meta">{r.meta}</div>
+              </div>
+              <div className="pl-c-team">
+                <span className="pl-badge" style={teamBadgeStyle(r.team)}>
+                  {r.team === '' ? '—' : teamLabel(r.team)}
+                </span>
+              </div>
+              <div className="pl-c-elo">{r.elo}</div>
+              <div className="pl-c-matchs">{r.matchsLabel}</div>
+              <div className={`pl-c-win${r.winrateStrong ? ' strong' : ''}`}>{r.winrate}</div>
+              <div className="pl-act">
+                <button
+                  className="pl-icon-btn edit"
+                  title="Modifier"
+                  aria-label={`Modifier ${r.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openEdit(r)
+                  }}
+                >
+                  <IconPencil size={15} stroke={2} />
+                </button>
+                <button
+                  className="pl-icon-btn trash"
+                  title="Retirer"
+                  aria-label={`Retirer ${r.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeJoueur(r)
+                  }}
+                >
+                  <IconTrash size={15} stroke={1.9} />
+                </button>
+              </div>
             </div>
-            <div className="pl-c-team">
-              <span className="pl-badge" style={teamBadgeStyle(r.team)}>
-                {r.team === '' ? '—' : teamLabel(r.team)}
-              </span>
-            </div>
-            <div className="pl-c-elo">{r.elo}</div>
-            <div className="pl-c-matchs">{r.matchsLabel}</div>
-            <div className={`pl-c-win${r.winrateStrong ? ' strong' : ''}`}>{r.winrate}</div>
-            <div className="pl-act">
-              <button
-                className="pl-icon-btn edit"
-                title="Modifier"
-                aria-label={`Modifier ${r.name}`}
-                onClick={() => openEdit(r)}
-              >
-                <IconPencil size={15} stroke={2} />
-              </button>
-              <button
-                className="pl-icon-btn trash"
-                title="Retirer"
-                aria-label={`Retirer ${r.name}`}
-                onClick={() => removeJoueur(r)}
-              >
-                <IconTrash size={15} stroke={1.9} />
-              </button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
 
         {visible.length === 0 && (
           <div className="pl-empty">
@@ -448,6 +499,15 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {zoom !== null && (
+        <div className="scrim pl-zoom" onMouseDown={() => setZoom(null)}>
+          <img className="pl-zoom-img" src={zoom.url} alt={zoom.alt} />
+          <button className="pl-close pl-zoom-close" onClick={() => setZoom(null)} aria-label="Fermer">
+            <IconX size={16} stroke={2.2} />
+          </button>
         </div>
       )}
 

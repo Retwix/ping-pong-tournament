@@ -3,6 +3,7 @@ import type { RatingEvent, RatingRow } from './rating'
 import type { Player } from '../types'
 import {
   avatarAction,
+  avatarZoom,
   dialogTitle,
   filterJoueurs,
   joueurRows,
@@ -400,6 +401,17 @@ describe('photoShown', () => {
 
   it('falls back to initials as soon as « Retirer » is clicked', () => {
     expect(photoShown('https://cdn/x.webp', { kind: 'remove' })).toBeNull()
+  })
+})
+
+describe('avatarZoom', () => {
+  it('opens the uploaded photo full size, labelled with the player name', () => {
+    const row = getMockJoueurRow({ name: 'Léo', avatarUrl: 'https://cdn/leo.webp' })
+    expect(avatarZoom(row)).toEqual({ url: 'https://cdn/leo.webp', alt: 'Photo de Léo' })
+  })
+
+  it('has nothing to zoom when the row falls back to initials', () => {
+    expect(avatarZoom(getMockJoueurRow({ avatarUrl: null }))).toBeNull()
   })
 })
 
