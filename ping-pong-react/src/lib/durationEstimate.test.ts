@@ -19,7 +19,7 @@ import {
   resumeDuree,
   serrage,
   type ModeleDuree,
-} from './dureeEstimee'
+} from './durationEstimate'
 import type { Match, Tournament } from '../types'
 
 const getMockMatch = (overrides?: Partial<Match>): Match => ({

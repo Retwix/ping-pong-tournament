@@ -4,8 +4,8 @@
 **Nouveau tournoi** page, before the tournament is generated, from the club's
 own match history.
 
-Code: `ping-pong-react/src/lib/dureeEstimee.ts` (pure, tested in
-`dureeEstimee.test.ts`), surfaced in the rail of `NouvellePartie.tsx`.
+Code: `ping-pong-react/src/lib/durationEstimate.ts` (pure, tested in
+`durationEstimate.test.ts`), surfaced in the rail of `NouvellePartie.tsx`.
 
 ---
 
