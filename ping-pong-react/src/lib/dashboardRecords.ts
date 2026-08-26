@@ -1,6 +1,7 @@
-import type { Match } from '../types'
+import type { Match, Tournament } from '../types'
+import { relativeTime } from './format'
 import type { RatingEvent } from './rating'
-import { isCapot, type PlayerStat } from './stats'
+import { isCapot, winnerLoser, type PlayerStat } from './stats'
 
 export interface DashboardRecords {
   topStreak: { name: string; avatar_url: string | null; streak: number } | null
@@ -60,4 +61,40 @@ export function dashboardRecords(
     capots: matches.filter((m) => m.done && !m.bye && isCapot(m)).length,
     mostActive: mostActiveOf(stats),
   }
+}
+
+/** One shutout win, as listed in the dashboard « capots » modal. */
+export interface CapotEntry {
+  matchId: string
+  /** Tournament the match belongs to, so the row can deep-link to its board. */
+  tournamentId: string
+  winner: string
+  loser: string
+  /** « 11 – 0 » — the winner's score first. */
+  score: string
+  /** « Tournoi du vendredi » or « Partie rapide ». */
+  context: string
+  /** « il y a 2 j », empty when the match carries no timestamp. */
+  date: string
+}
+
+/** Capot matches, most recent first, with the result and where it happened. */
+export function capotList(matches: Match[], tournaments: Tournament[], now: Date): CapotEntry[] {
+  const byId = new Map(tournaments.map((t) => [t.id, t]))
+  return matches
+    .filter((m) => m.done && !m.bye && isCapot(m))
+    .sort((a, b) => (b.ended_at ?? '').localeCompare(a.ended_at ?? ''))
+    .map((m) => {
+      const { winner, loser, ws, ls } = winnerLoser(m)
+      const t = byId.get(m.tournament_id)
+      return {
+        matchId: m.id,
+        tournamentId: m.tournament_id,
+        winner,
+        loser,
+        score: `${ws} – ${ls}`,
+        context: t === undefined ? '' : t.kind === 'game' ? 'Partie rapide' : t.name,
+        date: relativeTime(m.ended_at ?? m.started_at, now),
+      }
+    })
 }

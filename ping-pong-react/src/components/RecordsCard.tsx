@@ -1,9 +1,11 @@
+import { useMemo, useState } from 'react'
 import { IconFlame, IconTrendingUp } from '@tabler/icons-react'
 import { useRatings } from '../hooks/useRatings'
-import { dashboardRecords } from '../lib/dashboardRecords'
+import { capotList, dashboardRecords } from '../lib/dashboardRecords'
 import { individualMatches } from '../lib/doubles'
 import { signed } from '../lib/format'
 import { computePlayerStats } from '../lib/stats'
+import CapotsModal from './CapotsModal'
 
 /**
  * Dashboard "Séries & records" — flavor chips for the current win streak,
@@ -12,9 +14,14 @@ import { computePlayerStats } from '../lib/stats'
  */
 export default function RecordsCard() {
   const { matches, players, events, tournaments } = useRatings()
+  const [capotsOpen, setCapotsOpen] = useState(false)
   const individuels = individualMatches(matches, tournaments)
   const stats = computePlayerStats(individuels, players)
   const rec = dashboardRecords(stats, individuels, events)
+  const capots = useMemo(
+    () => capotList(individuels, tournaments, new Date()),
+    [matches, tournaments],
+  )
 
   const isEmpty = !rec.topStreak && !rec.biggestUpset && !rec.mostActive && rec.capots === 0
 
@@ -45,10 +52,15 @@ export default function RecordsCard() {
           {(rec.capots > 0 || rec.mostActive) && (
             <div className="rv-record-tiles">
               {rec.capots > 0 && (
-                <div className="rv-record-tile">
+                <button
+                  type="button"
+                  className="rv-record-tile rv-record-tile--action"
+                  onClick={() => setCapotsOpen(true)}
+                  title="Voir les capots"
+                >
                   <span className="rv-record-tile-value">{rec.capots}</span>
                   <span className="rv-record-tile-label">capots</span>
-                </div>
+                </button>
               )}
               {rec.mostActive && (
                 <div className="rv-record-tile">
@@ -60,6 +72,7 @@ export default function RecordsCard() {
           )}
         </div>
       )}
+      {capotsOpen && <CapotsModal capots={capots} onClose={() => setCapotsOpen(false)} />}
     </div>
   )
 }
