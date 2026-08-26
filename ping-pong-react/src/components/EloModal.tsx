@@ -11,7 +11,7 @@ interface Props {
 
 /**
  * « Le détail du calcul » — the design handoff's Elo modal (M1), with the copy
- * adapted to the real engine: Glicko-2, départ 1500, weights for margin and
+ * adapted to the real engine: weighted Elo, départ 1500, weights for margin and
  * stakes. The example block shows the latest real rated match, not seeds.
  */
 export default function EloModal({ example, onClose }: Props) {
@@ -36,7 +36,7 @@ export default function EloModal({ example, onClose }: Props) {
         </button>
 
         <h2 className="cl-elo-title">Le détail du calcul</h2>
-        <p className="cl-elo-sub">Glicko-2 · départ {RATING.R0} · aucun ajustement manuel.</p>
+        <p className="cl-elo-sub">Elo · départ {RATING.R0} · aucun ajustement manuel.</p>
 
         <div className="cl-elo-formula">
           <div className="cl-elo-label">La formule</div>
@@ -45,7 +45,7 @@ export default function EloModal({ example, onClose }: Props) {
           </div>
           <p>
             « Attendu » est ta probabilité de gagner vue par le classement. Le poids grandit avec
-            l'écart au score, l'enjeu du match et l'incertitude « ± » de ta note.
+            l'écart au score et l'enjeu du match.
           </p>
         </div>
 
@@ -53,8 +53,8 @@ export default function EloModal({ example, onClose }: Props) {
           <li>
             <b>Départ à {RATING.R0}</b>
             <span>
-              Chaque joueur commence à {RATING.R0}, avec une marge « ± » large : le classement ne
-              sait pas encore ce qu'il vaut.
+              Chaque joueur commence à {RATING.R0}. Ce sont ensuite les résultats, et eux seuls, qui
+              écartent la note de ce point de départ.
             </span>
           </li>
           <li>
@@ -76,8 +76,8 @@ export default function EloModal({ example, onClose }: Props) {
             <span>
               Un 11–2 pèse plus qu'un 11–9 (jusqu'à ×{RATING.marginCap}), une finale ×
               {RATING.wFinal}, la grande finale ×{RATING.wGrandFinal}. Sous{' '}
-              {RATING.provisionalGames} matchs — ou après une longue absence — le « ± » s'élargit et
-              la note bouge plus vite.
+              {RATING.provisionalGames} matchs, la note reste « provisoire » : trop peu de résultats
+              pour te situer.
             </span>
           </li>
         </ol>

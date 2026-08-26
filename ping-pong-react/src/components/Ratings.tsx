@@ -581,9 +581,8 @@ export default function Ratings({
                   <span className="cl-rail-title">Comment marche l'Elo</span>
                 </div>
                 <p className="cl-rail-explain">
-                  Le vainqueur prend des points au perdant. L'écart au score, l'enjeu et la
-                  fiabilité « ± » de chaque note font varier le transfert — c'est le système
-                  Glicko-2.
+                  Le vainqueur prend des points au perdant. Plus la victoire est improbable, plus le
+                  transfert est gros — et l'écart au score comme l'enjeu du match l'amplifient.
                 </p>
                 <div className="cl-explain-row">
                   <b>×{RATING.marginCap}</b>
@@ -604,7 +603,7 @@ export default function Ratings({
           </div>
 
           <div className="footer-row">
-            <span className="hint">Notes Glicko-2 · parties rapides et tournois confondus.</span>
+            <span className="hint">Notes Elo · parties rapides et tournois confondus.</span>
           </div>
         </>
       )}
