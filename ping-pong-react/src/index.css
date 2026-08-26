@@ -599,9 +599,22 @@ td.elo.neg { color: var(--coral); }
 .rl-toggle button:hover { color: var(--fg-1); }
 .rl-toggle button.active { background: var(--primary); color: #fff; }
 .rl-nivo { height: 340px; margin: 4px 0 2px; }
-.rl-tip { display: flex; align-items: baseline; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 7px 11px; box-shadow: var(--shadow-pop); font-size: 12.5px; }
+.rl-tip { display: flex; flex-direction: column; gap: 5px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 7px 11px; box-shadow: var(--shadow-pop); font-size: 12.5px; }
+.rl-tip-head { display: flex; align-items: baseline; gap: 8px; }
 .rl-tip-date { color: var(--fg-3); }
 .rl-tip-rating { font-family: var(--font-display); font-weight: 800; color: var(--fg-1); }
+.rl-tip-match { display: flex; align-items: center; gap: 7px; }
+.rl-tip-res {
+  width: 19px; height: 19px; border-radius: 6px; flex: none;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 10px;
+}
+.rl-tip-res.w { background: #e4f5ee; color: var(--green); }
+.rl-tip-res.l { background: #fdeaea; color: #e54c4c; }
+[data-theme='dark'] .rl-tip-res.w { background: rgba(43, 165, 114, 0.18); color: #4bd69b; }
+[data-theme='dark'] .rl-tip-res.l { background: rgba(229, 76, 76, 0.18); color: #ff7676; }
+.rl-tip-score { font-family: var(--font-display); font-weight: 700; color: var(--fg-1); }
+.rl-tip-opp { color: var(--fg-2); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ===== player rating modal ===== */
 .rt-pm { position: relative; max-width: 940px; }

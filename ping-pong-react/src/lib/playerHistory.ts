@@ -1,9 +1,22 @@
 import { RATING, type RatingEvent, type RatingRow } from './rating'
 
-/** One point of a player's rating trajectory (the first has `at: null`). */
+/** The match a per-match point was earned in — what the chart tooltip shows. */
+export interface PlayerHistoryMatch {
+  opponent: string
+  scoreFor: number
+  scoreAgainst: number
+  won: boolean
+}
+
+/**
+ * One point of a player's rating trajectory (the first has `at: null`).
+ * `match` is set on every per-match point; the R0 anchor and the collapsed
+ * per-day points have none.
+ */
 export interface PlayerHistoryPoint {
   at: string | null
   rating: number
+  match?: PlayerHistoryMatch
 }
 
 /** Everything the player modal shows, derived from the live replay. */
@@ -24,12 +37,14 @@ export interface PlayerHistory {
  * end-of-day rating (the last match played that day). The leading `at: null`
  * anchor is preserved so the line still starts at R0. Points are assumed
  * chronological, so the last match seen for a day is the end-of-day one.
+ * A day point stands for every match played that day, so the single match
+ * behind it is dropped rather than shown as if it were the whole day.
  */
 export function perDayPoints(points: PlayerHistoryPoint[]): PlayerHistoryPoint[] {
   const byDay = new Map<string, PlayerHistoryPoint>()
   for (const p of points) {
     const day = p.at ? p.at.slice(0, 10) : `anchor:${byDay.size}`
-    byDay.set(day, p)
+    byDay.set(day, { at: p.at, rating: p.rating })
   }
   return [...byDay.values()]
 }
@@ -59,7 +74,16 @@ export function playerHistory(
   return {
     points: [
       { at: null, rating: RATING.R0 },
-      ...mine.map((e) => ({ at: e.at, rating: e.ratingAfter })),
+      ...mine.map((e) => ({
+        at: e.at,
+        rating: e.ratingAfter,
+        match: {
+          opponent: e.opponentName,
+          scoreFor: e.scoreFor,
+          scoreAgainst: e.scoreAgainst,
+          won: e.won,
+        },
+      })),
     ],
     peak,
     rank: rated.rank,

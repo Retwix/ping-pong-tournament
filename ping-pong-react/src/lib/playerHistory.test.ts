@@ -57,11 +57,31 @@ describe('playerHistory', () => {
       event({ matchId: 'm3', ratingAfter: 1520, at: '2026-07-03T10:00:00Z' }),
     ]
     const h = playerHistory(events, [row()], 'alice')
-    expect(h?.points).toEqual([
+    expect(h?.points.map((p) => ({ at: p.at, rating: p.rating }))).toEqual([
       { at: null, rating: 1500 },
       { at: '2026-07-01T10:00:00Z', rating: 1512 },
       { at: '2026-07-02T10:00:00Z', rating: 1498 },
       { at: '2026-07-03T10:00:00Z', rating: 1520 },
+    ])
+  })
+
+  it('carries the opponent and score of each match on its point', () => {
+    const events = [
+      event({ matchId: 'm1', opponentName: 'Bob', scoreFor: 11, scoreAgainst: 5, won: true }),
+      event({
+        matchId: 'm2',
+        opponentName: 'Carol',
+        scoreFor: 9,
+        scoreAgainst: 11,
+        won: false,
+        at: '2026-07-02T10:00:00Z',
+      }),
+    ]
+    const h = playerHistory(events, [row()], 'alice')
+    expect(h?.points.map((p) => p.match)).toEqual([
+      undefined,
+      { opponent: 'Bob', scoreFor: 11, scoreAgainst: 5, won: true },
+      { opponent: 'Carol', scoreFor: 9, scoreAgainst: 11, won: false },
     ])
   })
 
@@ -170,6 +190,26 @@ describe('perDayPoints', () => {
       { at: '2026-07-01T20:00:00Z', rating: 1520 },
       { at: '2026-07-02T10:00:00Z', rating: 1498 },
       { at: '2026-07-03T18:00:00Z', rating: 1541 },
+    ])
+  })
+
+  it('drops the match behind a day point — it stands for the whole day', () => {
+    const points = [
+      { at: null, rating: 1500 },
+      {
+        at: '2026-07-01T09:00:00Z',
+        rating: 1512,
+        match: { opponent: 'Bob', scoreFor: 11, scoreAgainst: 5, won: true },
+      },
+      {
+        at: '2026-07-01T20:00:00Z',
+        rating: 1523,
+        match: { opponent: 'Carol', scoreFor: 11, scoreAgainst: 8, won: true },
+      },
+    ]
+    expect(perDayPoints(points)).toEqual([
+      { at: null, rating: 1500 },
+      { at: '2026-07-01T20:00:00Z', rating: 1523 },
     ])
   })
 

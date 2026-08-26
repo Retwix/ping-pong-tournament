@@ -1,5 +1,5 @@
 // Charts for the app — the nivo rating line, themed via CSS variables.
-import { perDayPoints } from '../lib/playerHistory'
+import { perDayPoints, type PlayerHistoryMatch } from '../lib/playerHistory'
 import { linearGradientDef } from '@nivo/core'
 import { ResponsiveLine } from '@nivo/line'
 import { useEffect, useState } from 'react'
@@ -28,6 +28,7 @@ function shortDay(iso: string): string {
 export interface RatingPoint {
   at: string | null
   rating: number
+  match?: PlayerHistoryMatch
 }
 
 const ptLabel = (at: string | null): string => (at ? shortDay(at.slice(0, 10)) : '—')
@@ -127,14 +128,28 @@ export function RatingLine({ points, color }: { points: RatingPoint[]; color: st
             const i = Number(point.data.x)
             const delta =
               i > 0 ? Math.round(shown[i].rating) - Math.round(shown[i - 1].rating) : null
+            const match = shown[i].match
             return (
               <div className="rl-tip">
-                <span className="rl-tip-date">{ptLabel(shown[i].at)}</span>
-                <span className="rl-tip-rating">{Math.round(shown[i].rating)}</span>
-                {delta !== null && delta !== 0 && (
-                  <span className={`rt-trend ${delta > 0 ? 'up' : 'down'}`}>
-                    {delta > 0 ? '▲' : '▼'} {Math.abs(delta)}
-                  </span>
+                <div className="rl-tip-head">
+                  <span className="rl-tip-date">{ptLabel(shown[i].at)}</span>
+                  <span className="rl-tip-rating">{Math.round(shown[i].rating)}</span>
+                  {delta !== null && delta !== 0 && (
+                    <span className={`rt-trend ${delta > 0 ? 'up' : 'down'}`}>
+                      {delta > 0 ? '▲' : '▼'} {Math.abs(delta)}
+                    </span>
+                  )}
+                </div>
+                {match && (
+                  <div className="rl-tip-match">
+                    <span className={`rl-tip-res ${match.won ? 'w' : 'l'}`}>
+                      {match.won ? 'V' : 'D'}
+                    </span>
+                    <span className="rl-tip-score">
+                      {match.scoreFor}-{match.scoreAgainst}
+                    </span>
+                    <span className="rl-tip-opp">vs {match.opponent}</span>
+                  </div>
                 )}
               </div>
             )
