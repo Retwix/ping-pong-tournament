@@ -133,6 +133,21 @@ export function photoShown(original: string | null, draft: PhotoDraft): string |
   return original
 }
 
+export interface AvatarZoom {
+  url: string
+  alt: string
+}
+
+/**
+ * The photo an annuaire row can open full size. Rows falling back to initials
+ * have nothing to enlarge, so their avatar stays inert and the click opens the
+ * edit modale like the rest of the row.
+ */
+export function avatarZoom(row: JoueurRow): AvatarZoom | null {
+  if (row.avatarUrl === null) return null
+  return { url: row.avatarUrl, alt: `Photo de ${row.name}` }
+}
+
 export interface TeamChip {
   key: string
   label: string
