@@ -8,6 +8,22 @@
   <link rel="apple-touch-icon" href="/favicon-512.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#4A2AA4" />
+  <meta name="color-scheme" content="light dark" />
+  <script>
+    // Paint in the right theme from the first frame: the user's own pick, else
+    // whatever the device asks for. Kept in sync with src/lib/theme.ts.
+    (function () {
+      try {
+        var t = localStorage.getItem('rv-theme')
+        if (t !== 'light' && t !== 'dark')
+          t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.setAttribute('data-theme', t)
+        document.documentElement.style.colorScheme = t
+      } catch (e) {
+        /* storage or matchMedia unavailable: the app applies the theme on boot */
+      }
+    })()
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link

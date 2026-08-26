@@ -1685,9 +1685,14 @@ td.elo.neg { color: var(--coral); }
 
 /* ===== responsive breakpoint: collapse to one column, swap nav for tab bar ===== */
 @media (max-width: 820px) {
-  .rv-nav { display: none; }
+  /* The bar slims down to brand + theme toggle: the tab bar takes over the
+     links and the "+", but the theme switch lives nowhere else. */
+  .rv-nav { padding: 8px 10px 8px 12px; border-radius: 14px; margin-bottom: 4px; }
+  .rv-nav-links, .rv-nav-new { display: none; }
+  .rv-nav-tile { width: 30px; height: 30px; border-radius: 10px; }
+  .rv-nav-word { font-size: 15px; }
   .rv-tabbar { display: flex; }
-  .rv-page { padding: 52px 14px 96px; }
+  .rv-page { padding: max(14px, env(safe-area-inset-top, 0px)) 14px 96px; }
 
   /* Natural DOM order is hero -> tournaments -> recent results -> top players
      -> records (rv-main holds tournaments+recent, rv-side holds top+records).

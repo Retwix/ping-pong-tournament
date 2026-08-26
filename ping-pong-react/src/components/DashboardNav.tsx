@@ -22,7 +22,11 @@ const TAB_LABELS: Record<DashboardPage, string> = {
   players: 'Joueurs',
 }
 
-/** Desktop glass top bar: brand, nav links (current page active), theme toggle, "+ Nouveau" CTA. */
+/**
+ * Glass top bar: brand, nav links (current page active), theme toggle,
+ * "+ Nouveau" CTA. On mobile it slims down to the brand and the theme toggle —
+ * the tab bar carries the navigation and the "+" there.
+ */
 export default function DashboardNav({
   active,
   onHome,
@@ -64,7 +68,9 @@ export default function DashboardNav({
       </div>
       <div className="rv-nav-actions">
         <ThemeToggle />
-        <NewMenu onNew={onNew} onNewGame={onNewGame} />
+        <span className="rv-nav-new">
+          <NewMenu onNew={onNew} onNewGame={onNewGame} />
+        </span>
       </div>
     </nav>
   )
