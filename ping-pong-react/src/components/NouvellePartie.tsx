@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRatings } from '../hooks/useRatings'
 import { DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from '../lib/chaos'
 import { createPlayer, createTournament } from '../lib/db'
+import { calibrerDuree, estimerDuree, resumeDuree } from '../lib/dureeEstimee'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { joueurRows, type JoueurRow } from '../lib/joueurs'
 import { melangerEquipes, nomPaire, tirerEquipes } from '../lib/doubles'
@@ -85,7 +86,7 @@ export default function NouvellePartie({
   onNewGame,
 }: Props) {
   const isGame = variant === 'game'
-  const { rows, events, players, loading, error, reload } = useRatings()
+  const { rows, events, matches, tournaments, players, loading, error, reload } = useRatings()
 
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
@@ -183,6 +184,37 @@ export default function NouvellePartie({
   // Doubles have no pair Elo in v1, and an ancien must never move a rating in a
   // ladder they no longer appear in — both lock the enjeu on « Non classée ».
   const unrankedEffectif = enjeuEffectif(unranked, isDouble, ancienSelectionne)
+
+  // « Durée estimée » : the cost model is fitted from every timed match the club
+  // has played, and re-read as the selection, the format and the target change.
+  const modeleDuree = useMemo(
+    () => calibrerDuree(matches, tournaments, events),
+    [matches, tournaments, events],
+  )
+  // The levels the estimate reasons about. A double has no pair Elo, so each
+  // side is taken as the average of its two players; before the draw, both
+  // sides average the whole pool — the duos don't exist yet.
+  const elosEstimes = useMemo(() => {
+    const moyenne = (list: JoueurRow[]) => list.reduce((s, r) => s + r.elo, 0) / list.length
+    if (isHasard) return selRows.length === 4 ? [moyenne(selRows), moyenne(selRows)] : []
+    if (isDouble) {
+      const complet = teamRows.a.length === 2 && teamRows.b.length === 2
+      return complet ? [moyenne(teamRows.a), moyenne(teamRows.b)] : []
+    }
+    return selRows.map((r) => r.elo)
+  }, [isHasard, isDouble, selRows, teamRows])
+  const estimation = useMemo(
+    () =>
+      estimerDuree({
+        variant,
+        format: isGame ? 'round_robin' : format,
+        elos: elosEstimes,
+        target,
+        modele: modeleDuree,
+      }),
+    [variant, isGame, format, elosEstimes, target, modeleDuree],
+  )
+  const duree = estimation === null ? null : resumeDuree(estimation, time)
 
   const basculerMode = (double: boolean) => {
     if (double === dbl) return
@@ -909,6 +941,22 @@ export default function NouvellePartie({
               )}
               <span>{recap.hint}</span>
             </div>
+
+            {duree !== null && (
+              <div className="np-duree">
+                <div className="np-duree-head">
+                  <div className="np-label">Durée estimée</div>
+                  {duree.fin !== null && <span className="np-duree-fin">fin vers {duree.fin}</span>}
+                </div>
+                <div className="np-duree-val">
+                  <IconClock size={17} stroke={2.2} />
+                  <span className="np-duree-total">{duree.titre}</span>
+                  <span className="np-duree-band">{duree.fourchette}</span>
+                </div>
+                <div className="np-duree-detail">{duree.detail}</div>
+                <div className="np-duree-src">{duree.source}</div>
+              </div>
+            )}
 
             <div className="np-enjeu">
               <div className="np-enjeu-head">
