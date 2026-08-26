@@ -3818,6 +3818,34 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 }
 [data-theme='dark'] .np-rule { border-top-color: rgba(255, 255, 255, 0.08); color: #a99fc4; }
 
+/* ===== durée estimée (rail) ===== */
+.np-duree { margin-top: 16px; border-top: 1px solid #e8e4f2; padding-top: 14px; }
+[data-theme='dark'] .np-duree { border-top-color: rgba(255, 255, 255, 0.08); }
+.np-duree-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.np-duree-fin {
+  font-family: var(--font-display); font-weight: 800; font-size: 10.5px; line-height: 1;
+  letter-spacing: 0.04em; color: #4a2aa4; background: #f0ecfb; border-radius: 999px; padding: 6px 9px;
+}
+[data-theme='dark'] .np-duree-fin { color: #c9b8ff; background: rgba(122, 90, 224, 0.18); }
+.np-duree-val { margin-top: 9px; display: flex; align-items: baseline; gap: 8px; color: #4a2aa4; }
+[data-theme='dark'] .np-duree-val { color: #c9b8ff; }
+.np-duree-val svg { flex: none; align-self: center; }
+.np-duree-total { font-family: var(--font-display); font-weight: 800; font-size: 20px; line-height: 1.1; }
+.np-duree-band {
+  font-family: var(--font-body); font-weight: 600; font-size: 11.5px; color: #847e96;
+}
+[data-theme='dark'] .np-duree-band { color: #8b82a8; }
+.np-duree-detail {
+  margin-top: 8px;
+  font-family: var(--font-body); font-weight: 600; font-size: 12px; line-height: 1.5; color: #4a4458;
+}
+[data-theme='dark'] .np-duree-detail { color: #a99fc4; }
+.np-duree-src {
+  margin-top: 4px;
+  font-family: var(--font-body); font-weight: 600; font-size: 11px; line-height: 1.5; color: #a49eb3;
+}
+[data-theme='dark'] .np-duree-src { color: #8b82a8; }
+
 /* ===== l'enjeu (classée / non classée) ===== */
 .np-enjeu { margin-top: 16px; border-top: 1px solid #e8e4f2; padding-top: 14px; }
 [data-theme='dark'] .np-enjeu { border-top-color: rgba(255, 255, 255, 0.08); }
