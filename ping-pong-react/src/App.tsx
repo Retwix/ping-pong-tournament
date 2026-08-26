@@ -117,6 +117,7 @@ function renderRoute(route: Route) {
           onPlayers={() => navigate('/players')}
           onNew={() => navigate('/new')}
           onNewGame={() => navigate('/game')}
+          onTournament={(id) => navigate(`/t/${id}`)}
         />
       )
     case 'classement':

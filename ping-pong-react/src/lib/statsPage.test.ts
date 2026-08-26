@@ -515,8 +515,8 @@ describe('tournament titles', () => {
     const titles = titlesByName(tournaments, matches)
     expect(titles.get('Léo')?.count).toBe(2)
     expect(titles.get('Léo')?.titles).toEqual([
-      { name: 'Tournoi de printemps', date: 'avr. 2026' },
-      { name: 'Coupe du vendredi', date: 'juin 2026' },
+      { id: 't1', name: 'Tournoi de printemps', date: 'avr. 2026' },
+      { id: 't2', name: 'Coupe du vendredi', date: 'juin 2026' },
     ])
     expect(titles.get('Candice')?.count).toBe(1)
   })
@@ -526,7 +526,7 @@ describe('tournament titles', () => {
       doneTournament('t1', 'Coupe éclair', 'Léo', { created_at: '2026-03-02T09:00:00.000Z' }),
     ]
     expect(titlesByName(tournaments, []).get('Léo')?.titles).toEqual([
-      { name: 'Coupe éclair', date: 'mars 2026' },
+      { id: 't1', name: 'Coupe éclair', date: 'mars 2026' },
     ])
   })
 
@@ -717,7 +717,7 @@ describe('player card (fiche joueur)', () => {
   })
 
   it('shows the palmarès only when the player owns titles', () => {
-    expect(card()?.titles).toEqual([{ name: 'Open de juillet', date: 'juil. 2026' }])
+    expect(card()?.titles).toEqual([{ id: 't1', name: 'Open de juillet', date: 'juil. 2026' }])
     const stats = computePlayerStats(matches, [])
     expect(playerCard('pb', stats, new Map(), matches, NOW)?.titles).toEqual([])
   })
@@ -1048,7 +1048,7 @@ describe('mutation hardening', () => {
       getMockMatch({ id: 'early', tournament_id: 't1', ended_at: '2026-04-01T10:00:00.000Z' }),
     ]
     expect(titlesByName(tournaments, matches).get('Léo')?.titles).toEqual([
-      { name: 'Long', date: 'mai 2026' },
+      { id: 't1', name: 'Long', date: 'mai 2026' },
     ])
   })
 

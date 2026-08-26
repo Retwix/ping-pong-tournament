@@ -60,6 +60,7 @@ interface Props {
   onPlayers: () => void
   onNew: () => void
   onNewGame: () => void
+  onTournament: (id: string) => void
 }
 
 export default function Stats({
@@ -70,6 +71,7 @@ export default function Stats({
   onPlayers,
   onNew,
   onNewGame,
+  onTournament,
 }: Props) {
   const { matches, players, tournaments, loading, error } = useStats()
   const [sort, setSort] = useState<LeaderboardSort>(DEFAULT_LEADERBOARD_SORT)
@@ -618,6 +620,7 @@ export default function Stats({
           matches={scoped}
           now={now}
           onClose={() => setSelected(null)}
+          onTournament={onTournament}
         />
       )}
 
@@ -676,6 +679,7 @@ function PlayerCardModal({
   matches,
   now,
   onClose,
+  onTournament,
 }: {
   playerKey: string
   stats: PlayerStat[]
@@ -683,6 +687,7 @@ function PlayerCardModal({
   matches: Match[]
   now: Date
   onClose: () => void
+  onTournament: (id: string) => void
 }) {
   const [allOpps, setAllOpps] = useState(false)
   useEffect(() => {
@@ -743,11 +748,17 @@ function PlayerCardModal({
               <div className="st-pm-sec">Palmarès</div>
               <div className="st-pm-titles">
                 {card.titles.map((t) => (
-                  <div className="st-pm-title" key={`${t.name}|${t.date}`}>
+                  <button
+                    type="button"
+                    className="st-pm-title"
+                    key={t.id}
+                    onClick={() => onTournament(t.id)}
+                    title={`Voir les résultats de ${t.name}`}
+                  >
                     <span aria-hidden>🏆</span>
                     <span className="st-pm-title-name">{t.name}</span>
                     <span className="st-pm-title-date">{t.date}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </>
