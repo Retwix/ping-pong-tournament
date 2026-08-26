@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { IconArrowLeft, IconInfoCircle, IconRefresh, IconSearch } from '@tabler/icons-react'
+import {
+  IconArrowLeft,
+  IconCrownFilled,
+  IconInfoCircle,
+  IconRefresh,
+  IconSearch,
+} from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING, rankRatings, ratedMatches, replayRatings } from '../lib/rating'
 import { splitLadder } from '../lib/alumni'
@@ -363,13 +369,17 @@ export default function Ratings({
             <div className="cl-podium">
               <div className="cl-pod-1">
                 <div className="cl-pod-1-top">
-                  <Avatar
-                    name={pod.first.row.name}
-                    team={pod.first.row.team}
-                    url={pod.first.row.avatar_url}
-                    className="cl-ava-60"
-                    fill="hero"
-                  />
+                  {/* The leader wears the crown: it sits on the avatar, tilted. */}
+                  <span className="cl-pod-crowned" title={`${pod.first.row.name} · leader`}>
+                    <IconCrownFilled className="cl-pod-crown" size={28} aria-hidden />
+                    <Avatar
+                      name={pod.first.row.name}
+                      team={pod.first.row.team}
+                      url={pod.first.row.avatar_url}
+                      className="cl-ava-60"
+                      fill="hero"
+                    />
+                  </span>
                   <span className="cl-pod-badge1">1er · Leader</span>
                 </div>
                 <div className="cl-pod-1-name">{pod.first.row.name}</div>

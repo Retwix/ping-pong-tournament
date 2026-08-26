@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { Match } from '../types'
+import type { Match, Tournament } from '../types'
 import type { PlayerStat } from './stats'
 import type { RatingEvent } from './rating'
-import { dashboardRecords } from './dashboardRecords'
+import { capotList, dashboardRecords } from './dashboardRecords'
 
 function makeStat(overrides: Partial<PlayerStat> = {}): PlayerStat {
   return {
@@ -56,6 +56,32 @@ function makeMatch(overrides: Partial<Match> = {}): Match {
     bye: false,
     mb_saved_a: 0,
     mb_saved_b: 0,
+    ...overrides,
+  }
+}
+
+function makeTournament(overrides: Partial<Tournament> = {}): Tournament {
+  return {
+    id: 't1',
+    created_at: '2026-07-01T09:00:00.000Z',
+    name: 'Tournoi de juillet',
+    target: 11,
+    players: ['Alice', 'Bob'],
+    status: 'done',
+    kind: 'tournament',
+    format: 'round_robin',
+    champion: 'Alice',
+    is_active: false,
+    slack_channel: null,
+    slack_thread_ts: null,
+    result_notified: false,
+    unranked: false,
+    doubles: false,
+    teams: null,
+    chaos_enabled: false,
+    chaos_interval: 5,
+    chaos_intensity: 'mild',
+    chaos_legendary: false,
     ...overrides,
   }
 }
@@ -128,5 +154,65 @@ describe('dashboardRecords', () => {
       ev({ matchId: 'm1', key: 'pb', won: false, ratingBefore: 1400 }),
     ]
     expect(dashboardRecords([], [], events).biggestUpset).toBeNull()
+  })
+})
+
+describe('capotList', () => {
+  const NOW = new Date('2026-07-15T12:00:00.000Z')
+
+  it('lists finished shutouts, most recent first, winner-first score', () => {
+    const matches = [
+      makeMatch({ id: 'old', ended_at: '2026-07-10T10:00:00.000Z' }),
+      makeMatch({
+        id: 'recent',
+        player_a: 'Bob',
+        player_b: 'Alice',
+        score_a: 0,
+        score_b: 7,
+        ended_at: '2026-07-14T10:00:00.000Z',
+      }),
+    ]
+    expect(capotList(matches, [makeTournament()], NOW)).toEqual([
+      {
+        matchId: 'recent',
+        tournamentId: 't1',
+        winner: 'Alice',
+        loser: 'Bob',
+        score: '7 – 0',
+        context: 'Tournoi de juillet',
+        date: 'il y a 1 j',
+      },
+      {
+        matchId: 'old',
+        tournamentId: 't1',
+        winner: 'Alice',
+        loser: 'Bob',
+        score: '11 – 0',
+        context: 'Tournoi de juillet',
+        date: 'il y a 5 j',
+      },
+    ])
+  })
+
+  it('leaves out unfinished matches, byes and non-shutouts', () => {
+    const matches = [
+      makeMatch({ id: 'live', done: false }),
+      makeMatch({ id: 'bye', bye: true }),
+      makeMatch({ id: 'normal', score_b: 9 }),
+      makeMatch({ id: 'empty', score_a: 0, score_b: 0 }),
+    ]
+    expect(capotList(matches, [makeTournament()], NOW)).toEqual([])
+  })
+
+  it('labels a quick game and falls back to the start time and no context', () => {
+    const matches = [
+      makeMatch({ id: 'g', tournament_id: 'tg', started_at: '2026-07-15T11:00:00.000Z' }),
+      makeMatch({ id: 'orphan', tournament_id: 'gone' }),
+    ]
+    const rows = capotList(matches, [makeTournament({ id: 'tg', kind: 'game' })], NOW)
+    expect(rows.map((r) => [r.matchId, r.context, r.date])).toEqual([
+      ['g', 'Partie rapide', 'il y a 1 h'],
+      ['orphan', '', ''],
+    ])
   })
 })

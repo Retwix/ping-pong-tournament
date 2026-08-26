@@ -241,9 +241,16 @@ const monthYear = (iso: string): string => {
   return `${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`
 }
 
+/** One tournament won: its id (to deep-link to the board), name and month. */
+export interface PlayerTitle {
+  id: string
+  name: string
+  date: string
+}
+
 export interface PlayerTitles {
   count: number
-  titles: Array<{ name: string; date: string }>
+  titles: PlayerTitle[]
 }
 
 /**
@@ -264,7 +271,7 @@ export function titlesByName(
     }
     const entry = out.get(t.champion) ?? { count: 0, titles: [] }
     entry.count++
-    entry.titles.push({ name: t.name, date: monthYear(endedAt ?? t.created_at) })
+    entry.titles.push({ id: t.id, name: t.name, date: monthYear(endedAt ?? t.created_at) })
     out.set(t.champion, entry)
   }
   return out
@@ -587,7 +594,7 @@ export interface PlayerCardModel {
   avatarUrl: string | null
   lastSeen: string | null
   kpis: PlayerCardKpi[]
-  titles: Array<{ name: string; date: string }>
+  titles: PlayerTitle[]
   nemesis: { name: string; record: string } | null
   victim: { name: string; record: string } | null
   last8: PlayerCardMatch[]
