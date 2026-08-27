@@ -72,4 +72,19 @@ describe('splitInactive', () => {
       ['Léo', 2],
     ])
   })
+
+  it('reports whole days away, ignoring the time of day the last match ran', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        lastPlayedAt: '2026-07-25T18:00:00.000Z',
+      }),
+    ]
+
+    const { inactifs } = splitInactive(rows, now)
+
+    expect(inactifs.map((r) => [r.name, r.daysIdle])).toEqual([['Chris', 32]])
+  })
 })
