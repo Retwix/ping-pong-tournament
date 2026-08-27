@@ -41,4 +41,35 @@ describe('splitInactive', () => {
     expect(active.map((r) => r.name)).toEqual(['Léo'])
     expect(inactifs.map((r) => r.name)).toEqual(['Chris'])
   })
+
+  it('closes the gap in the numbering left by a player who drops out', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'thibault',
+        name: 'Thibault',
+        rank: 1,
+        lastPlayedAt: '2026-08-26T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        rank: 2,
+        lastPlayedAt: '2026-07-09T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'leo',
+        name: 'Léo',
+        rank: 3,
+        lastPlayedAt: '2026-08-26T12:00:00.000Z',
+      }),
+    ]
+
+    const { active } = splitInactive(rows, now)
+
+    expect(active.map((r) => [r.name, r.rank])).toEqual([
+      ['Thibault', 1],
+      ['Léo', 2],
+    ])
+  })
 })

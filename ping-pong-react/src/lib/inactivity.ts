@@ -27,5 +27,8 @@ export function splitInactive(
     if (idle >= INACTIVITY.days) inactifs.push({ ...r, daysIdle: idle })
     else active.push(r)
   }
-  return { active, inactifs }
+  return {
+    active: active.map((r, i) => ({ ...r, rank: i + 1 })),
+    inactifs,
+  }
 }
