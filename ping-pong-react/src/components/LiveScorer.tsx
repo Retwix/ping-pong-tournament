@@ -8,6 +8,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import {
 	decrementPatch,
+	firstPointPatch,
 	formatDuration,
 	isMatchPoint,
 	isWon,
@@ -138,10 +139,9 @@ export default function LiveScorer({
 				: { score_b: match.score_b + 1 };
 		if (side === "a" && bWasMp) patch.mb_saved_a = savedA + 1;
 		if (side === "b" && aWasMp) patch.mb_saved_b = savedB + 1;
-		if (!match.started_at && match.score_a + match.score_b === 0) {
-			patch.started_at = new Date().toISOString();
-		}
-		onPatch(patch);
+		// The first point starts the chrono — and the match itself when it was
+		// scored without ever being opened in referee mode.
+		onPatch({ ...patch, ...firstPointPatch(match, new Date().toISOString()) });
 	};
 	const removePoint = (side: MatchSide) => {
 		if (!onPatch) return;

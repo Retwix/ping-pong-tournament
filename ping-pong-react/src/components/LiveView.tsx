@@ -8,6 +8,7 @@ import { computeStandings } from '../lib/pingpong'
 import { navigate } from '../lib/router'
 import { isPlayable } from '../lib/doubleElim'
 import { isLive } from '../lib/liveHero'
+import { refStart } from '../lib/refMode'
 import type { Match } from '../types'
 import LiveScorer from './LiveScorer'
 import { RatingMoveRow } from './RatingDelta'
@@ -99,6 +100,15 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
     const next = matches.find(isPlayable)
     setShownId(next ? next.id : matches[matches.length - 1].id)
   }, [matches, shownId, isRef, awaitingNext])
+
+  // Referee mode: whatever is on screen is the match on the table, so it is
+  // marked as started right away — the dashboard, the board and the TV show it
+  // live before a single point is played. The chrono still waits for that point.
+  useEffect(() => {
+    if (!isRef) return
+    const write = refStart(matches, shownId, new Date().toISOString())
+    if (write) void patchMatch(write.id, write.patch)
+  }, [isRef, matches, shownId, patchMatch])
 
   // Referee taps "Commencer": jump straight into the next playable match.
   const startNext = () => {

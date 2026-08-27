@@ -67,7 +67,8 @@ create table if not exists public.matches (
   score_b       int  not null default 0,
   done          boolean not null default false,
   serve_start   text not null default 'a',      -- 'a' | 'b'
-  started_at    timestamptz,
+  started_at    timestamptz,                   -- put on the table (referee mode)
+  first_point_at timestamptz,                  -- first point: the match chrono
   ended_at      timestamptz,
   -- Match balls (match points) saved by each side: points won while the
   -- opponent was one point from winning. A save for one side is a wasted match
@@ -75,6 +76,16 @@ create table if not exists public.matches (
   mb_saved_a    int  not null default 0,
   mb_saved_b    int  not null default 0
 );
+
+-- Split « started » from « chrono started » on databases created before it: the
+-- first point used to be stamped as started_at, which is now the moment the
+-- referee opened the match. See supabase/first-point-migration.sql.
+alter table public.matches add column if not exists first_point_at timestamptz;
+update public.matches
+  set first_point_at = started_at
+  where first_point_at is null
+    and started_at is not null
+    and (score_a > 0 or score_b > 0);
 
 -- Add match-ball columns to databases created before they existed.
 alter table public.matches add column if not exists mb_saved_a int not null default 0;

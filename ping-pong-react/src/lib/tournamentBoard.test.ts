@@ -132,6 +132,7 @@ const getMockMatch = (overrides?: Partial<Match>): Match => ({
   done: false,
   serve_start: 'a',
   started_at: null,
+  first_point_at: null,
   ended_at: null,
   bracket: null,
   match_key: null,
@@ -779,5 +780,17 @@ describe('etatChargement', () => {
     expect(
       etatChargement({ loading: false, tournament: getMockTournament(), error: 'hors ligne' }),
     ).toEqual({ etat: 'ok', banniere: true })
+  })
+})
+
+describe('etatMatch — mis sur la table', () => {
+  it('reads a match started by the referee as en cours, before the first point', () => {
+    expect(etatMatch(getMockMatch({ started_at: '2026-08-24T10:00:00.000Z' }))).toBe('En cours')
+  })
+})
+
+describe('etatNoeud — mis sur la table', () => {
+  it('reads a bracket node started by the referee as en cours, before the first point', () => {
+    expect(etatNoeud(getMockMatch({ started_at: '2026-08-24T10:00:00.000Z' }))).toBe('En cours')
   })
 })
