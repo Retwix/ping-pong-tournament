@@ -87,4 +87,14 @@ describe('splitInactive', () => {
 
     expect(inactifs.map((r) => [r.name, r.daysIdle])).toEqual([['Chris', 32]])
   })
+
+  it('keeps a player whose last match carries no date, rather than inventing an absence', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [getMockRatingRow({ key: 'solenn', name: 'Solenn', lastPlayedAt: null })]
+
+    const { active, inactifs } = splitInactive(rows, now)
+
+    expect(active.map((r) => r.name)).toEqual(['Solenn'])
+    expect(inactifs).toEqual([])
+  })
 })
