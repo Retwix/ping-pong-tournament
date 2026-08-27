@@ -51,6 +51,24 @@ export const DUREE = {
 } as const
 
 /**
+ * When the app volunteers the bracket instead of round-robin. Round-robin grows
+ * as n(n−1)/2 while a bracket grows as 2n−2, so past a handful of players the
+ * schedule runs away: 15 matches against 10 at six players, 28 against 14 at
+ * eight.
+ *
+ * The rule is a floor in real minutes, deliberately, and not also a ratio. Over
+ * the integers the two schedules stand at 1.00 at four players and 1.25 at
+ * five, with nothing in between, and the dead time between matches only widens
+ * the gap — so any ratio test loose enough to admit a five-player field can
+ * never reject a field this floor has already accepted. Minutes are what an
+ * evening is actually measured in.
+ */
+export const SUGGESTION = {
+  /** The bracket has to save at least this much wall-clock time to be worth raising. */
+  ecartMinMs: 20 * 60_000,
+} as const
+
+/**
  * What the model says before the club has played enough timed matches: a game
  * to 11 between equals lands around six minutes, with a minute and a half
  * between matches. Replaced piece by piece as history accumulates.
@@ -398,6 +416,37 @@ export function estimerDuree(entree: EntreeEstimation): EstimationDuree | null {
     parMatchMs: jeuMs / matchs,
     modele,
   }
+}
+
+/** The nudge shown on the format card the app would rather you picked. */
+export interface SuggestionFormat {
+  /** Time the bracket saves over round-robin, in ms. */
+  gainMs: number
+  /** « −45 min », rounded exactly like the estimate above it. */
+  libelle: string
+}
+
+/**
+ * Whether to point at double elimination instead. Null — say nothing — unless
+ * a format is actually up for grabs (a quick game has none, and there is
+ * nothing to suggest once the bracket is already chosen), both formats can be
+ * priced, and the bracket saves enough time to be worth the interruption.
+ *
+ * The two estimates come from the same model and the same field, so the answer
+ * moves with the selection: adding a seventh player can make the suggestion
+ * appear, and shortening the target can make it go away.
+ */
+export function suggererFormat(entree: EntreeEstimation): SuggestionFormat | null {
+  if (entree.variant !== 'tournament' || entree.format !== 'round_robin') return null
+
+  const roundRobin = estimerDuree({ ...entree, format: 'round_robin' })
+  const bracket = estimerDuree({ ...entree, format: 'double_elim' })
+  if (roundRobin === null || bracket === null) return null
+
+  const gainMs = roundRobin.totalMs - bracket.totalMs
+  if (gainMs < SUGGESTION.ecartMinMs) return null
+
+  return { gainMs, libelle: `−${formatDuree(gainMs)}` }
 }
 
 // ---------- display ----------

@@ -3605,6 +3605,26 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 .np-format-card.active { border: 1.5px solid #4a2aa4; padding: 15.5px 17.5px; box-shadow: 0 10px 24px rgba(74, 42, 164, 0.14); }
 [data-theme='dark'] .np-format-card { background: #1e1138; border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3); }
 [data-theme='dark'] .np-format-card.active { border-color: #7a5ae0; box-shadow: 0 10px 24px rgba(74, 42, 164, 0.14); }
+/* Suggested by the duration estimate: a warm ring that reads as « look here »
+   without borrowing the purple of .active — two cards must never look picked. */
+.np-format-card.suggere { border-color: #e8a33d; box-shadow: 0 3px 12px rgba(232, 163, 61, 0.16); }
+.np-format-card.suggere.active { border-color: #4a2aa4; }
+[data-theme='dark'] .np-format-card.suggere { border-color: #e8a33d; box-shadow: 0 3px 12px rgba(232, 163, 61, 0.14); }
+[data-theme='dark'] .np-format-card.suggere.active { border-color: #7a5ae0; }
+.np-fc-suggere {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: auto; margin-right: 10px;
+  font-family: var(--font-display); font-weight: 800; font-size: 11px; line-height: 1;
+  letter-spacing: 0.04em; white-space: nowrap;
+  color: #8a5a10; background: #fdf1dd; border-radius: 999px; padding: 5px 9px;
+}
+[data-theme='dark'] .np-fc-suggere { color: #f3c785; background: rgba(232, 163, 61, 0.18); }
+@media (prefers-reduced-motion: no-preference) {
+  .np-format-card.suggere .np-fc-suggere { animation: np-fc-suggere-in 220ms var(--ease) both; }
+}
+@keyframes np-fc-suggere-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
 .np-fc-top { display: flex; align-items: center; justify-content: space-between; }
 .np-icon-tile {
   width: 34px; height: 34px; flex: none; border-radius: 11px; background: #f0ecfb;
