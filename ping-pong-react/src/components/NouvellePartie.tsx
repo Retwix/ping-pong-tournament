@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRatings } from '../hooks/useRatings'
 import { DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from '../lib/chaos'
 import { createPlayer, createTournament } from '../lib/db'
-import { calibrerDuree, estimerDuree, resumeDuree } from '../lib/durationEstimate'
+import { calibrerDuree, estimerDuree, resumeDuree, suggererFormat } from '../lib/durationEstimate'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { joueurRows, type JoueurRow } from '../lib/joueurs'
 import { melangerEquipes, nomPaire, tirerEquipes } from '../lib/doubles'
@@ -215,6 +215,21 @@ export default function NouvellePartie({
     [variant, isGame, format, elosEstimes, target, modeleDuree],
   )
   const duree = estimation === null ? null : resumeDuree(estimation, time)
+  // The bracket is offered, never imposed: the card lights up only while
+  // round-robin is picked and double elimination would hand the evening back a
+  // real chunk of time. Same model and same field as the estimate above it, so
+  // the two lines can never contradict each other.
+  const suggestion = useMemo(
+    () =>
+      suggererFormat({
+        variant,
+        format: isGame ? 'round_robin' : format,
+        elos: elosEstimes,
+        target,
+        modele: modeleDuree,
+      }),
+    [variant, isGame, format, elosEstimes, target, modeleDuree],
+  )
 
   const basculerMode = (double: boolean) => {
     if (double === dbl) return
@@ -515,13 +530,24 @@ export default function NouvellePartie({
                     </span>
                   </button>
                   <button
-                    className={`np-format-card${format === 'double_elim' ? ' active' : ''}`}
+                    className={`np-format-card${format === 'double_elim' ? ' active' : ''}${
+                      suggestion === null ? '' : ' suggere'
+                    }`}
                     onClick={() => setFormat('double_elim')}
                   >
                     <span className="np-fc-top">
                       <span className="np-icon-tile">
                         <IconTournament size={18} stroke={2} />
                       </span>
+                      {suggestion !== null && (
+                        <span
+                          className="np-fc-suggere"
+                          title={`Suggéré : ${suggestion.libelle} par rapport au round-robin`}
+                        >
+                          <IconClock size={12} stroke={2.4} />
+                          {suggestion.libelle}
+                        </span>
+                      )}
                       <span className="np-radio">
                         <span className="np-radio-dot" />
                       </span>

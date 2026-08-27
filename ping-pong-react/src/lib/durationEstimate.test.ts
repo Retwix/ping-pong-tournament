@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DUREE,
   MODELE_DEFAUT,
+  SUGGESTION,
   calibrerDispersion,
   calibrerDuree,
   calibrerEntracte,
@@ -18,6 +19,7 @@ import {
   probabilite,
   resumeDuree,
   serrage,
+  suggererFormat,
   type ModeleDuree,
 } from './durationEstimate'
 import type { Match, Tournament } from '../types'
@@ -623,5 +625,67 @@ describe('resumeDuree', () => {
     if (est === null) throw new Error('estimation attendue')
 
     expect(resumeDuree(est, '').source).toBe('d’après 100 matchs chronométrés')
+  })
+})
+
+describe('suggererFormat', () => {
+  const egaux = (n: number) => Array.from({ length: n }, () => 1500)
+
+  const entree = (n: number, extra?: Partial<Parameters<typeof suggererFormat>[0]>) => ({
+    variant: 'tournament' as const,
+    format: 'round_robin' as const,
+    elos: egaux(n),
+    target: 11,
+    modele: modele(),
+    ...extra,
+  })
+
+  it('offers the bracket when the round-robin schedule runs far longer', () => {
+    // Six players: 15 round-robin matches against the bracket's 10.
+    const suggestion = suggererFormat(entree(6))
+
+    expect(suggestion?.gainMs).toBeCloseTo(7_860_000 - 5_200_000, 5)
+    expect(suggestion?.libelle).toBe('−45 min')
+  })
+
+  it('says nothing once the bracket is already the chosen format', () => {
+    expect(suggererFormat(entree(6, { format: 'double_elim' }))).toBeNull()
+  })
+
+  it('says nothing for a quick game, which has no format to choose', () => {
+    expect(suggererFormat(entree(2, { variant: 'game', elos: [1500, 1500] }))).toBeNull()
+  })
+
+  it('says nothing when both formats play the very same schedule', () => {
+    // Four players is the crossover: 6 round-robin matches, 6 bracket matches.
+    expect(suggererFormat(entree(4))).toBeNull()
+  })
+
+  it('says nothing when the field is too small for a bracket at all', () => {
+    expect(suggererFormat(entree(2))).toBeNull()
+  })
+
+  it('says nothing when the round-robin is longer but not by enough real time', () => {
+    // Five players: 10 matches against 8, yet only some 18 minutes saved.
+    expect(suggererFormat(entree(5))).toBeNull()
+  })
+
+  it('offers the bracket right on the threshold, not a minute past it', () => {
+    // parPointMs 0 pins every match at fixeMs and there is no dead time, so the
+    // gap is exactly 2 × fixeMs: 10 round-robin matches against the bracket's 8.
+    const suggestion = suggererFormat(
+      entree(5, { modele: modele({ fixeMs: 600_000, parPointMs: 0, entracteMs: 0 }) }),
+    )
+
+    expect(suggestion?.gainMs).toBe(SUGGESTION.ecartMinMs)
+    expect(suggestion?.libelle).toBe('−20 min')
+  })
+
+  it('says nothing a hair under the time saved it asks for', () => {
+    expect(
+      suggererFormat(
+        entree(5, { modele: modele({ fixeMs: 590_000, parPointMs: 0, entracteMs: 0 }) }),
+      ),
+    ).toBeNull()
   })
 })
