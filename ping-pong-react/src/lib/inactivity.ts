@@ -16,6 +16,12 @@ export function daysIdle(lastPlayedAt: string | null, now: Date): number {
   return Math.floor((now.getTime() - Date.parse(lastPlayedAt)) / 86_400_000)
 }
 
+/**
+ * Split a ranked ladder into the players who still hold a rank and les
+ * inactifs. `rows` must arrive in rating order, as `rankRatings` emits it:
+ * both halves inherit it — les inactifs are listed in it, and the survivors
+ * are renumbered from their position in it.
+ */
 export function splitInactive(
   rows: RatingRow[],
   now: Date,

@@ -97,4 +97,29 @@ describe('splitInactive', () => {
     expect(active.map((r) => r.name)).toEqual(['Solenn'])
     expect(inactifs).toEqual([])
   })
+
+  it('lists les inactifs highest rating first, the order the ranked ladder handed over', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-07-09T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'solenn',
+        name: 'Solenn',
+        rating: 1520,
+        lastPlayedAt: '2026-07-17T12:00:00.000Z',
+      }),
+    ]
+
+    const { inactifs } = splitInactive(rows, now)
+
+    expect(inactifs.map((r) => [r.name, r.rating])).toEqual([
+      ['Chris', 1674],
+      ['Solenn', 1520],
+    ])
+  })
 })
