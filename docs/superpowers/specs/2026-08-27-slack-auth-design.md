@@ -54,10 +54,18 @@ create unique index if not exists players_auth_user_id_key
   on public.players (auth_user_id) where auth_user_id is not null;
 ```
 
-`auth_user_id` answers "may you act". The existing `slack_user_id` column stays
-what it is — the Slack user id the notification bot uses for `@mentions`. Both
-are written at claim time, so enabling real mentions in the bot becomes a free
-side effect of this work rather than a separate task.
+`auth_user_id` answers "may you act". The `slack_user_id` column keeps its own
+meaning — the Slack user id the notification bot uses for `@mentions` — and is
+written alongside `auth_user_id` at claim time.
+
+**Enabling real mentions is not a free side effect of this work.** The
+column is declared in `schema.sql:103` and in `slack-migration.sql`, but that
+migration was never applied to production: `db.ts:26` and `db.ts:45` both strip
+`slack_user_id` out of every write, each with a comment saying the column does
+not exist yet. Meanwhile `supabase/functions/slack-notify/index.ts:113` reads
+it. The bot reads a column nothing writes. Making mentions work therefore takes
+three things, not one — apply the migration, delete both strips in `db.ts`, and
+write the value at claim time — and only the third is auth work.
 
 The partial unique index enforces one player per Slack account, while leaving
 every unclaimed row `null`.
@@ -221,3 +229,12 @@ Cheap to check, and each one can invalidate part of the design:
 - Making the app private to reads.
 - Turning on real Slack `@mentions` in the notification bot, though this work
   populates the column that would enable it.
+- **Multi-workspace tenancy.** Decided 2026-08-27: the first deploy stays
+  single-workspace. `ping-pong-react/docs/design/slack-auth-schema.html`
+  (`4bdfd8d`) drafts the org-scoped alternative — `orgs`/`memberships`,
+  `org_id` on five tables, a `current_org_id()` JWT predicate — and nothing
+  here contradicts it; this spec is a strict narrowing. Two constraints in the
+  current schema are silently global and would break on a second workspace's
+  first action: `players.name` unique (`schema.sql:101`) and
+  `tournaments_one_active` (`schema.sql:50`). Neither can be scoped before
+  `org_id` exists, so both stay as they are.
