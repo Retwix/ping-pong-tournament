@@ -1,7 +1,8 @@
 // « Ça va durer combien de temps ? » — answered from the club's own history.
 //
-// Every finished match carries `started_at` / `ended_at`, so the app already
-// knows how long a game to 11 takes *here*; nothing has to be guessed. The
+// Every finished match carries a chrono (first point) and an `ended_at`, so the
+// app already knows how long a game to 11 takes *here*; nothing has to be
+// guessed. Time spent waiting on the table is entracte, not play. The
 // estimate is three fitted pieces:
 //
 //   1. Per match — duration ≈ fixe + parPoint × (points played), fitted by
@@ -21,7 +22,7 @@
 // lunch, a match validated twice) must never produce an absurd estimate.
 
 import { doubleElimMatchCount, MIN_DE_PLAYERS } from './doubleElim'
-import { matchDuration } from './pingpong'
+import { chronoStart, matchDuration } from './pingpong'
 import type { RatingEvent } from './rating'
 import { matchCount } from './roundRobin'
 import type { Match, Tournament, TournamentFormat } from '../types'
@@ -194,7 +195,11 @@ export function calibrerEntracte(
     if (!tournois.has(m.tournament_id) || m.bye) continue
     if (m.started_at === null || m.ended_at === null) continue
     const list = parTournoi.get(m.tournament_id) ?? []
-    list.push({ debut: Date.parse(m.started_at), fin: Date.parse(m.ended_at) })
+    // The chrono, not `started_at`: a match can sit on the table before its
+    // first point, and `matchDuration` does not count that wait. Measuring the
+    // gap up to the chrono keeps it in the entracte instead of losing it.
+    const debut = chronoStart(m) ?? m.started_at
+    list.push({ debut: Date.parse(debut), fin: Date.parse(m.ended_at) })
     parTournoi.set(m.tournament_id, list)
   }
 

@@ -36,6 +36,7 @@ const getMockMatch = (overrides?: Partial<Match>): Match => ({
   done: true,
   serve_start: 'a',
   started_at: '2026-08-20T17:00:00.000Z',
+  first_point_at: null,
   ended_at: '2026-08-20T17:06:00.000Z',
   bracket: null,
   match_key: null,
@@ -272,6 +273,21 @@ describe('calibrerEntracte', () => {
     const entracte = calibrerEntracte(matches, [getMockTournament({ id: 'g1', kind: 'game' })])
 
     expect(entracte).toBeNull()
+  })
+
+  it('counts the wait on the table as entracte, not as playing time', () => {
+    // The referee opens m2 at 17:08 but the first point lands at 17:10. That
+    // two-minute wait is dead time: `matchDuration` starts at the first point,
+    // so the gap has to reach up to the chrono or the wait is lost from the
+    // model entirely and the estimate under-predicts.
+    const matches = [
+      enchaine('m1', '2026-08-20T17:00:00.000Z', '2026-08-20T17:06:00.000Z'),
+      enchaine('m2', '2026-08-20T17:08:00.000Z', '2026-08-20T17:16:00.000Z', {
+        first_point_at: '2026-08-20T17:10:00.000Z',
+      }),
+    ]
+
+    expect(calibrerEntracte(matches, [getMockTournament()])).toBe(4 * 60_000)
   })
 
   it('ignores an abandoned table and matches played in parallel', () => {
