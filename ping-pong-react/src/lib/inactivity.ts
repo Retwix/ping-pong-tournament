@@ -11,7 +11,7 @@ export const INACTIVITY = { days: 30 }
 export type InactifRow = RatingRow & { daysIdle: number }
 
 /** Whole days since the last rated match. A null `lastPlayedAt` counts as 0 — fail open. */
-export function daysIdle(lastPlayedAt: string | null, now: Date): number {
+function daysIdle(lastPlayedAt: string | null, now: Date): number {
   if (!lastPlayedAt) return 0
   return Math.floor((now.getTime() - Date.parse(lastPlayedAt)) / 86_400_000)
 }
