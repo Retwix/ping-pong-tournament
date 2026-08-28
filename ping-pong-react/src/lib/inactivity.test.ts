@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest'
+import type { Player } from '../types'
 import type { RatingRow } from './rating'
 import type { Season } from './seasons'
 import { ladderSections, splitInactive } from './inactivity'
+
+const getMockPlayer = (overrides?: Partial<Player>): Player => ({
+  id: 'p1',
+  created_at: '2026-01-01T00:00:00.000Z',
+  name: 'Léo',
+  team: 'tech',
+  slack_user_id: null,
+  avatar_url: null,
+  status: 'active',
+  left_at: null,
+  ...overrides,
+})
 
 const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
   key: 'p1',
@@ -195,5 +208,41 @@ describe('ladderSections', () => {
 
     expect(ranked.map((r) => r.name)).toEqual(['Léo'])
     expect(inactifs.map((r) => r.name)).toEqual(['Chris'])
+  })
+
+  it('sends an idle ancien to les anciens, never to les inactifs', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        playerId: 'pc',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-06-01T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'leo',
+        playerId: 'pl',
+        name: 'Léo',
+        rating: 1565,
+        lastPlayedAt: '2026-08-20T12:00:00.000Z',
+      }),
+    ]
+    const players = [
+      getMockPlayer({ id: 'pc', name: 'Chris', status: 'alumni', left_at: '2026-06-15' }),
+      getMockPlayer({ id: 'pl', name: 'Léo' }),
+    ]
+
+    const { ranked, anciens, inactifs } = ladderSections({
+      rows,
+      players,
+      season: null,
+      now,
+      archived: false,
+    })
+
+    expect(ranked.map((r) => r.name)).toEqual(['Léo'])
+    expect(anciens.map((r) => r.name)).toEqual(['Chris'])
+    expect(inactifs).toEqual([])
   })
 })
