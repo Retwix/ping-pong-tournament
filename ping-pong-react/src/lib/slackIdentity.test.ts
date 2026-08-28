@@ -57,4 +57,45 @@ describe('matchPlayer', () => {
 
     expect(result).toEqual({ kind: 'matched', player: leo })
   })
+
+  it('matches a roster name split by a doubled space', () => {
+    const leo = player({ id: 'p2', name: 'Léo  Martin' })
+
+    const result = matchPlayer({ displayName: 'Léo Martin' }, [
+      player({ id: 'p1', name: 'Thomas' }),
+      leo,
+    ])
+
+    expect(result).toEqual({ kind: 'matched', player: leo })
+  })
+
+  it('collapses runs of whitespace without deleting the gaps altogether', () => {
+    const roster = [player({ id: 'p1', name: 'LéoMartin' })]
+
+    const result = matchPlayer({ displayName: 'Léo Martin' }, roster)
+
+    expect(result).toEqual({ kind: 'choose', candidates: roster })
+  })
+
+  it('matches a roster name doubled up at more than one space', () => {
+    const leo = player({ id: 'p2', name: 'Léo  Van  Martin' })
+
+    const result = matchPlayer({ displayName: 'Léo Van Martin' }, [
+      player({ id: 'p1', name: 'Thomas' }),
+      leo,
+    ])
+
+    expect(result).toEqual({ kind: 'matched', player: leo })
+  })
+
+  it('matches a roster name pasted with a non-breaking space', () => {
+    const leo = player({ id: 'p2', name: 'L\u00e9o\u00a0Martin' })
+
+    const result = matchPlayer({ displayName: 'Léo Martin' }, [
+      player({ id: 'p1', name: 'Thomas' }),
+      leo,
+    ])
+
+    expect(result).toEqual({ kind: 'matched', player: leo })
+  })
 })

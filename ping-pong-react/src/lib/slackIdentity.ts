@@ -7,7 +7,7 @@ export interface SlackProfile {
 }
 
 /** Roster names are typed by hand, so compare them past case, accents and stray padding. */
-const canonical = (name: string): string => fold(name).trim()
+const canonical = (name: string): string => fold(name).trim().replace(/\s+/g, ' ')
 
 /**
  * Either the one roster row this Slack account belongs to, or the roster itself
