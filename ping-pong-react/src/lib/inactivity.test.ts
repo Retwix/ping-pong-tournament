@@ -245,4 +245,27 @@ describe('ladderSections', () => {
     expect(anciens.map((r) => r.name)).toEqual(['Chris'])
     expect(inactifs).toEqual([])
   })
+
+  it('keeps an ancien ranked in a season they were still around for', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({ key: 'chris', playerId: 'pc', name: 'Chris', rating: 1674 }),
+      getMockRatingRow({ key: 'leo', playerId: 'pl', name: 'Léo', rating: 1565 }),
+    ]
+    const players = [
+      getMockPlayer({ id: 'pc', name: 'Chris', status: 'alumni', left_at: '2026-12-01' }),
+      getMockPlayer({ id: 'pl', name: 'Léo' }),
+    ]
+
+    const { ranked, anciens } = ladderSections({
+      rows,
+      players,
+      season: getMockSeason(),
+      now,
+      archived: true,
+    })
+
+    expect(ranked.map((r) => r.name)).toEqual(['Chris', 'Léo'])
+    expect(anciens).toEqual([])
+  })
 })
