@@ -4,6 +4,7 @@ import { fold } from './fold'
 /** What Slack tells us about the person signing in, narrowed to what we match a roster row on. */
 export interface SlackProfile {
   displayName: string
+  realName: string
 }
 
 /** Roster names are typed by hand, so compare them past case, accents and stray padding. */
@@ -20,8 +21,8 @@ export type PlayerMatch =
 
 export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMatch {
   const unclaimed = players.filter((p) => p.auth_user_id === null)
-  const wanted = canonical(profile.displayName)
-  const matches = unclaimed.filter((p) => canonical(p.name) === wanted)
+  const wanted = [canonical(profile.displayName), canonical(profile.realName)]
+  const matches = unclaimed.filter((p) => wanted.includes(canonical(p.name)))
   if (matches.length !== 1) return { kind: 'choose', candidates: unclaimed }
   return { kind: 'matched', player: matches[0] }
 }

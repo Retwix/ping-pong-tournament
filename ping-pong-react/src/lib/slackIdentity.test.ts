@@ -19,7 +19,7 @@ describe('matchPlayer', () => {
   it('picks out the roster entry bearing the name Slack knows the person by', () => {
     const leo = player({ id: 'p2', name: 'Léo' })
 
-    const result = matchPlayer({ displayName: 'Léo' }, [
+    const result = matchPlayer({ displayName: 'Léo', realName: 'Léo' }, [
       player({ id: 'p1', name: 'Thomas' }),
       leo,
     ])
@@ -30,7 +30,7 @@ describe('matchPlayer', () => {
   it('offers the whole roster to choose from when no name resembles the Slack one', () => {
     const roster = [player({ id: 'p1', name: 'Thomas' }), player({ id: 'p2', name: 'Léo' })]
 
-    const result = matchPlayer({ displayName: 'Inconnue' }, roster)
+    const result = matchPlayer({ displayName: 'Inconnue', realName: 'Inconnue' }, roster)
 
     expect(result).toEqual({ kind: 'choose', candidates: roster })
   })
@@ -38,7 +38,7 @@ describe('matchPlayer', () => {
   it('refuses to guess when two roster entries answer to the same name', () => {
     const roster = [player({ id: 'p1', name: 'Léo' }), player({ id: 'p2', name: 'Léo' })]
 
-    const result = matchPlayer({ displayName: 'Léo' }, roster)
+    const result = matchPlayer({ displayName: 'Léo', realName: 'Léo' }, roster)
 
     expect(result).toEqual({ kind: 'choose', candidates: roster })
   })
@@ -46,7 +46,7 @@ describe('matchPlayer', () => {
   it('matches a roster name that differs only by case and accents', () => {
     const leo = player({ id: 'p2', name: 'Léo' })
 
-    const result = matchPlayer({ displayName: 'LEO' }, [player({ id: 'p1', name: 'Thomas' }), leo])
+    const result = matchPlayer({ displayName: 'LEO', realName: 'LEO' }, [player({ id: 'p1', name: 'Thomas' }), leo])
 
     expect(result).toEqual({ kind: 'matched', player: leo })
   })
@@ -54,7 +54,7 @@ describe('matchPlayer', () => {
   it('matches a roster name saved with stray spaces around it', () => {
     const leo = player({ id: 'p2', name: '  Léo  ' })
 
-    const result = matchPlayer({ displayName: 'Léo' }, [player({ id: 'p1', name: 'Thomas' }), leo])
+    const result = matchPlayer({ displayName: 'Léo', realName: 'Léo' }, [player({ id: 'p1', name: 'Thomas' }), leo])
 
     expect(result).toEqual({ kind: 'matched', player: leo })
   })
@@ -62,7 +62,7 @@ describe('matchPlayer', () => {
   it('matches a roster name split by a doubled space', () => {
     const leo = player({ id: 'p2', name: 'Léo  Martin' })
 
-    const result = matchPlayer({ displayName: 'Léo Martin' }, [
+    const result = matchPlayer({ displayName: 'Léo Martin', realName: 'Léo Martin' }, [
       player({ id: 'p1', name: 'Thomas' }),
       leo,
     ])
@@ -73,7 +73,7 @@ describe('matchPlayer', () => {
   it('collapses runs of whitespace without deleting the gaps altogether', () => {
     const roster = [player({ id: 'p1', name: 'LéoMartin' })]
 
-    const result = matchPlayer({ displayName: 'Léo Martin' }, roster)
+    const result = matchPlayer({ displayName: 'Léo Martin', realName: 'Léo Martin' }, roster)
 
     expect(result).toEqual({ kind: 'choose', candidates: roster })
   })
@@ -81,7 +81,7 @@ describe('matchPlayer', () => {
   it('matches a roster name doubled up at more than one space', () => {
     const leo = player({ id: 'p2', name: 'Léo  Van  Martin' })
 
-    const result = matchPlayer({ displayName: 'Léo Van Martin' }, [
+    const result = matchPlayer({ displayName: 'Léo Van Martin', realName: 'Léo Van Martin' }, [
       player({ id: 'p1', name: 'Thomas' }),
       leo,
     ])
@@ -92,7 +92,7 @@ describe('matchPlayer', () => {
   it('matches a roster name pasted with a non-breaking space', () => {
     const leo = player({ id: 'p2', name: 'L\u00e9o\u00a0Martin' })
 
-    const result = matchPlayer({ displayName: 'Léo Martin' }, [
+    const result = matchPlayer({ displayName: 'Léo Martin', realName: 'Léo Martin' }, [
       player({ id: 'p1', name: 'Thomas' }),
       leo,
     ])
@@ -103,11 +103,33 @@ describe('matchPlayer', () => {
   it('never lands on a row another account has already claimed', () => {
     const thomas = player({ id: 'p1', name: 'Thomas' })
 
-    const result = matchPlayer({ displayName: 'Léo' }, [
+    const result = matchPlayer({ displayName: 'Léo', realName: 'Léo' }, [
       player({ id: 'p2', name: 'Léo', auth_user_id: 'u-someone-else' }),
       thomas,
     ])
 
     expect(result).toEqual({ kind: 'choose', candidates: [thomas] })
+  })
+
+  it('matches the roster name when Slack knows it as the real name, not the handle', () => {
+    const leo = player({ id: 'p2', name: 'Léo Martin' })
+
+    const result = matchPlayer({ displayName: 'leomartin92', realName: 'Léo Martin' }, [
+      player({ id: 'p1', name: 'Thomas' }),
+      leo,
+    ])
+
+    expect(result).toEqual({ kind: 'matched', player: leo })
+  })
+
+  it('matches the roster name when Slack knows it as the display name, not the real one', () => {
+    const leo = player({ id: 'p2', name: 'Léo' })
+
+    const result = matchPlayer({ displayName: 'Léo', realName: 'Leonard Martin' }, [
+      player({ id: 'p1', name: 'Thomas' }),
+      leo,
+    ])
+
+    expect(result).toEqual({ kind: 'matched', player: leo })
   })
 })
