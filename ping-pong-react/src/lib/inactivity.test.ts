@@ -167,4 +167,33 @@ describe('ladderSections', () => {
     ])
     expect(inactifs).toEqual([])
   })
+
+  it('applies the rule on an open season, where the ladder is still live', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-06-01T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'leo',
+        name: 'Léo',
+        rating: 1565,
+        lastPlayedAt: '2026-08-20T12:00:00.000Z',
+      }),
+    ]
+
+    const { ranked, inactifs } = ladderSections({
+      rows,
+      players: [],
+      season: getMockSeason(),
+      now,
+      archived: false,
+    })
+
+    expect(ranked.map((r) => r.name)).toEqual(['Léo'])
+    expect(inactifs.map((r) => r.name)).toEqual(['Chris'])
+  })
 })

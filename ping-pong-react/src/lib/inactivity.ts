@@ -55,11 +55,19 @@ export type LadderSectionsInput = {
  * The three blocks Le Classement renders, in one place so the component holds
  * no logic: the numbered ladder, les anciens, and les inactifs.
  */
-export function ladderSections({ rows, players, season }: LadderSectionsInput): {
+export function ladderSections({
+  rows,
+  players,
+  season,
+  now,
+  archived,
+}: LadderSectionsInput): {
   ranked: RatingRow[]
   anciens: AncienRow[]
   inactifs: InactifRow[]
 } {
   const { ranked, anciens } = splitLadder(rows, players, season)
-  return { ranked, anciens, inactifs: [] }
+  if (archived) return { ranked, anciens, inactifs: [] }
+  const { active, inactifs } = splitInactive(ranked, now)
+  return { ranked: active, anciens, inactifs }
 }
