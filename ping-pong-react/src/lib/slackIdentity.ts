@@ -6,6 +6,9 @@ export interface SlackProfile {
   displayName: string
 }
 
+/** Roster names are typed by hand, so compare them past case, accents and stray padding. */
+const canonical = (name: string): string => fold(name).trim()
+
 /**
  * Either the one roster row this Slack account belongs to, or the roster itself
  * for the person to pick from. A wrong confident match is worse than no match,
@@ -16,8 +19,8 @@ export type PlayerMatch =
   | { kind: 'choose'; candidates: Player[] }
 
 export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMatch {
-  const wanted = fold(profile.displayName)
-  const matches = players.filter((p) => fold(p.name) === wanted)
+  const wanted = canonical(profile.displayName)
+  const matches = players.filter((p) => canonical(p.name) === wanted)
   if (matches.length !== 1) return { kind: 'choose', candidates: players }
   return { kind: 'matched', player: matches[0] }
 }

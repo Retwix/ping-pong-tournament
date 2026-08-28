@@ -49,4 +49,12 @@ describe('matchPlayer', () => {
 
     expect(result).toEqual({ kind: 'matched', player: leo })
   })
+
+  it('matches a roster name saved with stray spaces around it', () => {
+    const leo = player({ id: 'p2', name: '  Léo  ' })
+
+    const result = matchPlayer({ displayName: 'Léo' }, [player({ id: 'p1', name: 'Thomas' }), leo])
+
+    expect(result).toEqual({ kind: 'matched', player: leo })
+  })
 })
