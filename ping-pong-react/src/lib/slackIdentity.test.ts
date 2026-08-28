@@ -41,4 +41,12 @@ describe('matchPlayer', () => {
 
     expect(result).toEqual({ kind: 'choose', candidates: roster })
   })
+
+  it('matches a roster name that differs only by case and accents', () => {
+    const leo = player({ id: 'p2', name: 'Léo' })
+
+    const result = matchPlayer({ displayName: 'LEO' }, [player({ id: 'p1', name: 'Thomas' }), leo])
+
+    expect(result).toEqual({ kind: 'matched', player: leo })
+  })
 })

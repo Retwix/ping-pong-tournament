@@ -1,8 +1,9 @@
 import type { Player } from '../types'
+import { fold } from './fold'
 
 /** What Slack tells us about the person signing in, narrowed to what we match a roster row on. */
 export interface SlackProfile {
-  displayName: string | null
+  displayName: string
 }
 
 /**
@@ -15,7 +16,8 @@ export type PlayerMatch =
   | { kind: 'choose'; candidates: Player[] }
 
 export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMatch {
-  const matches = players.filter((p) => p.name === profile.displayName)
+  const wanted = fold(profile.displayName)
+  const matches = players.filter((p) => fold(p.name) === wanted)
   if (matches.length !== 1) return { kind: 'choose', candidates: players }
   return { kind: 'matched', player: matches[0] }
 }
