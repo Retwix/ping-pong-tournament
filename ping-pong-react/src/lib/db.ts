@@ -49,6 +49,33 @@ export async function updatePlayer(
 }
 
 /**
+ * Link a roster row to the Slack account signing in. Writes both identifiers:
+ * `auth_user_id` answers "may you act", `slack_user_id` is what the notification
+ * bot @mentions.
+ *
+ * Deliberately a plain update rather than an RPC. What makes it safe is the
+ * `guard_player_claim` trigger, which permits exactly one transition —
+ * null to your own auth.uid() — and raises on reassigning, unclaiming, or
+ * claiming as somebody else. RLS alone could not do this: it cannot restrict
+ * which columns an update touches.
+ */
+export async function claimPlayer({
+  playerId,
+  authUserId,
+  slackUserId,
+}: {
+  playerId: string
+  authUserId: string
+  slackUserId: string | null
+}): Promise<void> {
+  const { error } = await supabase
+    .from('players')
+    .update({ auth_user_id: authUserId, slack_user_id: slackUserId })
+    .eq('id', playerId)
+  if (error) throw error
+}
+
+/**
  * Upload a player's processed avatar to the public `avatars` bucket at a stable
  * path (overwrites any previous photo) and return the public URL to store on
  * the player row.

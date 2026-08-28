@@ -15,6 +15,13 @@
 alter table public.players
   add column if not exists auth_user_id uuid references auth.users(id);
 
+-- slack-migration.sql declares this column and schema.sql does too, but it was
+-- never applied to production: db.ts strips slack_user_id out of every write,
+-- while supabase/functions/slack-notify reads it. Claiming writes it for real,
+-- so make sure it is there.
+alter table public.players
+  add column if not exists slack_user_id text;
+
 -- One player per Slack account, while leaving every unclaimed row null.
 create unique index if not exists players_auth_user_id_key
   on public.players (auth_user_id) where auth_user_id is not null;
