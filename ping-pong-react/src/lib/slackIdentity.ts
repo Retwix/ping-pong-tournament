@@ -39,3 +39,20 @@ export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMat
 export function linkedPlayer(userId: string, players: Player[]): Player | null {
   return players.find((p) => p.auth_user_id === userId) ?? null
 }
+
+/**
+ * What a guarded delete button should do next. Three states, not two: being
+ * signed in is not the same as being allowed, because the delete policies
+ * require a claimed row rather than a session.
+ *
+ * The distinction has to live in the UI, because Postgres will not raise. A
+ * delete refused by RLS affects zero rows and returns no error, so a button
+ * that offers to delete when the account is unlinked appears to do nothing at
+ * all.
+ */
+export type DeleteAction = 'sign-in' | 'claim' | 'delete'
+
+export function deleteAction(userId: string | null, players: Player[]): DeleteAction {
+  if (userId === null) return 'sign-in'
+  return linkedPlayer(userId, players) === null ? 'claim' : 'delete'
+}

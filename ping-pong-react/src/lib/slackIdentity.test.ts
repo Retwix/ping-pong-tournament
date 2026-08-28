@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Player } from '../types'
-import { linkedPlayer, matchPlayer } from './slackIdentity'
+import { deleteAction, linkedPlayer, matchPlayer } from './slackIdentity'
 
 function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
   return {
@@ -147,5 +147,21 @@ describe('linkedPlayer', () => {
     const found = linkedPlayer('u-leo', [player({ id: 'p1', name: 'Thomas' })])
 
     expect(found).toBeNull()
+  })
+})
+
+describe('deleteAction', () => {
+  it('asks a signed-out visitor to sign in', () => {
+    expect(deleteAction(null, [player({ id: 'p1', name: 'Léo' })])).toBe('sign-in')
+  })
+
+  it('asks a signed-in visitor who has claimed nobody to claim first', () => {
+    expect(deleteAction('u-leo', [player({ id: 'p1', name: 'Léo' })])).toBe('claim')
+  })
+
+  it('lets a signed-in visitor linked to a row go ahead', () => {
+    const roster = [player({ id: 'p1', name: 'Léo', auth_user_id: 'u-leo' })]
+
+    expect(deleteAction('u-leo', roster)).toBe('delete')
   })
 })
