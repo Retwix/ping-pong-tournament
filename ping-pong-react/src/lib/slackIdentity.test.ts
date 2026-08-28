@@ -7,6 +7,7 @@ function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
     created_at: '2026-01-01T00:00:00Z',
     team: 'tech',
     slack_user_id: null,
+    auth_user_id: null,
     avatar_url: null,
     status: 'active',
     left_at: null,
@@ -97,5 +98,16 @@ describe('matchPlayer', () => {
     ])
 
     expect(result).toEqual({ kind: 'matched', player: leo })
+  })
+
+  it('never lands on a row another account has already claimed', () => {
+    const thomas = player({ id: 'p1', name: 'Thomas' })
+
+    const result = matchPlayer({ displayName: 'Léo' }, [
+      player({ id: 'p2', name: 'Léo', auth_user_id: 'u-someone-else' }),
+      thomas,
+    ])
+
+    expect(result).toEqual({ kind: 'choose', candidates: [thomas] })
   })
 })

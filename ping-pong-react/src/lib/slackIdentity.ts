@@ -19,8 +19,9 @@ export type PlayerMatch =
   | { kind: 'choose'; candidates: Player[] }
 
 export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMatch {
+  const unclaimed = players.filter((p) => p.auth_user_id === null)
   const wanted = canonical(profile.displayName)
-  const matches = players.filter((p) => canonical(p.name) === wanted)
-  if (matches.length !== 1) return { kind: 'choose', candidates: players }
+  const matches = unclaimed.filter((p) => canonical(p.name) === wanted)
+  if (matches.length !== 1) return { kind: 'choose', candidates: unclaimed }
   return { kind: 'matched', player: matches[0] }
 }
