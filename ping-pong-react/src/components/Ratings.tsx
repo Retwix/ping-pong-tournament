@@ -9,6 +9,7 @@ import {
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING, rankRatings, ratedMatches, replayRatings } from '../lib/rating'
 import { splitLadder } from '../lib/alumni'
+import { ladderSections } from '../lib/inactivity'
 import {
   STREAK_BADGE_MIN,
   filterRatingRows,
@@ -169,9 +170,9 @@ export default function Ratings({
     scope.kind === 'season' ? (seasons.find((s) => s.id === scope.id) ?? null) : null
   const archived = scopedSeason !== null && isClosed(scopedSeason, now)
 
-  const { ranked, anciens } = useMemo(
-    () => splitLadder(rows, players, scopedSeason),
-    [rows, players, scopedSeason],
+  const { ranked, anciens, inactifs } = useMemo(
+    () => ladderSections({ rows, players, season: scopedSeason, now, archived }),
+    [rows, players, scopedSeason, now, archived],
   )
 
   const leader = ranked.find((r) => !r.provisional) ?? ranked[0]
@@ -539,6 +540,33 @@ export default function Ratings({
                         <span className="cl-ancien-name">{r.name}</span>
                         <span className="cl-ancien-elo">{Math.round(r.rating)}</span>
                         <span className="cl-ancien-departure">{departureLabel(r.leftAt)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {inactifs.length > 0 && (
+                  <div className="cl-anciens">
+                    <div className="cl-anciens-head">Inactifs</div>
+                    {inactifs.map((r) => (
+                      <div
+                        key={r.key}
+                        className="cl-ancien-row"
+                        onClick={() => setSelectedKey(r.key)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setSelectedKey(r.key)
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`Voir l'historique de ${r.name}`}
+                      >
+                        <Avatar name={r.name} team={r.team} url={r.avatar_url} muted className="sm" />
+                        <span className="cl-ancien-name">{r.name}</span>
+                        <span className="cl-ancien-elo">{Math.round(r.rating)}</span>
+                        <span className="cl-ancien-departure">inactif depuis {r.daysIdle} j</span>
                       </div>
                     ))}
                   </div>
