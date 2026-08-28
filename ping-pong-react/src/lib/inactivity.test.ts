@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RatingRow } from './rating'
-import { splitInactive } from './inactivity'
+import type { Season } from './seasons'
+import { ladderSections, splitInactive } from './inactivity'
 
 const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
   key: 'p1',
@@ -17,6 +18,16 @@ const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
   team: 'tech',
   avatar_url: null,
   trend: 0,
+  ...overrides,
+})
+
+const getMockSeason = (overrides?: Partial<Season>): Season => ({
+  id: '2026-ete',
+  slug: 'ete',
+  label: 'Été 2026',
+  start: new Date('2026-06-01T00:00:00.000Z'),
+  end: new Date('2026-09-01T00:00:00.000Z'),
+  year: 2026,
   ...overrides,
 })
 
@@ -121,5 +132,39 @@ describe('splitInactive', () => {
       ['Chris', 1674],
       ['Solenn', 1520],
     ])
+  })
+})
+
+describe('ladderSections', () => {
+  it('leaves a closed season alone — its ladder is frozen history, so nobody is inactif', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-06-01T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'leo',
+        name: 'Léo',
+        rating: 1565,
+        lastPlayedAt: '2026-06-02T12:00:00.000Z',
+      }),
+    ]
+
+    const { ranked, inactifs } = ladderSections({
+      rows,
+      players: [],
+      season: getMockSeason(),
+      now,
+      archived: true,
+    })
+
+    expect(ranked.map((r) => [r.name, r.rank])).toEqual([
+      ['Chris', 1],
+      ['Léo', 2],
+    ])
+    expect(inactifs).toEqual([])
   })
 })

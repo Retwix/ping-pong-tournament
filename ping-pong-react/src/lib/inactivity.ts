@@ -3,7 +3,10 @@
 // `rating.ts` is untouched, so every rating, RD and replay position is exactly
 // what it was before the split. `now` is injected so the rule is testable.
 
+import type { Player } from '../types'
+import { splitLadder, type AncienRow } from './alumni'
 import type { RatingRow } from './rating'
+import type { Season } from './seasons'
 
 export const INACTIVITY = { days: 30 }
 
@@ -37,4 +40,26 @@ export function splitInactive(
     active: active.map((r, i) => ({ ...r, rank: i + 1 })),
     inactifs,
   }
+}
+
+export type LadderSectionsInput = {
+  rows: RatingRow[]
+  players: Player[]
+  season: Season | null
+  now: Date
+  /** A closed season is frozen history: everyone in it is trivially idle, so the rule is off. */
+  archived: boolean
+}
+
+/**
+ * The three blocks Le Classement renders, in one place so the component holds
+ * no logic: the numbered ladder, les anciens, and les inactifs.
+ */
+export function ladderSections({ rows, players, season }: LadderSectionsInput): {
+  ranked: RatingRow[]
+  anciens: AncienRow[]
+  inactifs: InactifRow[]
+} {
+  const { ranked, anciens } = splitLadder(rows, players, season)
+  return { ranked, anciens, inactifs: [] }
 }
