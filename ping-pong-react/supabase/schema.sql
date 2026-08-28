@@ -190,6 +190,10 @@ create policy "public access matches" on public.matches
 -- (true)` would cover delete as well, and RLS policies are OR'd together — so a
 -- restrictive delete policy sitting next to a blanket one is a silent no-op.
 drop policy if exists "public access players" on public.players;
+drop policy if exists "read players"   on public.players;
+drop policy if exists "insert players" on public.players;
+drop policy if exists "update players" on public.players;
+drop policy if exists "delete players" on public.players;
 
 create policy "read players"   on public.players for select using (true);
 create policy "insert players" on public.players for insert with check (true);
@@ -203,6 +207,10 @@ create policy "delete players" on public.players for delete
   using (exists (select 1 from public.players p where p.auth_user_id = auth.uid()));
 
 drop policy if exists "public access tournaments" on public.tournaments;
+drop policy if exists "read tournaments"   on public.tournaments;
+drop policy if exists "insert tournaments" on public.tournaments;
+drop policy if exists "update tournaments" on public.tournaments;
+drop policy if exists "delete tournaments" on public.tournaments;
 
 create policy "read tournaments"   on public.tournaments for select using (true);
 create policy "insert tournaments" on public.tournaments for insert with check (true);
