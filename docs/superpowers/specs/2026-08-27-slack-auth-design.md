@@ -238,3 +238,43 @@ Cheap to check, and each one can invalidate part of the design:
   first action: `players.name` unique (`schema.sql:101`) and
   `tournaments_one_active` (`schema.sql:50`). Neither can be scoped before
   `org_id` exists, so both stay as they are.
+
+## Deferred, and owed
+
+Not "won't do" — these are decisions to revisit, recorded so they are not lost
+when the branch is.
+
+### Adapter tests
+
+Decided 2026-08-28: `useSession.ts` and `claimPlayer` ship without unit tests
+for now, following the convention already in place — `db.ts` and all eight
+hooks under `src/hooks/` are untested, and nothing in the 34-file suite touches
+Supabase or React. The tested logic stays pure: `matchPlayer` and
+`linkedPlayer` in `src/lib/slackIdentity.ts` carry the decisions, and the
+database rules were verified directly against Postgres.
+
+**These tests are still owed.** The deferral is about sequencing, not about
+whether adapter code deserves coverage — it does, and CLAUDE.md's rule against
+untested production code is not waived here, only postponed with the debt
+written down. Paying it means choosing a home first: either a Supabase mock, or
+Vitest Browser Mode with vitest-browser-react, which would cover the sign-in and
+claim flows as components and is the more valuable of the two. Neither exists in
+this project yet, so either is a piece of work in its own right.
+
+### Deploy ordering
+
+**Do not apply `auth-migration.sql` before the sign-in and claim UI ships.**
+
+A delete refused by RLS does not raise — it affects zero rows and returns no
+error. Verified locally. Until sign-in exists, every visitor is unlinked, so
+every guarded delete silently does nothing.
+
+The casualty is the add-player flow. `Players.tsx` inserts a real `Nouveau
+joueur` row before anything is typed, and Cancel deletes it
+(`Players.tsx:124-157`). Between the migration and the UI, Cancel would quietly
+fail and strand a row in the roster every single time. "Accepted consequences"
+above tolerates orphan rows as an edge case for signed-out visitors; applying
+the migration early makes them the normal case for everyone.
+
+The safe order: enable the Slack provider, ship sign-in and claiming, then
+migrate.
