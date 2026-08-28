@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Player } from '../types'
-import { matchPlayer } from './slackIdentity'
+import { linkedPlayer, matchPlayer } from './slackIdentity'
 
 function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
   return {
@@ -131,5 +131,21 @@ describe('matchPlayer', () => {
     ])
 
     expect(result).toEqual({ kind: 'matched', player: leo })
+  })
+})
+
+describe('linkedPlayer', () => {
+  it('finds the roster row this account has claimed', () => {
+    const leo = player({ id: 'p2', name: 'Léo', auth_user_id: 'u-leo' })
+
+    const found = linkedPlayer('u-leo', [player({ id: 'p1', name: 'Thomas' }), leo])
+
+    expect(found).toEqual(leo)
+  })
+
+  it('reports nobody when the account has claimed no row', () => {
+    const found = linkedPlayer('u-leo', [player({ id: 'p1', name: 'Thomas' })])
+
+    expect(found).toBeNull()
   })
 })
