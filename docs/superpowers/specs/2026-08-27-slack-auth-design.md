@@ -182,12 +182,25 @@ safe; `db.ts` stays idiomatic with the rest of the file.
 
 ## UI
 
-- A sign-in control in the page header.
-- On first sign-in with no link, a claim modal: either the auto-matched name to
-  confirm, or the picker.
+- A sign-in control in the page header. It lives in `DashboardNav`, because this
+  app has no shared header — every screen renders its own.
+- On first sign-in, a claim modal. **Revised 2026-08-31:** linking is mandatory
+  and there is no "later". Signed-in-but-unlinked is the state where the app
+  looks broken, since a delete the policies refuse affects zero rows without
+  raising. The way out is to sign out again, which is therefore the only other
+  control on the modal.
+- **An auto-match preselects; it never confirms itself.** Matching is a guess
+  about which human this is, and only that human can settle it, so their row
+  arrives highlighted and they still press "C'est moi". This collapses the two
+  paths above — confirm-a-match and pick-from-a-list — into one screen.
+- Someone with no row creates one from the modal and claims it in a single
+  press. Making linking mandatory closed the door they would otherwise use:
+  adding players is open to everyone, but not from behind a blocking modal.
 - The two guarded delete buttons stay visible when signed out and prompt
   sign-in on click. A button that vanishes reads as a bug; a button that
-  explains itself does not.
+  explains itself does not. `deleteAction` resolves the three states — signed
+  out, signed in but unlinked, linked — because being signed in is not the same
+  as being allowed.
 
 ## Accepted consequences
 
