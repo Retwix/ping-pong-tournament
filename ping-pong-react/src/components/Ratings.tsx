@@ -170,7 +170,7 @@ export default function Ratings({
     scope.kind === 'season' ? (seasons.find((s) => s.id === scope.id) ?? null) : null
   const archived = scopedSeason !== null && isClosed(scopedSeason, now)
 
-  const { ranked, anciens, inactifs } = useMemo(
+  const { ranked, anciens, table } = useMemo(
     () => ladderSections({ rows, players, season: scopedSeason, now, archived }),
     [rows, players, scopedSeason, now, archived],
   )
@@ -181,14 +181,14 @@ export default function Ratings({
 
   const tableRows = useMemo(() => {
     const now = new Date()
-    return filterRatingRows(ranked, query).map((r) => ({
+    return filterRatingRows(table, query).map((r) => ({
       ...r,
       record: recordOf(events, r.key),
       form: lastFive(events, r.key),
       streak: winStreak(events, r.key),
       delta7: weeklyDelta(events, r.key, now),
     }))
-  }, [ranked, events, query])
+  }, [table, events, query])
 
   const pod = useMemo(() => podium(ranked, events, new Date()), [ranked, events])
   const gaps = useMemo(() => tightestGaps(ranked), [ranked])
@@ -461,17 +461,23 @@ export default function Ratings({
                     >
                       <span
                         className={`cl-c-rank${
-                          r.provisional ? ' prov' : r.rank <= 3 ? ` p${r.rank}` : ''
+                          r.daysIdle !== null
+                            ? ' idle'
+                            : r.provisional
+                              ? ' prov'
+                              : r.rank <= 3
+                                ? ` p${r.rank}`
+                                : ''
                         }`}
                       >
-                        {r.provisional ? '—' : r.rank}
+                        {r.provisional || r.daysIdle !== null ? '—' : r.rank}
                       </span>
                       <span className="cl-c-avatar">
                         <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
                       </span>
                       <span className="cl-c-name">
                         <span className="cl-name-text">{r.name}</span>
-                        {!r.provisional && r.streak >= STREAK_BADGE_MIN && (
+                        {!r.provisional && r.daysIdle === null && r.streak >= STREAK_BADGE_MIN && (
                           <span className="cl-badge cl-badge-streak">{r.streak} victoires</span>
                         )}
                         {r.provisional && (
@@ -479,7 +485,9 @@ export default function Ratings({
                         )}
                       </span>
                       <span className="cl-c-form">
-                        {r.provisional ? (
+                        {r.daysIdle !== null ? (
+                          <span className="cl-form-count">inactif depuis {r.daysIdle} j</span>
+                        ) : r.provisional ? (
                           <span className="cl-form-count">
                             {r.games} / {RATING.provisionalGames} matchs
                           </span>
@@ -495,7 +503,11 @@ export default function Ratings({
                       <span className="cl-c-games">{r.games}</span>
                       <span
                         className={`cl-c-elo${
-                          r.provisional ? ' prov' : r.key === leader?.key ? ' lead' : ''
+                          r.provisional || r.daysIdle !== null
+                            ? ' prov'
+                            : r.key === leader?.key
+                              ? ' lead'
+                              : ''
                         }`}
                       >
                         {r.provisional ? `~${Math.round(r.rating)}` : Math.round(r.rating)}
@@ -540,33 +552,6 @@ export default function Ratings({
                         <span className="cl-ancien-name">{r.name}</span>
                         <span className="cl-ancien-elo">{Math.round(r.rating)}</span>
                         <span className="cl-ancien-departure">{departureLabel(r.leftAt)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {inactifs.length > 0 && (
-                  <div className="cl-anciens">
-                    <div className="cl-anciens-head">Inactifs</div>
-                    {inactifs.map((r) => (
-                      <div
-                        key={r.key}
-                        className="cl-ancien-row"
-                        onClick={() => setSelectedKey(r.key)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            setSelectedKey(r.key)
-                          }
-                        }}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={`Voir l'historique de ${r.name}`}
-                      >
-                        <Avatar name={r.name} team={r.team} url={r.avatar_url} muted className="sm" />
-                        <span className="cl-ancien-name">{r.name}</span>
-                        <span className="cl-ancien-elo">{Math.round(r.rating)}</span>
-                        <span className="cl-ancien-departure">inactif depuis {r.daysIdle} j</span>
                       </div>
                     ))}
                   </div>

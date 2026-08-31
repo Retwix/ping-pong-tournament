@@ -13,6 +13,9 @@ export const INACTIVITY = { days: 30 }
 /** An inactive player's row: the frozen rating plus how long they have been away. */
 export type InactifRow = RatingRow & { daysIdle: number }
 
+/** A row as the ladder table renders it. `daysIdle` is null for anyone still holding a rank. */
+export type LadderRow = RatingRow & { daysIdle: number | null }
+
 /** Whole days since the last rated match. A null `lastPlayedAt` counts as 0 — fail open. */
 function daysIdle(lastPlayedAt: string | null, now: Date): number {
   if (!lastPlayedAt) return 0
@@ -68,10 +71,11 @@ export function ladderSections({
   ranked: RatingRow[]
   anciens: AncienRow[]
   inactifs: InactifRow[]
-  table: (RatingRow | InactifRow)[]
+  table: LadderRow[]
 } {
+  const stillRanked = (r: RatingRow): LadderRow => ({ ...r, daysIdle: null })
   const { ranked, anciens } = splitLadder(rows, players, season)
-  if (archived) return { ranked, anciens, inactifs: [], table: ranked }
+  if (archived) return { ranked, anciens, inactifs: [], table: ranked.map(stillRanked) }
   const { active, inactifs } = splitInactive(ranked, now)
-  return { ranked: active, anciens, inactifs, table: [...active, ...inactifs] }
+  return { ranked: active, anciens, inactifs, table: [...active.map(stillRanked), ...inactifs] }
 }

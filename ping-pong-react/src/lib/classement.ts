@@ -138,7 +138,7 @@ export function topProgressions(
 }
 
 /** Case- and accent-insensitive search over player names and teams. Empty query → all rows. */
-export function filterRatingRows(rows: RatingRow[], query: string): RatingRow[] {
+export function filterRatingRows<T extends RatingRow>(rows: T[], query: string): T[] {
   const q = fold(query.trim())
   return rows.filter(
     (r) => fold(r.name).includes(q) || (r.team !== null && fold(r.team).includes(q)),
