@@ -1,6 +1,9 @@
 import type { MouseEvent } from 'react'
+import { usePlayers } from '../hooks/usePlayers'
+import { useSession } from '../hooks/useSession'
 import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
+import { deleteAction } from '../lib/slackIdentity'
 import { recentTournaments } from '../lib/recentTournaments'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
@@ -45,9 +48,19 @@ export default function Home({
   onRef,
 }: Props) {
   const { tournaments, loading, error } = useTournaments()
+  const { userId, signIn } = useSession()
+  const { players } = usePlayers()
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
     e.stopPropagation()
+    // Unguarded, this is a button that appears to work and does nothing: see
+    // deleteAction on why the refusal never reaches us.
+    const action = deleteAction(userId, players)
+    if (action !== 'delete') {
+      if (action === 'sign-in' && confirm('Seuls les joueurs connectés peuvent supprimer un tournoi. Se connecter avec Slack ?'))
+        signIn()
+      return
+    }
     if (confirm(`Supprimer « ${name} » ? Cette action est définitive.`)) {
       await deleteTournament(id)
     }
