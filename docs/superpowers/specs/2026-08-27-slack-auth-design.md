@@ -131,6 +131,43 @@ re-entering the delete policy. **If reads are ever restricted, this policy has
 to be revisited** — at that point the `exists` clause belongs in a
 `security definer` function that bypasses RLS on the lookup.
 
+### Detecting a refusal
+
+A delete the policies refuse is not an error. It matches zero rows and comes
+back clean, so `supabase.from('players').delete().eq('id', id)` reports success
+while the row stays on the ladder. This is the mechanism under every
+dishonest-copy bug on this branch.
+
+Asking for the deleted ids back tells the two apart:
+
+```ts
+const { data, error } = await supabase.from('players').delete().eq('id', id).select('id')
+if (error) throw error
+if (data.length === 0) throw new Error(/* refused, or already gone */)
+```
+
+**Verified against local Postgres, 2026-08-31**, on `schema.sql` +
+`auth-migration.sql` with real `anon` / `authenticated` roles and a stubbed
+`auth.uid()` — hazard first, per the recipe:
+
+| Case | rows from `returning` | row actually deleted |
+|---|---|---|
+| signed out | 0, no exception | no |
+| linked account | 1 | yes |
+| `read players using (false)` | 0 | no |
+
+The third case is what makes the check sound rather than merely convenient.
+Postgres applies `select` policies to a `delete`'s `WHERE`, so a row the reader
+cannot see is never matched: an empty result is never a false alarm. If reads
+are ever restricted, the check reports "not deleted", and that is true.
+
+It is also independent corroboration of the warning above. Restricting reads
+does not merely endanger the delete policy's `exists` subquery — it stops
+deletes working at all.
+
+`deletePlayer` does this. `deleteTournament` does not yet: `Home.onDelete` has
+no `catch`, so making that call throw needs an error surface there first.
+
 ### Bootstrapping
 
 There is no chicken-and-egg problem. Claiming requires only *being
