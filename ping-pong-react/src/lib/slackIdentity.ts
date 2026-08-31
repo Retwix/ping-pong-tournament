@@ -60,6 +60,16 @@ export function deleteAction(userId: string | null, players: Player[]): DeleteAc
   return linkedPlayer(userId, players) === null ? 'claim' : 'delete'
 }
 
+/**
+ * Shown when a guarded delete is clicked by an account that has claimed no row.
+ *
+ * Reachable despite ClaimGate blocking the page: while the roster is still
+ * loading the gate shows nothing, so the delete buttons are live and this is
+ * the state behind them.
+ */
+export const CLAIM_REQUIRED_TO_DELETE =
+  'Ton compte Slack n’est pas encore lié à une ligne du classement. Termine la liaison pour pouvoir supprimer.'
+
 const GENERIC_CLAIM_FAILURE = 'La liaison a échoué. Réessaie dans un instant.'
 
 /**

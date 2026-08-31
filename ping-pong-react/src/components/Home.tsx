@@ -3,8 +3,8 @@ import { usePlayers } from '../hooks/usePlayers'
 import { useSession } from '../hooks/useSession'
 import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
-import { deleteAction } from '../lib/slackIdentity'
 import { recentTournaments } from '../lib/recentTournaments'
+import { CLAIM_REQUIRED_TO_DELETE, deleteAction } from '../lib/slackIdentity'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
@@ -58,9 +58,12 @@ export default function Home({
     // Unguarded, this is a button that appears to work and does nothing: see
     // deleteAction on why the refusal never reaches us.
     const action = deleteAction(userId, players)
-    if (action !== 'delete') {
-      if (action === 'sign-in' && confirm('Seuls les joueurs connectés peuvent supprimer un tournoi. Se connecter avec Slack ?'))
-        signIn()
+    if (action === 'sign-in') {
+      if (confirm('Seuls les joueurs connectés peuvent supprimer un tournoi. Se connecter avec Slack ?')) signIn()
+      return
+    }
+    if (action === 'claim') {
+      setDeleteError(CLAIM_REQUIRED_TO_DELETE)
       return
     }
     if (confirm(`Supprimer « ${name} » ? Cette action est définitive.`)) {
