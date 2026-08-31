@@ -166,7 +166,7 @@ describe('ladderSections', () => {
       }),
     ]
 
-    const { ranked, inactifs } = ladderSections({
+    const { ranked, inactifs, table } = ladderSections({
       rows,
       players: [],
       season: getMockSeason(),
@@ -179,6 +179,7 @@ describe('ladderSections', () => {
       ['Léo', 2],
     ])
     expect(inactifs).toEqual([])
+    expect(table.map((r) => r.name)).toEqual(['Chris', 'Léo'])
   })
 
   it('applies the rule on an open season, where the ladder is still live', () => {
@@ -267,5 +268,33 @@ describe('ladderSections', () => {
 
     expect(ranked.map((r) => r.name)).toEqual(['Chris', 'Léo'])
     expect(anciens).toEqual([])
+  })
+
+  it('sorts les inactifs below every ranked player, whatever their rating', () => {
+    const now = new Date('2026-08-31T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-06-01T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'candice',
+        name: 'Candice',
+        rating: 1402,
+        lastPlayedAt: '2026-08-29T12:00:00.000Z',
+      }),
+    ]
+
+    const { table } = ladderSections({
+      rows,
+      players: [],
+      season: null,
+      now,
+      archived: false,
+    })
+
+    expect(table.map((r) => r.name)).toEqual(['Candice', 'Chris'])
   })
 })

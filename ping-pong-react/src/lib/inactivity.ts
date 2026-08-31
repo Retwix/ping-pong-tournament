@@ -52,8 +52,11 @@ export type LadderSectionsInput = {
 }
 
 /**
- * The three blocks Le Classement renders, in one place so the component holds
- * no logic: the numbered ladder, les anciens, and les inactifs.
+ * The blocks Le Classement renders, in one place so the component holds no
+ * logic: `table` is the ladder as displayed — the ranked players in rating
+ * order, then les inactifs, who sort below all of them however high their
+ * rating, since they hold no rank to defend. `ranked` stays active-only, so
+ * the podium, the leader and the gap cards resolve against live players.
  */
 export function ladderSections({
   rows,
@@ -65,9 +68,10 @@ export function ladderSections({
   ranked: RatingRow[]
   anciens: AncienRow[]
   inactifs: InactifRow[]
+  table: (RatingRow | InactifRow)[]
 } {
   const { ranked, anciens } = splitLadder(rows, players, season)
-  if (archived) return { ranked, anciens, inactifs: [] }
+  if (archived) return { ranked, anciens, inactifs: [], table: ranked }
   const { active, inactifs } = splitInactive(ranked, now)
-  return { ranked: active, anciens, inactifs }
+  return { ranked: active, anciens, inactifs, table: [...active, ...inactifs] }
 }
