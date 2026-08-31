@@ -25,7 +25,7 @@ import {
   type JoueurRow,
   type PhotoDraft,
 } from '../lib/joueurs'
-import { CLAIM_REQUIRED_TO_DELETE, deleteAction } from '../lib/slackIdentity'
+import { deleteAttempt } from '../lib/slackIdentity'
 import { TEAMS, teamBadgeStyle, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
@@ -115,14 +115,14 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
   const removeJoueur = async (r: JoueurRow) => {
     setSaveError(null)
     // Unguarded, this is a button that appears to work and does nothing: see
-    // deleteAction on why the refusal never reaches us.
-    const action = deleteAction(userId, players)
-    if (action === 'sign-in') {
-      if (confirm('Seuls les joueurs connectés peuvent supprimer un joueur. Se connecter avec Slack ?')) signIn()
+    // deleteAttempt on why the refusal never reaches us.
+    const attempt = deleteAttempt(userId, players, 'un joueur')
+    if (attempt.kind === 'ask-sign-in') {
+      if (confirm(attempt.message)) signIn()
       return
     }
-    if (action === 'claim') {
-      setSaveError(CLAIM_REQUIRED_TO_DELETE)
+    if (attempt.kind === 'explain') {
+      setSaveError(attempt.message)
       return
     }
     try {

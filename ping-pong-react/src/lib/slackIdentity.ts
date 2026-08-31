@@ -67,7 +67,7 @@ export function deleteAction(userId: string | null, players: Player[]): DeleteAc
  * loading the gate shows nothing, so the delete buttons are live and this is
  * the state behind them.
  */
-export const CLAIM_REQUIRED_TO_DELETE =
+const CLAIM_REQUIRED_TO_DELETE =
   'Ton compte Slack n’est pas encore lié à une ligne du classement. Termine la liaison pour pouvoir supprimer.'
 
 const GENERIC_CLAIM_FAILURE = 'La liaison a échoué. Réessaie dans un instant.'
@@ -123,4 +123,33 @@ export function claimPrompt(userId: string, roster: RosterLoad): ClaimPrompt {
   if (roster.kind === 'unreadable') return { kind: 'unreadable' }
   if (linkedPlayer(userId, roster.players) !== null) return { kind: 'none' }
   return { kind: 'pick', candidates: unclaimed(roster.players) }
+}
+
+/**
+ * What a guarded delete button should do about the click it just received.
+ *
+ * The three states of deleteAction, each carrying the sentence that goes with
+ * it. Components are left holding only the effect — run the confirm, start the
+ * sign-in, show the message — which matters because those effects reach for
+ * window.confirm and are therefore the one part no test can enter.
+ */
+export type DeleteAttempt =
+  | { kind: 'ask-sign-in'; message: string }
+  | { kind: 'explain'; message: string }
+  | { kind: 'proceed' }
+
+/** `noun` names what was clicked, e.g. 'un tournoi' — it appears in the prompt. */
+export function deleteAttempt(
+  userId: string | null,
+  players: Player[],
+  noun: string,
+): DeleteAttempt {
+  const action = deleteAction(userId, players)
+  if (action === 'sign-in')
+    return {
+      kind: 'ask-sign-in',
+      message: `Seuls les joueurs connectés peuvent supprimer ${noun}. Se connecter avec Slack ?`,
+    }
+  if (action === 'claim') return { kind: 'explain', message: CLAIM_REQUIRED_TO_DELETE }
+  return { kind: 'proceed' }
 }

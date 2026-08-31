@@ -4,7 +4,7 @@ import { useSession } from '../hooks/useSession'
 import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
 import { recentTournaments } from '../lib/recentTournaments'
-import { CLAIM_REQUIRED_TO_DELETE, deleteAction } from '../lib/slackIdentity'
+import { deleteAttempt } from '../lib/slackIdentity'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
@@ -56,14 +56,14 @@ export default function Home({
     e.stopPropagation()
     setDeleteError(null)
     // Unguarded, this is a button that appears to work and does nothing: see
-    // deleteAction on why the refusal never reaches us.
-    const action = deleteAction(userId, players)
-    if (action === 'sign-in') {
-      if (confirm('Seuls les joueurs connectés peuvent supprimer un tournoi. Se connecter avec Slack ?')) signIn()
+    // deleteAttempt on why the refusal never reaches us.
+    const attempt = deleteAttempt(userId, players, 'un tournoi')
+    if (attempt.kind === 'ask-sign-in') {
+      if (confirm(attempt.message)) signIn()
       return
     }
-    if (action === 'claim') {
-      setDeleteError(CLAIM_REQUIRED_TO_DELETE)
+    if (attempt.kind === 'explain') {
+      setDeleteError(attempt.message)
       return
     }
     if (confirm(`Supprimer « ${name} » ? Cette action est définitive.`)) {

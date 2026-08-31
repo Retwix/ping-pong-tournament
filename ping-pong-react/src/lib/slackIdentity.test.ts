@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { Player } from '../types'
-import { claimErrorMessage, claimPrompt, deleteAction, linkedPlayer, matchPlayer } from './slackIdentity'
+import {
+  claimErrorMessage,
+  claimPrompt,
+  deleteAction,
+  deleteAttempt,
+  linkedPlayer,
+  matchPlayer,
+} from './slackIdentity'
 
 function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
   return {
@@ -238,5 +245,41 @@ describe('claimPrompt', () => {
     })
 
     expect(prompt).toEqual({ kind: 'none' })
+  })
+})
+
+describe('deleteAttempt', () => {
+  it('offers a signed-out visitor the sign-in, naming what they tried to delete', () => {
+    const attempt = deleteAttempt(null, [player({ id: 'p1', name: 'Léo' })], 'un tournoi')
+
+    expect(attempt).toEqual({
+      kind: 'ask-sign-in',
+      message: 'Seuls les joueurs connectés peuvent supprimer un tournoi. Se connecter avec Slack ?',
+    })
+  })
+
+  it('names the other thing when that is what was clicked', () => {
+    const attempt = deleteAttempt(null, [player({ id: 'p1', name: 'Léo' })], 'un joueur')
+
+    expect(attempt).toEqual({
+      kind: 'ask-sign-in',
+      message: 'Seuls les joueurs connectés peuvent supprimer un joueur. Se connecter avec Slack ?',
+    })
+  })
+
+  it('tells a signed-in account that has claimed nobody to finish linking first', () => {
+    const attempt = deleteAttempt('u-leo', [player({ id: 'p1', name: 'Léo' })], 'un joueur')
+
+    expect(attempt).toEqual({
+      kind: 'explain',
+      message:
+        'Ton compte Slack n’est pas encore lié à une ligne du classement. Termine la liaison pour pouvoir supprimer.',
+    })
+  })
+
+  it('lets an account linked to a row go ahead, with nothing to say', () => {
+    const roster = [player({ id: 'p1', name: 'Léo', auth_user_id: 'u-leo' })]
+
+    expect(deleteAttempt('u-leo', roster, 'un joueur')).toEqual({ kind: 'proceed' })
   })
 })
