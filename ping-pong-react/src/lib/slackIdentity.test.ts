@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Player } from '../types'
-import { claimErrorMessage, deleteAction, linkedPlayer, matchPlayer } from './slackIdentity'
+import { claimErrorMessage, claimPrompt, deleteAction, linkedPlayer, matchPlayer } from './slackIdentity'
 
 function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
   return {
@@ -199,5 +199,44 @@ describe('claimErrorMessage', () => {
 
   it('falls back when there is no error object at all', () => {
     expect(claimErrorMessage(null)).toBe('La liaison a échoué. Réessaie dans un instant.')
+  })
+})
+
+describe('claimPrompt', () => {
+  it('says the roster could not be read rather than passing it off as an empty one', () => {
+    expect(claimPrompt('u1', { kind: 'unreadable' })).toEqual({ kind: 'unreadable' })
+  })
+
+  it('offers the unclaimed rows once the roster has been read', () => {
+    const libre = player({ id: 'p2', name: 'Léo' })
+
+    const prompt = claimPrompt('u1', {
+      kind: 'loaded',
+      players: [player({ id: 'p1', name: 'Thomas', auth_user_id: 'u9' }), libre],
+    })
+
+    expect(prompt).toEqual({ kind: 'pick', candidates: [libre] })
+  })
+
+  it('offers an empty pick when the roster is read and every row is taken', () => {
+    const prompt = claimPrompt('u1', {
+      kind: 'loaded',
+      players: [player({ id: 'p1', name: 'Thomas', auth_user_id: 'u9' })],
+    })
+
+    expect(prompt).toEqual({ kind: 'pick', candidates: [] })
+  })
+
+  it('prompts for nothing while the roster is still being read', () => {
+    expect(claimPrompt('u1', { kind: 'loading' })).toEqual({ kind: 'none' })
+  })
+
+  it('prompts for nothing once this account has claimed a row', () => {
+    const prompt = claimPrompt('u1', {
+      kind: 'loaded',
+      players: [player({ id: 'p1', name: 'Thomas', auth_user_id: 'u1' })],
+    })
+
+    expect(prompt).toEqual({ kind: 'none' })
   })
 })

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { IconLogout } from '@tabler/icons-react'
 import { claimPlayer, createPlayer, listPlayers } from '../lib/db'
-import { claimErrorMessage, linkedPlayer } from '../lib/slackIdentity'
-import type { Player } from '../types'
+import { claimErrorMessage, claimPrompt } from '../lib/slackIdentity'
+import type { RosterLoad } from '../lib/slackIdentity'
 import ClaimModal from './ClaimModal'
 
 interface Props {
@@ -20,24 +21,44 @@ interface Props {
  * is, matchPlayer supplies the id here and the row arrives highlighted.
  */
 export default function ClaimGate({ userId, onSignOut }: Props) {
-  const [players, setPlayers] = useState<Player[] | null>(null)
+  const [roster, setRoster] = useState<RosterLoad>({ kind: 'loading' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     listPlayers()
-      .then(setPlayers)
+      .then((players) => setRoster({ kind: 'loaded', players }))
       .catch((e) => {
-        // Not silent: an unreadable roster still has to show the modal, or a
-        // signed-in person is left with no prompt and no way to link at all.
         console.error('Chargement du classement impossible', e)
-        setPlayers([])
+        setRoster({ kind: 'unreadable' })
       })
   }, [])
 
   useEffect(load, [load])
 
-  if (players === null || linkedPlayer(userId, players) !== null) return null
+  const prompt = claimPrompt(userId, roster)
+  if (prompt.kind === 'none') return null
+
+  if (prompt.kind === 'unreadable')
+    return (
+      <div className="scrim">
+        <div className="modal" role="dialog" aria-modal="true" aria-label="Classement indisponible">
+          <h2>Classement indisponible</h2>
+          <p className="modal-hint">
+            Impossible de lire le classement pour l’instant. Ta ligne y est peut-être déjà : réessaie
+            plutôt que d’en créer une seconde.
+          </p>
+          <div className="modal-actions rv-claim-actions">
+            <button className="rv-nav-link rv-nav-auth" onClick={onSignOut}>
+              <IconLogout size={16} stroke={1.8} /> Se déconnecter
+            </button>
+            <button className="btn-primary" onClick={load}>
+              Réessayer
+            </button>
+          </div>
+        </div>
+      </div>
+    )
 
   // A claim can genuinely fail: the trigger rejects a row taken between the
   // read and the click, and players.name is unique, so a newcomer's name may
@@ -67,7 +88,7 @@ export default function ClaimGate({ userId, onSignOut }: Props) {
 
   return (
     <ClaimModal
-      candidates={players.filter((p) => p.auth_user_id === null)}
+      candidates={prompt.candidates}
       preselected={null}
       saving={saving}
       error={error}

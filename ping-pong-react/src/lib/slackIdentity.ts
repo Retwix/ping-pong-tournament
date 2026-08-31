@@ -10,6 +10,9 @@ export interface SlackProfile {
 /** Roster names are typed by hand, so compare them past case, accents and stray padding. */
 const canonical = (name: string): string => fold(name).trim().replace(/\s+/g, ' ')
 
+/** The rows still up for grabs — no account has linked itself to them. */
+const unclaimed = (players: Player[]): Player[] => players.filter((p) => p.auth_user_id === null)
+
 /**
  * Either the one roster row this Slack account belongs to, or the roster itself
  * for the person to pick from. A wrong confident match is worse than no match,
@@ -20,10 +23,10 @@ export type PlayerMatch =
   | { kind: 'choose'; candidates: Player[] }
 
 export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMatch {
-  const unclaimed = players.filter((p) => p.auth_user_id === null)
+  const free = unclaimed(players)
   const wanted = [canonical(profile.displayName), canonical(profile.realName)]
-  const matches = unclaimed.filter((p) => wanted.includes(canonical(p.name)))
-  if (matches.length !== 1) return { kind: 'choose', candidates: unclaimed }
+  const matches = free.filter((p) => wanted.includes(canonical(p.name)))
+  if (matches.length !== 1) return { kind: 'choose', candidates: free }
   return { kind: 'matched', player: matches[0] }
 }
 
@@ -82,4 +85,32 @@ export function claimErrorMessage(error: unknown): string {
   if (message.includes('player already claimed'))
     return 'Quelqu’un vient de prendre cette ligne. Choisis-en une autre.'
   return GENERIC_CLAIM_FAILURE
+}
+
+/** Reading the roster has three outcomes, and an unreadable one is not an empty one. */
+export type RosterLoad =
+  | { kind: 'loading' }
+  | { kind: 'unreadable' }
+  | { kind: 'loaded'; players: Player[] }
+
+/** What the claim gate should put in front of a signed-in account. */
+export type ClaimPrompt =
+  | { kind: 'none' }
+  | { kind: 'unreadable' }
+  | { kind: 'pick'; candidates: Player[] }
+
+/**
+ * Which prompt a signed-in account is owed.
+ *
+ * A roster we failed to read must not collapse into 'pick' with no candidates:
+ * that is the shape of a ladder where every row is taken, and the modal answers
+ * it by offering to create a new row. Someone whose row exists but could not be
+ * fetched would be walked into a duplicate — and players.name is unique, so it
+ * fails at the very end, after they have typed their name.
+ */
+export function claimPrompt(userId: string, roster: RosterLoad): ClaimPrompt {
+  if (roster.kind === 'loading') return { kind: 'none' }
+  if (roster.kind === 'unreadable') return { kind: 'unreadable' }
+  if (linkedPlayer(userId, roster.players) !== null) return { kind: 'none' }
+  return { kind: 'pick', candidates: unclaimed(roster.players) }
 }
