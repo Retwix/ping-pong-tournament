@@ -3,12 +3,18 @@
 // `rating.ts` is untouched, so every rating, RD and replay position is exactly
 // what it was before the split. `now` is injected so the rule is testable.
 
+import type { Player } from '../types'
+import { splitLadder, type AncienRow } from './alumni'
 import type { RatingRow } from './rating'
+import type { Season } from './seasons'
 
 export const INACTIVITY = { days: 30 }
 
 /** An inactive player's row: the frozen rating plus how long they have been away. */
 export type InactifRow = RatingRow & { daysIdle: number }
+
+/** A row as the ladder table renders it. `daysIdle` is null for anyone still holding a rank. */
+export type LadderRow = RatingRow & { daysIdle: number | null }
 
 /** Whole days since the last rated match. A null `lastPlayedAt` counts as 0 — fail open. */
 function daysIdle(lastPlayedAt: string | null, now: Date): number {
@@ -37,4 +43,39 @@ export function splitInactive(
     active: active.map((r, i) => ({ ...r, rank: i + 1 })),
     inactifs,
   }
+}
+
+export type LadderSectionsInput = {
+  rows: RatingRow[]
+  players: Player[]
+  season: Season | null
+  now: Date
+  /** A closed season is frozen history: everyone in it is trivially idle, so the rule is off. */
+  archived: boolean
+}
+
+/**
+ * The blocks Le Classement renders, in one place so the component holds no
+ * logic: `table` is the ladder as displayed — the ranked players in rating
+ * order, then les inactifs, who sort below all of them however high their
+ * rating, since they hold no rank to defend. `ranked` stays active-only, so
+ * the podium, the leader and the gap cards resolve against live players.
+ */
+export function ladderSections({
+  rows,
+  players,
+  season,
+  now,
+  archived,
+}: LadderSectionsInput): {
+  ranked: RatingRow[]
+  anciens: AncienRow[]
+  inactifs: InactifRow[]
+  table: LadderRow[]
+} {
+  const stillRanked = (r: RatingRow): LadderRow => ({ ...r, daysIdle: null })
+  const { ranked, anciens } = splitLadder(rows, players, season)
+  if (archived) return { ranked, anciens, inactifs: [], table: ranked.map(stillRanked) }
+  const { active, inactifs } = splitInactive(ranked, now)
+  return { ranked: active, anciens, inactifs, table: [...active.map(stillRanked), ...inactifs] }
 }

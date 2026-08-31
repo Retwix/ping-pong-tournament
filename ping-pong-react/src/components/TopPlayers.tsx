@@ -1,5 +1,5 @@
 import { useRatings } from '../hooks/useRatings'
-import { splitLadder } from '../lib/alumni'
+import { ladderSections } from '../lib/inactivity'
 import { signed } from '../lib/format'
 import Avatar from './Avatar'
 
@@ -8,14 +8,23 @@ interface Props {
 }
 
 /**
- * Dashboard "Top joueurs" — the top 5 of the live Elo leaderboard. The whole
- * card opens Classement; each row shows the medal-tinted rank, avatar, name,
+ * Dashboard "Top joueurs" — the top 5 of the live Elo leaderboard. It reads
+ * the all-time ladder through the same ladderSections Le Classement uses, so
+ * the two can never disagree about who holds a rank: alumni and anyone idle
+ * 30 days are gone, and the ranks are the ladder's own 1..n.
+ * The whole card opens Classement; each row shows the medal-tinted rank, avatar, name,
  * rating (rank 1 in the brand purple), and the signed trend from the
  * player's most recent match (hidden when it's exactly zero).
  */
 export default function TopPlayers({ onOpenClassement }: Props) {
   const { rows, players } = useRatings()
-  const { ranked } = splitLadder(rows, players)
+  const { ranked } = ladderSections({
+    rows,
+    players,
+    season: null,
+    now: new Date(),
+    archived: false,
+  })
   const top = ranked.slice(0, 5)
 
   return (

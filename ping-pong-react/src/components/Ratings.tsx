@@ -9,6 +9,7 @@ import {
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING, rankRatings, ratedMatches, replayRatings } from '../lib/rating'
 import { splitLadder } from '../lib/alumni'
+import { INACTIVITY, ladderSections } from '../lib/inactivity'
 import {
   STREAK_BADGE_MIN,
   filterRatingRows,
@@ -169,9 +170,9 @@ export default function Ratings({
     scope.kind === 'season' ? (seasons.find((s) => s.id === scope.id) ?? null) : null
   const archived = scopedSeason !== null && isClosed(scopedSeason, now)
 
-  const { ranked, anciens } = useMemo(
-    () => splitLadder(rows, players, scopedSeason),
-    [rows, players, scopedSeason],
+  const { ranked, anciens, table } = useMemo(
+    () => ladderSections({ rows, players, season: scopedSeason, now, archived }),
+    [rows, players, scopedSeason, now, archived],
   )
 
   const leader = ranked.find((r) => !r.provisional) ?? ranked[0]
@@ -180,14 +181,14 @@ export default function Ratings({
 
   const tableRows = useMemo(() => {
     const now = new Date()
-    return filterRatingRows(ranked, query).map((r) => ({
+    return filterRatingRows(table, query).map((r) => ({
       ...r,
       record: recordOf(events, r.key),
       form: lastFive(events, r.key),
       streak: winStreak(events, r.key),
       delta7: weeklyDelta(events, r.key, now),
     }))
-  }, [ranked, events, query])
+  }, [table, events, query])
 
   const pod = useMemo(() => podium(ranked, events, new Date()), [ranked, events])
   const gaps = useMemo(() => tightestGaps(ranked), [ranked])
@@ -460,17 +461,23 @@ export default function Ratings({
                     >
                       <span
                         className={`cl-c-rank${
-                          r.provisional ? ' prov' : r.rank <= 3 ? ` p${r.rank}` : ''
+                          r.daysIdle !== null
+                            ? ' idle'
+                            : r.provisional
+                              ? ' prov'
+                              : r.rank <= 3
+                                ? ` p${r.rank}`
+                                : ''
                         }`}
                       >
-                        {r.provisional ? '—' : r.rank}
+                        {r.provisional || r.daysIdle !== null ? '—' : r.rank}
                       </span>
                       <span className="cl-c-avatar">
                         <Avatar name={r.name} team={r.team} url={r.avatar_url} className="sm" />
                       </span>
                       <span className="cl-c-name">
                         <span className="cl-name-text">{r.name}</span>
-                        {!r.provisional && r.streak >= STREAK_BADGE_MIN && (
+                        {!r.provisional && r.daysIdle === null && r.streak >= STREAK_BADGE_MIN && (
                           <span className="cl-badge cl-badge-streak">{r.streak} victoires</span>
                         )}
                         {r.provisional && (
@@ -478,7 +485,9 @@ export default function Ratings({
                         )}
                       </span>
                       <span className="cl-c-form">
-                        {r.provisional ? (
+                        {r.daysIdle !== null ? (
+                          <span className="cl-form-count">inactif depuis {r.daysIdle} j</span>
+                        ) : r.provisional ? (
                           <span className="cl-form-count">
                             {r.games} / {RATING.provisionalGames} matchs
                           </span>
@@ -494,7 +503,11 @@ export default function Ratings({
                       <span className="cl-c-games">{r.games}</span>
                       <span
                         className={`cl-c-elo${
-                          r.provisional ? ' prov' : r.key === leader?.key ? ' lead' : ''
+                          r.provisional || r.daysIdle !== null
+                            ? ' prov'
+                            : r.key === leader?.key
+                              ? ' lead'
+                              : ''
                         }`}
                       >
                         {r.provisional ? `~${Math.round(r.rating)}` : Math.round(r.rating)}
@@ -514,7 +527,9 @@ export default function Ratings({
                   Un joueur apparaît au classement dès son premier match. En dessous de{' '}
                   {RATING.provisionalGames} parties son Elo est « provisoire » et s'affiche en gris
                   — et il faut {RATING.provisionalGames} parties dans la saison pour pouvoir être
-                  sacré champion.
+                  sacré champion. Sans match classé depuis {INACTIVITY.days} jours, il devient
+                  « inactif » : il glisse en bas du tableau, en gris et sans numéro de place,
+                  jusqu'à sa prochaine partie. Son Elo, lui, reste intact pendant l'absence.
                 </p>
 
                 {anciens.length > 0 && (
@@ -602,6 +617,10 @@ export default function Ratings({
                 <div className="cl-explain-row">
                   <b>×{RATING.wGrandFinal}</b>
                   <span>poids d'une grande finale</span>
+                </div>
+                <div className="cl-explain-row">
+                  <b>{INACTIVITY.days} j</b>
+                  <span>sans match : place perdue, Elo conservé</span>
                 </div>
                 <button className="cl-explain-link" onClick={() => setEloOpen(true)}>
                   Voir le détail du calcul →

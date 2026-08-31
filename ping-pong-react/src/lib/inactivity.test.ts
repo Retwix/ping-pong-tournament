@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest'
+import type { Player } from '../types'
 import type { RatingRow } from './rating'
-import { splitInactive } from './inactivity'
+import type { Season } from './seasons'
+import { ladderSections, splitInactive } from './inactivity'
+
+const getMockPlayer = (overrides?: Partial<Player>): Player => ({
+  id: 'p1',
+  created_at: '2026-01-01T00:00:00.000Z',
+  name: 'Léo',
+  team: 'tech',
+  slack_user_id: null,
+  avatar_url: null,
+  status: 'active',
+  left_at: null,
+  ...overrides,
+})
 
 const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
   key: 'p1',
@@ -17,6 +31,16 @@ const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
   team: 'tech',
   avatar_url: null,
   trend: 0,
+  ...overrides,
+})
+
+const getMockSeason = (overrides?: Partial<Season>): Season => ({
+  id: '2026-ete',
+  slug: 'ete',
+  label: 'Été 2026',
+  start: new Date('2026-06-01T00:00:00.000Z'),
+  end: new Date('2026-09-01T00:00:00.000Z'),
+  year: 2026,
   ...overrides,
 })
 
@@ -121,5 +145,156 @@ describe('splitInactive', () => {
       ['Chris', 1674],
       ['Solenn', 1520],
     ])
+  })
+})
+
+describe('ladderSections', () => {
+  it('leaves a closed season alone — its ladder is frozen history, so nobody is inactif', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-06-01T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'leo',
+        name: 'Léo',
+        rating: 1565,
+        lastPlayedAt: '2026-06-02T12:00:00.000Z',
+      }),
+    ]
+
+    const { ranked, inactifs, table } = ladderSections({
+      rows,
+      players: [],
+      season: getMockSeason(),
+      now,
+      archived: true,
+    })
+
+    expect(ranked.map((r) => [r.name, r.rank])).toEqual([
+      ['Chris', 1],
+      ['Léo', 2],
+    ])
+    expect(inactifs).toEqual([])
+    expect(table.map((r) => r.name)).toEqual(['Chris', 'Léo'])
+  })
+
+  it('applies the rule on an open season, where the ladder is still live', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-06-01T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'leo',
+        name: 'Léo',
+        rating: 1565,
+        lastPlayedAt: '2026-08-20T12:00:00.000Z',
+      }),
+    ]
+
+    const { ranked, inactifs } = ladderSections({
+      rows,
+      players: [],
+      season: getMockSeason(),
+      now,
+      archived: false,
+    })
+
+    expect(ranked.map((r) => r.name)).toEqual(['Léo'])
+    expect(inactifs.map((r) => r.name)).toEqual(['Chris'])
+  })
+
+  it('sends an idle ancien to les anciens, never to les inactifs', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        playerId: 'pc',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-06-01T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'leo',
+        playerId: 'pl',
+        name: 'Léo',
+        rating: 1565,
+        lastPlayedAt: '2026-08-20T12:00:00.000Z',
+      }),
+    ]
+    const players = [
+      getMockPlayer({ id: 'pc', name: 'Chris', status: 'alumni', left_at: '2026-06-15' }),
+      getMockPlayer({ id: 'pl', name: 'Léo' }),
+    ]
+
+    const { ranked, anciens, inactifs } = ladderSections({
+      rows,
+      players,
+      season: null,
+      now,
+      archived: false,
+    })
+
+    expect(ranked.map((r) => r.name)).toEqual(['Léo'])
+    expect(anciens.map((r) => r.name)).toEqual(['Chris'])
+    expect(inactifs).toEqual([])
+  })
+
+  it('keeps an ancien ranked in a season they were still around for', () => {
+    const now = new Date('2026-08-27T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({ key: 'chris', playerId: 'pc', name: 'Chris', rating: 1674 }),
+      getMockRatingRow({ key: 'leo', playerId: 'pl', name: 'Léo', rating: 1565 }),
+    ]
+    const players = [
+      getMockPlayer({ id: 'pc', name: 'Chris', status: 'alumni', left_at: '2026-12-01' }),
+      getMockPlayer({ id: 'pl', name: 'Léo' }),
+    ]
+
+    const { ranked, anciens } = ladderSections({
+      rows,
+      players,
+      season: getMockSeason(),
+      now,
+      archived: true,
+    })
+
+    expect(ranked.map((r) => r.name)).toEqual(['Chris', 'Léo'])
+    expect(anciens).toEqual([])
+  })
+
+  it('sorts les inactifs below every ranked player, whatever their rating', () => {
+    const now = new Date('2026-08-31T12:00:00.000Z')
+    const rows = [
+      getMockRatingRow({
+        key: 'chris',
+        name: 'Chris',
+        rating: 1674,
+        lastPlayedAt: '2026-06-01T12:00:00.000Z',
+      }),
+      getMockRatingRow({
+        key: 'candice',
+        name: 'Candice',
+        rating: 1402,
+        lastPlayedAt: '2026-08-29T12:00:00.000Z',
+      }),
+    ]
+
+    const { table } = ladderSections({
+      rows,
+      players: [],
+      season: null,
+      now,
+      archived: false,
+    })
+
+    expect(table.map((r) => r.name)).toEqual(['Candice', 'Chris'])
   })
 })
