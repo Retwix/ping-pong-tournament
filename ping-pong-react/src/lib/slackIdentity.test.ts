@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Player } from '../types'
-import { deleteAction, linkedPlayer, matchPlayer } from './slackIdentity'
+import { claimErrorMessage, deleteAction, linkedPlayer, matchPlayer } from './slackIdentity'
 
 function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
   return {
@@ -163,5 +163,41 @@ describe('deleteAction', () => {
     const roster = [player({ id: 'p1', name: 'Léo', auth_user_id: 'u-leo' })]
 
     expect(deleteAction('u-leo', roster)).toBe('delete')
+  })
+})
+
+describe('claimErrorMessage', () => {
+  it('says the name is taken when the roster already has it', () => {
+    const error = {
+      code: '23505',
+      message: 'duplicate key value violates unique constraint "players_name_key"',
+    }
+
+    expect(claimErrorMessage(error)).toBe('Ce nom est déjà pris dans le classement.')
+  })
+
+  it('says the account is already linked when it has claimed a row before', () => {
+    const error = {
+      code: '23505',
+      message: 'duplicate key value violates unique constraint "players_auth_user_id_key"',
+    }
+
+    expect(claimErrorMessage(error)).toBe('Ton compte Slack est déjà lié à un joueur.')
+  })
+
+  it('says the row was taken when someone claimed it first', () => {
+    const error = { code: 'P0001', message: 'player already claimed' }
+
+    expect(claimErrorMessage(error)).toBe('Quelqu’un vient de prendre cette ligne. Choisis-en une autre.')
+  })
+
+  it('falls back to something a person can act on when the cause is unknown', () => {
+    expect(claimErrorMessage(new Error('Failed to fetch'))).toBe(
+      'La liaison a échoué. Réessaie dans un instant.',
+    )
+  })
+
+  it('falls back when there is no error object at all', () => {
+    expect(claimErrorMessage(null)).toBe('La liaison a échoué. Réessaie dans un instant.')
   })
 })

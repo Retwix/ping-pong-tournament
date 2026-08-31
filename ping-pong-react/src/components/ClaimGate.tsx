@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { claimPlayer, createPlayer, listPlayers } from '../lib/db'
-import { linkedPlayer } from '../lib/slackIdentity'
+import { claimErrorMessage, linkedPlayer } from '../lib/slackIdentity'
 import type { Player } from '../types'
 import ClaimModal from './ClaimModal'
 
@@ -50,7 +50,7 @@ export default function ClaimGate({ userId, onSignOut }: Props) {
       await run()
       load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(claimErrorMessage(e))
     } finally {
       setSaving(false)
     }

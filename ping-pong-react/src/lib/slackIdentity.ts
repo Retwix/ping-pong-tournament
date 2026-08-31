@@ -56,3 +56,30 @@ export function deleteAction(userId: string | null, players: Player[]): DeleteAc
   if (userId === null) return 'sign-in'
   return linkedPlayer(userId, players) === null ? 'claim' : 'delete'
 }
+
+const GENERIC_CLAIM_FAILURE = 'La liaison a échoué. Réessaie dans un instant.'
+
+/**
+ * What to tell someone whose claim just failed.
+ *
+ * Postgres is the only thing enforcing these rules, so its errors are the only
+ * signal there is — but its wording is English, mentions constraint names, and
+ * says nothing about what to do next. Each case here is a rule from
+ * auth-migration.sql: the two unique indexes, and the claim trigger.
+ *
+ * Anything unrecognised falls back rather than leaking raw database text into a
+ * modal the person cannot dismiss.
+ */
+export function claimErrorMessage(error: unknown): string {
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : ''
+
+  if (message.includes('players_name_key')) return 'Ce nom est déjà pris dans le classement.'
+  if (message.includes('players_auth_user_id_key'))
+    return 'Ton compte Slack est déjà lié à un joueur.'
+  if (message.includes('player already claimed'))
+    return 'Quelqu’un vient de prendre cette ligne. Choisis-en une autre.'
+  return GENERIC_CLAIM_FAILURE
+}
