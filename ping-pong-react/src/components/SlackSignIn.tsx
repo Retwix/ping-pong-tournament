@@ -23,10 +23,11 @@ export default function SlackSignIn() {
       <button
         className="rv-nav-link rv-nav-auth"
         onClick={() => signIn()}
+        aria-label="Se connecter avec Slack"
         title="Se connecter avec Slack"
       >
         <IconBrandSlack size={16} stroke={1.8} />
-        <span>Se connecter</span>
+        <span className="rv-nav-auth-label">Se connecter</span>
       </button>
     )
   }

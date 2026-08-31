@@ -1686,10 +1686,12 @@ td.elo.neg { color: var(--coral); }
 
 /* ===== responsive breakpoint: collapse to one column, swap nav for tab bar ===== */
 @media (max-width: 820px) {
-  /* The bar slims down to brand + theme toggle: the tab bar takes over the
-     links and the "+", but the theme switch lives nowhere else. */
+  /* The bar slims down to brand + sign-in + theme toggle: the tab bar takes
+     over the links and the "+", but neither the theme switch nor sign-in lives
+     anywhere else. Sign-in drops to its icon — with the label it overflows a
+     400px bar by 18px. */
   .rv-nav { padding: 8px 10px 8px 12px; border-radius: 14px; margin-bottom: 4px; }
-  .rv-nav-links, .rv-nav-new { display: none; }
+  .rv-nav-links, .rv-nav-new, .rv-nav-auth-label { display: none; }
   .rv-nav-tile { width: 30px; height: 30px; border-radius: 10px; }
   .rv-nav-word { font-size: 15px; }
   .rv-tabbar { display: flex; }
