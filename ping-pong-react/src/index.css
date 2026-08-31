@@ -1582,6 +1582,7 @@ td.elo.neg { color: var(--coral); }
 [data-theme='dark'] .rv-nav-link.active { color: #fff; background: rgba(255, 255, 255, 0.09); }
 
 .rv-nav-actions { display: flex; align-items: center; gap: 10px; }
+.rv-nav-auth { display: inline-flex; align-items: center; gap: 6px; }
 
 /* ===== 2-column grid ===== */
 .rv-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
