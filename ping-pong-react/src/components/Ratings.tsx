@@ -9,7 +9,7 @@ import {
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
 import { RATING, rankRatings, ratedMatches, replayRatings } from '../lib/rating'
 import { splitLadder } from '../lib/alumni'
-import { ladderSections } from '../lib/inactivity'
+import { INACTIVITY, ladderSections } from '../lib/inactivity'
 import {
   STREAK_BADGE_MIN,
   filterRatingRows,
@@ -527,7 +527,9 @@ export default function Ratings({
                   Un joueur apparaît au classement dès son premier match. En dessous de{' '}
                   {RATING.provisionalGames} parties son Elo est « provisoire » et s'affiche en gris
                   — et il faut {RATING.provisionalGames} parties dans la saison pour pouvoir être
-                  sacré champion.
+                  sacré champion. Sans match classé depuis {INACTIVITY.days} jours, il devient
+                  « inactif » : il glisse en bas du tableau, en gris et sans numéro de place,
+                  jusqu'à sa prochaine partie. Son Elo, lui, reste intact pendant l'absence.
                 </p>
 
                 {anciens.length > 0 && (
@@ -615,6 +617,10 @@ export default function Ratings({
                 <div className="cl-explain-row">
                   <b>×{RATING.wGrandFinal}</b>
                   <span>poids d'une grande finale</span>
+                </div>
+                <div className="cl-explain-row">
+                  <b>{INACTIVITY.days} j</b>
+                  <span>sans match : place perdue, Elo conservé</span>
                 </div>
                 <button className="cl-explain-link" onClick={() => setEloOpen(true)}>
                   Voir le détail du calcul →
