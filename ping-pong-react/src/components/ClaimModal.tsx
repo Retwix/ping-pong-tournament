@@ -7,7 +7,9 @@ interface Props {
   /** The auto-matched row, preselected for confirmation — never committed on its own. */
   preselected: string | null
   saving: boolean
+  error: string | null
   onConfirm: (playerId: string) => void
+  onCreate: (name: string) => void
   onSignOut: () => void
 }
 
@@ -17,61 +19,88 @@ interface Props {
  * Linking is not optional. Signing in and staying unlinked is the state where
  * the app looks broken: the delete policies require a claimed row, and a delete
  * they refuse affects zero rows without raising, so nothing visibly happens.
- * There is no "later" — the way out is to sign out again.
  *
  * A match on the Slack name preselects, it never confirms. Auto-matching is a
- * guess about which human this is, and the person is the only one who can
- * settle that; the picker stays open with their name already highlighted.
+ * guess about which human this is, and only that human can settle it.
  *
- * Only unclaimed rows are ever passed in, and the database refuses a claim on a
- * taken row regardless.
+ * Someone new to the ladder creates their row here instead of being turned
+ * away. Making linking mandatory closed the door they would otherwise use —
+ * adding players is open to everyone, but not from behind this modal.
  */
 export default function ClaimModal({
   candidates,
   preselected,
   saving,
+  error,
   onConfirm,
+  onCreate,
   onSignOut,
 }: Props) {
   const [selected, setSelected] = useState<string | null>(preselected)
+  const [newcomer, setNewcomer] = useState(candidates.length === 0)
+  const [name, setName] = useState('')
+
+  const ready = newcomer ? name.trim() !== '' : selected !== null
+  const submit = () => {
+    if (newcomer) onCreate(name.trim())
+    else if (selected !== null) onConfirm(selected)
+  }
 
   return (
     <div className="scrim">
       <div className="modal" role="dialog" aria-modal="true" aria-label="Lier ton compte Slack">
         <h2>Qui es-tu ?</h2>
         <p className="modal-hint">
-          Choisis ta ligne dans le classement pour lier ton compte Slack. Une seule fois.
+          {newcomer
+            ? 'Ton nom rejoint le classement et ton compte Slack y est lié.'
+            : 'Choisis ta ligne dans le classement pour lier ton compte Slack. Une seule fois.'}
         </p>
-        {candidates.length === 0 && (
-          <p className="modal-hint">
-            Aucune ligne libre dans le classement. Déconnecte-toi pour t’ajouter depuis « Joueurs ».
-          </p>
+
+        {newcomer ? (
+          <div className="pl-field">
+            <div className="pl-flabel">Nom</div>
+            <input
+              className="pl-finput"
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && ready && !saving && submit()}
+              placeholder="Prénom ou pseudo"
+              maxLength={40}
+            />
+          </div>
+        ) : (
+          <div className="rv-claim-list" role="radiogroup" aria-label="Joueurs disponibles">
+            {candidates.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="radio"
+                aria-checked={selected === p.id}
+                className={`rv-claim-option${selected === p.id ? ' selected' : ''}`}
+                disabled={saving}
+                onClick={() => setSelected(p.id)}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
         )}
-        <div className="rv-claim-list" role="radiogroup" aria-label="Joueurs disponibles">
-          {candidates.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              role="radio"
-              aria-checked={selected === p.id}
-              className={`rv-claim-option${selected === p.id ? ' selected' : ''}`}
-              disabled={saving}
-              onClick={() => setSelected(p.id)}
-            >
-              {p.name}
-            </button>
-          ))}
-        </div>
+
+        {candidates.length > 0 && (
+          <button className="rv-claim-switch" disabled={saving} onClick={() => setNewcomer(!newcomer)}>
+            {newcomer ? '← Choisir dans la liste' : 'Je ne suis pas dans la liste'}
+          </button>
+        )}
+
+        {error !== null && <p className="rv-claim-error">{error}</p>}
+
         <div className="modal-actions rv-claim-actions">
           <button className="rv-nav-link rv-nav-auth" onClick={onSignOut} disabled={saving}>
             <IconLogout size={16} stroke={1.8} /> Se déconnecter
           </button>
-          <button
-            className="btn-primary"
-            disabled={saving || selected === null}
-            onClick={() => selected !== null && onConfirm(selected)}
-          >
-            {saving ? 'Liaison…' : 'C’est moi'}
+          <button className="btn-primary" disabled={saving || !ready} onClick={submit}>
+            {saving ? 'Liaison…' : newcomer ? 'Créer et lier' : 'C’est moi'}
           </button>
         </div>
       </div>
