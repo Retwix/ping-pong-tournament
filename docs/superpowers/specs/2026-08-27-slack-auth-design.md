@@ -165,8 +165,10 @@ It is also independent corroboration of the warning above. Restricting reads
 does not merely endanger the delete policy's `exists` subquery — it stops
 deletes working at all.
 
-`deletePlayer` does this. `deleteTournament` does not yet: `Home.onDelete` has
-no `catch`, so making that call throw needs an error surface there first.
+Both `deletePlayer` and `deleteTournament` do this, and the table above was
+re-run against `tournaments` with the same result — signed out returns 0 rows
+and the row survives, a linked account returns 1 and it is gone. The policy
+shapes are identical, but the branch's rule is to prove rather than transfer.
 
 ### Bootstrapping
 

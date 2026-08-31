@@ -101,6 +101,10 @@ export async function removePlayerAvatar(id: string): Promise<void> {
  * Remove a player from the registry. Past tournaments/matches keep their recorded
  * names (they store text, not a reference), so history is unaffected.
  */
+/** Zero rows also means "already gone", so the wording has to admit both. */
+const notDeleted = (what: string) =>
+  `${what} n’a pas été supprimé : soit il l’était déjà, soit ton compte n’en a pas le droit.`
+
 /**
  * Deletes, and insists on having deleted something.
  *
@@ -108,14 +112,12 @@ export async function removePlayerAvatar(id: string): Promise<void> {
  * comes back clean, so the plain form of this call reports success while the
  * row stays on the ladder. Asking for the deleted ids back is the only way to
  * tell the two apart.
- *
- * Zero rows also means "already gone", which is why the message admits both.
  */
 export async function deletePlayer(id: string): Promise<void> {
   const { data, error } = await supabase.from('players').delete().eq('id', id).select('id')
   if (error) throw error
   if (data.length === 0)
-    throw new Error('Le joueur n’a pas été supprimé : soit il l’était déjà, soit ton compte n’en a pas le droit.')
+    throw new Error(notDeleted('Le joueur'))
 }
 
 /** A blank match row, before the matchup-specific fields are filled in. */
@@ -305,9 +307,12 @@ export async function updateTournament(id: string, patch: Partial<Tournament>): 
   if (error) throw error
 }
 
+/** Deletes, and insists on having deleted something — see deletePlayer for why. */
 export async function deleteTournament(id: string): Promise<void> {
-  const { error } = await supabase.from('tournaments').delete().eq('id', id)
+  const { data, error } = await supabase.from('tournaments').delete().eq('id', id).select('id')
   if (error) throw error
+  if (data.length === 0)
+    throw new Error(notDeleted('Le tournoi'))
 }
 
 // ---------- ratings ----------
