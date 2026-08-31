@@ -1,5 +1,6 @@
 import { IconBrandSlack, IconLogout } from '@tabler/icons-react'
 import { useSession } from '../hooks/useSession'
+import ClaimGate from './ClaimGate'
 
 /**
  * Sign in with Slack, or sign out again. Sits in the top bar beside the theme
@@ -33,13 +34,16 @@ export default function SlackSignIn() {
   }
 
   return (
-    <button
-      className="rv-nav-link rv-nav-auth"
-      onClick={() => signOut()}
-      aria-label="Se déconnecter"
-      title="Se déconnecter"
-    >
-      <IconLogout size={16} stroke={1.8} />
-    </button>
+    <>
+      <button
+        className="rv-nav-link rv-nav-auth"
+        onClick={() => signOut()}
+        aria-label="Se déconnecter"
+        title="Se déconnecter"
+      >
+        <IconLogout size={16} stroke={1.8} />
+      </button>
+      <ClaimGate userId={session.user.id} onSignOut={() => signOut()} />
+    </>
   )
 }

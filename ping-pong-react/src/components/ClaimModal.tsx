@@ -42,6 +42,11 @@ export default function ClaimModal({
         <p className="modal-hint">
           Choisis ta ligne dans le classement pour lier ton compte Slack. Une seule fois.
         </p>
+        {candidates.length === 0 && (
+          <p className="modal-hint">
+            Aucune ligne libre dans le classement. Déconnecte-toi pour t’ajouter depuis « Joueurs ».
+          </p>
+        )}
         <div className="rv-claim-list" role="radiogroup" aria-label="Joueurs disponibles">
           {candidates.map((p) => (
             <button
