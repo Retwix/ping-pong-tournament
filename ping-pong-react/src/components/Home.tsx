@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { usePlayers } from '../hooks/usePlayers'
 import { useSession } from '../hooks/useSession'
 import { useTournaments } from '../hooks/useTournaments'
@@ -50,9 +50,11 @@ export default function Home({
   const { tournaments, loading, error } = useTournaments()
   const { userId, signIn } = useSession()
   const { players } = usePlayers()
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
     e.stopPropagation()
+    setDeleteError(null)
     // Unguarded, this is a button that appears to work and does nothing: see
     // deleteAction on why the refusal never reaches us.
     const action = deleteAction(userId, players)
@@ -62,7 +64,11 @@ export default function Home({
       return
     }
     if (confirm(`Supprimer « ${name} » ? Cette action est définitive.`)) {
-      await deleteTournament(id)
+      try {
+        await deleteTournament(id)
+      } catch (err) {
+        setDeleteError(err instanceof Error ? err.message : String(err))
+      }
     }
   }
 
@@ -82,6 +88,7 @@ export default function Home({
       <SeasonBanner onClassement={onClassement} onNew={onNew} />
 
       {error && <div className="error-banner">Erreur : {error}</div>}
+      {deleteError && <div className="error-banner">Erreur : {deleteError}</div>}
 
       <div className="rv-grid">
         <div className="rv-main">
