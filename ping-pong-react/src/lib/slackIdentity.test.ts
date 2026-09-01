@@ -4,7 +4,6 @@ import {
   claimErrorMessage,
   claimPrompt,
   deleteAttempt,
-  linkedPlayer,
   matchPlayer,
 } from './slackIdentity'
 
@@ -137,22 +136,6 @@ describe('matchPlayer', () => {
     ])
 
     expect(result).toEqual({ kind: 'matched', player: leo })
-  })
-})
-
-describe('linkedPlayer', () => {
-  it('finds the roster row this account has claimed', () => {
-    const leo = player({ id: 'p2', name: 'Léo', auth_user_id: 'u-leo' })
-
-    const found = linkedPlayer('u-leo', [player({ id: 'p1', name: 'Thomas' }), leo])
-
-    expect(found).toEqual(leo)
-  })
-
-  it('reports nobody when the account has claimed no row', () => {
-    const found = linkedPlayer('u-leo', [player({ id: 'p1', name: 'Thomas' })])
-
-    expect(found).toBeNull()
   })
 })
 

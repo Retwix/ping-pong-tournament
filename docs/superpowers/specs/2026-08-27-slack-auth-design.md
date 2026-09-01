@@ -303,8 +303,8 @@ when the branch is.
 Decided 2026-08-28: `useSession.ts` and `claimPlayer` ship without unit tests
 for now, following the convention already in place — `db.ts` and all eight
 hooks under `src/hooks/` are untested, and nothing in the 34-file suite touches
-Supabase or React. The tested logic stays pure: `matchPlayer` and
-`linkedPlayer` in `src/lib/slackIdentity.ts` carry the decisions, and the
+Supabase or React. The tested logic stays pure: `matchPlayer`, `claimPrompt`
+and `deleteAttempt` in `src/lib/slackIdentity.ts` carry the decisions, and the
 database rules were verified directly against Postgres.
 
 **These tests are still owed.** The deferral is about sequencing, not about

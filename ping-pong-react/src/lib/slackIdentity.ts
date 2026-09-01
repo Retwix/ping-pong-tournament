@@ -33,13 +33,14 @@ export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMat
 /**
  * The roster row a signed-in account has claimed, or null when it has claimed
  * none. Being linked — not merely being signed in — is what the delete policies
- * require, so this is what the UI must gate the delete buttons on.
+ * require, which is why claimPrompt and deleteAction both turn on it.
  *
  * Unlike matchPlayer, this may take the first hit: players_auth_user_id_key
  * makes auth_user_id unique among claimed rows, so there is never a second one
- * to choose between.
+ * to choose between. That uniqueness is also why no caller ever asks which row
+ * came back, only whether one did.
  */
-export function linkedPlayer(userId: string, players: Player[]): Player | null {
+function linkedPlayer(userId: string, players: Player[]): Player | null {
   return players.find((p) => p.auth_user_id === userId) ?? null
 }
 
