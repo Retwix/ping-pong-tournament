@@ -237,9 +237,11 @@ safe; `db.ts` stays idiomatic with the rest of the file.
   adding players is open to everyone, but not from behind a blocking modal.
 - The two guarded delete buttons stay visible when signed out and prompt
   sign-in on click. A button that vanishes reads as a bug; a button that
-  explains itself does not. `deleteAction` resolves the three states — signed
+  explains itself does not. `deleteAttempt` resolves the three states — signed
   out, signed in but unlinked, linked — because being signed in is not the same
-  as being allowed.
+  as being allowed, and hands back the sentence for each. It returns
+  `ask-sign-in` / `explain` / `proceed`; the component only runs the effect,
+  since `window.confirm` is unreachable from any test.
 
 ## Accepted consequences
 

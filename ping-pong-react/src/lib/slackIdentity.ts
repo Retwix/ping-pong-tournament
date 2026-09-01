@@ -44,18 +44,20 @@ export function linkedPlayer(userId: string, players: Player[]): Player | null {
 }
 
 /**
- * What a guarded delete button should do next. Three states, not two: being
- * signed in is not the same as being allowed, because the delete policies
- * require a claimed row rather than a session.
+ * Whether a guarded delete may go ahead. Three states, not two: being signed
+ * in is not the same as being allowed, because the delete policies require a
+ * claimed row rather than a session.
  *
  * The distinction has to live in the UI, because Postgres will not raise. A
  * delete refused by RLS affects zero rows and returns no error, so a button
  * that offers to delete when the account is unlinked appears to do nothing at
  * all.
+ *
+ * Internal: deleteAttempt is what the UI calls, and covers these three states.
  */
-export type DeleteAction = 'sign-in' | 'claim' | 'delete'
+type DeleteAction = 'sign-in' | 'claim' | 'delete'
 
-export function deleteAction(userId: string | null, players: Player[]): DeleteAction {
+function deleteAction(userId: string | null, players: Player[]): DeleteAction {
   if (userId === null) return 'sign-in'
   return linkedPlayer(userId, players) === null ? 'claim' : 'delete'
 }
