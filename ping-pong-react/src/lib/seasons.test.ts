@@ -13,7 +13,9 @@ import {
   seasonWindowLabel,
   seasonsUpTo,
   ladderIdentity,
+  ladderLabel,
   ladderScopeSearch,
+  defaultLadderScope,
   parseLadderScope,
   type LadderIdentityInput,
   type LadderScope,
@@ -485,6 +487,35 @@ describe('parseLadderScope', () => {
 
   it('falls back to all-time before any season has started', () => {
     expect(parseLadderScope('?s=nawak-1999', new Date(2026, 7, 1))).toEqual({ kind: 'all' })
+  })
+})
+
+describe('defaultLadderScope', () => {
+  it('is the season being played right now', () => {
+    expect(defaultLadderScope(new Date(2026, 9, 15))).toEqual({
+      kind: 'season',
+      id: 'automne-2026',
+    })
+  })
+
+  it('is all-time before the first season has started', () => {
+    expect(defaultLadderScope(new Date(2026, 7, 1))).toEqual({ kind: 'all' })
+  })
+
+  it('is the ladder an unscoped URL lands on, so no view can drift from another', () => {
+    for (const now of [new Date(2026, 7, 1), new Date(2026, 9, 15), new Date(2027, 0, 20)]) {
+      expect(parseLadderScope('', now)).toEqual(defaultLadderScope(now))
+    }
+  })
+})
+
+describe('ladderLabel', () => {
+  it('names the season', () => {
+    expect(ladderLabel(seasonById('automne-2026'))).toBe('Saison Automne 2026')
+  })
+
+  it('names the all-time ladder when no season is in scope', () => {
+    expect(ladderLabel(null)).toBe('Tous les temps')
   })
 })
 
