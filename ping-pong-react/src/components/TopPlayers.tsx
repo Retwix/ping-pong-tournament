@@ -1,6 +1,7 @@
 import { useRatings } from '../hooks/useRatings'
 import { ladderSections } from '../lib/inactivity'
 import { signed } from '../lib/format'
+import { currentSeason, defaultLadderScope, ladderLabel } from '../lib/seasons'
 import Avatar from './Avatar'
 
 interface Props {
@@ -8,29 +9,31 @@ interface Props {
 }
 
 /**
- * Dashboard "Top joueurs" — the top 5 of the live Elo leaderboard. It reads
- * the all-time ladder through the same ladderSections Le Classement uses, so
- * the two can never disagree about who holds a rank: alumni and anyone idle
- * 30 days are gone, and the ranks are the ladder's own 1..n.
+ * Dashboard "Top joueurs" — the top 5 of the live Elo leaderboard. It reads the
+ * same ladder Le Classement opens on: defaultLadderScope, so the season being
+ * played right now, and the same ladderSections rules, so the two can never
+ * disagree about who holds a rank — alumni and anyone idle 30 days are gone,
+ * and the ranks are the ladder's own 1..n. A season is its own replay from
+ * 1500, so the card is empty — under its own scope label — until that
+ * season's first rated match.
  * The whole card opens Classement; each row shows the medal-tinted rank, avatar, name,
  * rating (rank 1 in the brand purple), and the signed trend from the
  * player's most recent match (hidden when it's exactly zero).
  */
 export default function TopPlayers({ onOpenClassement }: Props) {
-  const { rows, players } = useRatings()
-  const { ranked } = ladderSections({
-    rows,
-    players,
-    season: null,
-    now: new Date(),
-    archived: false,
-  })
+  const now = new Date()
+  const season = currentSeason(now)
+  const { rows, players } = useRatings(defaultLadderScope(now))
+  const { ranked } = ladderSections({ rows, players, season, now, archived: false })
   const top = ranked.slice(0, 5)
 
   return (
     <div className="rv-card rv-top-card" onClick={onOpenClassement}>
       <div className="rv-top-header">
-        <div className="rv-card-title">Top joueurs</div>
+        <div className="rv-top-heading">
+          <div className="rv-card-title">Top joueurs</div>
+          <div className="rv-top-scope">{ladderLabel(season)}</div>
+        </div>
         <span className="rv-top-link">Classement →</span>
       </div>
       {top.length === 0 ? (

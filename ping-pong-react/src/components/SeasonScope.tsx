@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { IconCalendar, IconChevronDown } from '@tabler/icons-react'
-import { isClosed, type LadderScope, type Season } from '../lib/seasons'
+import { isClosed, ladderLabel, type LadderScope, type Season } from '../lib/seasons'
 
 interface Props {
   value: LadderScope
@@ -38,7 +38,7 @@ export default function SeasonScope({ value, seasons, championById, now, onChang
     <div className="sn-scope">
       <button className="sn-scope-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <IconCalendar size={16} stroke={1.8} />
-        <span className="sn-scope-label">{selected?.label ?? 'Tous les temps'}</span>
+        <span className="sn-scope-label">{ladderLabel(selected)}</span>
         {badge && <span className={`sn-scope-badge ${badge.cls}`}>{badge.text}</span>}
         <IconChevronDown size={16} stroke={1.8} />
       </button>
@@ -77,7 +77,7 @@ export default function SeasonScope({ value, seasons, championById, now, onChang
 
             <div className="sn-scope-zone">
               <button className="sn-scope-item" onClick={() => pick({ kind: 'all' })}>
-                <span>Tous les temps</span>
+                <span>{ladderLabel(null)}</span>
                 <span className="sn-scope-champ">Depuis le premier match · sans remise à zéro</span>
               </button>
             </div>

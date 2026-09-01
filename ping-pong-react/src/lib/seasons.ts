@@ -251,13 +251,32 @@ export type LadderScope = { kind: 'season'; id: string } | { kind: 'all' }
 
 export const ALL_TIME: LadderScope = { kind: 'all' }
 
+/**
+ * The ladder you get when you haven't asked for one: the season being played
+ * right now, or all-time before the first season opens. Every unscoped view
+ * reads it — the Classement's own default and the dashboard cards alike — so
+ * that clicking through from Accueil can never land you on a different ladder
+ * than the one you were just reading.
+ */
+export function defaultLadderScope(now: Date): LadderScope {
+  const s = currentSeason(now)
+  return s === null ? ALL_TIME : { kind: 'season', id: s.id }
+}
+
+/**
+ * What to call the ladder in scope, wherever a view has to name the one it is
+ * showing. A null season is the all-time ladder — the scope with no window.
+ */
+export function ladderLabel(season: Season | null): string {
+  return season?.label ?? 'Tous les temps'
+}
+
 /** Read a ladder scope from a query string: ?s=<id> | ?s=all. */
 export function parseLadderScope(search: string, now: Date): LadderScope {
   const raw = new URLSearchParams(search).get('s')
   if (raw === 'all') return ALL_TIME
   if (raw !== null && seasonById(raw) !== null) return { kind: 'season', id: raw }
-  const s = currentSeason(now)
-  return s === null ? ALL_TIME : { kind: 'season', id: s.id }
+  return defaultLadderScope(now)
 }
 
 /**
