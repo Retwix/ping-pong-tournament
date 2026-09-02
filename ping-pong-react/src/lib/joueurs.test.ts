@@ -123,6 +123,19 @@ describe('joueurRows', () => {
     })
   })
 
+  it('keeps the career record of a player who holds no row on the ladder in scope', () => {
+    // Le Classement is a season now: someone who hasn't played since it opened
+    // has no rating row, but « 2 matchs · 50 % » is still their career.
+    const rows = joueurRows([getMockPlayer()], [], [wonEvent('p1', 'm1'), lostEvent('p1', 'm2')])
+    expect(rows[0]).toMatchObject({
+      elo: 1500,
+      played: 2,
+      meta: '1 V · 1 D',
+      matchsLabel: '2 matchs',
+      winrate: '50 %',
+    })
+  })
+
   it('falls back to matching a rating row recorded by name only', () => {
     const rows = joueurRows(
       [getMockPlayer({ id: 'p9', name: 'Candice' })],

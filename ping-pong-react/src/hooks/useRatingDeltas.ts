@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { sideKey } from '../lib/stats'
 import { sideElos, type SideElos } from '../lib/scorerElo'
 import type { Match } from '../types'
+import { defaultLadderScope } from '../lib/seasons'
 import { useRatings, type RatingEvent } from './useRatings'
 
 /** One side's rating move for a finished match, plus its current ladder standing. */
@@ -13,7 +14,7 @@ export interface SideRating {
   ratingAfter: number
   won: boolean
   stakes: RatingEvent['stakes']
-  /** Current leaderboard rank/provisional state (from the global replay). */
+  /** Current leaderboard rank/provisional state (from the season being played). */
   rank: number | null
   provisional: boolean
 }
@@ -40,18 +41,24 @@ const EMPTY: MatchRatings = { a: null, b: null }
 /**
  * Looks up the Glicko-2 rating change a finished match produced for each side.
  *
- * Ratings are a single global ladder replayed from *all* history, so this leans
- * on `useRatings` (full replay + realtime) rather than re-deriving from one
- * tournament — a tournament-scoped replay would produce wrong numbers. Sides are
- * matched by stable identity (`playerId ?? name:<name>`), the same key the engine
- * uses, so renames and name collisions don't misattribute a delta.
+ * Two ladders, deliberately. A *move* is read from `historyEvents`, where every
+ * match is replayed inside the season it was played in — so a game shows the
+ * ±points it actually moved on the night, and a tournament from before the first
+ * season keeps its moves instead of going blank. A *standing* (the Elo pill next
+ * to a name, the rank, « provisoire ») is read from the season being played right
+ * now, which is the ladder Le Classement and Top joueurs open on.
+ *
+ * This leans on `useRatings` (full replay + realtime) rather than re-deriving
+ * from one tournament — a tournament-scoped replay would produce wrong numbers.
+ * Sides are matched by stable identity (`playerId ?? name:<name>`), the same key
+ * the engine uses, so renames and name collisions don't misattribute a delta.
  *
  * The event for a just-validated match only exists once the write has propagated
  * back through realtime, so `forMatch` returns nulls for a beat after validation;
  * callers should treat a null side as "not ready yet" and render nothing.
  */
 export function useRatingDeltas() {
-  const { events, rows, loading } = useRatings()
+  const { historyEvents: events, rows, loading } = useRatings(defaultLadderScope(new Date()))
 
   // Current ladder Elo for each side of a match (referee scorer name pills).
   const elosFor = useCallback(
@@ -117,6 +124,9 @@ export function useRatingDeltas() {
       const ids = new Set(tournamentMatches.map((m) => m.id))
       // `events` are in replay (chronological) order, so the first event we see
       // for a player is their entry rating and the last is their exit rating.
+      // The net is summed rather than taken end-minus-start: the two are the same
+      // number inside one ladder, but a tournament straddling a season boundary is
+      // replayed on both sides of it, and only the sum stays a real points total.
       const acc = new Map<string, TournamentRating>()
       for (const e of events) {
         if (!ids.has(e.matchId)) continue
@@ -124,7 +134,7 @@ export function useRatingDeltas() {
         if (cur) {
           cur.name = e.name
           cur.endRating = e.ratingAfter
-          cur.netDelta = e.ratingAfter - cur.startRating
+          cur.netDelta += e.delta
           cur.games += 1
         } else {
           const s = standingByKey.get(e.key)
@@ -133,7 +143,7 @@ export function useRatingDeltas() {
             name: e.name,
             startRating: e.ratingBefore,
             endRating: e.ratingAfter,
-            netDelta: e.ratingAfter - e.ratingBefore,
+            netDelta: e.delta,
             games: 1,
             rank: s?.rank ?? null,
             provisional: s?.provisional ?? false,

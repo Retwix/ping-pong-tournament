@@ -173,6 +173,14 @@ export function seasonWindowLabel(s: Season): string {
  */
 const matchTime = (m: Match): string | null => m.ended_at ?? m.started_at
 
+/**
+ * The season a match was played in. null = undated, or « avant les saisons ».
+ * The one place any surface should ask "which ladder does this match belong to".
+ */
+export function seasonOfMatch(m: Match): string | null {
+  return seasonOf(matchTime(m))
+}
+
 /** The matches played inside a season's window. Undated matches belong to none. */
 export function matchesInSeason(matches: Match[], id: string): Match[] {
   const season = seasonById(id)

@@ -30,6 +30,14 @@ export interface JoueurRow {
  * One annuaire row per registered player, best Elo first. Identity (name, team,
  * photo) always reflects the editable registry; the rating row is matched by
  * player id, falling back to rows recorded by name only (pre-registry matches).
+ *
+ * The two numbers answer two different questions and are read from two different
+ * places on purpose: `rows` is the ladder in scope — the season being played, so
+ * the Elo here is the one Le Classement shows — while `events` is the career, so
+ * « 12 matchs · 58 % » still counts every match the player has ever played. That
+ * is also why the record is keyed off the player rather than off their rating
+ * row: someone who hasn't played since the season opened holds no row, and their
+ * career must not read as zero.
  */
 export function joueurRows(
   players: Player[],
@@ -39,10 +47,12 @@ export function joueurRows(
   const rowOf = (p: Player) =>
     rows.find((r) => r.playerId === p.id) ??
     rows.find((r) => r.playerId === null && r.name === p.name)
+  const eventKeys = new Set(events.map((e) => e.key))
+  const recordKeyOf = (p: Player) => (eventKeys.has(p.id) ? p.id : `name:${p.name}`)
   return players
     .map((p) => {
       const row = rowOf(p)
-      const { wins, losses } = row ? recordOf(events, row.key) : { wins: 0, losses: 0 }
+      const { wins, losses } = recordOf(events, recordKeyOf(p))
       const played = wins + losses
       const rate = played === 0 ? 0 : Math.round((wins / played) * 100)
       return {

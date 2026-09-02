@@ -38,6 +38,7 @@ import {
   retirerJoueurDouble,
   type SelectionDouble,
 } from '../lib/nouvellePartie'
+import { currentSeason, defaultLadderScope, ladderLabel } from '../lib/seasons'
 import { inviteToSlack } from '../lib/slack'
 import { TEAMS, teamBadgeStyle, teamColor, teamLabel, type TeamKey } from '../lib/teams'
 import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
@@ -86,7 +87,10 @@ export default function NouvellePartie({
   onNewGame,
 }: Props) {
   const isGame = variant === 'game'
-  const { rows, events, matches, tournaments, players, loading, error, reload } = useRatings()
+  // Season ladder for the Elo beside each name, career history for everything
+  // derived from past matches (the annuaire's record, the duration model).
+  const { rows, historyEvents, matches, tournaments, players, loading, error, reload } =
+    useRatings(defaultLadderScope(new Date()))
 
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
@@ -136,7 +140,10 @@ export default function NouvellePartie({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const annuaire = useMemo(() => joueurRows(players, rows, events), [players, rows, events])
+  const annuaire = useMemo(
+    () => joueurRows(players, rows, historyEvents),
+    [players, rows, historyEvents],
+  )
   const selRows = useMemo(() => rowsPour(annuaire, selected), [selected, annuaire])
   const teamRows = useMemo(
     () => ({
@@ -188,8 +195,8 @@ export default function NouvellePartie({
   // « Durée estimée » : the cost model is fitted from every timed match the club
   // has played, and re-read as the selection, the format and the target change.
   const modeleDuree = useMemo(
-    () => calibrerDuree(matches, tournaments, events),
-    [matches, tournaments, events],
+    () => calibrerDuree(matches, tournaments, historyEvents),
+    [matches, tournaments, historyEvents],
   )
   // The levels the estimate reasons about. A double has no pair Elo, so each
   // side is taken as the average of its two players; before the draw, both
@@ -558,6 +565,7 @@ export default function NouvellePartie({
             <div className="np-players-head">
               <h2 className="np-sec-title">Joueurs</h2>
               <span className="np-count-pill">{countPill}</span>
+              <span className="np-elo-scope">Elo · {ladderLabel(currentSeason(new Date()))}</span>
               {isGame && (
                 <div className="np-mode-seg">
                   <button

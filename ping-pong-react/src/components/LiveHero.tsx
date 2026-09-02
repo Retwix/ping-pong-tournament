@@ -2,6 +2,7 @@ import { IconClock, IconPlayerPlay } from '@tabler/icons-react'
 import { useCurrentTournament } from '../hooks/useCurrentTournament'
 import { useRatings } from '../hooks/useRatings'
 import { useTournament } from '../hooks/useTournament'
+import { defaultLadderScope } from '../lib/seasons'
 import { ladderAvatar } from '../lib/spectator'
 import { pickLiveMatch } from '../lib/liveHero'
 import { serverIsA } from '../lib/pingpong'
@@ -23,7 +24,9 @@ interface Props {
 export default function LiveHero({ onWatch, onRef, onNew }: Props) {
   const { id, loading } = useCurrentTournament()
   const { tournament, matches } = useTournament(id)
-  const { rows } = useRatings()
+  // The Elo under each name is the season's, the same ladder Le Classement and
+  // Top joueurs open on — the hero can't quote a number the podium disagrees with.
+  const { rows } = useRatings(defaultLadderScope(new Date()))
   const live = pickLiveMatch(matches)
 
   if (loading || !tournament || !live) {

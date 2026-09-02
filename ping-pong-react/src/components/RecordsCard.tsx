@@ -4,6 +4,7 @@ import { useRatings } from '../hooks/useRatings'
 import { capotList, dashboardRecords } from '../lib/dashboardRecords'
 import { individualMatches } from '../lib/doubles'
 import { signed } from '../lib/format'
+import { defaultLadderScope } from '../lib/seasons'
 import { computePlayerStats } from '../lib/stats'
 import CapotsModal from './CapotsModal'
 
@@ -13,11 +14,13 @@ import CapotsModal from './CapotsModal'
  * independently nullable so the card degrades gracefully when data is thin.
  */
 export default function RecordsCard() {
-  const { matches, players, events, tournaments } = useRatings()
+  const { matches, players, historyEvents, tournaments } = useRatings(
+    defaultLadderScope(new Date()),
+  )
   const [capotsOpen, setCapotsOpen] = useState(false)
   const individuels = individualMatches(matches, tournaments)
   const stats = computePlayerStats(individuels, players)
-  const rec = dashboardRecords(stats, individuels, events)
+  const rec = dashboardRecords(stats, individuels, historyEvents)
   const capots = useMemo(
     () => capotList(individuels, tournaments, new Date()),
     [matches, tournaments],

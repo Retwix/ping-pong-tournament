@@ -24,6 +24,7 @@ import {
   type JoueurRow,
   type PhotoDraft,
 } from '../lib/joueurs'
+import { currentSeason, defaultLadderScope, ladderLabel } from '../lib/seasons'
 import { TEAMS, teamBadgeStyle, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
@@ -39,7 +40,9 @@ interface Props {
 }
 
 export default function Players({ onHome, onClassement, onStats, onNew, onNewGame }: Props) {
-  const { rows, events, players, loading, error, reload } = useRatings()
+  // Elo column = the season being played; matchs/victoires = the whole career.
+  const { rows, historyEvents, players, loading, error, reload } =
+    useRatings(defaultLadderScope(new Date()))
   const [query, setQuery] = useState('')
   const [team, setTeam] = useState('all')
   const [editing, setEditing] = useState<string | null>(null)
@@ -204,7 +207,13 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
     return () => window.removeEventListener('keydown', onKey)
   }, [zoom])
 
-  const annuaire = useMemo(() => joueurRows(players, rows, events), [players, rows, events])
+  const annuaire = useMemo(
+    () => joueurRows(players, rows, historyEvents),
+    [players, rows, historyEvents],
+  )
+  // Which ladder the Elo column is. A season starts everyone at 1500, and a
+  // column of 1500s reads as a bug unless the page names the season it is showing.
+  const eloScope = `Elo · ${ladderLabel(currentSeason(new Date()))}`
   const visible = useMemo(() => filterJoueurs(annuaire, query, team), [annuaire, query, team])
   const chips = useMemo(() => teamChips(annuaire), [annuaire])
 
@@ -249,7 +258,10 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
       <div className="pl-head">
         <div className="pl-head-text">
           <h1 className="pl-title">Joueurs</h1>
-          <p className="pl-sub">{joueursSubtitle(annuaire.length)}</p>
+          <p className="pl-sub">
+            {joueursSubtitle(annuaire.length)}
+            <span className="pl-sub-scope">{eloScope}</span>
+          </p>
         </div>
         <div className="pl-head-actions">
           <label className="pl-search">

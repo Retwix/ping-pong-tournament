@@ -2,6 +2,7 @@ import { IconChevronRight } from '@tabler/icons-react'
 import { useRatings } from '../hooks/useRatings'
 import { relativeTime } from '../lib/format'
 import { recentResults } from '../lib/recentResults'
+import { defaultLadderScope } from '../lib/seasons'
 import Avatar from './Avatar'
 
 interface Props {
@@ -16,7 +17,8 @@ interface Props {
  * belongs to.
  */
 export default function RecentResults({ onOpenTournament, onHistory }: Props) {
-  const { matches, players, tournaments } = useRatings()
+  // No Elo on this card, but the season scope keeps it off the lifetime replay.
+  const { matches, players, tournaments } = useRatings(defaultLadderScope(new Date()))
   const rows = recentResults(matches, players, tournaments, 5)
 
   return (

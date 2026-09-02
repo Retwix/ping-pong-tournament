@@ -25,6 +25,7 @@ import {
   type TournamentRow,
 } from '../lib/parties'
 import { playerLookup, type LookUpPlayer } from '../lib/playerLookup'
+import { defaultLadderScope } from '../lib/seasons'
 import type { Match } from '../types'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
@@ -293,7 +294,9 @@ export default function Parties({
   onLive,
   onRef,
 }: Props) {
-  const { matches, tournaments, players, events, loading, error } = useRatings()
+  // Each match's Elo move as it happened, inside the season it was played in.
+  const { matches, tournaments, players, historyEvents, loading, error } =
+    useRatings(defaultLadderScope(new Date()))
   const { id: currentId } = useCurrentTournament()
   const { tournament: currentTournament, matches: currentMatches } = useTournament(currentId)
   const live = pickLiveMatch(currentMatches)
@@ -308,8 +311,8 @@ export default function Parties({
   const look = useMemo(() => playerLookup(players), [players])
   const tourRows = useMemo(() => tournamentRows(tournaments, matches), [tournaments, matches])
   const allMatchRows = useMemo(
-    () => matchRows(matches, events, tournaments),
-    [matches, events, tournaments],
+    () => matchRows(matches, historyEvents, tournaments),
+    [matches, historyEvents, tournaments],
   )
   const shownTourRows = useMemo(
     () => applySort(filterTournamentRows(tourRows, query), dir),
