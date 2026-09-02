@@ -30,8 +30,14 @@ export function useSession() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  // Without redirectTo, Slack returns to the project's Site URL — the deployed
+  // app — so signing in from anywhere else lands the session on the wrong page.
   const signIn = useCallback(
-    () => supabase.auth.signInWithOAuth({ provider: SLACK_PROVIDER }),
+    () =>
+      supabase.auth.signInWithOAuth({
+        provider: SLACK_PROVIDER,
+        options: { redirectTo: window.location.origin },
+      }),
     [],
   )
   const signOut = useCallback(() => supabase.auth.signOut(), [])
