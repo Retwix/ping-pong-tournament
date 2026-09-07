@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decrementPatch, matchPointKind } from './pingpong'
+import { decrementPatch, isSixSeven, matchPointKind } from './pingpong'
 
 describe('decrementPatch', () => {
 	it('removes one point from side a', () => {
@@ -61,5 +61,33 @@ describe('matchPointKind', () => {
 		expect(matchPointKind(20, 5, 21)).toBe('match')
 		expect(matchPointKind(20, 0, 21)).toBe('capot')
 		expect(matchPointKind(19, 5, 21)).toBeNull()
+	})
+})
+
+describe('isSixSeven', () => {
+	it('is true at 6-7', () => {
+		expect(isSixSeven(6, 7)).toBe(true)
+	})
+
+	it('is true the other way round, at 7-6', () => {
+		expect(isSixSeven(7, 6)).toBe(true)
+	})
+
+	it('is false one point before, at 6-6', () => {
+		expect(isSixSeven(6, 6)).toBe(false)
+	})
+
+	it('is false one point after, at 7-7', () => {
+		expect(isSixSeven(7, 7)).toBe(false)
+	})
+
+	it('is false for a score that merely contains a 6 or a 7', () => {
+		expect(isSixSeven(6, 3)).toBe(false)
+		expect(isSixSeven(7, 0)).toBe(false)
+		expect(isSixSeven(11, 7)).toBe(false)
+	})
+
+	it('is false at 0-0', () => {
+		expect(isSixSeven(0, 0)).toBe(false)
 	})
 })

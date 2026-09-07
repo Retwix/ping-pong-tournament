@@ -44,6 +44,14 @@ export function matchPointKind(
 }
 
 /**
+ * The "6-7" score, in either direction. Purely cosmetic: it triggers the little
+ * audio cue in the live scorer and means nothing for the rules of the game.
+ */
+export function isSixSeven(a: number, b: number): boolean {
+  return (a === 6 && b === 7) || (a === 7 && b === 6)
+}
+
+/**
  * Whether side A is serving. Serve alternates every 2 points,
  * then every point once both players reach target-1 (deuce).
  */

@@ -10,12 +10,13 @@ import {
 	decrementPatch,
 	formatDuration,
 	isMatchPoint,
+	isSixSeven,
 	isWon,
 	matchDuration,
 	matchPointKind,
 	serverIsA,
 } from "../lib/pingpong";
-import { playDing } from "../lib/sound";
+import { playDing, playSixSeven } from "../lib/sound";
 import {
 	activeChaosAt,
 	applyScoreMutation,
@@ -67,6 +68,9 @@ export default function LiveScorer({
 	const prevServeRef = useRef<boolean | null>(null);
 	// Last chaos interval-block seen, to cue when a fresh modifier rolls.
 	const prevChaosBlockRef = useRef<number | null>(null);
+	// Whether the score was already at 6-7, so the cue fires on arrival only —
+	// seeded from the opening score, which keeps reopening a paused 6-7 silent.
+	const prevSixSevenRef = useRef(isSixSeven(match.score_a, match.score_b));
 	// Tick state purely to re-render the running clock.
 	const [, forceTick] = useState(0);
 	// Visual left/right swap (persisted) so the layout matches the physical table.
@@ -222,6 +226,14 @@ export default function LiveScorer({
 		}
 		prevServeRef.current = aServe;
 	}, [aServe, won, match.done]);
+
+	// The 6-7 cue. Fires the moment the score lands there, once per arrival, so
+	// an undo followed by a re-score plays it again.
+	useEffect(() => {
+		const here = !won && !match.done && isSixSeven(match.score_a, match.score_b);
+		if (here && !prevSixSevenRef.current) playSixSeven();
+		prevSixSevenRef.current = here;
+	}, [match.score_a, match.score_b, won, match.done]);
 
 	// Cue a fresh chaos roll (a new interval-block) with a double ding.
 	useEffect(() => {
