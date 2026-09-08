@@ -343,7 +343,9 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
                   {r.team === '' ? '—' : teamLabel(r.team)}
                 </span>
               </div>
-              <div className="pl-c-elo">{r.elo}</div>
+              <div className="pl-c-elo" title={r.elo === null ? 'Aucun match joué' : undefined}>
+                {r.elo ?? '—'}
+              </div>
               <div className="pl-c-matchs">{r.matchsLabel}</div>
               <div className={`pl-c-win${r.winrateStrong ? ' strong' : ''}`}>{r.winrate}</div>
               <div className="pl-act">

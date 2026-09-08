@@ -644,7 +644,12 @@ export default function NouvellePartie({
                     <span className="np-poletag" style={teamBadgeStyle(r.team)}>
                       {teamLabel(r.team)}
                     </span>
-                    <span className="np-elo">{r.elo}</span>
+                    <span
+                      className="np-elo"
+                      title={r.elo === null ? 'Pas encore joué cette saison' : undefined}
+                    >
+                      {r.elo ?? '—'}
+                    </span>
                     <button className="np-x" onClick={() => remove(r.id)} title="Retirer">
                       <IconX size={16} stroke={2.2} />
                     </button>
@@ -804,7 +809,12 @@ export default function NouvellePartie({
                         <span className="np-poletag" style={teamBadgeStyle(r.team)}>
                           {teamLabel(r.team)}
                         </span>
-                        <span className="np-elo">{r.elo}</span>
+                        <span
+                          className="np-elo"
+                          title={r.elo === null ? 'Pas encore joué cette saison' : undefined}
+                        >
+                          {r.elo ?? '—'}
+                        </span>
                         <span className="np-reg-add">
                           <IconPlus size={15} stroke={2.4} />
                         </span>

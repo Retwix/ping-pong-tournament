@@ -6,7 +6,7 @@
 import type { Player, PlayerStatus } from '../types'
 import { recordOf } from './classement'
 import { fold, matchesJoueur } from './fold'
-import { RATING, type RatingEvent, type RatingRow } from './rating'
+import type { RatingEvent, RatingRow } from './rating'
 import { TEAMS, teamLabel } from './teams'
 
 export interface JoueurRow {
@@ -14,7 +14,8 @@ export interface JoueurRow {
   name: string
   team: string
   avatarUrl: string | null
-  elo: number
+  /** null when the player has no game on the ladder in scope — never a stand-in 1500. */
+  elo: number | null
   played: number
   wins: number
   losses: number
@@ -27,9 +28,15 @@ export interface JoueurRow {
 }
 
 /**
- * One annuaire row per registered player, best Elo first. Identity (name, team,
- * photo) always reflects the editable registry; the rating row is matched by
- * player id, falling back to rows recorded by name only (pre-registry matches).
+ * One annuaire row per registered player, best Elo first, the unrated last.
+ * Identity (name, team, photo) always reflects the editable registry; the rating
+ * row is matched by player id, falling back to rows recorded by name only
+ * (pre-registry matches).
+ *
+ * A player absent from `rows` has no rating on this ladder, which is a different
+ * thing from sitting at the starting 1500 — on a season ladder that is most of
+ * the roster in the opening weeks. The Classement drops them; a registry has to
+ * list them, so it says so instead of inventing a number.
  */
 export function joueurRows(
   players: Player[],
@@ -50,7 +57,7 @@ export function joueurRows(
         name: p.name,
         team: p.team,
         avatarUrl: p.avatar_url,
-        elo: Math.round(row?.rating ?? RATING.R0),
+        elo: row === undefined ? null : Math.round(row.rating),
         played,
         wins,
         losses,
@@ -64,6 +71,9 @@ export function joueurRows(
     })
     .sort((a, b) => {
       if (a.status !== b.status) return a.status === 'alumni' ? 1 : -1
+      if (a.elo === null && b.elo === null) return a.name.localeCompare(b.name, 'fr')
+      if (a.elo === null) return 1
+      if (b.elo === null) return -1
       return b.elo - a.elo || a.name.localeCompare(b.name, 'fr')
     })
 }
