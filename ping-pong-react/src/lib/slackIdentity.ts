@@ -156,3 +156,38 @@ export function deleteAttempt(
   if (action === 'claim') return { kind: 'explain', message: CLAIM_REQUIRED_TO_DELETE }
   return { kind: 'proceed' }
 }
+
+/** What a Slack sign-in tells us, once the payload has been read. */
+export interface SlackSignInData {
+  /** The `U0…` id the notification bot @mentions, or null when Slack withheld it. */
+  slackUserId: string | null
+  /** Null when no name was granted — matching must not fall back to empty strings. */
+  profile: SlackProfile | null
+}
+
+const text = (o: Record<string, unknown>, key: string): string | null =>
+  typeof o[key] === 'string' && o[key] !== '' ? (o[key] as string) : null
+
+/**
+ * Reads a Supabase `user_metadata` / `identity_data` payload from Slack OIDC.
+ *
+ * Shape confirmed against a real sign-in rather than assumed: the Slack user id
+ * arrives as `provider_id` (`sub` repeats it, and is not read), and the name as `name` and
+ * `full_name` — carrying the same value, because OIDC exposes no separate
+ * handle. The spec's SlackProfile asked for a display name and a real name; it
+ * gets one name twice, which matchPlayer already tolerates.
+ *
+ * Both halves are independently optional. Granting only `openid` yields an id
+ * and no name, and a nameless profile must stay null rather than become empty
+ * strings — canonical('') would match any roster row normalising to nothing.
+ */
+export function slackIdentity(metadata: unknown): SlackSignInData {
+  if (typeof metadata !== 'object' || metadata === null)
+    return { slackUserId: null, profile: null }
+  const o = metadata as Record<string, unknown>
+  const name = text(o, 'name') ?? text(o, 'full_name')
+  return {
+    slackUserId: text(o, 'provider_id'),
+    profile: name === null ? null : { displayName: name, realName: text(o, 'full_name') ?? name },
+  }
+}

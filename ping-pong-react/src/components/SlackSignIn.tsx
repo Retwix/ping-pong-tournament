@@ -43,7 +43,11 @@ export default function SlackSignIn() {
       >
         <IconLogout size={16} stroke={1.8} />
       </button>
-      <ClaimGate userId={session.user.id} onSignOut={() => signOut()} />
+      <ClaimGate
+        userId={session.user.id}
+        metadata={session.user.user_metadata}
+        onSignOut={() => signOut()}
+      />
     </>
   )
 }

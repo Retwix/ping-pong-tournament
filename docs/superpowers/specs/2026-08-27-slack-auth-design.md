@@ -265,6 +265,25 @@ optimistic create means reworking image handling in `Players.tsx` first.
 
 Cheap to check, and each one can invalidate part of the design:
 
+**Answered 2026-09-03, against a real sign-in.** The provider id is
+`slack_oidc`. The payload arrives as:
+
+```
+provider_id  U07LVS146M7    the Slack user id -> slack_user_id
+sub          U07LVS146M7    repeats provider_id
+name         Thibault       }  Slack OIDC exposes no separate handle:
+full_name    Thibault       }  both keys carried the same value
+email, email_verified, picture, avatar_url, iss
+custom_claims { "https://slack.com/team_id": "T8AH00RHN" }
+```
+
+So `SlackProfile`'s two fields are one name in practice. `matchPlayer` already
+tolerates that — it matches against either — but nothing should be built on the
+assumption that a display name and a real name differ. The team id is present,
+which is what a workspace check would key on.
+
+The original questions, kept for the record:
+
 - The exact Supabase provider id for Slack, and whether the older `slack`
   provider or the OIDC one is current.
 - What the identity payload actually contains — specifically the Slack user id

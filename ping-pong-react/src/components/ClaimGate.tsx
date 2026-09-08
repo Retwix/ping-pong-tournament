@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { IconLogout } from '@tabler/icons-react'
 import { claimPlayer, createPlayer, listPlayers } from '../lib/db'
-import { claimErrorMessage, claimPrompt } from '../lib/slackIdentity'
+import { claimErrorMessage, claimPrompt, matchPlayer, slackIdentity } from '../lib/slackIdentity'
 import type { RosterLoad } from '../lib/slackIdentity'
 import ClaimModal from './ClaimModal'
 
 interface Props {
   userId: string
+  /** The signed-in account's Supabase `user_metadata`, straight from the session. */
+  metadata: unknown
   onSignOut: () => void
 }
 
@@ -18,8 +20,9 @@ interface Props {
  * which rows are unclaimed — only matters while the modal is up, and a realtime
  * channel on every page for a one-off decision is not worth its cost.
  *
- * `preselected` is null until the Slack identity payload is confirmed. Once it
- * is, matchPlayer supplies the id here and the row arrives highlighted.
+ * An auto-match preselects a row; it never confirms it. matchPlayer degrades to
+ * the plain picker on zero matches or more than one, and a nameless payload —
+ * Slack granted only `openid` — preselects nothing at all.
  *
  * Both branches render through a portal, and that is load-bearing rather than
  * tidy. This component sits inside DashboardNav, whose .rv-nav carries
@@ -29,7 +32,7 @@ interface Props {
  * the modal that is supposed to make linking mandatory covers the header and
  * leaves the whole app underneath live and clickable.
  */
-export default function ClaimGate({ userId, onSignOut }: Props) {
+export default function ClaimGate({ userId, metadata, onSignOut }: Props) {
   const [roster, setRoster] = useState<RosterLoad>({ kind: 'loading' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,6 +47,8 @@ export default function ClaimGate({ userId, onSignOut }: Props) {
   }, [])
 
   useEffect(load, [load])
+
+  const { slackUserId, profile } = slackIdentity(metadata)
 
   const prompt = claimPrompt(userId, roster)
   if (prompt.kind === 'none') return null
@@ -88,18 +93,21 @@ export default function ClaimGate({ userId, onSignOut }: Props) {
   }
 
   const confirm = (playerId: string) =>
-    attempt(() => claimPlayer({ playerId, authUserId: userId, slackUserId: null }))
+    attempt(() => claimPlayer({ playerId, authUserId: userId, slackUserId }))
 
   const create = (name: string) =>
     attempt(async () => {
       const player = await createPlayer(name, 'tech')
-      await claimPlayer({ playerId: player.id, authUserId: userId, slackUserId: null })
+      await claimPlayer({ playerId: player.id, authUserId: userId, slackUserId })
     })
+
+  const match = profile === null ? null : matchPlayer(profile, prompt.candidates)
+  const preselected = match !== null && match.kind === 'matched' ? match.player.id : null
 
   return createPortal(
     <ClaimModal
       candidates={prompt.candidates}
-      preselected={null}
+      preselected={preselected}
       saving={saving}
       error={error}
       onConfirm={confirm}

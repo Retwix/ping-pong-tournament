@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Player } from '../types'
 import {
   claimErrorMessage,
+  slackIdentity,
   claimPrompt,
   deleteAttempt,
   matchPlayer,
@@ -247,5 +248,63 @@ describe('deleteAttempt', () => {
     const roster = [player({ id: 'p1', name: 'Léo', auth_user_id: 'u-leo' })]
 
     expect(deleteAttempt('u-leo', roster, 'un joueur')).toEqual({ kind: 'proceed' })
+  })
+})
+
+describe('slackIdentity', () => {
+  // Shape confirmed against a real Slack OIDC sign-in, 2026-09-03. Slack sends
+  // `name` and `full_name` with the same value — it has no separate handle —
+  // so matching gets one name, not the two the spec assumed.
+  const payload = {
+    avatar_url: 'https://avatars.slack-edge.com/x.jpg',
+    custom_claims: { 'https://slack.com/team_id': 'T8AH00RHN' },
+    email: 'someone@example.com',
+    email_verified: true,
+    full_name: 'Thibault',
+    iss: 'https://slack.com/api',
+    name: 'Thibault',
+    picture: 'https://avatars.slack-edge.com/x.jpg',
+    provider_id: 'U07LVS146M7',
+    sub: 'U07LVS146M7',
+  }
+
+  it('reads the Slack user id and the name to match a roster row on', () => {
+    expect(slackIdentity(payload)).toEqual({
+      slackUserId: 'U07LVS146M7',
+      profile: { displayName: 'Thibault', realName: 'Thibault' },
+    })
+  })
+
+  it('still reports the Slack user id when only openid was granted, with no name to match on', () => {
+    const { name, full_name, ...idOnly } = payload
+
+    expect(slackIdentity(idOnly)).toEqual({ slackUserId: 'U07LVS146M7', profile: null })
+  })
+
+  it('keeps the handle and the real name apart when Slack has both', () => {
+    const both = { ...payload, name: 'Thibs', full_name: 'Thibault Pras' }
+
+    expect(slackIdentity(both).profile).toEqual({
+      displayName: 'Thibs',
+      realName: 'Thibault Pras',
+    })
+  })
+
+  it('treats a blank name as no name, so nobody auto-matches an empty roster entry', () => {
+    const blank = { ...payload, name: '', full_name: '' }
+
+    expect(slackIdentity(blank)).toEqual({ slackUserId: 'U07LVS146M7', profile: null })
+  })
+
+  it('reports nothing usable when the payload is null', () => {
+    expect(slackIdentity(null)).toEqual({ slackUserId: null, profile: null })
+  })
+
+  it('reports nothing usable when there is no payload at all', () => {
+    expect(slackIdentity(undefined)).toEqual({ slackUserId: null, profile: null })
+  })
+
+  it('reports nothing usable when the payload is not an object', () => {
+    expect(slackIdentity('U07LVS146M7')).toEqual({ slackUserId: null, profile: null })
   })
 })
