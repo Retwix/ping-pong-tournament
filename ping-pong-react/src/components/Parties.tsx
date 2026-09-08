@@ -4,6 +4,7 @@ import { useCurrentTournament } from '../hooks/useCurrentTournament'
 import { useRatings } from '../hooks/useRatings'
 import { useTournament } from '../hooks/useTournament'
 import { membresPaire } from '../lib/doubles'
+import { scopedEvents } from '../lib/ladder'
 import { pickLiveMatch } from '../lib/liveHero'
 import { signed } from '../lib/format'
 import {
@@ -293,7 +294,7 @@ export default function Parties({
   onLive,
   onRef,
 }: Props) {
-  const { matches, tournaments, players, events, loading, error } = useRatings()
+  const { matches, tournaments, players, loading, error } = useRatings()
   const { id: currentId } = useCurrentTournament()
   const { tournament: currentTournament, matches: currentMatches } = useTournament(currentId)
   const live = pickLiveMatch(currentMatches)
@@ -308,8 +309,8 @@ export default function Parties({
   const look = useMemo(() => playerLookup(players), [players])
   const tourRows = useMemo(() => tournamentRows(tournaments, matches), [tournaments, matches])
   const allMatchRows = useMemo(
-    () => matchRows(matches, events, tournaments),
-    [matches, events, tournaments],
+    () => matchRows(matches, scopedEvents({ matches, players, tournaments }), tournaments),
+    [matches, players, tournaments],
   )
   const shownTourRows = useMemo(
     () => applySort(filterTournamentRows(tourRows, query), dir),
