@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { ladderReplay } from '../lib/ladder'
+import { eventsByMatch, ladderReplay } from '../lib/ladder'
 import { defaultLadderScope } from '../lib/seasons'
 import { sideKey } from '../lib/stats'
 import { sideElos, type SideElos } from '../lib/scorerElo'
@@ -72,16 +72,12 @@ export function useRatingDeltas() {
     [rows],
   )
 
-  // Events grouped by match; rank/provisional keyed by season-ladder identity.
-  const byMatch = useMemo(() => {
-    const m = new Map<string, RatingEvent[]>()
-    for (const e of events) {
-      const arr = m.get(e.matchId)
-      if (arr) arr.push(e)
-      else m.set(e.matchId, [e])
-    }
-    return m
-  }, [events])
+  // Each match's move, read off the ladder that match actually moved — its own
+  // season, or the lifetime one for anything played before September.
+  const byMatch = useMemo(
+    () => eventsByMatch({ matches: allMatches, players, tournaments }),
+    [allMatches, players, tournaments],
+  )
 
   const standingByKey = useMemo(() => {
     const m = new Map<string, { rank: number; provisional: boolean }>()
@@ -127,6 +123,9 @@ export function useRatingDeltas() {
   const forTournament = useCallback(
     (tournamentMatches: Match[]): TournamentRating[] => {
       const ids = new Set(tournamentMatches.map((m) => m.id))
+      // Still the lifetime ladder, unlike forMatch above: a tournament's net move
+      // needs its games in one chronological run, which the per-match map does
+      // not carry. Straddling a season boundary is what makes that hard.
       // `events` are in replay (chronological) order, so the first event we see
       // for a player is their entry rating and the last is their exit rating.
       const acc = new Map<string, TournamentRating>()
