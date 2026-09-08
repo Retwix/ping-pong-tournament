@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-
-/**
- * Must match whichever provider is enabled in Supabase → Authentication →
- * Providers. Both are accepted by the client: `slack_oidc` is Slack's current
- * OpenID Connect app, `slack` the deprecated "Sign in with Slack" one.
- */
-const SLACK_PROVIDER = 'slack_oidc'
+import { SLACK_PROVIDER } from '../lib/slackIdentity'
 
 /**
  * The signed-in Slack account, or null. Supabase persists the session in

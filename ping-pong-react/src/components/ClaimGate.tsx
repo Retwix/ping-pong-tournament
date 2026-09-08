@@ -8,8 +8,8 @@ import ClaimModal from './ClaimModal'
 
 interface Props {
   userId: string
-  /** The signed-in account's Supabase `user_metadata`, straight from the session. */
-  metadata: unknown
+  /** The whole session user — slackIdentity reads `identities`, not metadata. */
+  user: unknown
   onSignOut: () => void
 }
 
@@ -32,7 +32,7 @@ interface Props {
  * the modal that is supposed to make linking mandatory covers the header and
  * leaves the whole app underneath live and clickable.
  */
-export default function ClaimGate({ userId, metadata, onSignOut }: Props) {
+export default function ClaimGate({ userId, user, onSignOut }: Props) {
   const [roster, setRoster] = useState<RosterLoad>({ kind: 'loading' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +48,7 @@ export default function ClaimGate({ userId, metadata, onSignOut }: Props) {
 
   useEffect(load, [load])
 
-  const { slackUserId, profile } = slackIdentity(metadata)
+  const { slackUserId, profile } = slackIdentity(user)
 
   const prompt = claimPrompt(userId, roster)
   if (prompt.kind === 'none') return null

@@ -277,6 +277,15 @@ email, email_verified, picture, avatar_url, iss
 custom_claims { "https://slack.com/team_id": "T8AH00RHN" }
 ```
 
+**Read this off `identities`, never `user_metadata`.** Both carry these same
+keys after a sign-in, which makes the wrong one look like a shortcut — but
+`supabase.auth.updateUser({ data })` writes `raw_user_meta_data` from the
+browser with nothing but the anon key. Trusting it would let any signed-in
+account claim a row while writing somebody else's Slack id into
+`slack_user_id`, which is exactly what the notification bot @mentions.
+`identity_data` is written by the provider through GoTrue and cannot be reached
+that way.
+
 So `SlackProfile`'s two fields are one name in practice. `matchPlayer` already
 tolerates that — it matches against either — but nothing should be built on the
 assumption that a display name and a real name differ. The team id is present,

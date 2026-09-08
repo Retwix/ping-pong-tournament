@@ -157,6 +157,13 @@ export function deleteAttempt(
   return { kind: 'proceed' }
 }
 
+/**
+ * Must match whichever provider is enabled in Supabase -> Authentication ->
+ * Providers. `slack_oidc` is Slack's current OpenID Connect app; `slack` was
+ * the deprecated "Sign in with Slack" one.
+ */
+export const SLACK_PROVIDER = 'slack_oidc'
+
 /** What a Slack sign-in tells us, once the payload has been read. */
 export interface SlackSignInData {
   /** The `U0…` id the notification bot @mentions, or null when Slack withheld it. */
@@ -165,26 +172,42 @@ export interface SlackSignInData {
   profile: SlackProfile | null
 }
 
+const NOTHING: SlackSignInData = { slackUserId: null, profile: null }
+
+const record = (value: unknown): Record<string, unknown> | null =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null
+
 const text = (o: Record<string, unknown>, key: string): string | null =>
   typeof o[key] === 'string' && o[key] !== '' ? (o[key] as string) : null
 
 /**
- * Reads a Supabase `user_metadata` / `identity_data` payload from Slack OIDC.
+ * Reads the Slack identity off a Supabase session user.
+ *
+ * **Reads `identities`, never `user_metadata`.** Those two carry the same keys
+ * after a sign-in, which makes the wrong one look like a shortcut — but
+ * `supabase.auth.updateUser({ data })` writes `raw_user_meta_data` from the
+ * browser with nothing but the anon key. Believing it would let any signed-in
+ * account claim a row while writing somebody else's Slack id into
+ * `slack_user_id`, which is what the notification bot @mentions.
+ * `identity_data` is written by the provider through GoTrue and is not
+ * reachable that way.
  *
  * Shape confirmed against a real sign-in rather than assumed: the Slack user id
- * arrives as `provider_id` (`sub` repeats it, and is not read), and the name as `name` and
- * `full_name` — carrying the same value, because OIDC exposes no separate
- * handle. The spec's SlackProfile asked for a display name and a real name; it
- * gets one name twice, which matchPlayer already tolerates.
+ * arrives as `provider_id` (`sub` repeats it, and is not read), and the name as
+ * `name` and `full_name` — carrying the same value, because OIDC exposes no
+ * separate handle. The spec's SlackProfile asked for a display name and a real
+ * name; it gets one name twice, which matchPlayer already tolerates.
  *
  * Both halves are independently optional. Granting only `openid` yields an id
  * and no name, and a nameless profile must stay null rather than become empty
  * strings — canonical('') would match any roster row normalising to nothing.
  */
-export function slackIdentity(metadata: unknown): SlackSignInData {
-  if (typeof metadata !== 'object' || metadata === null)
-    return { slackUserId: null, profile: null }
-  const o = metadata as Record<string, unknown>
+export function slackIdentity(user: unknown): SlackSignInData {
+  const u = record(user)
+  if (u === null || !Array.isArray(u.identities)) return NOTHING
+  const slack = u.identities.find((i) => record(i)?.provider === SLACK_PROVIDER)
+  const o = record(record(slack)?.identity_data)
+  if (o === null) return NOTHING
   const name = text(o, 'name') ?? text(o, 'full_name')
   return {
     slackUserId: text(o, 'provider_id'),

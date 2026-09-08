@@ -255,7 +255,7 @@ describe('slackIdentity', () => {
   // Shape confirmed against a real Slack OIDC sign-in, 2026-09-03. Slack sends
   // `name` and `full_name` with the same value — it has no separate handle —
   // so matching gets one name, not the two the spec assumed.
-  const payload = {
+  const slackPayload = {
     avatar_url: 'https://avatars.slack-edge.com/x.jpg',
     custom_claims: { 'https://slack.com/team_id': 'T8AH00RHN' },
     email: 'someone@example.com',
@@ -268,43 +268,75 @@ describe('slackIdentity', () => {
     sub: 'U07LVS146M7',
   }
 
+  const user = (over: Record<string, unknown> = {}) => ({
+    id: 'ab24fdd9',
+    user_metadata: slackPayload,
+    identities: [{ provider: 'slack_oidc', identity_data: slackPayload }],
+    ...over,
+  })
+
   it('reads the Slack user id and the name to match a roster row on', () => {
-    expect(slackIdentity(payload)).toEqual({
+    expect(slackIdentity(user())).toEqual({
       slackUserId: 'U07LVS146M7',
       profile: { displayName: 'Thibault', realName: 'Thibault' },
     })
   })
 
-  it('still reports the Slack user id when only openid was granted, with no name to match on', () => {
-    const { name, full_name, ...idOnly } = payload
+  it('ignores user_metadata, which the account holder can rewrite at will', () => {
+    // supabase.auth.updateUser({ data }) writes raw_user_meta_data from the
+    // client. Only the provider-supplied identity may be believed.
+    const spoofed = user({
+      user_metadata: { ...slackPayload, provider_id: 'U_SOMEONE_ELSE', name: 'Quelqu’un' },
+    })
 
-    expect(slackIdentity(idOnly)).toEqual({ slackUserId: 'U07LVS146M7', profile: null })
-  })
-
-  it('keeps the handle and the real name apart when Slack has both', () => {
-    const both = { ...payload, name: 'Thibs', full_name: 'Thibault Pras' }
-
-    expect(slackIdentity(both).profile).toEqual({
-      displayName: 'Thibs',
-      realName: 'Thibault Pras',
+    expect(slackIdentity(spoofed)).toEqual({
+      slackUserId: 'U07LVS146M7',
+      profile: { displayName: 'Thibault', realName: 'Thibault' },
     })
   })
 
-  it('treats a blank name as no name, so nobody auto-matches an empty roster entry', () => {
-    const blank = { ...payload, name: '', full_name: '' }
+  it('believes nothing when the account has no Slack identity', () => {
+    const emailOnly = user({ identities: [{ provider: 'email', identity_data: slackPayload }] })
 
-    expect(slackIdentity(blank)).toEqual({ slackUserId: 'U07LVS146M7', profile: null })
+    expect(slackIdentity(emailOnly)).toEqual({ slackUserId: null, profile: null })
   })
 
-  it('reports nothing usable when the payload is null', () => {
+  it('believes nothing when the session carries no identities at all', () => {
+    const bare = user({ identities: undefined })
+
+    expect(slackIdentity(bare)).toEqual({ slackUserId: null, profile: null })
+  })
+
+  it('keeps the handle and the real name apart when Slack has both', () => {
+    const both = user({
+      identities: [
+        { provider: 'slack_oidc', identity_data: { ...slackPayload, name: 'Thibs', full_name: 'Thibault Pras' } },
+      ],
+    })
+
+    expect(slackIdentity(both).profile).toEqual({ displayName: 'Thibs', realName: 'Thibault Pras' })
+  })
+
+  it('still reports the Slack user id when only openid was granted, with no name to match on', () => {
+    const { name, full_name, ...idOnly } = slackPayload
+    const u = user({ identities: [{ provider: 'slack_oidc', identity_data: idOnly }] })
+
+    expect(slackIdentity(u)).toEqual({ slackUserId: 'U07LVS146M7', profile: null })
+  })
+
+  it('treats a blank name as no name, so nobody auto-matches an empty roster entry', () => {
+    const u = user({
+      identities: [{ provider: 'slack_oidc', identity_data: { ...slackPayload, name: '', full_name: '' } }],
+    })
+
+    expect(slackIdentity(u)).toEqual({ slackUserId: 'U07LVS146M7', profile: null })
+  })
+
+  it('reports nothing usable when the session is null', () => {
     expect(slackIdentity(null)).toEqual({ slackUserId: null, profile: null })
   })
 
-  it('reports nothing usable when there is no payload at all', () => {
+  it('reports nothing usable when there is no session at all', () => {
     expect(slackIdentity(undefined)).toEqual({ slackUserId: null, profile: null })
-  })
-
-  it('reports nothing usable when the payload is not an object', () => {
-    expect(slackIdentity('U07LVS146M7')).toEqual({ slackUserId: null, profile: null })
   })
 })
