@@ -4,16 +4,15 @@ import { splitLadder } from '../lib/alumni'
 import { RATING, ratedMatches } from '../lib/rating'
 import { recordOf } from '../lib/classement'
 import {
-  ALL_TIME,
   currentSeason,
   daysLeft,
+  defaultLadderScope,
   isClosed,
   matchesInSeason,
   nextSeason,
   seasonBannerState,
   seasonWindowLabel,
   SEASONS_START,
-  type LadderScope,
 } from '../lib/seasons'
 import Avatar from './Avatar'
 
@@ -33,8 +32,7 @@ const dayMonth = (d: Date): string =>
 export default function SeasonBanner({ onClassement, onNew }: Props) {
   const now = new Date()
   const season = currentSeason(now)
-  const scope: LadderScope = season === null ? ALL_TIME : { kind: 'season', id: season.id }
-  const { rows, events, matches, players, tournaments } = useRatings(scope)
+  const { rows, events, matches, players, tournaments } = useRatings(defaultLadderScope(now))
 
   const ratedCount =
     season === null ? 0 : ratedMatches(matchesInSeason(matches, season.id), tournaments).length
