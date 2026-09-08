@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { IconLogout } from '@tabler/icons-react'
+import { claimNameWarning } from '../lib/slackIdentity'
+import type { SlackProfile } from '../lib/slackIdentity'
 import type { Player } from '../types'
 
 interface Props {
   candidates: Player[]
   /** The auto-matched row, preselected for confirmation — never committed on its own. */
   preselected: string | null
+  /** What Slack calls this person, used to question a pick that looks like somebody else. */
+  profile: SlackProfile | null
   saving: boolean
   error: string | null
   onConfirm: (playerId: string) => void
@@ -30,6 +34,7 @@ interface Props {
 export default function ClaimModal({
   candidates,
   preselected,
+  profile,
   saving,
   error,
   onConfirm,
@@ -41,6 +46,8 @@ export default function ClaimModal({
   const [name, setName] = useState('')
 
   const ready = newcomer ? name.trim() !== '' : selected !== null
+  const chosen = candidates.find((p) => p.id === selected)
+  const nameWarning = newcomer || chosen === undefined ? null : claimNameWarning(profile, chosen.name)
   const submit = () => {
     if (newcomer) onCreate(name.trim())
     else if (selected !== null) onConfirm(selected)
@@ -92,6 +99,8 @@ export default function ClaimModal({
             {newcomer ? '← Choisir dans la liste' : 'Je ne suis pas dans la liste'}
           </button>
         )}
+
+        {nameWarning !== null && <p className="rv-claim-warning">{nameWarning}</p>}
 
         {error !== null && <p className="rv-claim-error">{error}</p>}
 

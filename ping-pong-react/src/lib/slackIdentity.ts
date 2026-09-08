@@ -214,3 +214,54 @@ export function slackIdentity(user: unknown): SlackSignInData {
     profile: name === null ? null : { displayName: name, realName: text(o, 'full_name') ?? name },
   }
 }
+
+/**
+ * How much of the start two words must share before they count as the same
+ * person. Three was indistinguishable from four under mutation testing and
+ * looser than it should be — it makes Marie kin to Marc, and Alexis kin to
+ * Alessandro. Short words stay capped by their own length, so raising it does
+ * not cost Leo/Leopold.
+ */
+const KINSHIP = 4
+
+const sharedPrefix = (a: string, b: string): number => {
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i += 1
+  return i
+}
+
+/**
+ * Do these two names plausibly belong to the same person?
+ *
+ * Word by word, because a roster keeps `Pras` where Slack says `Thibault Pras`.
+ * A shared opening is the test rather than an edit distance: nicknames are
+ * overwhelmingly truncations — Leopold/Leo, Christophe/Chris, Thibault/Thibs —
+ * and those sit far apart by edit distance while sharing their first letters.
+ *
+ * Words shorter than KINSHIP must match in full, so `Al` still recognises
+ * `Alessandro` without `Le` claiming kinship with `Léo`.
+ */
+const namesLookRelated = (a: string, b: string): boolean =>
+  canonical(a)
+    .split(' ')
+    .some((wordA) =>
+      canonical(b)
+        .split(' ')
+        .some((wordB) => sharedPrefix(wordA, wordB) >= Math.min(KINSHIP, wordA.length, wordB.length)),
+    )
+
+/**
+ * A nudge shown when someone is about to claim a row that does not look like
+ * them, or null when it does.
+ *
+ * Deliberately a warning and not a block. Roster names are typed by hand and
+ * people go by things Slack never sees, so refusing the claim would strand
+ * exactly the person who most needs to link. Both the handle and the real name
+ * are accepted — either resembling the row is enough to stay quiet.
+ */
+export function claimNameWarning(profile: SlackProfile | null, rosterName: string): string | null {
+  if (profile === null) return null
+  if (namesLookRelated(profile.displayName, rosterName)) return null
+  if (namesLookRelated(profile.realName, rosterName)) return null
+  return `Slack te connaît sous le nom « ${profile.displayName} ». Es-tu bien « ${rosterName} » ?`
+}

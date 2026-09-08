@@ -355,6 +355,13 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 .rv-claim-switch:hover:not(:disabled) { color: var(--fg-1); text-decoration: underline; }
 .rv-claim-switch:disabled { opacity: 0.5; cursor: not-allowed; }
 .rv-claim-error { margin-top: 14px; font-size: 13.5px; color: var(--danger, #d7503a); }
+/* A question, not a refusal — amber and quiet, sitting above the error slot. */
+.rv-claim-warning {
+  margin-top: 14px; padding: 10px 12px; border-radius: 12px;
+  font-size: 13.5px; line-height: 1.45;
+  color: var(--fg-1); background: rgba(214, 158, 46, 0.12);
+  border: 1px solid rgba(214, 158, 46, 0.34);
+}
 .rv-claim-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
 .rv-claim-option {
   font-family: var(--font-display); font-weight: 600; font-size: 14px; text-align: left;

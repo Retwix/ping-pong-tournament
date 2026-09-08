@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Player } from '../types'
 import {
   claimErrorMessage,
+  claimNameWarning,
   slackIdentity,
   claimPrompt,
   deleteAttempt,
@@ -338,5 +339,55 @@ describe('slackIdentity', () => {
 
   it('reports nothing usable when there is no session at all', () => {
     expect(slackIdentity(undefined)).toEqual({ slackUserId: null, profile: null })
+  })
+})
+
+describe('claimNameWarning', () => {
+  const profile = (displayName: string, realName = displayName) => ({ displayName, realName })
+
+  it('warns when the chosen row bears no resemblance to the Slack name', () => {
+    expect(claimNameWarning(profile('Thibault'), 'Solenn')).toBe(
+      'Slack te connaît sous le nom « Thibault ». Es-tu bien « Solenn » ?',
+    )
+  })
+
+  it('stays quiet for a diminutive of the same name', () => {
+    expect(claimNameWarning(profile('Leopold'), 'Leo')).toBeNull()
+  })
+
+  it('stays quiet when a nickname only shares the start of the name', () => {
+    expect(claimNameWarning(profile('Thibs'), 'Thibault')).toBeNull()
+  })
+
+  it('stays quiet for the same name written with accents and different case', () => {
+    expect(claimNameWarning(profile('LEO'), 'Léo')).toBeNull()
+  })
+
+  it('stays quiet when the roster keeps only one word of a fuller Slack name', () => {
+    expect(claimNameWarning(profile('Thibault Pras'), 'Pras')).toBeNull()
+  })
+
+  it('stays quiet when a short name is the whole start of the longer one', () => {
+    expect(claimNameWarning(profile('Al'), 'Alessandro')).toBeNull()
+  })
+
+  it('compares against the real name too, not just the handle', () => {
+    expect(claimNameWarning(profile('bricoleur42', 'Solenn'), 'Solenn')).toBeNull()
+  })
+
+  it('warns when two short names merely start alike', () => {
+    expect(claimNameWarning(profile('Lea'), 'Leo')).toContain('Es-tu bien')
+  })
+
+  it('warns when longer names share only their first three letters', () => {
+    expect(claimNameWarning(profile('Marie'), 'Marc')).toContain('Es-tu bien')
+  })
+
+  it('stays quiet when one word of a two-word roster name matches', () => {
+    expect(claimNameWarning(profile('Dupont'), 'Jean Dupont')).toBeNull()
+  })
+
+  it('says nothing when Slack granted no name to compare against', () => {
+    expect(claimNameWarning(null, 'Solenn')).toBeNull()
   })
 })

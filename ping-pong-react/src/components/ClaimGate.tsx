@@ -108,6 +108,7 @@ export default function ClaimGate({ userId, user, onSignOut }: Props) {
     <ClaimModal
       candidates={prompt.candidates}
       preselected={preselected}
+      profile={profile}
       saving={saving}
       error={error}
       onConfirm={confirm}
