@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { IconLogout } from '@tabler/icons-react'
 import { claimPlayer, createPlayer, listPlayers } from '../lib/db'
 import { claimErrorMessage, claimPrompt } from '../lib/slackIdentity'
@@ -19,6 +20,14 @@ interface Props {
  *
  * `preselected` is null until the Slack identity payload is confirmed. Once it
  * is, matchPlayer supplies the id here and the row arrives highlighted.
+ *
+ * Both branches render through a portal, and that is load-bearing rather than
+ * tidy. This component sits inside DashboardNav, whose .rv-nav carries
+ * backdrop-filter — which makes it the containing block for position: fixed,
+ * exactly as filter does. Left in place, `.scrim { position: fixed; inset: 0 }`
+ * resolves against the nav bar and measures 1870x63 instead of the viewport, so
+ * the modal that is supposed to make linking mandatory covers the header and
+ * leaves the whole app underneath live and clickable.
  */
 export default function ClaimGate({ userId, onSignOut }: Props) {
   const [roster, setRoster] = useState<RosterLoad>({ kind: 'loading' })
@@ -40,7 +49,7 @@ export default function ClaimGate({ userId, onSignOut }: Props) {
   if (prompt.kind === 'none') return null
 
   if (prompt.kind === 'unreadable')
-    return (
+    return createPortal(
       <div className="scrim">
         <div className="modal" role="dialog" aria-modal="true" aria-label="Classement indisponible">
           <h2>Classement indisponible</h2>
@@ -57,7 +66,8 @@ export default function ClaimGate({ userId, onSignOut }: Props) {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     )
 
   // A claim can genuinely fail: the trigger rejects a row taken between the
@@ -86,7 +96,7 @@ export default function ClaimGate({ userId, onSignOut }: Props) {
       await claimPlayer({ playerId: player.id, authUserId: userId, slackUserId: null })
     })
 
-  return (
+  return createPortal(
     <ClaimModal
       candidates={prompt.candidates}
       preselected={null}
@@ -95,6 +105,7 @@ export default function ClaimGate({ userId, onSignOut }: Props) {
       onConfirm={confirm}
       onCreate={create}
       onSignOut={onSignOut}
-    />
+    />,
+    document.body,
   )
 }
