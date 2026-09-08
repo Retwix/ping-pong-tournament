@@ -1,5 +1,6 @@
 import { IconBrandSlack, IconLogout } from '@tabler/icons-react'
 import { useSession } from '../hooks/useSession'
+import { slackIdentity } from '../lib/slackIdentity'
 import ClaimGate from './ClaimGate'
 
 /**
@@ -33,15 +34,21 @@ export default function SlackSignIn() {
     )
   }
 
+  // Slack withholds the name unless `profile` scope was granted, so the button
+  // has to work as an icon alone. The label rides the same class as the
+  // signed-out one, which the nav already hides below 820px.
+  const { profile } = slackIdentity(session.user)
+
   return (
     <>
       <button
         className="rv-nav-link rv-nav-auth"
         onClick={() => signOut()}
-        aria-label="Se déconnecter"
+        aria-label={profile === null ? 'Se déconnecter' : `Se déconnecter (${profile.displayName})`}
         title="Se déconnecter"
       >
         <IconLogout size={16} stroke={1.8} />
+        {profile !== null && <span className="rv-nav-auth-label">{profile.displayName}</span>}
       </button>
       <ClaimGate
         userId={session.user.id}
