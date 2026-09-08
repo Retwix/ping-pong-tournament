@@ -22,6 +22,9 @@ import { createPlayer, createTournament } from '../lib/db'
 import { calibrerDuree, estimerDuree, resumeDuree, suggererFormat } from '../lib/durationEstimate'
 import { downloadBlob, getEmbeddedFontCss, svgToPngBlob } from '../lib/exportPng'
 import { joueurRows, type JoueurRow } from '../lib/joueurs'
+import { ladderReplay } from '../lib/ladder'
+import { RATING } from '../lib/rating'
+import { defaultLadderScope } from '../lib/seasons'
 import { melangerEquipes, nomPaire, tirerEquipes } from '../lib/doubles'
 import {
   aideCamp,
@@ -136,7 +139,23 @@ export default function NouvellePartie({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const annuaire = useMemo(() => joueurRows(players, rows, events), [players, rows, events])
+  // The cards show the ladder being played right now — the same number as the
+  // Classement — while the duration model below keeps reasoning on lifetime Elo,
+  // the gap it was fitted against: a fresh season's 1500s would flatten every
+  // matchup into a nail-biter.
+  const now = useMemo(() => new Date(), [])
+  const saison = useMemo(
+    () => ladderReplay(defaultLadderScope(now), { matches, players, tournaments }),
+    [now, matches, players, tournaments],
+  )
+  const annuaire = useMemo(
+    () => joueurRows(players, saison.rows, saison.events),
+    [players, saison],
+  )
+  const eloVie = useMemo(
+    () => new Map(joueurRows(players, rows, events).map((r) => [r.id, r.elo])),
+    [players, rows, events],
+  )
   const selRows = useMemo(() => rowsPour(annuaire, selected), [selected, annuaire])
   const teamRows = useMemo(
     () => ({
@@ -195,14 +214,15 @@ export default function NouvellePartie({
   // side is taken as the average of its two players; before the draw, both
   // sides average the whole pool — the duos don't exist yet.
   const elosEstimes = useMemo(() => {
-    const moyenne = (list: JoueurRow[]) => list.reduce((s, r) => s + r.elo, 0) / list.length
+    const eloDe = (r: JoueurRow) => eloVie.get(r.id) ?? RATING.R0
+    const moyenne = (list: JoueurRow[]) => list.reduce((s, r) => s + eloDe(r), 0) / list.length
     if (isHasard) return selRows.length === 4 ? [moyenne(selRows), moyenne(selRows)] : []
     if (isDouble) {
       const complet = teamRows.a.length === 2 && teamRows.b.length === 2
       return complet ? [moyenne(teamRows.a), moyenne(teamRows.b)] : []
     }
-    return selRows.map((r) => r.elo)
-  }, [isHasard, isDouble, selRows, teamRows])
+    return selRows.map(eloDe)
+  }, [isHasard, isDouble, selRows, teamRows, eloVie])
   // What the estimate reasons about: the selection, the format actually in play
   // (a quick game has none), the target, and the fitted model. The card below
   // and the format suggestion both read this, so they can never disagree.
