@@ -1,5 +1,6 @@
 import { IconPingPong } from '@tabler/icons-react'
 import NewMenu from './NewMenu'
+import SlackSignIn from './SlackSignIn'
 import ThemeToggle from './ThemeToggle'
 
 export type DashboardPage = 'home' | 'classement' | 'stats' | 'players'
@@ -67,6 +68,7 @@ export default function DashboardNav({
         )}
       </div>
       <div className="rv-nav-actions">
+        <SlackSignIn />
         <ThemeToggle />
         <span className="rv-nav-new">
           <NewMenu onNew={onNew} onNewGame={onNewGame} />

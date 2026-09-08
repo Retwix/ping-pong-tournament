@@ -1,7 +1,10 @@
-import type { MouseEvent } from 'react'
+import { useState, type MouseEvent } from 'react'
+import { usePlayers } from '../hooks/usePlayers'
+import { useSession } from '../hooks/useSession'
 import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
 import { recentTournaments } from '../lib/recentTournaments'
+import { deleteAttempt } from '../lib/slackIdentity'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import LiveHero from './LiveHero'
@@ -45,11 +48,30 @@ export default function Home({
   onRef,
 }: Props) {
   const { tournaments, loading, error } = useTournaments()
+  const { userId, signIn } = useSession()
+  const { players } = usePlayers()
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
     e.stopPropagation()
+    setDeleteError(null)
+    // Unguarded, this is a button that appears to work and does nothing: see
+    // deleteAttempt on why the refusal never reaches us.
+    const attempt = deleteAttempt(userId, players, 'un tournoi')
+    if (attempt.kind === 'ask-sign-in') {
+      if (confirm(attempt.message)) signIn()
+      return
+    }
+    if (attempt.kind === 'explain') {
+      setDeleteError(attempt.message)
+      return
+    }
     if (confirm(`Supprimer « ${name} » ? Cette action est définitive.`)) {
-      await deleteTournament(id)
+      try {
+        await deleteTournament(id)
+      } catch (err) {
+        setDeleteError(err instanceof Error ? err.message : String(err))
+      }
     }
   }
 
@@ -69,6 +91,7 @@ export default function Home({
       <SeasonBanner onClassement={onClassement} onNew={onNew} />
 
       {error && <div className="error-banner">Erreur : {error}</div>}
+      {deleteError && <div className="error-banner">Erreur : {deleteError}</div>}
 
       <div className="rv-grid">
         <div className="rv-main">

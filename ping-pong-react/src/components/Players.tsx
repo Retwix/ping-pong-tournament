@@ -1,6 +1,7 @@
 import { IconPencil, IconPlus, IconSearch, IconTrash, IconUpload, IconX } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRatings } from '../hooks/useRatings'
+import { useSession } from '../hooks/useSession'
 import { processAvatarFile, validateAvatarFile } from '../lib/avatar'
 import {
   createPlayer,
@@ -24,6 +25,7 @@ import {
   type JoueurRow,
   type PhotoDraft,
 } from '../lib/joueurs'
+import { deleteAttempt } from '../lib/slackIdentity'
 import { TEAMS, teamBadgeStyle, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
@@ -40,6 +42,7 @@ interface Props {
 
 export default function Players({ onHome, onClassement, onStats, onNew, onNewGame }: Props) {
   const { rows, events, players, loading, error, reload } = useRatings()
+  const { userId, signIn } = useSession()
   const [query, setQuery] = useState('')
   const [team, setTeam] = useState('all')
   const [editing, setEditing] = useState<string | null>(null)
@@ -111,6 +114,17 @@ export default function Players({ onHome, onClassement, onStats, onNew, onNewGam
   // Immediate removal, per the handoff. Past matches keep their recorded names.
   const removeJoueur = async (r: JoueurRow) => {
     setSaveError(null)
+    // Unguarded, this is a button that appears to work and does nothing: see
+    // deleteAttempt on why the refusal never reaches us.
+    const attempt = deleteAttempt(userId, players, 'un joueur')
+    if (attempt.kind === 'ask-sign-in') {
+      if (confirm(attempt.message)) signIn()
+      return
+    }
+    if (attempt.kind === 'explain') {
+      setSaveError(attempt.message)
+      return
+    }
     try {
       await deletePlayer(r.id)
     } catch (e) {

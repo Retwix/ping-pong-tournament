@@ -49,6 +49,33 @@ export async function updatePlayer(
 }
 
 /**
+ * Link a roster row to the Slack account signing in. Writes both identifiers:
+ * `auth_user_id` answers "may you act", `slack_user_id` is what the notification
+ * bot @mentions.
+ *
+ * Deliberately a plain update rather than an RPC. What makes it safe is the
+ * `guard_player_claim` trigger, which permits exactly one transition —
+ * null to your own auth.uid() — and raises on reassigning, unclaiming, or
+ * claiming as somebody else. RLS alone could not do this: it cannot restrict
+ * which columns an update touches.
+ */
+export async function claimPlayer({
+  playerId,
+  authUserId,
+  slackUserId,
+}: {
+  playerId: string
+  authUserId: string
+  slackUserId: string | null
+}): Promise<void> {
+  const { error } = await supabase
+    .from('players')
+    .update({ auth_user_id: authUserId, slack_user_id: slackUserId })
+    .eq('id', playerId)
+  if (error) throw error
+}
+
+/**
  * Upload a player's processed avatar to the public `avatars` bucket at a stable
  * path (overwrites any previous photo) and return the public URL to store on
  * the player row.
@@ -74,9 +101,23 @@ export async function removePlayerAvatar(id: string): Promise<void> {
  * Remove a player from the registry. Past tournaments/matches keep their recorded
  * names (they store text, not a reference), so history is unaffected.
  */
+/** Zero rows also means "already gone", so the wording has to admit both. */
+const notDeleted = (what: string) =>
+  `${what} n’a pas été supprimé : soit il l’était déjà, soit ton compte n’en a pas le droit.`
+
+/**
+ * Deletes, and insists on having deleted something.
+ *
+ * A delete the RLS policies refuse is not an error: it matches zero rows and
+ * comes back clean, so the plain form of this call reports success while the
+ * row stays on the ladder. Asking for the deleted ids back is the only way to
+ * tell the two apart.
+ */
 export async function deletePlayer(id: string): Promise<void> {
-  const { error } = await supabase.from('players').delete().eq('id', id)
+  const { data, error } = await supabase.from('players').delete().eq('id', id).select('id')
   if (error) throw error
+  if (data.length === 0)
+    throw new Error(notDeleted('Le joueur'))
 }
 
 /** A blank match row, before the matchup-specific fields are filled in. */
@@ -266,9 +307,12 @@ export async function updateTournament(id: string, patch: Partial<Tournament>): 
   if (error) throw error
 }
 
+/** Deletes, and insists on having deleted something — see deletePlayer for why. */
 export async function deleteTournament(id: string): Promise<void> {
-  const { error } = await supabase.from('tournaments').delete().eq('id', id)
+  const { data, error } = await supabase.from('tournaments').delete().eq('id', id).select('id')
   if (error) throw error
+  if (data.length === 0)
+    throw new Error(notDeleted('Le tournoi'))
 }
 
 // ---------- ratings ----------

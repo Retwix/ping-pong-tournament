@@ -38,6 +38,7 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
     name: 'Alice',
     team: 'Red',
     slack_user_id: null,
+    auth_user_id: null,
     avatar_url: null,
     status: 'active',
     left_at: null,

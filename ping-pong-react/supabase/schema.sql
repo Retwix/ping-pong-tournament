@@ -101,11 +101,43 @@ create table if not exists public.players (
   name        text not null unique,
   team        text not null default 'guests',
   slack_user_id text,  -- Slack user id (e.g. U0123ABCD) for private invitations; null = not on Slack
+  auth_user_id uuid references auth.users(id),  -- the signed-in Slack account that claimed this row; null = unclaimed
   avatar_url text      -- public URL of the uploaded profile photo; null = initial-letter avatar
 );
 
 -- Add `slack_user_id` to databases created before this column existed.
 alter table public.players add column if not exists slack_user_id text;
+
+-- ---------- claiming a player ----------
+-- See supabase/auth-migration.sql; kept here so a database created from this
+-- file alone comes up guarded rather than wide open.
+alter table public.players add column if not exists auth_user_id uuid references auth.users(id);
+
+-- One player per Slack account, leaving every unclaimed row null.
+create unique index if not exists players_auth_user_id_key
+  on public.players (auth_user_id) where auth_user_id is not null;
+
+-- RLS cannot restrict WHICH columns an update touches, and the update policy
+-- below is open, so the column-level rule lives in a trigger. Exactly one
+-- transition is permitted: null -> your own auth.uid(). Unclaiming, reassigning
+-- and claiming as somebody else all raise.
+create or replace function public.guard_player_claim() returns trigger as $$
+begin
+  if new.auth_user_id is distinct from old.auth_user_id then
+    if old.auth_user_id is not null then
+      raise exception 'player already claimed';
+    end if;
+    if new.auth_user_id is distinct from auth.uid() then
+      raise exception 'you can only claim a player as yourself';
+    end if;
+  end if;
+  return new;
+end $$ language plpgsql security definer set search_path = public, auth, pg_temp;
+
+drop trigger if exists guard_player_claim on public.players;
+create trigger guard_player_claim
+  before update on public.players
+  for each row execute function public.guard_player_claim();
 
 -- ---------- player identity on matches ----------
 -- Matches reference players by id so stats survive renames / duplicate names.
@@ -138,21 +170,51 @@ begin
 end $$;
 
 -- ---------- row level security ----------
--- Open policies: anyone with the anon key can read/write. Fine for a casual,
--- unauthenticated office tool. Tighten later (e.g. add auth + per-user policies)
--- if the app ever needs to be private.
+-- Mostly open: anyone with the anon key can read, add players, create
+-- tournaments and score matches. The two destructive actions are not open —
+-- deleting a player or a tournament requires a signed-in account linked to a
+-- player row, so deletes are attributable to a person.
+--
+-- The anon key ships inside the Vite bundle, so a guard expressed only in React
+-- is cosmetic; these policies are the real boundary.
 alter table public.tournaments enable row level security;
 alter table public.matches     enable row level security;
 alter table public.players     enable row level security;
 
-drop policy if exists "public access tournaments" on public.tournaments;
-create policy "public access tournaments" on public.tournaments
-  for all using (true) with check (true);
-
+-- matches stays blanket-open: nothing in this scope guards matches.
 drop policy if exists "public access matches" on public.matches;
 create policy "public access matches" on public.matches
   for all using (true) with check (true);
 
+-- Players and tournaments are split PER COMMAND. A blanket `for all using
+-- (true)` would cover delete as well, and RLS policies are OR'd together — so a
+-- restrictive delete policy sitting next to a blanket one is a silent no-op.
 drop policy if exists "public access players" on public.players;
-create policy "public access players" on public.players
-  for all using (true) with check (true);
+drop policy if exists "read players"   on public.players;
+drop policy if exists "insert players" on public.players;
+drop policy if exists "update players" on public.players;
+drop policy if exists "delete players" on public.players;
+
+create policy "read players"   on public.players for select using (true);
+create policy "insert players" on public.players for insert with check (true);
+create policy "update players" on public.players for update using (true) with check (true);
+
+-- The subquery is evaluated against the select policy above, and that policy is
+-- unconditional, so the chain terminates at `using (true)` instead of
+-- re-entering this one. IF READS ARE EVER RESTRICTED, THIS MUST BE REVISITED:
+-- the exists clause then belongs in a security definer function.
+create policy "delete players" on public.players for delete
+  using (exists (select 1 from public.players p where p.auth_user_id = auth.uid()));
+
+drop policy if exists "public access tournaments" on public.tournaments;
+drop policy if exists "read tournaments"   on public.tournaments;
+drop policy if exists "insert tournaments" on public.tournaments;
+drop policy if exists "update tournaments" on public.tournaments;
+drop policy if exists "delete tournaments" on public.tournaments;
+
+create policy "read tournaments"   on public.tournaments for select using (true);
+create policy "insert tournaments" on public.tournaments for insert with check (true);
+create policy "update tournaments" on public.tournaments for update using (true) with check (true);
+
+create policy "delete tournaments" on public.tournaments for delete
+  using (exists (select 1 from public.players p where p.auth_user_id = auth.uid()));

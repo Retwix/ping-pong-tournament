@@ -1,0 +1,267 @@
+import type { Player } from '../types'
+import { fold } from './fold'
+
+/** What Slack tells us about the person signing in, narrowed to what we match a roster row on. */
+export interface SlackProfile {
+  displayName: string
+  realName: string
+}
+
+/** Roster names are typed by hand, so compare them past case, accents and stray padding. */
+const canonical = (name: string): string => fold(name).trim().replace(/\s+/g, ' ')
+
+/** The rows still up for grabs — no account has linked itself to them. */
+const unclaimed = (players: Player[]): Player[] => players.filter((p) => p.auth_user_id === null)
+
+/**
+ * Either the one roster row this Slack account belongs to, or the roster itself
+ * for the person to pick from. A wrong confident match is worse than no match,
+ * so anything short of a single hit degrades to the picker.
+ */
+export type PlayerMatch =
+  | { kind: 'matched'; player: Player }
+  | { kind: 'choose'; candidates: Player[] }
+
+export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMatch {
+  const free = unclaimed(players)
+  const wanted = [canonical(profile.displayName), canonical(profile.realName)]
+  const matches = free.filter((p) => wanted.includes(canonical(p.name)))
+  if (matches.length !== 1) return { kind: 'choose', candidates: free }
+  return { kind: 'matched', player: matches[0] }
+}
+
+/**
+ * The roster row a signed-in account has claimed, or null when it has claimed
+ * none. Being linked — not merely being signed in — is what the delete policies
+ * require, which is why claimPrompt and deleteAction both turn on it.
+ *
+ * Unlike matchPlayer, this may take the first hit: players_auth_user_id_key
+ * makes auth_user_id unique among claimed rows, so there is never a second one
+ * to choose between. That uniqueness is also why no caller ever asks which row
+ * came back, only whether one did.
+ */
+function linkedPlayer(userId: string, players: Player[]): Player | null {
+  return players.find((p) => p.auth_user_id === userId) ?? null
+}
+
+/**
+ * Whether a guarded delete may go ahead. Three states, not two: being signed
+ * in is not the same as being allowed, because the delete policies require a
+ * claimed row rather than a session.
+ *
+ * The distinction has to live in the UI, because Postgres will not raise. A
+ * delete refused by RLS affects zero rows and returns no error, so a button
+ * that offers to delete when the account is unlinked appears to do nothing at
+ * all.
+ *
+ * Internal: deleteAttempt is what the UI calls, and covers these three states.
+ */
+type DeleteAction = 'sign-in' | 'claim' | 'delete'
+
+function deleteAction(userId: string | null, players: Player[]): DeleteAction {
+  if (userId === null) return 'sign-in'
+  return linkedPlayer(userId, players) === null ? 'claim' : 'delete'
+}
+
+/**
+ * Shown when a guarded delete is clicked by an account that has claimed no row.
+ *
+ * Reachable despite ClaimGate blocking the page: while the roster is still
+ * loading the gate shows nothing, so the delete buttons are live and this is
+ * the state behind them.
+ */
+const CLAIM_REQUIRED_TO_DELETE =
+  'Ton compte Slack n’est pas encore lié à une ligne du classement. Termine la liaison pour pouvoir supprimer.'
+
+const GENERIC_CLAIM_FAILURE = 'La liaison a échoué. Réessaie dans un instant.'
+
+/**
+ * What to tell someone whose claim just failed.
+ *
+ * Postgres is the only thing enforcing these rules, so its errors are the only
+ * signal there is — but its wording is English, mentions constraint names, and
+ * says nothing about what to do next. Each case here is a rule from
+ * auth-migration.sql: the two unique indexes, and the claim trigger.
+ *
+ * Anything unrecognised falls back rather than leaking raw database text into a
+ * modal the person cannot dismiss.
+ */
+export function claimErrorMessage(error: unknown): string {
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : ''
+
+  if (message.includes('players_name_key')) return 'Ce nom est déjà pris dans le classement.'
+  if (message.includes('players_auth_user_id_key'))
+    return 'Ton compte Slack est déjà lié à un joueur.'
+  if (message.includes('player already claimed'))
+    return 'Quelqu’un vient de prendre cette ligne. Choisis-en une autre.'
+  return GENERIC_CLAIM_FAILURE
+}
+
+/** Reading the roster has three outcomes, and an unreadable one is not an empty one. */
+export type RosterLoad =
+  | { kind: 'loading' }
+  | { kind: 'unreadable' }
+  | { kind: 'loaded'; players: Player[] }
+
+/** What the claim gate should put in front of a signed-in account. */
+export type ClaimPrompt =
+  | { kind: 'none' }
+  | { kind: 'unreadable' }
+  | { kind: 'pick'; candidates: Player[] }
+
+/**
+ * Which prompt a signed-in account is owed.
+ *
+ * A roster we failed to read must not collapse into 'pick' with no candidates:
+ * that is the shape of a ladder where every row is taken, and the modal answers
+ * it by offering to create a new row. Someone whose row exists but could not be
+ * fetched would be walked into a duplicate — and players.name is unique, so it
+ * fails at the very end, after they have typed their name.
+ */
+export function claimPrompt(userId: string, roster: RosterLoad): ClaimPrompt {
+  if (roster.kind === 'loading') return { kind: 'none' }
+  if (roster.kind === 'unreadable') return { kind: 'unreadable' }
+  if (linkedPlayer(userId, roster.players) !== null) return { kind: 'none' }
+  return { kind: 'pick', candidates: unclaimed(roster.players) }
+}
+
+/**
+ * What a guarded delete button should do about the click it just received.
+ *
+ * The three states of deleteAction, each carrying the sentence that goes with
+ * it. Components are left holding only the effect — run the confirm, start the
+ * sign-in, show the message — which matters because those effects reach for
+ * window.confirm and are therefore the one part no test can enter.
+ */
+export type DeleteAttempt =
+  | { kind: 'ask-sign-in'; message: string }
+  | { kind: 'explain'; message: string }
+  | { kind: 'proceed' }
+
+/** `noun` names what was clicked, e.g. 'un tournoi' — it appears in the prompt. */
+export function deleteAttempt(
+  userId: string | null,
+  players: Player[],
+  noun: string,
+): DeleteAttempt {
+  const action = deleteAction(userId, players)
+  if (action === 'sign-in')
+    return {
+      kind: 'ask-sign-in',
+      message: `Seuls les joueurs connectés peuvent supprimer ${noun}. Se connecter avec Slack ?`,
+    }
+  if (action === 'claim') return { kind: 'explain', message: CLAIM_REQUIRED_TO_DELETE }
+  return { kind: 'proceed' }
+}
+
+/**
+ * Must match whichever provider is enabled in Supabase -> Authentication ->
+ * Providers. `slack_oidc` is Slack's current OpenID Connect app; `slack` was
+ * the deprecated "Sign in with Slack" one.
+ */
+export const SLACK_PROVIDER = 'slack_oidc'
+
+/** What a Slack sign-in tells us, once the payload has been read. */
+export interface SlackSignInData {
+  /** The `U0…` id the notification bot @mentions, or null when Slack withheld it. */
+  slackUserId: string | null
+  /** Null when no name was granted — matching must not fall back to empty strings. */
+  profile: SlackProfile | null
+}
+
+const NOTHING: SlackSignInData = { slackUserId: null, profile: null }
+
+const record = (value: unknown): Record<string, unknown> | null =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null
+
+const text = (o: Record<string, unknown>, key: string): string | null =>
+  typeof o[key] === 'string' && o[key] !== '' ? (o[key] as string) : null
+
+/**
+ * Reads the Slack identity off a Supabase session user.
+ *
+ * **Reads `identities`, never `user_metadata`.** Those two carry the same keys
+ * after a sign-in, which makes the wrong one look like a shortcut — but
+ * `supabase.auth.updateUser({ data })` writes `raw_user_meta_data` from the
+ * browser with nothing but the anon key. Believing it would let any signed-in
+ * account claim a row while writing somebody else's Slack id into
+ * `slack_user_id`, which is what the notification bot @mentions.
+ * `identity_data` is written by the provider through GoTrue and is not
+ * reachable that way.
+ *
+ * Shape confirmed against a real sign-in rather than assumed: the Slack user id
+ * arrives as `provider_id` (`sub` repeats it, and is not read), and the name as
+ * `name` and `full_name` — carrying the same value, because OIDC exposes no
+ * separate handle. The spec's SlackProfile asked for a display name and a real
+ * name; it gets one name twice, which matchPlayer already tolerates.
+ *
+ * Both halves are independently optional. Granting only `openid` yields an id
+ * and no name, and a nameless profile must stay null rather than become empty
+ * strings — canonical('') would match any roster row normalising to nothing.
+ */
+export function slackIdentity(user: unknown): SlackSignInData {
+  const u = record(user)
+  if (u === null || !Array.isArray(u.identities)) return NOTHING
+  const slack = u.identities.find((i) => record(i)?.provider === SLACK_PROVIDER)
+  const o = record(record(slack)?.identity_data)
+  if (o === null) return NOTHING
+  const name = text(o, 'name') ?? text(o, 'full_name')
+  return {
+    slackUserId: text(o, 'provider_id'),
+    profile: name === null ? null : { displayName: name, realName: text(o, 'full_name') ?? name },
+  }
+}
+
+/**
+ * How much of the start two words must share before they count as the same
+ * person. Three was indistinguishable from four under mutation testing and
+ * looser than it should be — it makes Marie kin to Marc, and Alexis kin to
+ * Alessandro. Short words stay capped by their own length, so raising it does
+ * not cost Leo/Leopold.
+ */
+const KINSHIP = 4
+
+const sharedPrefix = (a: string, b: string): number => {
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i += 1
+  return i
+}
+
+/**
+ * Do these two names plausibly belong to the same person?
+ *
+ * Word by word, because a roster keeps `Pras` where Slack says `Thibault Pras`.
+ * A shared opening is the test rather than an edit distance: nicknames are
+ * overwhelmingly truncations — Leopold/Leo, Christophe/Chris, Thibault/Thibs —
+ * and those sit far apart by edit distance while sharing their first letters.
+ *
+ * Words shorter than KINSHIP must match in full, so `Al` still recognises
+ * `Alessandro` without `Le` claiming kinship with `Léo`.
+ */
+const namesLookRelated = (a: string, b: string): boolean =>
+  canonical(a)
+    .split(' ')
+    .some((wordA) =>
+      canonical(b)
+        .split(' ')
+        .some((wordB) => sharedPrefix(wordA, wordB) >= Math.min(KINSHIP, wordA.length, wordB.length)),
+    )
+
+/**
+ * A nudge shown when someone is about to claim a row that does not look like
+ * them, or null when it does.
+ *
+ * Deliberately a warning and not a block. Roster names are typed by hand and
+ * people go by things Slack never sees, so refusing the claim would strand
+ * exactly the person who most needs to link. Both the handle and the real name
+ * are accepted — either resembling the row is enough to stay quiet.
+ */
+export function claimNameWarning(profile: SlackProfile | null, rosterName: string): string | null {
+  if (profile === null) return null
+  if (namesLookRelated(profile.displayName, rosterName)) return null
+  if (namesLookRelated(profile.realName, rosterName)) return null
+  return `Slack te connaît sous le nom « ${profile.displayName} ». Es-tu bien « ${rosterName} » ?`
+}
