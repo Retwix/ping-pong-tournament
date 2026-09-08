@@ -1,4 +1,6 @@
 import { useCallback, useMemo } from 'react'
+import { ladderReplay } from '../lib/ladder'
+import { defaultLadderScope } from '../lib/seasons'
 import { sideKey } from '../lib/stats'
 import { sideElos, type SideElos } from '../lib/scorerElo'
 import type { Match } from '../types'
@@ -13,7 +15,7 @@ export interface SideRating {
   ratingAfter: number
   won: boolean
   stakes: RatingEvent['stakes']
-  /** Current leaderboard rank/provisional state (from the global replay). */
+  /** Where the player stands right now, on the ladder being played. */
   rank: number | null
   provisional: boolean
 }
@@ -40,9 +42,9 @@ const EMPTY: MatchRatings = { a: null, b: null }
 /**
  * Looks up the Glicko-2 rating change a finished match produced for each side.
  *
- * Ratings are a single global ladder replayed from *all* history, so this leans
- * on `useRatings` (full replay + realtime) rather than re-deriving from one
- * tournament — a tournament-scoped replay would produce wrong numbers. Sides are
+ * A rating move is a whole ladder's arithmetic, so this leans on `useRatings`
+ * (full replay + realtime) rather than re-deriving from one tournament — a
+ * tournament-scoped replay would produce wrong numbers. Sides are
  * matched by stable identity (`playerId ?? name:<name>`), the same key the engine
  * uses, so renames and name collisions don't misattribute a delta.
  *
@@ -51,16 +53,26 @@ const EMPTY: MatchRatings = { a: null, b: null }
  * callers should treat a null side as "not ready yet" and render nothing.
  */
 export function useRatingDeltas() {
-  const { events, rows, loading } = useRatings()
+  const { events, matches: allMatches, players, tournaments, loading } = useRatings()
 
-  // Current ladder Elo for each side of a match (referee scorer name pills).
+  // Two ladders, deliberately. Where a player *stands* is the ladder being
+  // played — the one « Le classement » opens on — so a pill here and a row
+  // there can never show the same player two ratings. How far a result *moved*
+  // them is still read from the lifetime replay below.
+  const now = useMemo(() => new Date(), [])
+  const { rows } = useMemo(
+    () => ladderReplay(defaultLadderScope(now), { matches: allMatches, players, tournaments }),
+    [now, allMatches, players, tournaments],
+  )
+
+  // Season-ladder Elo for each side of a match (referee scorer name pills).
   const elosFor = useCallback(
     (match: Match | null | undefined): SideElos =>
       match ? sideElos(rows, match) : { a: null, b: null },
     [rows],
   )
 
-  // Events grouped by match, and rank/provisional keyed by ladder identity.
+  // Events grouped by match; rank/provisional keyed by season-ladder identity.
   const byMatch = useMemo(() => {
     const m = new Map<string, RatingEvent[]>()
     for (const e of events) {
