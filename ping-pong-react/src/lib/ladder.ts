@@ -32,9 +32,9 @@ const scopeOf = (seasonId: string | null): LadderScope =>
   seasonId === null ? ALL_TIME : { kind: 'season', id: seasonId }
 
 /**
- * Every match's rating events, each read off the ladder that match moved: its
- * own season, or the lifetime one for anything played before seasons began — or
- * never dated at all.
+ * Every rating event, each read off the ladder the match that produced it
+ * actually moved: its own season, or the lifetime ladder for anything played
+ * before seasons began — or never dated at all.
  *
  * The same match yields a different delta on each ladder, because a season
  * replays everyone from 1500. Reading a result off the wrong one shows a number
@@ -43,22 +43,26 @@ const scopeOf = (seasonId: string | null): LadderScope =>
  * One replay per ladder in play, not one per match: each match belongs to
  * exactly one window, so the total work is about a single full replay however
  * many seasons have been played. A match no ladder counts — « non classée », or
- * a double — is absent from the map rather than present and empty.
+ * a double — contributes nothing.
+ *
+ * Ordered oldest first, like a single replay, so a caller can still read a
+ * player's entry and exit rating off the ends of a run. Undated matches sort
+ * first, as they do inside the engine.
  */
-export function eventsByMatch(data: LadderData): Map<string, RatingEvent[]> {
+export function scopedEvents(data: LadderData): RatingEvent[] {
   const seasonIdOf = new Map<string, string | null>()
   for (const m of data.matches) seasonIdOf.set(m.id, seasonOf(m.ended_at ?? m.started_at))
 
-  const out = new Map<string, RatingEvent[]>()
+  const out: RatingEvent[] = []
   for (const seasonId of new Set(seasonIdOf.values())) {
-    for (const e of ladderReplay(scopeOf(seasonId), data).events) {
-      // A season's replay holds only its own matches, but the lifetime one holds
-      // every match — including those a season already answered for.
-      if (seasonIdOf.get(e.matchId) !== seasonId) continue
-      const found = out.get(e.matchId)
-      if (found) found.push(e)
-      else out.set(e.matchId, [e])
-    }
+    // A season's replay holds only its own matches, but the lifetime one holds
+    // every match — including those a season already answered for.
+    const own = ladderReplay(scopeOf(seasonId), data).events.filter(
+      (e) => seasonIdOf.get(e.matchId) === seasonId,
+    )
+    out.push(...own)
   }
-  return out
+  // Windows never overlap, so this only interleaves whole ladders. Sorting is
+  // stable, which keeps each replay's own order for events sharing a timestamp.
+  return out.sort((a, b) => (a.at ?? '').localeCompare(b.at ?? ''))
 }

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { eventsByMatch, ladderReplay } from '../lib/ladder'
+import { ladderReplay, scopedEvents } from '../lib/ladder'
 import { defaultLadderScope } from '../lib/seasons'
 import { sideKey } from '../lib/stats'
 import { sideElos, type SideElos } from '../lib/scorerElo'
@@ -53,7 +53,7 @@ const EMPTY: MatchRatings = { a: null, b: null }
  * callers should treat a null side as "not ready yet" and render nothing.
  */
 export function useRatingDeltas() {
-  const { events, matches: allMatches, players, tournaments, loading } = useRatings()
+  const { matches: allMatches, players, tournaments, loading } = useRatings()
 
   // Two ladders, deliberately. Where a player *stands* is the ladder being
   // played — the one « Le classement » opens on — so a pill here and a row
@@ -72,12 +72,22 @@ export function useRatingDeltas() {
     [rows],
   )
 
-  // Each match's move, read off the ladder that match actually moved — its own
-  // season, or the lifetime one for anything played before September.
-  const byMatch = useMemo(
-    () => eventsByMatch({ matches: allMatches, players, tournaments }),
+  // Every move, read off the ladder that produced it — the match's own season,
+  // or the lifetime ladder for anything played before September.
+  const events = useMemo(
+    () => scopedEvents({ matches: allMatches, players, tournaments }),
     [allMatches, players, tournaments],
   )
+
+  const byMatch = useMemo(() => {
+    const m = new Map<string, RatingEvent[]>()
+    for (const e of events) {
+      const found = m.get(e.matchId)
+      if (found) found.push(e)
+      else m.set(e.matchId, [e])
+    }
+    return m
+  }, [events])
 
   const standingByKey = useMemo(() => {
     const m = new Map<string, { rank: number; provisional: boolean }>()
@@ -123,11 +133,11 @@ export function useRatingDeltas() {
   const forTournament = useCallback(
     (tournamentMatches: Match[]): TournamentRating[] => {
       const ids = new Set(tournamentMatches.map((m) => m.id))
-      // Still the lifetime ladder, unlike forMatch above: a tournament's net move
-      // needs its games in one chronological run, which the per-match map does
-      // not carry. Straddling a season boundary is what makes that hard.
       // `events` are in replay (chronological) order, so the first event we see
       // for a player is their entry rating and the last is their exit rating.
+      // The net move accumulates the deltas rather than differencing those two:
+      // a tournament running through midnight on 30 November is played half on
+      // one ladder and half on the next, and only the sum survives that.
       const acc = new Map<string, TournamentRating>()
       for (const e of events) {
         if (!ids.has(e.matchId)) continue
@@ -135,7 +145,7 @@ export function useRatingDeltas() {
         if (cur) {
           cur.name = e.name
           cur.endRating = e.ratingAfter
-          cur.netDelta = e.ratingAfter - cur.startRating
+          cur.netDelta += e.delta
           cur.games += 1
         } else {
           const s = standingByKey.get(e.key)
@@ -144,7 +154,7 @@ export function useRatingDeltas() {
             name: e.name,
             startRating: e.ratingBefore,
             endRating: e.ratingAfter,
-            netDelta: e.ratingAfter - e.ratingBefore,
+            netDelta: e.delta,
             games: 1,
             rank: s?.rank ?? null,
             provisional: s?.provisional ?? false,

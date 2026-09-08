@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { eventsByMatch, ladderReplay } from './ladder'
+import { ladderReplay, scopedEvents } from './ladder'
 import { RATING } from './rating'
 import { ALL_TIME } from './seasons'
 import type { Match, Player, Tournament } from '../types'
@@ -107,46 +107,58 @@ describe('ladderReplay', () => {
   })
 })
 
-describe('eventsByMatch', () => {
+describe('scopedEvents', () => {
   const history = { matches: [june, september], players, tournaments }
+  const forMatch = (data: typeof history, id: string) =>
+    scopedEvents(data).filter((e) => e.matchId === id)
 
   it('reads a season match off its own season, not off the lifetime ladder', () => {
-    const seasonEvents = ladderReplay({ kind: 'season', id: 'automne-2026' }, history).events
+    const season = ladderReplay({ kind: 'season', id: 'automne-2026' }, history).events
     const lifetime = ladderReplay(ALL_TIME, history).events.filter((e) => e.matchId === 'sept')
 
-    const found = eventsByMatch(history).get('sept')
-    expect(found?.map((e) => e.delta)).toEqual(seasonEvents.map((e) => e.delta))
-    expect(found?.map((e) => e.delta)).not.toEqual(lifetime.map((e) => e.delta))
+    const found = forMatch(history, 'sept')
+    expect(found.map((e) => e.delta)).toEqual(season.map((e) => e.delta))
+    expect(found.map((e) => e.delta)).not.toEqual(lifetime.map((e) => e.delta))
   })
 
   it('keeps the lifetime delta for a match played before the first season', () => {
     const lifetime = ladderReplay(ALL_TIME, history).events.filter((e) => e.matchId === 'june')
-    expect(eventsByMatch(history).get('june')).toEqual(lifetime)
+    expect(forMatch(history, 'june')).toEqual(lifetime)
   })
 
   it('dates a match by its start when it never recorded an end', () => {
     const noEnd = getMockMatch({ id: 'noend', ended_at: null, started_at: at(2026, 8, 20) })
-    const history = { matches: [noEnd], players, tournaments }
-    const season = ladderReplay({ kind: 'season', id: 'automne-2026' }, history).events
+    const data = { matches: [noEnd], players, tournaments }
+    const season = ladderReplay({ kind: 'season', id: 'automne-2026' }, data).events
     expect(season).toHaveLength(2)
-    expect(eventsByMatch(history).get('noend')).toEqual(season)
+    expect(forMatch(data, 'noend')).toEqual(season)
   })
 
   it('keeps an undated match on the lifetime ladder, the only one that counts it', () => {
     const undated = getMockMatch({ id: 'undated', ended_at: null, started_at: null })
-    const history = { matches: [undated], players, tournaments }
-    expect(eventsByMatch(history).get('undated')).toEqual(ladderReplay(ALL_TIME, history).events)
+    const data = { matches: [undated], players, tournaments }
+    expect(scopedEvents(data)).toEqual(ladderReplay(ALL_TIME, data).events)
   })
 
   it('leaves out a match no ladder counts', () => {
     const unrankedT = getMockTournament({ id: 'nc', unranked: true })
     const nc = getMockMatch({ id: 'nc1', tournament_id: 'nc', ended_at: at(2026, 8, 12) })
-    const found = eventsByMatch({
+    const data = {
       matches: [september, nc],
       players,
       tournaments: [...tournaments, unrankedT],
-    })
-    expect(found.has('nc1')).toBe(false)
-    expect(found.get('sept')).toHaveLength(2)
+    }
+    expect(forMatch(data, 'nc1')).toEqual([])
+    expect(forMatch(data, 'sept')).toHaveLength(2)
+  })
+
+  it('runs chronologically across ladders, oldest first', () => {
+    const winter = getMockMatch({ id: 'dec', ended_at: at(2026, 11, 4) })
+    const undated = getMockMatch({ id: 'undated', ended_at: null, started_at: null })
+    const data = { matches: [winter, september, undated, june], players, tournaments }
+    const order = scopedEvents(data)
+      .map((e) => e.matchId)
+      .filter((id, i, all) => all.indexOf(id) === i)
+    expect(order).toEqual(['undated', 'june', 'sept', 'dec'])
   })
 })
