@@ -40,14 +40,23 @@ engineering trade-off in here.
 **Decision: phone as camera, laptop as brain.** A phone has far better optics
 and framerate than a laptop webcam, and the laptop can sit anywhere.
 
-Two transports, in order of preference:
+**Confirmed setup: iPhone → Apple Silicon Mac, over USB.** Two ways to get the
+frames, both of which present the iPhone as an ordinary capture device, so
+`cv2.VideoCapture(index)` is all the code ever sees:
 
-1. **Phone as a USB/WiFi virtual webcam** (Camo, Iriun, or equivalent). The
-   phone shows up as a normal capture device, so `cv2.VideoCapture(0)` just
-   works. Latency ~50–150 ms over USB. **Preferred.**
-2. **MJPEG or RTSP stream** over WiFi (IP Webcam on Android, Larix, etc.).
-   `cv2.VideoCapture("http://192.168.1.x:8080/video")`. Latency ~150–400 ms and
-   dependent on the WiFi. Fallback.
+1. **Continuity Camera** — built into macOS, nothing to install, no licence.
+   Plug the iPhone in and it appears as a camera. **Try this first**: if its
+   framerate is good enough, the transport question is closed for free.
+2. **Camo or Iriun** — third-party, but they expose framerate and resolution
+   controls that Continuity Camera does not, and can drive 60 fps. Fall back to
+   this only if M0 measures Continuity Camera below ~50 fps.
+
+M0 (§14) measures both and picks; neither choice touches any code downstream.
+
+macOS gotcha worth knowing before it costs an hour: the terminal app running
+Python needs camera permission under **System Settings → Privacy & Security →
+Camera**, and OpenCV reports no error when it's missing — it just hands back
+empty frames. `probe.py --list` calls this out explicitly.
 
 The capture layer takes a single `--source` that accepts an integer (device
 index), a file path (recorded clip, for development), or a URL. Development and
@@ -79,8 +88,15 @@ mid-match, detection degrades until recalibration.
 - **Bright, constant, artificial light.** Windows are the enemy: passing clouds
   change the background globally. Bright light also buys a shorter shutter,
   which shortens the ball's motion streak.
-- **Orange ball, not white.** Best separation from a blue/green table, white
-  lines, and white shirts.
+- **Orange ball on a white table** — confirmed, and it's a *better* combination
+  than it sounds. White is unsaturated; orange is strongly saturated. So the
+  colour gate keys on **saturation, not hue**, and the table falls out of the
+  mask almost completely. Two caveats it also solves: player shadows and the
+  ball's own shadow travelling across a white table are dark but *grey* (low
+  saturation), so the same gate kills them, and MOG2's shadow classification
+  catches the rest. Glare is the one real risk — a specular highlight on a
+  glossy white table is bright and blown out; diffuse lighting, or angling the
+  lights away from the camera, avoids it.
 
 ---
 
@@ -115,6 +131,11 @@ language. The service is a sensor, not a referee.
 Once per session (the camera doesn't move between matches), the operator clicks
 the **four table corners** in a still frame. That gives a homography `H` mapping
 image pixels → the table plane in centimetres (274 × 152.5, net at y = 137).
+
+Any camera angle works, so the framing can be tweaked freely to fit the room —
+the homography absorbs arbitrary perspective. The two real constraints are that
+**all four corners stay visible** and that **the camera does not move** once
+calibrated. Nothing else about the angle matters.
 
 Auto-detecting the table by colour segmentation is possible and is not worth it
 for v1 — four clicks take five seconds and never fail. Calibration is persisted
@@ -359,13 +380,16 @@ Per frame at 720p on a mid-range laptop CPU, no GPU:
 |---|---|
 | Capture + decode | ~5 ms |
 | Background subtraction + blobs | ~4 ms |
-| Person detection (320 px, every 5th frame) | ~8 ms amortised |
+| Person detection (320 px, every 5th frame, MPS) | ~3 ms amortised |
 | Tracking + bounce + state machine | < 1 ms |
 | Overlay + display | ~5 ms |
 | **Total** | **~23 ms → 40+ fps** |
 
-Comfortable at 30 fps input, adequate at 60. Apple Silicon (MPS/CoreML) or an
-NVIDIA GPU makes the person detector free, but neither is required.
+Apple Silicon confirmed, so the person detector runs on the GPU via MPS (or a
+CoreML export) and is effectively free — the budget above is the pessimistic
+CPU-only case and still clears 60 fps. It also means the TrackNet-style upgrade
+in §5 can be trained and run locally if §15 calls for it, rather than needing
+rented hardware.
 
 End-to-end latency from the real point to the score changing: transport
 (~100 ms) + dwell timeout (~700 ms) + network (~100 ms) ≈ **under a second**,
@@ -418,13 +442,17 @@ deletes, and it needs the consent of whoever is playing.
 
 ---
 
-## 17. Open questions
+## 17. Resolved, and what's still open
 
-1. **Laptop specs?** Determines whether the person detector runs comfortably and
-   whether the learned-detector upgrade is viable locally.
-2. **Which phone / which streaming app?** Decides transport and the achievable
-   framerate. M0 answers this.
-3. **Table and ball colour?** Drives the colour gate in §5. Orange ball on a
-   dark table is the friendliest combination by a wide margin.
-4. **Where does the laptop sit during a real match** — is someone watching the
-   operator window, or does it run headless with the phone as the only display?
+Settled 2026-09-10: **Apple Silicon Mac + iPhone over USB**, **orange ball on a
+white table**, and the framing is free to be tweaked to fit the room (§4).
+
+Still open, neither of them blocking:
+
+1. **Where does the Mac sit during a real match** — is someone watching the
+   operator window, or does it run headless with a phone or TV showing
+   `SpectatorView` as the only display? Decides how much the overlay in §12
+   matters versus the toast in §11.
+2. **The exact saturation threshold for the orange gate**, which depends on your
+   lighting and how glossy the table is. `probe.py --mask` has live sliders for
+   this; M0 reports the numbers back and they become the defaults.
