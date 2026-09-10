@@ -3,6 +3,7 @@ import { IconFlame, IconTrendingUp } from '@tabler/icons-react'
 import { useRatings } from '../hooks/useRatings'
 import { capotList, dashboardRecords } from '../lib/dashboardRecords'
 import { individualMatches } from '../lib/doubles'
+import { scopedEvents } from '../lib/ladder'
 import { signed } from '../lib/format'
 import { computePlayerStats } from '../lib/stats'
 import CapotsModal from './CapotsModal'
@@ -13,10 +14,17 @@ import CapotsModal from './CapotsModal'
  * independently nullable so the card degrades gracefully when data is thin.
  */
 export default function RecordsCard() {
-  const { matches, players, events, tournaments } = useRatings()
+  const { matches, players, tournaments } = useRatings()
   const [capotsOpen, setCapotsOpen] = useState(false)
   const individuels = individualMatches(matches, tournaments)
   const stats = computePlayerStats(individuels, players)
+  // The upset is a gap between two ratings, so it has to be read off the ladder
+  // that held them the night it happened — beating a 1700 in June was an upset
+  // on the lifetime ladder, and nothing on a season that had not started.
+  const events = useMemo(
+    () => scopedEvents({ matches, players, tournaments }),
+    [matches, players, tournaments],
+  )
   const rec = dashboardRecords(stats, individuels, events)
   const capots = useMemo(
     () => capotList(individuels, tournaments, new Date()),

@@ -4,6 +4,7 @@ import { useRatings } from '../hooks/useRatings'
 import { useTournament } from '../hooks/useTournament'
 import { ladderAvatar } from '../lib/spectator'
 import { pickLiveMatch } from '../lib/liveHero'
+import { defaultLadderScope } from '../lib/seasons'
 import { serverIsA } from '../lib/pingpong'
 import { sideKey } from '../lib/stats'
 import Avatar from './Avatar'
@@ -17,13 +18,14 @@ interface Props {
 /**
  * Dashboard live hero — the emotional anchor of the home screen. Shows the coral
  * "match in progress" card when a game is live on the table, otherwise a slim
- * glass invite band. Never renders nothing: while the active tournament is still
+ * glass invite band. The Elo under each player is read off the ladder the
+ * dashboard's other cards show — the season being played — not the lifetime one. Never renders nothing: while the active tournament is still
  * resolving, the idle band shows too, so the top of the page never flashes empty.
  */
 export default function LiveHero({ onWatch, onRef, onNew }: Props) {
   const { id, loading } = useCurrentTournament()
   const { tournament, matches } = useTournament(id)
-  const { rows } = useRatings()
+  const { rows } = useRatings(defaultLadderScope(new Date()))
   const live = pickLiveMatch(matches)
 
   if (loading || !tournament || !live) {

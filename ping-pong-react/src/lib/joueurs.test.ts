@@ -112,10 +112,10 @@ describe('joueurRows', () => {
     expect(rows[0].elo).toBe(1487)
   })
 
-  it('gives a registered player with no rated game the starting 1500 and an empty record', () => {
+  it('leaves the Elo empty for a registered player with no game on this ladder', () => {
     const rows = joueurRows([getMockPlayer()], [], [])
     expect(rows[0]).toMatchObject({
-      elo: 1500,
+      elo: null,
       played: 0,
       meta: '0 V · 0 D',
       matchsLabel: '0 match',
@@ -139,7 +139,7 @@ describe('joueurRows', () => {
       [getMockRatingRow({ key: 'p1', playerId: 'p1', name: 'Léo' })],
       [],
     )
-    expect(rows[0].elo).toBe(1500)
+    expect(rows[0].elo).toBeNull()
   })
 
   it('never claims a homonym row already owned by another player id', () => {
@@ -148,7 +148,7 @@ describe('joueurRows', () => {
       [getMockRatingRow({ key: 'p1', playerId: 'p1', name: 'Candice' })],
       [],
     )
-    expect(rows[0].elo).toBe(1500)
+    expect(rows[0].elo).toBeNull()
   })
 
   it('never claims an unowned row recorded under a different name', () => {
@@ -157,7 +157,7 @@ describe('joueurRows', () => {
       [getMockRatingRow({ key: 'name:Léo', playerId: null, name: 'Léo' })],
       [],
     )
-    expect(rows[0].elo).toBe(1500)
+    expect(rows[0].elo).toBeNull()
   })
 
   it('counts only this player’s events for the V · D record and match count', () => {
@@ -224,7 +224,10 @@ describe('joueurRows', () => {
   it('breaks Elo ties alphabetically (French collation)', () => {
     const rows = joueurRows(
       [getMockPlayer({ id: 'p1', name: 'Zoé' }), getMockPlayer({ id: 'p2', name: 'Émile' })],
-      [],
+      [
+        getMockRatingRow({ key: 'p1', playerId: 'p1', name: 'Zoé', rating: 1500 }),
+        getMockRatingRow({ key: 'p2', playerId: 'p2', name: 'Émile', rating: 1500 }),
+      ],
       [],
     )
     expect(rows.map((r) => r.name)).toEqual(['Émile', 'Zoé'])
@@ -242,6 +245,25 @@ describe('joueurRows', () => {
   it('defaults an active player to a null leftAt', () => {
     const rows = joueurRows([getMockPlayer()], [getMockRatingRow()], [])
     expect(rows[0]).toMatchObject({ status: 'active', leftAt: null })
+  })
+
+  it('sorts every player with no Elo on this ladder below every rated player', () => {
+    const rows = joueurRows(
+      [
+        getMockPlayer({ id: 'p1', name: 'Zoé' }),
+        getMockPlayer({ id: 'p2', name: 'Léo' }),
+        getMockPlayer({ id: 'p3', name: 'Amélie' }),
+        getMockPlayer({ id: 'p4', name: 'Inès' }),
+        getMockPlayer({ id: 'p5', name: 'Marc' }),
+      ],
+      [
+        getMockRatingRow({ key: 'p2', playerId: 'p2', name: 'Léo', rating: 1400 }),
+        getMockRatingRow({ key: 'p4', playerId: 'p4', name: 'Inès', rating: 1600 }),
+        getMockRatingRow({ key: 'p5', playerId: 'p5', name: 'Marc', rating: 1200 }),
+      ],
+      [],
+    )
+    expect(rows.map((r) => r.name)).toEqual(['Inès', 'Léo', 'Marc', 'Amélie', 'Zoé'])
   })
 
   it('sorts every alumnus below every active player regardless of Elo', () => {
