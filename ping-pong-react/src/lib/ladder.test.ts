@@ -13,6 +13,7 @@ const getMockPlayer = (overrides?: Partial<Player>): Player => ({
   name: 'Léo',
   team: 'tech',
   slack_user_id: null,
+  auth_user_id: null,
   avatar_url: null,
   status: 'active',
   left_at: null,
