@@ -76,6 +76,11 @@ class FakeCapture:
     def get(self, _prop: int) -> float:
         return self._reports_fps
 
+    def set(self, _prop: int, _value: float) -> bool:
+        """Seeking back to the start, as a file source does."""
+        self._delivered = 0
+        return True
+
 
 class SpyWriter:
     def __init__(self) -> None:
@@ -162,3 +167,31 @@ def test_settles_through_intermittent_empty_reads() -> None:
     )
 
     assert opened["fps"] == pytest.approx(48.0, abs=0.5)
+
+
+def test_frame_stream_ends_when_the_source_is_exhausted() -> None:
+    """A clip that ends must end the loop, not spin on empty reads for ever."""
+    stream = probe.frames(FakeCapture(stops_after=7))
+
+    assert len(list(stream)) == 7
+
+
+def test_frame_stream_survives_intermittent_empty_reads() -> None:
+    """A live camera returns the occasional empty read; that is not the end.
+
+    Every other read fails here, so the empty reads far outnumber the threshold
+    in total while never once being consecutive. Counting them cumulatively
+    would cut the stream off mid-clip.
+    """
+    stream = probe.frames(FakeCapture(stops_after=100, fails_every=2))
+
+    assert len(list(stream)) == 100
+
+
+def test_frame_stream_replays_a_file_when_asked() -> None:
+    """Tuning sliders against a short clip needs the clip to keep playing."""
+    stream = probe.frames(FakeCapture(stops_after=4), replay=True)
+
+    collected = [frame for _, frame in zip(range(10), stream)]
+
+    assert len(collected) == 10

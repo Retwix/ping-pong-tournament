@@ -192,7 +192,7 @@ def latency(cap: cv2.VideoCapture) -> None:
             break
 
 
-def mask(cap: cv2.VideoCapture, gate: dict[str, int]) -> None:
+def mask(cap: cv2.VideoCapture, gate: dict[str, int], *, replay: bool = False) -> None:
     """Tune the orange gate live, and report the largest surviving blob.
 
     The blob area matters as much as the threshold: it tells us how many pixels
@@ -209,10 +209,7 @@ def mask(cap: cv2.VideoCapture, gate: dict[str, int]) -> None:
     print("ball stays white. Note the largest-blob area at each end.")
     print("Press q when the ball is clean at both ends.\n")
 
-    while True:
-        ok, frame = cap.read()
-        if not ok or frame is None:
-            continue
+    for frame in frames(cap, replay=replay):
         for name in gate:
             gate[name] = cv2.getTrackbarPos(name, win)
 
@@ -241,6 +238,33 @@ def mask(cap: cv2.VideoCapture, gate: dict[str, int]) -> None:
 
     print(f"\n  Tuned gate: {gate}")
     print("  Report these — they become the defaults for ball detection.")
+
+
+# A live camera returns the odd empty read while it settles; an exhausted file
+# returns nothing else, for ever. Only the consecutive count separates them.
+EMPTY_READS_BEFORE_EOF = 30
+
+
+def frames(cap: cv2.VideoCapture, *, replay: bool = False):
+    """Yield frames until the source is exhausted.
+
+    `replay` rewinds a file instead of stopping, so a short clip can be looped
+    while sliders are being tuned against it.
+    """
+    empty = 0
+    while True:
+        ok, frame = cap.read()
+        if ok and frame is not None:
+            empty = 0
+            yield frame
+            continue
+        empty += 1
+        if empty < EMPTY_READS_BEFORE_EOF:
+            continue
+        if not replay:
+            return
+        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        empty = 0
 
 
 def settle(cap: cv2.VideoCapture, *, frames: int = WARMUP_FRAMES, now=time.perf_counter):
@@ -328,6 +352,7 @@ def main() -> int:
         return 0
 
     source: int | str = int(args.source) if args.source.isdigit() else args.source
+    is_file = isinstance(source, str) and Path(source).exists()
     cap = open_capture(source, args.width, args.height, args.fps)
     if not cap.isOpened():
         print(f"Could not open source {source!r}. Try --list.", file=sys.stderr)
@@ -337,7 +362,7 @@ def main() -> int:
         if args.latency:
             latency(cap)
         elif args.mask:
-            mask(cap, dict(DEFAULT_GATE))
+            mask(cap, dict(DEFAULT_GATE), replay=is_file)
         elif args.record:
             record(cap, args.record, args.seconds)
         else:

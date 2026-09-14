@@ -73,6 +73,17 @@ python3 probe.py --source 1 --mask
 Note the **largest-blob area at each end** — that pixel count is what the
 depth-aware size gate gets built from.
 
+**Tune from a clip instead of at the table.** `--mask` takes a recorded file
+just as happily as a camera, and loops it so the sliders stay usable:
+
+```sh
+python3 probe.py --source rally.mp4 --mask
+```
+
+So the scarce thing is *footage*, not table time. Record the ball held still at
+each end, an empty table, and some warm-up, and the gate can be tuned and
+re-tuned at any desk.
+
 ## Recording test footage
 
 ```sh
