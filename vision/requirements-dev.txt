@@ -1,0 +1,4 @@
+# Tests for the probe's pure logic. No camera, no OpenCV device — these run in
+# CI and on any machine.
+-r requirements.txt
+pytest>=8.0.0

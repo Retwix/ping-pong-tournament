@@ -41,6 +41,17 @@ DEFAULT_GATE = {"hue_lo": 3, "hue_hi": 28, "sat_min": 110, "val_min": 90}
 WARMUP_FRAMES = 30  # auto-exposure and the encoder need a moment to settle
 
 
+def measured_fps(timestamps: list[float]) -> float:
+    """The rate frames actually arrived at, from their arrival times.
+
+    The median gap, not the mean: a capture device stalls for a quarter to half
+    a second on its first frames, and a mean would carry that into the number
+    every later stage is tuned against.
+    """
+    gaps = [later - earlier for earlier, later in zip(timestamps, timestamps[1:])]
+    return 1.0 / statistics.median(gaps)
+
+
 def open_capture(source: int | str, width: int, height: int, fps: int) -> cv2.VideoCapture:
     """Open a device index, file path, or stream URL."""
     if isinstance(source, int):

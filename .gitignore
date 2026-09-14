@@ -34,4 +34,5 @@ vision/*.mp4
 vision/*.mov
 vision/calibration.json
 vision/.venv/
-vision/__pycache__/
+vision/**/__pycache__/
+vision/.pytest_cache/
