@@ -162,34 +162,85 @@ def measure(cap: cv2.VideoCapture, seconds: float, show: bool) -> None:
               "  coast through those, so mention it when reporting.")
 
 
-def latency(cap: cv2.VideoCapture) -> None:
-    """Glass-to-screen latency, by the photograph-the-clock trick.
+PANEL = (600, 900)  # big enough for a phone across a desk to fill its frame with
+BASELINE_FRAMES = 3  # a predecessor to compare the first post-flash frame against
 
-    A millisecond counter is drawn on screen. Point the iPhone at that window:
-    the video then shows the counter as it was when the light left the screen,
-    so the gap between the number *in* the video and the number next to it is
-    the round-trip latency.
+
+def _brightness(frame) -> float:
+    return float(frame.mean())
+
+
+def _drain(cap: cv2.VideoCapture, seconds: float, now) -> None:
+    """Let the screen's current state reach the sensor before timing anything."""
+    deadline = now() + seconds
+    for _ in frames(cap):
+        if now() >= deadline:
+            return
+
+
+def latency(cap: cv2.VideoCapture, *, flashes: int = 10, timeout: float = 2.0,
+            now=time.perf_counter) -> None:
+    """Glass-to-glass latency, by flashing the screen and timing the step.
+
+    The window flips black -> white at a known instant; the first frame that
+    arrives measurably brighter than its predecessor is the frame showing the
+    flip. Nothing to read by eye, and it says so when the phone is not pointed
+    at the screen instead of reporting a number anyway.
+
+    The figure includes the display's own latency, so it overstates the camera
+    path slightly. That is the conservative direction, and it is the number that
+    actually matters: how stale a frame is by the time Python sees it.
     """
-    print("\nPoint the iPhone at this window so the counter is visible in the video.")
-    print("Read the number inside the video feed, subtract it from the big number")
-    print("beside it — that difference, in ms, is the end-to-end latency.")
-    print("Press q to stop.\n")
+    win = "latency - point the phone at this window"
+    cv2.namedWindow(win)
+    dark_panel = np.zeros((*PANEL, 3), dtype=np.uint8)
+    bright_panel = np.full((*PANEL, 3), 255, dtype=np.uint8)
 
-    start = time.perf_counter()
-    while True:
-        ok, frame = cap.read()
-        if not ok or frame is None:
+    def paint(panel) -> None:
+        cv2.imshow(win, panel)
+        cv2.waitKey(1)
+
+    print("\nPoint the iPhone at the flashing window, filling as much of its")
+    print("frame as possible. Measuring...\n")
+
+    results: list[float] = []
+    for attempt in range(1, flashes + 1):
+        paint(dark_panel)
+        _drain(cap, 0.5, now)
+
+        samples: list[tuple[float, float]] = []
+        for frame in frames(cap):
+            samples.append((now(), _brightness(frame)))
+            if len(samples) >= BASELINE_FRAMES:
+                break
+
+        flash_at = now()
+        paint(bright_panel)
+        rise = None
+        for frame in frames(cap):
+            samples.append((now(), _brightness(frame)))
+            rise = first_significant_rise(samples, after=flash_at, min_rise=MIN_FLASH_RISE)
+            if rise is not None or now() - flash_at > timeout:
+                break
+
+        if rise is None:
+            print(f"  flash {attempt:2d}   no step seen within {timeout:.1f}s")
             continue
-        elapsed_ms = int((time.perf_counter() - start) * 1000)
-        h, w = frame.shape[:2]
-        panel = np.zeros((h, 420, 3), dtype=np.uint8)
-        cv2.putText(panel, f"{elapsed_ms % 100000:05d}", (10, h // 2),
-                    cv2.FONT_HERSHEY_SIMPLEX, 2.6, (255, 255, 255), 6)
-        cv2.putText(panel, "now", (10, h // 2 + 60),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 200, 255), 2)
-        cv2.imshow("latency", np.hstack([frame, panel]))
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        results.append((rise - flash_at) * 1000.0)
+        print(f"  flash {attempt:2d}   {results[-1]:6.1f} ms")
+
+    cv2.destroyWindow(win)
+    if not results:
+        print("\n  No flash was ever seen. Point the phone at this window, fill its")
+        print("  frame with it, raise the screen brightness, and try again.")
+        return
+
+    results.sort()
+    print(f"\n  median  {statistics.median(results):.0f} ms   "
+          f"min {results[0]:.0f} ms   max {results[-1]:.0f} ms   "
+          f"({len(results)}/{flashes} seen)")
+    print(f"  Resolution is one frame interval, so anything under ~{1000/30:.0f} ms")
+    print("  reads as sub-frame. Includes display latency: an upper bound.")
 
 
 def mask(cap: cv2.VideoCapture, gate: dict[str, int], *, replay: bool = False) -> None:
@@ -238,6 +289,33 @@ def mask(cap: cv2.VideoCapture, gate: dict[str, int], *, replay: bool = False) -
 
     print(f"\n  Tuned gate: {gate}")
     print("  Report these — they become the defaults for ball detection.")
+
+
+# A screen flip lands inside one frame; a camera's auto-exposure takes hundreds
+# of milliseconds to drift. Twelve grey levels between consecutive frames is far
+# above sensor noise and far above any drift, so it separates the two cleanly.
+MIN_FLASH_RISE = 12.0
+
+
+def first_significant_rise(
+    samples: list[tuple[float, float]], *, after: float, min_rise: float
+) -> float | None:
+    """When a frame first arrived `min_rise` brighter than the one before it.
+
+    Deliberately a *step*, not a level. An absolute threshold cannot survive the
+    camera's gain control: with the panel black, a settled frame can measure
+    brighter than the white panel did a second earlier, so any fixed brightness
+    is both crossed and not crossed depending on how long the scene sat still.
+
+    Frames captured at or before `after` are skipped however bright they are --
+    one that left the sensor before the screen changed cannot be showing it.
+    """
+    previous = None
+    for timestamp, brightness in samples:
+        if previous is not None and timestamp > after and brightness - previous >= min_rise:
+            return timestamp
+        previous = brightness
+    return None
 
 
 # A live camera returns the odd empty read while it settles; an exhausted file

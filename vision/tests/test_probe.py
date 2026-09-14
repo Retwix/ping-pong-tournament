@@ -195,3 +195,86 @@ def test_frame_stream_replays_a_file_when_asked() -> None:
     collected = [frame for _, frame in zip(range(10), stream)]
 
     assert len(collected) == 10
+
+
+def brightness_samples(
+    *,
+    flash_at: float = 1.0,
+    lag: float = 0.12,
+    fps: float = 30.0,
+    dark: float = 20.0,
+    jump: float = 150.0,
+    drift_per_frame: float = 0.0,
+    count: int = 90,
+) -> list[tuple[float, float]]:
+    """Frame brightness over time, for a screen that flips dark -> bright.
+
+    The flip happens at `flash_at`; the camera only shows it `lag` later, and
+    that lag is what the measurement exists to recover. `drift_per_frame` models
+    the camera's auto-exposure slowly brightening a dark scene, which is the
+    thing an absolute brightness threshold cannot survive.
+    """
+    interval = 1.0 / fps
+    samples = []
+    for index in range(count):
+        t = index * interval
+        level = dark + index * drift_per_frame
+        if t >= flash_at + lag:
+            level += jump
+        samples.append((t, level))
+    return samples
+
+
+def test_latency_is_the_gap_between_the_flash_and_the_frame_that_shows_it() -> None:
+    samples = brightness_samples(flash_at=1.0, lag=0.12)
+
+    rise = probe.first_significant_rise(samples, after=1.0, min_rise=12.0)
+
+    assert rise is not None
+    assert rise - 1.0 == pytest.approx(0.12, abs=1 / 30)
+
+
+def test_finds_the_flash_while_auto_exposure_brightens_the_whole_scene() -> None:
+    """The camera's gain control drifts the baseline past any fixed threshold.
+
+    Observed for real: with the panel black, a settled frame measured brighter
+    than the *bright* panel had a second earlier. Only the single-frame step
+    distinguishes the flash from the drift.
+    """
+    samples = brightness_samples(flash_at=1.0, lag=0.12, dark=20.0, drift_per_frame=4.0)
+
+    rise = probe.first_significant_rise(samples, after=1.0, min_rise=12.0)
+
+    assert rise is not None
+    assert rise - 1.0 == pytest.approx(0.12, abs=1 / 30)
+
+
+def test_a_frame_captured_before_the_flash_is_not_the_flash() -> None:
+    """A frame that left the sensor before the flip cannot be showing it."""
+    samples = [(0.5, 20.0), (0.8, 200.0), (0.9, 200.0), (1.2, 200.0), (1.3, 350.0)]
+
+    assert probe.first_significant_rise(samples, after=1.0, min_rise=12.0) == 1.3
+
+
+def test_no_rise_when_the_camera_never_sees_the_screen() -> None:
+    """Pointed away, the flash is a few grey levels of noise, not a step."""
+    samples = brightness_samples(flash_at=1.0, lag=0.12, jump=3.0)
+
+    assert probe.first_significant_rise(samples, after=1.0, min_rise=12.0) is None
+
+
+def test_gradual_brightening_alone_is_never_read_as_a_flash() -> None:
+    samples = brightness_samples(flash_at=1.0, lag=0.12, jump=0.0, drift_per_frame=5.0)
+
+    assert probe.first_significant_rise(samples, after=1.0, min_rise=12.0) is None
+
+
+def test_a_frame_timestamped_exactly_at_the_flash_is_still_too_early() -> None:
+    """The timestamp is taken when the frame arrives, so it was captured earlier.
+
+    A frame landing at the flash instant was already in flight when the screen
+    changed. Counting it would report a latency of zero.
+    """
+    samples = [(0.9, 20.0), (1.0, 200.0), (1.1, 220.0)]
+
+    assert probe.first_significant_rise(samples, after=1.0, min_rise=12.0) == 1.1
