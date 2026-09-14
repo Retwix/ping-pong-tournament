@@ -38,7 +38,10 @@ IS_MAC = platform.system() == "Darwin"
 # white table and grey shadows are unsaturated, an orange ball is not.
 DEFAULT_GATE = {"hue_lo": 3, "hue_hi": 28, "sat_min": 110, "val_min": 90}
 
-WARMUP_FRAMES = 30  # auto-exposure and the encoder need a moment to settle
+# Auto-exposure, the encoder and the transport all need a moment. M0 measured a
+# 0.25-0.5 s stall on the first capture after the device has been idle, so this
+# has to outlast that: 60 frames is ~2 s at 30 fps, ~1 s at 60.
+WARMUP_FRAMES = 60
 
 
 def measured_fps(timestamps: list[float]) -> float:
@@ -240,28 +243,66 @@ def mask(cap: cv2.VideoCapture, gate: dict[str, int]) -> None:
     print("  Report these — they become the defaults for ball detection.")
 
 
-def record(cap: cv2.VideoCapture, path: Path, seconds: float, fps_hint: float) -> None:
-    """Record a clip, so the tracker can be developed against real footage."""
-    ok, frame = cap.read()
-    if not ok or frame is None:
+def settle(cap: cv2.VideoCapture, *, frames: int = WARMUP_FRAMES, now=time.perf_counter):
+    """Discard the warm-up frames, and report the rate the rest arrived at.
+
+    Returns (last frame, measured fps), or (None, None) if the device never
+    delivers. Both are needed before a writer can be opened: the frame gives the
+    real resolution, and the rate is the one fact a clip's header must carry.
+    """
+    stamps: list[float] = []
+    frame = None
+    for _ in range(frames * 4):  # attempts, not frames: a dead device returns fast
+        ok, candidate = cap.read()
+        if not ok or candidate is None:
+            continue
+        frame = candidate
+        stamps.append(now())
+        if len(stamps) == frames:
+            return frame, measured_fps(stamps)
+    return None, None
+
+
+def open_video_writer(path: Path, fps: float, size: tuple[int, int]):
+    return cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), fps, size)
+
+
+def record(
+    cap: cv2.VideoCapture,
+    path: Path,
+    seconds: float,
+    *,
+    now=time.perf_counter,
+    open_writer=open_video_writer,
+    show: bool = True,
+) -> None:
+    """Record a clip, so the tracker can be developed against real footage.
+
+    The clip is stamped with the rate frames *actually arrived* at, never the
+    rate that was requested. A device is free to refuse `--fps`, and a clip whose
+    header disagrees with its contents silently rescales time for every stage
+    that later treats it as ground truth.
+    """
+    frame, fps = settle(cap, now=now)
+    if frame is None or fps is None:
         print("No frames to record.")
         return
     h, w = frame.shape[:2]
-    fps = fps_hint or cap.get(cv2.CAP_PROP_FPS) or 30.0
-    writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
+    writer = open_writer(path, fps, (w, h))
 
-    print(f"\nRecording {seconds:.0f}s to {path} at {fps:.0f} fps. Press q to stop early.")
-    start = time.perf_counter()
+    print(f"\nRecording {seconds:.0f}s to {path} at {fps:.1f} fps. Press q to stop early.")
+    start = now()
     n = 0
-    while time.perf_counter() - start < seconds:
+    while now() - start < seconds:
         ok, frame = cap.read()
         if not ok or frame is None:
             continue
         writer.write(frame)
         n += 1
-        cv2.imshow("recording", frame)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        if show:
+            cv2.imshow("recording", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
     writer.release()
     print(f"  wrote {n} frames to {path}")
     print("  Reminder: this is video of people. Keep it local, delete it when done,\n"
@@ -298,7 +339,7 @@ def main() -> int:
         elif args.mask:
             mask(cap, dict(DEFAULT_GATE))
         elif args.record:
-            record(cap, args.record, args.seconds, args.fps)
+            record(cap, args.record, args.seconds)
         else:
             measure(cap, args.seconds, args.show)
     finally:
