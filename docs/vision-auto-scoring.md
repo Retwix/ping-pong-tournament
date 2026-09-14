@@ -436,8 +436,19 @@ in §5 can be trained and run locally if §15 calls for it, rather than needing
 rented hardware.
 
 End-to-end latency from the real point to the score changing: transport
-(~100 ms) + dwell timeout (~700 ms) + network (~100 ms) ≈ **under a second**,
-which reads as instant next to someone walking to fetch the ball.
+(**160 ms, measured**) + dwell timeout (~700 ms) + network (~100 ms) ≈
+**960 ms**, which reads as instant next to someone walking to fetch the ball —
+but with far less headroom than the ~100 ms guess this section started with.
+
+**Transport measured 2026-09-14:** median 157–161 ms over two runs of ten
+flashes, by `probe.py --latency`. That is an *upper* bound — it includes the
+display's own latency, since the method times a flash on screen — and it
+resolves only to one frame interval (33 ms), which is why the two runs land a
+frame apart rather than disagreeing.
+
+The dwell timeout is now the only part of the budget worth tuning: it is 4× the
+transport, it is ours to choose, and §8 sets it. If the total ever needs to come
+down, shorten the dwell — do not go looking for a faster camera.
 
 ---
 
@@ -509,8 +520,15 @@ Still open:
 3. **The exact saturation threshold for the orange gate**, which depends on the
    room's lighting and how glossy the table is. `probe.py --mask` has live
    sliders for this; the numbers become the defaults. Needs the table and a ball.
-4. **End-to-end latency has not been measured.** `probe.py --latency` asks the
-   operator to read a millisecond counter off a moving video feed, and those
-   digits are motion-blurred at 30 fps — the method does not work and the
-   command prints nothing. Needs replacing with an automatic flash-step
-   measurement before §13's sub-second claim is anything but arithmetic.
+Closed 2026-09-14: **end-to-end capture latency is ~160 ms** (§13), measured by
+flashing the screen and timing the step rather than reading a counter by eye.
+Two lessons came out of getting there, and both apply to the ball detector:
+
+- **The camera's auto-exposure moves the baseline.** With the panel black, a
+  settled frame measured *brighter* than the white panel had a second earlier.
+  Any detector keyed to an absolute brightness will drift out of calibration on
+  its own, unprompted — which is what §2's "lock exposure" instruction is really
+  protecting, and why §5's gate keys on saturation rather than value.
+- **A measurement that works once has not been shown to work.** The absolute
+  threshold produced a plausible 31 ms on its first run and refused to measure
+  at all on its second. Run every calibration twice before believing it.

@@ -56,10 +56,18 @@ zero failed reads over 60 s. Continuity Camera refuses 60 fps. Measure for a
 full minute, not fifteen seconds: the first capture after the device has been
 idle stalls for 0.25–0.5 s and skews a short run.
 
-**3. Measure latency.** ⚠️ **Not working.** The command asks you to read a
-millisecond counter burnt into the video against a live one beside it, but at
-30 fps those digits are motion-blurred, and it prints no result on exit. Being
-replaced with an automatic flash-step measurement.
+**3. Measure latency.** The screen flashes; the probe times how long the flash
+takes to come back through the camera. Point the phone at the window and fill
+its frame with it.
+
+```sh
+python3 probe.py --source 1 --latency
+```
+
+*Result:* median **157–161 ms** over two runs. Resolution is one frame interval
+(33 ms), and the figure includes the display's own latency, so treat it as an
+upper bound. If it reports *no step seen*, the phone is not looking at the
+window — that is the intended failure, not a bug.
 
 **4. Tune the orange gate.** ⏳ **Still to do — needs the table and a ball.**
 This is the one that de-risks the white table. Aim the camera at the table, hold
