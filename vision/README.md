@@ -92,15 +92,116 @@ So the scarce thing is *footage*, not table time. Record the ball held still at
 each end, an empty table, and some warm-up, and the gate can be tuned and
 re-tuned at any desk.
 
-## Recording test footage
+## Recording session — the field checklist
+
+Four clips, recorded live through Continuity Camera. Follow this at the table;
+it needs no other page.
+
+### Record live, never on the phone
+
+These commands open the iPhone and write the mp4 on the Mac as it happens. Do
+**not** substitute a clip shot with the iPhone's Camera app: that is a different
+pipeline — 60 fps, HEVC, Apple's full image processing, no Continuity Camera
+compression, different auto-exposure behaviour. A detector tuned on footage that
+clean will fail on the 30 fps stream the service actually receives. Record
+through the pipeline you are going to run.
+
+### Before you start
+
+- [ ] iPhone plugged in over USB and **unlocked**. Asleep, it opens fine and
+      delivers no frames at all.
+- [ ] `python3 probe.py --list` — confirm the index. It was `[1]` here, but the
+      ordering is not guaranteed.
+- [ ] Camera on something **rigid**, elevated ~2–2.5 m, 1–2 m behind one end,
+      looking down the long axis, with ~1 m of space beyond each end in frame.
+      Everything downstream assumes it does not move.
+- [ ] **Do not re-aim between clips.** Calibration is per session.
+- [ ] Bright, constant, artificial light. No windows — a passing cloud changes
+      the background globally. Keep glare off the white table.
+- [ ] A few GB free. Five minutes of 1080p from this encoder is several hundred MB.
+
+### Camera settings, and the one you cannot set
+
+The spec asks for exposure, focus and white balance to be **locked** — it calls
+auto-exposure the single most destructive thing for detection. **Continuity
+Camera exposes no manual controls at all.** This is not an oversight to hunt
+for in a menu; Apple's pipeline does not offer it.
+
+It is not hypothetical. Measuring latency, the camera reported a *black* panel
+as brighter than white had been a second earlier — the gain control hunting,
+badly enough to break the measurement outright. Camo and Iriun do expose those
+controls, which is a stronger argument for them than 60 fps ever was. Worth
+knowing before spending an afternoon filming; whether it actually hurts ball
+detection is what M2 decides.
+
+What you can control today is the light: bright, constant, artificial, no
+windows, no glare off the table.
+
+Record at **1080p, not the 720p default**: a clip can be downscaled later, but
+detail never captured cannot be invented, and the far-end ball is exactly where
+pixels are scarce.
 
 ```sh
-python3 probe.py --source 1 --record rally.mp4 --seconds 30
+cd vision
+P="./.venv/bin/python probe.py --source 1 --width 1920 --height 1080"
 ```
 
-Every later stage accepts `--source rally.mp4`, so the tracker can be developed
-and tested against a real clip with no camera attached. Keep clips local and out
-of git (`.gitignore` covers `vision/*.mp4`); they are video of people.
+### The four clips
+
+```sh
+$P --record empty-table.mp4    --seconds 15
+```
+Background model, and the four table corners M1 needs for the homography. Nobody
+in frame.
+
+```sh
+$P --record ball-positions.mp4 --seconds 45
+```
+Ball resting **on the table** at the far end for a few seconds, then the near
+end, then a couple of spots between; rolling it slowly down the length is a
+bonus. This measures how many pixels the ball occupies at each distance — it may
+be ~300 px² near the camera and ~30 px² at the far end, and that ratio builds the
+depth-aware size gate. One fixed size threshold would either miss the far ball
+or accept every speck of noise near the camera.
+
+```sh
+$P --record warmup.mp4         --seconds 300
+```
+**No points scored, on purpose.** Knocking the ball about, fetching it off the
+floor, standing around talking, walking through frame. This is the only evidence
+that can prove the acceptance criterion *"zero phantom points during 10 minutes
+of knocking about"*: any point emitted against this footage is a false positive
+by definition, with no judgement call needed. Play real points during it and that
+evidence is gone. Ten minutes is what the criterion actually asks for.
+
+```sh
+$P --record rally.mp4          --seconds 180
+```
+Real points, played properly — and **write the score down as you go**. A notes
+app with `A, A, B, A, B, B…` in order is enough. "Points awarded to the correct
+player ≥ 90%" is meaningless without hand-scored ground truth, and the recorder
+writes no audio, so calling the score out loud will not survive.
+
+### While it runs
+
+- **~2 seconds pass before it captures anything** — 60 frames are discarded to
+  clear the cold-start stall. The line `Recording 45s to … at 29.7 fps` is the
+  cue that recording has begun; the countdown starts there, not at the keypress.
+- **The fps in that line is the measured rate.** Wildly wrong means something
+  regressed — stop and say so.
+- **A preview window opens; `q` in that window stops early.** A clip going badly
+  costs nothing.
+
+### Afterwards
+
+Clips are gitignored (`vision/*.mp4`) and stay local. They are video of people:
+tell whoever is playing, and delete them when M2 is done with them.
+
+Tuning happens away from the table — `--mask` takes a file and loops it:
+
+```sh
+./.venv/bin/python probe.py --source ball-positions.mp4 --mask
+```
 
 ## What is still to report back
 
