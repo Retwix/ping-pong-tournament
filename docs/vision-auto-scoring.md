@@ -45,18 +45,62 @@ frames, both of which present the iPhone as an ordinary capture device, so
 `cv2.VideoCapture(index)` is all the code ever sees:
 
 1. **Continuity Camera** — built into macOS, nothing to install, no licence.
-   Plug the iPhone in and it appears as a camera. **Try this first**: if its
-   framerate is good enough, the transport question is closed for free.
+   Plug the iPhone in and it appears as a camera.
 2. **Camo or Iriun** — third-party, but they expose framerate and resolution
-   controls that Continuity Camera does not, and can drive 60 fps. Fall back to
-   this only if M0 measures Continuity Camera below ~50 fps.
+   controls that Continuity Camera does not, and can drive 60 fps.
 
-M0 (§14) measures both and picks; neither choice touches any code downstream.
+### M0 result: Continuity Camera over USB, 30 fps, stable
 
-macOS gotcha worth knowing before it costs an hour: the terminal app running
-Python needs camera permission under **System Settings → Privacy & Security →
-Camera**, and OpenCV reports no error when it's missing — it just hands back
-empty frames. `probe.py --list` calls this out explicitly.
+Measured 2026-09-14, iPhone 16 Pro (`iPhone17,2`) → Apple Silicon Mac:
+
+| | fps | p50 | p95 | max interval | failed reads |
+|---|---|---|---|---|---|
+| **USB, 60 s sustained** | **30.0** | 33.4 ms | 35.9 ms | **46.7 ms** | 0 |
+| USB, first run after idle | 29.6 | 33.5 ms | 38.0 ms | 265.3 ms | 0 |
+| Wi-Fi, first run after idle | 29.1 | 33.4 ms | 35.9 ms | 498.6 ms | 0 |
+| Built-in FaceTime HD (control) | 30.0 | 33.4 ms | 34.4 ms | 37.4 ms | 0 |
+
+Four things follow, and the last is the one that will bite.
+
+**Continuity Camera is stable, and the transport question is closed.** Over USB,
+after warm-up, the worst frame in 1,800 arrived 46.7 ms late — 1.4 frame
+intervals, a single dropped frame. Nothing to design around.
+
+**The half-second stalls are cold-start, not transport.** The 498 ms outlier
+that made the first measurement alarming was a first capture after the device
+had been idle, over Wi-Fi. On USB the same artefact is half the size, and by the
+second run it is gone entirely. `WARMUP_FRAMES = 30` is only one second at
+30 fps and does not cover it: **open the capture device once at session start
+and keep it open**, and discard the first ~2 s rather than the first 30 frames.
+Re-opening the device mid-session buys a stall each time.
+
+**60 fps is not on offer here.** Continuity Camera refuses the request and
+delivers 30. By the rule this section originally set — fall back below ~50 fps —
+that mandates Camo/Iriun. **Deliberately not doing that yet.** 30 fps gives ~7
+ball samples per table length against 15 at 60, and whether that resolves a
+bounce is a question about real footage, not about a framerate. M2 measures
+detection rate on the recorded clips; if it falls short, Camo is a fifteen-minute
+change that touches no code, because both present as an ordinary capture device.
+Installing it now would be paying for a problem we have not yet observed.
+
+**Device indices are not stable — select by name.** With the phone asleep,
+index `[1]` opened successfully and delivered *no frames*; woken, the same index
+delivered 1080p30. Index order also depends on which cameras exist. Anything
+past M0 must resolve the camera by name (`iPhone17,2` / "Caméra de …") and fail
+loudly when it is absent, or it will silently grab the laptop webcam one evening
+and detect nothing.
+
+macOS gotcha worth knowing before it costs an hour: the process running Python
+needs camera permission under **System Settings → Privacy & Security → Camera**.
+Under OpenCV 4 this failed *silently* — empty frames, no error. **OpenCV 5 says
+so explicitly** (`not authorized to capture video (status 0)`), so the symptom
+to expect now is that line, not a mysterious black window.
+
+The permission is granted to the **owning application bundle**, which is the
+trap: running inside a `tmux` server started from `launchd` attributes the
+request to nothing macOS can prompt for, so it is refused with no dialog, for
+ever, no matter how many times you grant Terminal access. Run the probe from a
+plain terminal window — attribution follows the process tree to the app bundle.
 
 The capture layer takes a single `--source` that accepts an integer (device
 index), a file path (recorded clip, for development), or a URL. Development and
@@ -447,12 +491,26 @@ deletes, and it needs the consent of whoever is playing.
 Settled 2026-09-10: **Apple Silicon Mac + iPhone over USB**, **orange ball on a
 white table**, and the framing is free to be tweaked to fit the room (§4).
 
-Still open, neither of them blocking:
+Settled 2026-09-14 by M0 (§2): **Continuity Camera over USB**, no third-party
+capture app, **1280×720 at a true 30.0 fps**, jitter ≤ 47 ms sustained. The
+iPhone must be resolved **by name, not index**. Capture is opened once per
+session and held open, because re-opening costs a cold-start stall.
 
-1. **Where does the Mac sit during a real match** — is someone watching the
+Still open:
+
+1. **Is 30 fps enough to resolve a bounce?** Continuity Camera will not give 60,
+   so this is the one measurement that could still force a change of capture app.
+   Not answerable from a framerate — M2 measures detection rate on recorded
+   clips and decides. Switching to Camo/Iriun afterwards touches no code.
+2. **Where does the Mac sit during a real match** — is someone watching the
    operator window, or does it run headless with a phone or TV showing
    `SpectatorView` as the only display? Decides how much the overlay in §12
-   matters versus the toast in §11.
-2. **The exact saturation threshold for the orange gate**, which depends on your
-   lighting and how glossy the table is. `probe.py --mask` has live sliders for
-   this; M0 reports the numbers back and they become the defaults.
+   matters versus the toast in §11. Not blocking.
+3. **The exact saturation threshold for the orange gate**, which depends on the
+   room's lighting and how glossy the table is. `probe.py --mask` has live
+   sliders for this; the numbers become the defaults. Needs the table and a ball.
+4. **End-to-end latency has not been measured.** `probe.py --latency` asks the
+   operator to read a millisecond counter off a moving video feed, and those
+   digits are motion-blurred at 30 fps — the method does not work and the
+   command prints nothing. Needs replacing with an automatic flash-step
+   measurement before §13's sub-second claim is anything but arithmetic.
