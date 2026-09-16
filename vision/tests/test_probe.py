@@ -343,3 +343,23 @@ def test_a_preview_larger_than_the_screen_is_scaled_down() -> None:
 def test_a_preview_already_small_enough_is_left_alone() -> None:
     """Upscaling a small frame would invent detail and mislead the framing."""
     assert probe.fit_preview((480, 640), max_width=960) == (640, 480)
+
+
+def test_a_rally_that_scored_nothing_can_be_marked_too() -> None:
+    """A serve-decider, a let, a practice ball: a real rally, not a point.
+
+    It passes every guard in §8 and the system will emit a point for it. Left
+    unmarked it reads as a phantom point, which is the metric that must stay
+    trustworthy — and it is a rally end, which should be detected.
+    """
+    marks = probe.apply_mark([], key=ord("n"), frame=600, seconds=20.0)
+
+    assert marks == [(600, 20.0, "none")]
+
+
+def test_undo_removes_a_scoreless_rally_like_any_other() -> None:
+    marks = [(600, 20.0, "none"), (900, 30.0, "left")]
+
+    assert probe.apply_mark(marks, key=ord("u"), frame=910, seconds=30.3) == [
+        (600, 20.0, "none")
+    ]

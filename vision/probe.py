@@ -312,7 +312,14 @@ def show_preview(window: str, frame) -> None:
 # Ground truth for a rally clip, marked live by whoever is watching. Sides, not
 # player names: the vision service only ever knows "left" and "right", and the
 # operator maps those to A/B once at session start.
-MARK_KEYS = {ord("a"): "left", ord("b"): "right"}
+#
+# "none" is a rally that ended without scoring -- the ball that decides who
+# serves, a let, a practice exchange. It passes every guard in section 8, so the
+# service will emit a point for it and be right to; left unmarked it reads as a
+# phantom point and poisons the one metric that has to stay trustworthy. It is
+# also a genuine rally end, which *should* be detected. The two criteria in
+# section 15 therefore treat it oppositely, and only an explicit mark can say so.
+MARK_KEYS = {ord("a"): "left", ord("b"): "right", ord("n"): "none"}
 UNDO_KEY = ord("u")
 
 Mark = tuple[int, float, str]
@@ -465,8 +472,11 @@ def record(
         if not show:
             continue
         preview = frame.copy()
-        cv2.putText(preview, f"points marked: {len(marks)}   a/b = left/right   u = undo",
-                    (12, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        scored = sum(1 for _, _, side in marks if side != "none")
+        cv2.putText(preview,
+                    f"points: {scored}   no-point rallies: {len(marks) - scored}"
+                    f"   a/b = left/right   n = no point   u = undo",
+                    (12, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (0, 255, 0), 2)
         if marks:
             cv2.putText(preview, f"last: {marks[-1][2]} at {marks[-1][1]:.1f}s",
                         (12, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
@@ -481,9 +491,11 @@ def record(
     print(f"  header {fps:.1f} fps, achieved {achieved:.1f} fps while encoding")
     if marks:
         truth_path = write_truth(path, marks)
-        left = sum(1 for _, _, side in marks if side == "left")
-        print(f"  marked {len(marks)} points ({left} left, {len(marks) - left} right)"
-              f" -> {truth_path.name}")
+        tally = {side: sum(1 for _, _, s in marks if s == side)
+                 for side in ("left", "right", "none")}
+        print(f"  marked {tally['left'] + tally['right']} points "
+              f"({tally['left']} left, {tally['right']} right)"
+              f" and {tally['none']} scoreless rallies -> {truth_path.name}")
     print("  Reminder: this is video of people. Keep it local, delete it when done,\n"
           "  and make sure whoever is playing knows it was recorded.")
 
