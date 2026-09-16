@@ -122,10 +122,27 @@ through the pipeline you are going to run.
 
 ### Camera settings, and the one you cannot set
 
+**Turn Center Stage off before you record.** Control Center → Video Effects,
+while the camera is active. Center Stage crops from the ultra-wide sensor and
+pans and zooms automatically to follow people — so the camera effectively moves
+itself mid-clip. That breaks the fixed-view assumption everything downstream
+rests on: the homography stops matching the image, the background model never
+settles, and the failure looks like a broken tracker rather than a camera
+setting. Desk View and Portrait mode are wrong here for the same reason.
+
 The spec asks for exposure, focus and white balance to be **locked** — it calls
 auto-exposure the single most destructive thing for detection. **Continuity
-Camera exposes no manual controls at all.** This is not an oversight to hunt
-for in a menu; Apple's pipeline does not offer it.
+Camera exposes no manual controls at all**, confirmed by probing the backend:
+`ZOOM`, `FOCUS`, `AUTOFOCUS`, `EXPOSURE`, `AUTO_EXPOSURE`, `WB_TEMPERATURE`,
+`GAIN` and `BRIGHTNESS` all read `-1` and refuse to be set. There is no lens
+switch either — wide versus ultra-wide is not selectable from code.
+
+Nor would ultra-wide help. Its barrel distortion is not a projective transform,
+so it breaks the homography in §4 — straight table edges bow, and the mapping
+goes wrong exactly at the frame edges where the table meets the border. It also
+shrinks the far ball, which is already the scarcest-pixel case. If the table
+does not fit the frame, move the camera back rather than reaching for a wider
+lens; the main camera covers the table's width comfortably from 1.5–2 m.
 
 It is not hypothetical. Measuring latency, the camera reported a *black* panel
 as brighter than white had been a second earlier — the gain control hunting,
