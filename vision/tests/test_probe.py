@@ -333,3 +333,13 @@ def test_truth_is_written_beside_the_clip_it_describes(tmp_path: Path) -> None:
         "120,4.000,left\n"
         "300,10.250,right\n"
     )
+
+
+def test_a_preview_larger_than_the_screen_is_scaled_down() -> None:
+    """1080p capture on a laptop screen: the window must fit to be aimed by."""
+    assert probe.fit_preview((1080, 1920), max_width=960) == (960, 540)
+
+
+def test_a_preview_already_small_enough_is_left_alone() -> None:
+    """Upscaling a small frame would invent detail and mislead the framing."""
+    assert probe.fit_preview((480, 640), max_width=960) == (640, 480)

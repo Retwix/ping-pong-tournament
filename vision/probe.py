@@ -128,7 +128,7 @@ def measure(cap: cv2.VideoCapture, seconds: float, show: bool) -> None:
         last = now
 
         if show:
-            cv2.imshow("probe", frame)
+            show_preview("probe", frame)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
@@ -291,6 +291,24 @@ def mask(cap: cv2.VideoCapture, gate: dict[str, int], *, replay: bool = False) -
     print("  Report these — they become the defaults for ball detection.")
 
 
+# A 1080p preview opens a 1920-wide window, which is wider than most laptop
+# screens: clipped, and useless for judging framing. Capture stays full
+# resolution; only what is shown shrinks.
+PREVIEW_MAX_WIDTH = 960
+
+
+def fit_preview(shape: tuple[int, int], *, max_width: int = PREVIEW_MAX_WIDTH) -> tuple[int, int]:
+    """The (width, height) to display a frame at. Never upscales."""
+    height, width = shape[:2]
+    if width <= max_width:
+        return width, height
+    return max_width, round(height * max_width / width)
+
+
+def show_preview(window: str, frame) -> None:
+    cv2.imshow(window, cv2.resize(frame, fit_preview(frame.shape)))
+
+
 # Ground truth for a rally clip, marked live by whoever is watching. Sides, not
 # player names: the vision service only ever knows "left" and "right", and the
 # operator maps those to A/B once at session start.
@@ -376,12 +394,20 @@ def frames(cap: cv2.VideoCapture, *, replay: bool = False):
         empty = 0
 
 
-def settle(cap: cv2.VideoCapture, *, frames: int = WARMUP_FRAMES, now=time.perf_counter):
+def settle(cap: cv2.VideoCapture, *, frames: int = WARMUP_FRAMES, now=time.perf_counter,
+           preview: str | None = None):
     """Discard the warm-up frames, and report the rate the rest arrived at.
 
     Returns (last frame, measured fps), or (None, None) if the device never
     delivers. Both are needed before a writer can be opened: the frame gives the
     real resolution, and the rate is the one fact a clip's header must carry.
+
+    `preview` draws the warm-up frames in that window. Not a courtesy: drawing
+    costs several milliseconds a frame and drops the delivered rate by a few
+    percent, so a rate measured without it would stamp a clip recorded *with* it
+    as faster than it really is. Measure under the conditions you will record
+    under. It also puts a live view on screen while the camera settles, which is
+    the moment you want it for aiming.
     """
     stamps: list[float] = []
     frame = None
@@ -391,6 +417,9 @@ def settle(cap: cv2.VideoCapture, *, frames: int = WARMUP_FRAMES, now=time.perf_
             continue
         frame = candidate
         stamps.append(now())
+        if preview is not None:
+            show_preview(preview, frame)
+            cv2.waitKey(1)
         if len(stamps) == frames:
             return frame, measured_fps(stamps)
     return None, None
@@ -416,7 +445,7 @@ def record(
     header disagrees with its contents silently rescales time for every stage
     that later treats it as ground truth.
     """
-    frame, fps = settle(cap, now=now)
+    frame, fps = settle(cap, now=now, preview="recording" if show else None)
     if frame is None or fps is None:
         print("No frames to record.")
         return
@@ -441,13 +470,15 @@ def record(
         if marks:
             cv2.putText(preview, f"last: {marks[-1][2]} at {marks[-1][1]:.1f}s",
                         (12, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        cv2.imshow("recording", preview)
+        show_preview("recording", preview)
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             break
         marks = apply_mark(marks, key=key, frame=n, seconds=now() - start)
     writer.release()
+    achieved = n / (now() - start) if now() > start else 0.0
     print(f"  wrote {n} frames to {path}")
+    print(f"  header {fps:.1f} fps, achieved {achieved:.1f} fps while encoding")
     if marks:
         truth_path = write_truth(path, marks)
         left = sum(1 for _, _, side in marks if side == "left")
