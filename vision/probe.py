@@ -291,6 +291,37 @@ def mask(cap: cv2.VideoCapture, gate: dict[str, int], *, replay: bool = False) -
     print("  Report these — they become the defaults for ball detection.")
 
 
+# Ground truth for a rally clip, marked live by whoever is watching. Sides, not
+# player names: the vision service only ever knows "left" and "right", and the
+# operator maps those to A/B once at session start.
+MARK_KEYS = {ord("a"): "left", ord("b"): "right"}
+UNDO_KEY = ord("u")
+
+Mark = tuple[int, float, str]
+
+
+def apply_mark(marks: list[Mark], *, key: int, frame: int, seconds: float) -> list[Mark]:
+    """The point log after one keypress. Returns a new list; never mutates.
+
+    Anything that is not a mark or an undo is ignored, because a laptop beside a
+    ping-pong table collects stray keypresses.
+    """
+    if key in MARK_KEYS:
+        return [*marks, (frame, seconds, MARK_KEYS[key])]
+    if key == UNDO_KEY:
+        return marks[:-1]
+    return list(marks)
+
+
+def write_truth(path: Path, marks: list[Mark]) -> Path:
+    """Ground truth beside the clip it describes, as csv."""
+    truth_path = path.with_suffix(".truth.csv")
+    lines = ["frame,seconds,side"]
+    lines += [f"{frame},{seconds:.3f},{side}" for frame, seconds, side in marks]
+    truth_path.write_text("\n".join(lines) + "\n")
+    return truth_path
+
+
 # A screen flip lands inside one frame; a camera's auto-exposure takes hundreds
 # of milliseconds to drift. Twelve grey levels between consecutive frames is far
 # above sensor noise and far above any drift, so it separates the two cleanly.
@@ -395,18 +426,33 @@ def record(
     print(f"\nRecording {seconds:.0f}s to {path} at {fps:.1f} fps. Press q to stop early.")
     start = now()
     n = 0
+    marks: list[Mark] = []
     while now() - start < seconds:
         ok, frame = cap.read()
         if not ok or frame is None:
             continue
         writer.write(frame)
         n += 1
-        if show:
-            cv2.imshow("recording", frame)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+        if not show:
+            continue
+        preview = frame.copy()
+        cv2.putText(preview, f"points marked: {len(marks)}   a/b = left/right   u = undo",
+                    (12, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        if marks:
+            cv2.putText(preview, f"last: {marks[-1][2]} at {marks[-1][1]:.1f}s",
+                        (12, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.imshow("recording", preview)
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord("q"):
+            break
+        marks = apply_mark(marks, key=key, frame=n, seconds=now() - start)
     writer.release()
     print(f"  wrote {n} frames to {path}")
+    if marks:
+        truth_path = write_truth(path, marks)
+        left = sum(1 for _, _, side in marks if side == "left")
+        print(f"  marked {len(marks)} points ({left} left, {len(marks) - left} right)"
+              f" -> {truth_path.name}")
     print("  Reminder: this is video of people. Keep it local, delete it when done,\n"
           "  and make sure whoever is playing knows it was recorded.")
 

@@ -278,3 +278,58 @@ def test_a_frame_timestamped_exactly_at_the_flash_is_still_too_early() -> None:
     samples = [(0.9, 20.0), (1.0, 200.0), (1.1, 220.0)]
 
     assert probe.first_significant_rise(samples, after=1.0, min_rise=12.0) == 1.1
+
+
+def test_marking_a_point_records_the_side_and_when() -> None:
+    marks = probe.apply_mark([], key=ord("a"), frame=120, seconds=4.0)
+
+    assert marks == [(120, 4.0, "left")]
+
+
+def test_both_sides_can_be_marked_in_order() -> None:
+    marks = probe.apply_mark([], key=ord("a"), frame=120, seconds=4.0)
+    marks = probe.apply_mark(marks, key=ord("b"), frame=300, seconds=10.0)
+
+    assert marks == [(120, 4.0, "left"), (300, 10.0, "right")]
+
+
+def test_undo_removes_the_last_mark_only() -> None:
+    """The marker will mis-hit; §11 makes undo part of the design, not an extra."""
+    marks = [(120, 4.0, "left"), (300, 10.0, "right")]
+
+    assert probe.apply_mark(marks, key=ord("u"), frame=310, seconds=10.3) == [
+        (120, 4.0, "left")
+    ]
+
+
+def test_undo_on_an_empty_log_is_harmless() -> None:
+    assert probe.apply_mark([], key=ord("u"), frame=10, seconds=0.3) == []
+
+
+def test_any_other_key_leaves_the_log_alone() -> None:
+    """Stray keypresses near a laptop at a ping-pong table are guaranteed."""
+    marks = [(120, 4.0, "left")]
+
+    assert probe.apply_mark(marks, key=ord("k"), frame=200, seconds=7.0) == marks
+
+
+def test_marking_does_not_mutate_the_log_it_was_given() -> None:
+    original = [(120, 4.0, "left")]
+
+    probe.apply_mark(original, key=ord("b"), frame=300, seconds=10.0)
+
+    assert original == [(120, 4.0, "left")]
+
+
+def test_truth_is_written_beside_the_clip_it_describes(tmp_path: Path) -> None:
+    """Ground truth that loses track of its clip is worthless, so it shares a name."""
+    clip = tmp_path / "rally.mp4"
+
+    written = probe.write_truth(clip, [(120, 4.0, "left"), (300, 10.25, "right")])
+
+    assert written == tmp_path / "rally.truth.csv"
+    assert written.read_text() == (
+        "frame,seconds,side\n"
+        "120,4.000,left\n"
+        "300,10.250,right\n"
+    )

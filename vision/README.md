@@ -177,10 +177,33 @@ evidence is gone. Ten minutes is what the criterion actually asks for.
 ```sh
 $P --record rally.mp4          --seconds 180
 ```
-Real points, played properly — and **write the score down as you go**. A notes
-app with `A, A, B, A, B, B…` in order is enough. "Points awarded to the correct
-player ≥ 90%" is meaningless without hand-scored ground truth, and the recorder
-writes no audio, so calling the score out loud will not survive.
+Real points, played properly. **Two people play, a third marks the score** in
+the preview window as each point ends:
+
+| key | meaning |
+|---|---|
+| `a` | the **left** side won that point |
+| `b` | the **right** side won that point |
+| `u` | undo the last mark |
+| `q` | stop recording early |
+
+Left and right as the *camera* sees them — the vision service only ever knows
+sides, and the mapping to players happens once. The window shows a running count
+and the last mark, so the marker can see their keypress landed.
+
+This writes `rally.truth.csv` beside the clip (`frame, seconds, side`), on the
+video's own clock. That alignment is the whole point: "points awarded to the
+correct player ≥ 90%" is meaningless without ground truth, and a sequence with
+no timestamps desynchronises the moment the system misses a point — every
+comparison after it then reads as wrong, measuring drift rather than accuracy.
+
+A notes app cannot do this. Marks must land on the video's clock, not
+wall-clock. Nothing is written if nothing is marked, so an unmarked clip is not
+a broken one — just an unlabelled one.
+
+Reaction time of a few hundred milliseconds does not matter here: rallies are
+seconds apart, and the *latency* criterion cannot be measured from a clip at
+all — it only exists with the whole system running live at the table.
 
 ### While it runs
 
