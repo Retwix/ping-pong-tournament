@@ -146,6 +146,22 @@ cd vision
 P="./.venv/bin/python probe.py --source 1 --width 1920 --height 1080"
 ```
 
+### Aim the camera first
+
+A live view, with the framerate as a bonus. Nothing is written to disk; `q`
+closes it. Do this before the first take and do not touch the camera afterwards.
+
+```sh
+./.venv/bin/python probe.py --source 1 --width 1920 --height 1080 --seconds 60 --show
+```
+
+The preview is scaled to fit the screen — capture stays at full resolution. Note
+that drawing it costs a couple of frames per second, which is why the warm-up
+measures the rate with the preview already running: the clip is then stamped with
+the rate it was actually recorded at. The recorder prints both that header rate
+and the rate achieved while encoding; a gap of a percent or two between them is
+the encoder, and is expected.
+
 ### The four clips
 
 ```sh
