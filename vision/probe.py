@@ -34,9 +34,15 @@ import numpy as np
 
 IS_MAC = platform.system() == "Darwin"
 
-# Starting point for the orange gate. Saturation is the load-bearing one: a
-# white table and grey shadows are unsaturated, an orange ball is not.
-DEFAULT_GATE = {"hue_lo": 3, "hue_hi": 28, "sat_min": 110, "val_min": 90}
+# The orange gate, tuned on the 2026-09-16 footage. Saturation is the
+# load-bearing one: a white table, grey shadows, human skin and a tan dog are
+# all weakly saturated; a fluorescent orange ball is not.
+#
+# sat_min was 110 as a guess, and 110 is far too low -- at that threshold an
+# arm is an 11,498 px^2 blob and the ball is lost in the noise. Skin collapses
+# by 140; the ball survives past 240. At 180 the ball is typically the *only*
+# blob in frame, 34-915 px^2 depending on its distance from the camera.
+DEFAULT_GATE = {"hue_lo": 3, "hue_hi": 28, "sat_min": 180, "val_min": 90}
 
 # Auto-exposure, the encoder and the transport all need a moment. M0 measured a
 # 0.25-0.5 s stall on the first capture after the device has been idle, so this

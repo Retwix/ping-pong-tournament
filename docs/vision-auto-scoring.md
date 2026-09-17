@@ -517,9 +517,15 @@ Still open:
    operator window, or does it run headless with a phone or TV showing
    `SpectatorView` as the only display? Decides how much the overlay in §12
    matters versus the toast in §11. Not blocking.
-3. **The exact saturation threshold for the orange gate**, which depends on the
-   room's lighting and how glossy the table is. `probe.py --mask` has live
-   sliders for this; the numbers become the defaults. Needs the table and a ball.
+3. ~~**The exact saturation threshold for the orange gate.**~~ **Settled
+   2026-09-14 → measured 2026-09-17: `sat_min = 180`**, now the default. The
+   original guess of 110 was far too low — at 110 an arm is an 11,498 px² blob
+   and the ball is lost in it. Skin collapses by 140, the ball survives past
+   240, and at 180 the ball is usually the *only* blob in frame. Its area runs
+   ~100 px² at the far end to ~900 px² near the camera, which is the §5 size
+   gate measured rather than guessed. **Still open:** every one of those numbers
+   is a ball at rest. A struck ball at 30 fps smears, and motion blur lowers
+   saturation exactly when it matters. M2 measures whether 180 survives flight.
 Closed 2026-09-14: **end-to-end capture latency is ~160 ms** (§13), measured by
 flashing the screen and timing the step rather than reading a counter by eye.
 Two lessons came out of getting there, and both apply to the ball detector:
