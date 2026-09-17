@@ -173,13 +173,41 @@ language. The service is a sensor, not a referee.
 ## 4. Table calibration
 
 Once per session (the camera doesn't move between matches), the operator clicks
-the **four table corners** in a still frame. That gives a homography `H` mapping
-image pixels → the table plane in centimetres (274 × 152.5, net at y = 137).
+the **four table corners** in a still frame, **and the two ends of the net**.
+That gives a homography `H` mapping image pixels → the table plane in
+centimetres, plus the net's real position on it.
+
+### The table is not a regulation table, and the net is not at its middle
+
+Measured 2026-09-17. The playing surface is **two 140 × 140 cm office desks**
+pushed together: **280 × 140 cm** overall. Close to regulation in length (274)
+and 12.5 cm narrower, but the proportions differ — 2:1 against 1.8:1 — so the
+dimensions are a **parameter, not a constant**. Another room will differ again.
+
+The net matters more. It is a clamp-on net, and where it can sit is constrained
+by the desks' legs, so it lands **up to ±25 cm off the centre line**, on either
+side. One half can be 165 cm and the other 115 cm.
+
+That is why the net is clicked rather than assumed. §8's rule is *"the point
+goes to the player on the side opposite the last table bounce"* — the net line
+**is** the decision boundary, and the whole scoring rule rests on it. Assuming
+`y = length / 2` would silently misattribute every bounce landing in a 25 cm
+band near the middle, and misattribution doesn't degrade a point, it **inverts**
+it. It also cannot be caught by inspection: the system would look confident and
+be wrong only for balls near the net, which is where a lot of play happens.
+
+Re-clamping the net between sessions moves it again, so this is per-session
+calibration, never a stored constant.
 
 Any camera angle works, so the framing can be tweaked freely to fit the room —
 the homography absorbs arbitrary perspective. The two real constraints are that
 **all four corners stay visible** and that **the camera does not move** once
 calibrated. Nothing else about the angle matters.
+
+The camera does **not** need to return to the same spot between sessions — it is
+re-calibrated each time, so there is no mark to preserve on the floor. Equally,
+the table and net must not move *relative to the camera* after calibration;
+moving the whole rig together is harmless, nudging one of them is not.
 
 Auto-detecting the table by colour segmentation is possible and is not worth it
 for v1 — four clicks take five seconds and never fail. Calibration is persisted
