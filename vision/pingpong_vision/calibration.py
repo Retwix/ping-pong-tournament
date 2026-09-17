@@ -49,3 +49,32 @@ def to_table_cm(homography: np.ndarray, point: Point) -> Point:
         np.array([[point]], dtype=np.float32), homography
     )[0][0]
     return float(x), float(y)
+
+
+def net_position_cm(homography: np.ndarray, net_ends: list[Point]) -> float:
+    """How far down the table the net actually is, in centimetres.
+
+    Clicked, never assumed. The net clamps on, and the desks' legs constrain
+    where it can sit, so it lands up to ±25 cm off the centre line — one half
+    165 cm, the other 115 cm. §8 gives the point to the side opposite the last
+    table bounce, which makes this line the decision boundary itself: put it in
+    the wrong place and bounces in that band are not blurred, they are awarded
+    to the wrong player.
+
+    The two ends are averaged. Nobody clicks two posts at exactly the same
+    distance down the table, and the net is a straight line between them.
+    """
+    if len(net_ends) != 2:
+        raise ValueError(f"need the net's 2 ends, got {len(net_ends)}")
+
+    return sum(to_table_cm(homography, end)[1] for end in net_ends) / 2.0
+
+
+def half_of_bounce(y_cm: float, *, net_cm: float) -> str:
+    """Which half of the table a bounce landed on.
+
+    "near" is the end clicked first (y = 0), "far" the other. Mapping those to
+    the sides an operator recognises — left/right, A/B — happens once at session
+    start and is not geometry's business.
+    """
+    return "near" if y_cm < net_cm else "far"
