@@ -1,0 +1,4 @@
+# M0 needs nothing but OpenCV. The detector dependencies (ultralytics, torch)
+# arrive at M4 — no reason to install a deep-learning stack to measure a webcam.
+opencv-python>=4.9.0
+numpy>=1.26.0

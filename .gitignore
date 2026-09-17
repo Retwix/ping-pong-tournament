@@ -28,3 +28,11 @@ design_handoff*/
 *.pdf
 *.sketch
 *.fig
+
+# vision test footage — video of people, stays local
+vision/*.mp4
+vision/*.mov
+vision/calibration.json
+vision/.venv/
+vision/**/__pycache__/
+vision/.pytest_cache/
