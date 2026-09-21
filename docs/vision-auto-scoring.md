@@ -292,6 +292,40 @@ rather than assumed (§4), and camera drift is detected rather than hoped for �
 their README lists automatic compensation for camera motion as a wanted
 improvement.
 
+### What the gate actually does on the clips (measured 2026-09-21)
+
+Steps 1-2 only — there is no tracker yet. `detect_probe.py`, every 2nd frame,
+`sat_min = 180`, the 2026-09-16 calibration, and the size gate measuring the
+streak's width rather than its area.
+
+| clip | what is in it | nothing found | exactly one |
+|---|---|---|---|
+| `empty-table.mp4` | table, no ball, nobody | 100.0% | 0.0% |
+| `rally.mp4` | points being played | 73.5% | 18.0% |
+| `warmup.mp4` | knocking about | 75.9% | 17.0% |
+| `ball-positions.mp4` | ball placed by hand, at rest | 27.8% | 69.2% |
+
+**The gate finds the ball at rest and loses it in flight.** 69.2% on a still
+ball against 18.0% in a rally — same table, same calibration, same threshold,
+the only difference being that the ball is moving. That answers §17.3: 180 does
+not survive flight.
+
+**A rally and a warm-up look the same to it.** 18.0% against 17.0%. Whatever is
+being counted during a point is mostly not the point, and no tracker layered on
+top can invent a distinction the candidates do not contain.
+
+**The static scene is clean.** Zero candidates on the empty table at every
+threshold from 70 to 180, so none of this is sensor noise or table texture. The
+failure mode is missing the ball, not inventing one — which is the better of
+the two to have, since §15's phantom-point target is the strict one.
+
+Lowering the threshold does raise the count — 27.2% exactly-one at `sat_min =
+70` against 19.5% at 180, on the same clip. **This is not yet evidence that 70
+is better.** The probe counts candidates, not correct ones, and §17.3 records
+that skin re-enters below 140, so the extra blobs are as likely to be arms.
+Separating those needs per-frame ground truth, which `rally.truth.csv` (twelve
+bounces) does not provide.
+
 ---
 
 ## 6. Person detection — what it's actually for
@@ -582,9 +616,12 @@ Still open:
    and the ball is lost in it. Skin collapses by 140, the ball survives past
    240, and at 180 the ball is usually the *only* blob in frame. Its area runs
    ~100 px² at the far end to ~900 px² near the camera, which is the §5 size
-   gate measured rather than guessed. **Still open:** every one of those numbers
-   is a ball at rest. A struck ball at 30 fps smears, and motion blur lowers
-   saturation exactly when it matters. M2 measures whether 180 survives flight.
+   gate measured rather than guessed. **Reopened 2026-09-21:** every one of those
+   numbers was a ball at rest, and §5's clip measurements find a resting ball in
+   69.2% of frames and a struck one in 18.0%. Motion blur lowers saturation
+   exactly when it matters, and 180 does not survive it. What replaces 180 is
+   open: a lower threshold finds more blobs, but skin collapses only by 140, so
+   it also finds more arms.
 Closed 2026-09-14: **end-to-end capture latency is ~160 ms** (§13), measured by
 flashing the screen and timing the step rather than reading a counter by eye.
 Two lessons came out of getting there, and both apply to the ball detector:
