@@ -61,6 +61,26 @@ def advance(seen: tuple[Point, ...], candidates: list[Point], *, gate_px: float)
     return (*seen, nearest)
 
 
+def is_ballistic(seen: tuple[Point, ...], *, tolerance_px: float, least: int) -> bool:
+    """Has this path been falling freely, or is something carrying it?
+
+    §5 step 4, and the only question in the pipeline a single frame cannot
+    answer: a hand and a ball look alike for one instant and nothing alike
+    over six. Between contacts a ball is in free fall, so every position is
+    where its three predecessors said it would be; a forearm goes where its
+    owner decides, and misses its own prediction immediately.
+
+    `least` exists because consistency over too few frames proves nothing --
+    three points fit a curve through themselves whatever they are. Neither
+    bound is defaulted: §5 wants both tuned against footage, and a guessed
+    constant in a signature is how a guess becomes a fact nobody rechecks.
+    """
+    if len(seen) < least:
+        return False
+    return all(_apart(predict_next(seen[i - 3:i]), seen[i]) <= tolerance_px
+               for i in range(3, len(seen)))
+
+
 def _apart(a: Point, b: Point) -> float:
     """One definition of distance, used both to rank and to reject.
 

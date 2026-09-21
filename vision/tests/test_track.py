@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pingpong_vision.track import advance, predict_next
+from pingpong_vision.track import advance, is_ballistic, predict_next
 
 
 def test_a_falling_ball_is_predicted_onto_its_arc_not_its_last_heading() -> None:
@@ -62,3 +62,34 @@ def test_the_track_takes_the_candidate_nearest_where_it_expected_the_ball() -> N
     assert advance(seen, [below, nearby, aside, elsewhere], gate_px=40.0)[-1] == nearby
     assert advance(seen, [elsewhere], gate_px=40.0) == seen
     assert advance(seen, [], gate_px=40.0) == seen
+
+
+def test_only_a_path_that_keeps_curving_the_same_way_is_a_ball() -> None:
+    """§5 step 4: "a hand or a racket produces blobs; it does not produce a parabola".
+
+    This is the test the single-frame gates cannot do at any threshold, and the
+    reason d7a2179 found a rally and a warm-up indistinguishable. A struck ball
+    is in free fall between contacts, so each position is where the previous
+    three said it would be. A forearm goes where its owner decides.
+
+    Being consistent over too few frames proves nothing — three points define a
+    curve through themselves no matter what they are — so a track under `least`
+    is refused however neatly it fits.
+
+    One wrong blob anywhere disqualifies the whole path, which is why the
+    broken pair is here. A track that holds up for five frames and jumps on
+    the sixth is a track that grabbed something else on the sixth, and a check
+    that only sampled the good end would certify it. `early` and `late` differ
+    from `flight` in one position each, at opposite ends.
+    """
+    flight = tuple((100.0 + 60 * t, 500.0 + 20 * t + 10 * t * t) for t in range(6))
+    forearm = ((100.0, 500.0), (150.0, 480.0), (120.0, 520.0),
+               (170.0, 495.0), (130.0, 515.0), (165.0, 500.0))
+    early = ((0.0, 0.0), *flight[1:])
+    late = (*flight[:5], (400.0, 900.0))
+
+    assert is_ballistic(flight, tolerance_px=6.0, least=6) is True
+    assert is_ballistic(forearm, tolerance_px=6.0, least=6) is False
+    assert is_ballistic(early, tolerance_px=6.0, least=6) is False
+    assert is_ballistic(late, tolerance_px=6.0, least=6) is False
+    assert is_ballistic(flight[:4], tolerance_px=6.0, least=6) is False
