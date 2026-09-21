@@ -25,3 +25,15 @@ def test_a_falling_ball_is_predicted_onto_its_arc_not_its_last_heading() -> None
             (100.0, 500.0), (160.0, 520.0), (220.0, 560.0)]
 
     assert predict_next(seen) == pytest.approx((280.0, 620.0))
+
+
+def test_a_short_history_predicts_with_what_little_it_has() -> None:
+    """A track has to survive its own first two frames to reach a third.
+
+    Two sightings measure a speed but no bend, so the best available guess is
+    a straight line; one measures nothing at all, and standing still is the
+    only honest answer. Refusing to predict here would mean a track could
+    never start, and the ball is only ever seen in bursts.
+    """
+    assert predict_next([(100.0, 500.0), (160.0, 520.0)]) == pytest.approx((220.0, 540.0))
+    assert predict_next([(100.0, 500.0)]) == pytest.approx((100.0, 500.0))

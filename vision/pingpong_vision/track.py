@@ -25,6 +25,14 @@ def predict_next(seen: list[Point]) -> Point:
     frame, so a straight line drawn through the last two always undershoots.
     Three points is the fewest that can measure a bend at all, and few enough
     that the estimate stays fresh when the ball is struck and the arc restarts.
+
+    A shorter history predicts with what it has rather than refusing, because
+    a track has to survive its own first two frames to ever reach a third.
     """
+    if len(seen) == 1:
+        return seen[-1]
+    if len(seen) == 2:
+        (bx, by), (cx, cy) = seen
+        return (2.0 * cx - bx, 2.0 * cy - by)
     (ax, ay), (bx, by), (cx, cy) = seen[-3:]
     return (3.0 * cx - 3.0 * bx + ax, 3.0 * cy - 3.0 * by + ay)
