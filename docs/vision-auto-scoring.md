@@ -258,8 +258,39 @@ Two things to get right, which will otherwise burn a day each:
 **Upgrade path, if §14's accuracy target isn't met:** a TrackNet-style model —
 three consecutive frames in, a heatmap out — which is the standard answer for
 small fast balls, precisely because motion helps it instead of hurting it.
-That's ~1–2k labelled frames, and Roboflow-style labelling is exactly the tennis
-project's workflow. Deferred, not dismissed; §14 defines the trigger.
+Deferred, not dismissed; §14 defines the trigger.
+
+### What the tennis project actually did (read 2026-09-21)
+
+[collidingScopes/tennis-cv](https://github.com/collidingScopes/tennis-cv). Three
+corrections to the assumptions above, and one lesson that applies either way.
+
+**The labelling cost was overestimated by 5–10×.** Their entire dataset is
+**~200 frames**, sampled at 2 fps from three 30-second clips, auto-labelled
+zero-shot by a vision-language model and then reviewed by hand. "~1–2k labelled
+frames" was the main reason this section deferred a trained model, and it is
+wrong. We have 13 minutes of footage; they had ninety seconds.
+
+**Keep the input resolution high.** Their sharpest practical finding: *"In a
+1920×1080 frame the ball is about 25px across. The conventional 640×640 resize
+shrinks it to roughly 8px."* They train at 1024×1024 with **stretching, not
+letterboxing**. Our own measurements agree — the ball runs 100–900 px², so
+11–34 px across. This applies to the classical pipeline too: downscaling frames
+for speed destroys the very signal being detected.
+
+**A trained model does not solve motion blur.** They report ball detection as
+their weakest class, with "invented balls" and **motion-blur misses** among the
+common failures. So blur is a problem for both routes, and 60 fps helps either.
+
+What stands from the original reasoning: they run **offline, with cached
+inference on a hosted GPU endpoint**, and report no inference speed. Nothing
+there shows RF-DETR running live on a laptop, which is now the principal
+objection rather than the labelling cost.
+
+Two things we already do that they list as missing: the net line is clicked
+rather than assumed (§4), and camera drift is detected rather than hoped for —
+their README lists automatic compensation for camera motion as a wanted
+improvement.
 
 ---
 
