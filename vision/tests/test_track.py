@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pingpong_vision.track import advance, follow, is_ballistic, predict_next
+from pingpong_vision.track import Track, advance, follow, is_ballistic, predict_next
 
 
 def test_a_falling_ball_is_predicted_onto_its_arc_not_its_last_heading() -> None:
@@ -120,7 +120,7 @@ def test_the_ball_is_picked_out_of_the_clutter_and_the_clutter_is_not() -> None:
     """
     together = [[ball, arm] for ball, arm in zip(FLIGHT, FOREARM)]
 
-    assert follow(together, **POLICY) == [FLIGHT]
+    assert follow(together, **POLICY) == [Track(0, FLIGHT)]
     assert follow([[arm] for arm in FOREARM], **POLICY) == []
 
 
@@ -137,7 +137,7 @@ def test_a_ball_hidden_for_exactly_the_coast_is_still_the_same_ball() -> None:
     """
     hidden = [[] if t in (4, 5, 6) else [arc(10)[t]] for t in range(10)]
 
-    assert follow(hidden, **POLICY) == [arc(10)]
+    assert follow(hidden, **POLICY) == [Track(0, arc(10))]
 
 
 def test_a_ball_gone_too_long_is_not_the_ball_that_comes_back() -> None:
@@ -158,7 +158,7 @@ def test_a_ball_gone_too_long_is_not_the_ball_that_comes_back() -> None:
     twice_hidden = [[] if t in (3, 4, 7, 8) else [arc(12)[t]] for t in range(12)]
 
     assert follow(long_gap, **POLICY) == []
-    assert follow(twice_hidden, **POLICY) == [arc(12)]
+    assert follow(twice_hidden, **POLICY) == [Track(0, arc(12))]
 
 
 def test_a_blob_that_moves_smoothly_and_then_turns_round_is_not_a_ball() -> None:
@@ -189,7 +189,7 @@ def test_a_track_that_ends_before_the_clip_does_is_still_reported() -> None:
     """
     then_gone = [[arc(8)[t]] if t < 8 else [] for t in range(14)]
 
-    assert follow(then_gone, **POLICY) == [arc(8)]
+    assert follow(then_gone, **POLICY) == [Track(0, arc(8))]
 
 
 def test_a_path_that_was_mostly_guessed_is_not_evidence_of_a_ball() -> None:
@@ -222,7 +222,7 @@ def test_the_ball_is_found_even_when_it_is_not_the_first_blob_in_the_frame() -> 
     """
     arm_first = [[arm, ball] for ball, arm in zip(FLIGHT, FOREARM)]
 
-    assert follow(arm_first, **POLICY) == [FLIGHT]
+    assert follow(arm_first, **POLICY) == [Track(0, FLIGHT)]
 
 
 def test_exactly_enough_sightings_is_enough() -> None:
@@ -232,7 +232,7 @@ def test_exactly_enough_sightings_is_enough() -> None:
     one, and short is what a rally is made of: the ball is lost behind a
     player and found again, so most paths finish near the minimum.
     """
-    assert follow([[p] for p in arc(6)], **POLICY) == [arc(6)]
+    assert follow([[p] for p in arc(6)], **POLICY) == [Track(0, arc(6))]
     assert follow([[p] for p in arc(5)], **POLICY) == []
 
 
@@ -257,4 +257,18 @@ def test_an_established_path_keeps_its_ball_against_a_newcomer() -> None:
     baited = [[FLIGHT[t], bait(t)] if t + 1 < len(FLIGHT) else [FLIGHT[t]]
               for t in range(len(FLIGHT))]
 
-    assert follow(baited, **POLICY) == [FLIGHT]
+    assert follow(baited, **POLICY) == [Track(0, FLIGHT)]
+
+
+def test_a_track_says_which_frame_it_started_on() -> None:
+    """Positions alone cannot say when, and every useful question is "when".
+
+    Paths now overlap — several run at once and two may cover the same
+    frames — so counting frames by adding up path lengths double-counts, and
+    a coverage figure built that way flatters itself. §7 needs the frame of
+    a bounce and §8 needs to know whether a rally was being tracked at a
+    given moment; both are the same missing number.
+    """
+    late = [[], [], *[[p] for p in arc(8)]]
+
+    assert follow(late, **POLICY) == [Track(2, arc(8))]

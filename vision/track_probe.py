@@ -55,6 +55,18 @@ def candidates_per_frame(clip: str, calibration, gate: dict[str, int], every: in
     capture.release()
 
 
+def read_truth(path: Path) -> list[int]:
+    """The hand-marked bounce frames — the only ground truth this repo has.
+
+    Twelve bounces is far too few to tune against, but it answers a question
+    no amount of coverage percentage can: at the moments somebody watched the
+    ball hit the table, was the tracker holding it? Coverage counts frames;
+    this counts the frames that decide points.
+    """
+    rows = path.read_text().strip().splitlines()[1:]
+    return [int(row.split(",")[0]) for row in rows]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("clips", nargs="+")
@@ -68,6 +80,8 @@ def main() -> int:
     ap.add_argument("--motion", action="store_true", help="§5 step 1: require MOG2 foreground")
     ap.add_argument("--margin", type=float, default=150.0,
                     help="cm past the table edge a candidate may project to")
+    ap.add_argument("--truth", type=Path, default=None,
+                    help="hand-marked bounce frames; reports how many were being tracked")
     args = ap.parse_args()
 
     calibration = load_calibration(args.calibration)
@@ -78,7 +92,12 @@ def main() -> int:
     print(f"\n  sat_min {gate['sat_min']}, gate {args.gate:.0f} px, coast {args.coast}, "
           f"least {args.least}, tolerance {args.tolerance:.0f} px, every {args.every}, "
           f"motion {'on' if args.motion else 'off'}, margin {args.margin:.0f} cm\n")
-    print(f"    {'clip':22} {'frames':>7} {'tracks':>7} {'tracked':>8} {'longest':>8}")
+    if args.truth and len(args.clips) != 1:
+        print("--truth describes one clip; pass exactly one", file=sys.stderr)
+        return 2
+    truth = read_truth(args.truth) if args.truth else []
+    print(f"    {'clip':22} {'frames':>7} {'tracks':>7} {'tracked':>8} {'longest':>8}"
+          + (f" {'bounces held':>13}" if truth else ""))
 
     for clip in args.clips:
         per_frame = list(candidates_per_frame(clip, calibration, gate, args.every, args.motion, args.margin))
@@ -87,10 +106,15 @@ def main() -> int:
             continue
         tracks = follow(per_frame, gate_px=args.gate, coast=args.coast,
                         least=args.least, tolerance_px=args.tolerance)
-        covered = sum(len(t) for t in tracks)
-        longest = max((len(t) for t in tracks), default=0)
-        print(f"    {clip:22} {len(per_frame):7d} {len(tracks):7d} "
-              f"{covered / len(per_frame) * 100:7.1f}% {longest:8d}")
+        covered = {sample for track in tracks
+                   for sample in range(track.start, track.start + len(track.seen))}
+        longest = max((len(t.seen) for t in tracks), default=0)
+        line = (f"    {clip:22} {len(per_frame):7d} {len(tracks):7d} "
+                f"{len(covered) / len(per_frame) * 100:7.1f}% {longest:8d}")
+        if truth:
+            samples = {(frame - 1) // args.every for frame in truth}
+            line += f" {len(samples & covered):6d} of {len(samples):<4d}"
+        print(line)
     print()
     return 0
 

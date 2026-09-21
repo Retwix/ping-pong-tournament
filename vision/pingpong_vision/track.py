@@ -93,8 +93,23 @@ def _apart(a: Point, b: Point) -> float:
     return hypot(a[0] - b[0], a[1] - b[1])
 
 
+@dataclass(frozen=True)
+class Track:
+    """A believed path: the frame it opened on, and where it went after.
+
+    The frame number is not decoration. Paths overlap now, so frames covered
+    cannot be counted by adding path lengths; §7 needs the frame a bounce
+    happened on, and §8 needs to know whether the ball was being followed at
+    a given moment. Positions are one frame apart by construction, so `start`
+    and the length give the span.
+    """
+
+    start: int
+    seen: tuple[Point, ...]
+
+
 def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
-           least: int, tolerance_px: float) -> list[tuple[Point, ...]]:
+           least: int, tolerance_px: float) -> list[Track]:
     """Every path through a clip that behaved like a ball.
 
     Takes one candidate list per frame and returns the tracks worth
@@ -126,23 +141,23 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
     last frame from a speck, and letting the newcomer take it shreds a good
     path into stubs that each die below `least`.
     """
-    accepted: list[tuple[Point, ...]] = []
+    accepted: list[Track] = []
     live: list[_Path] = []
 
-    for candidates in per_frame:
+    for frame, candidates in enumerate(per_frame):
         unclaimed = list(candidates)
         carried: list[_Path] = []
         for path in sorted(live, key=lambda path: -path.sightings):
             grown = advance(path.seen, unclaimed, gate_px=gate_px)
             if len(grown) > len(path.seen):
                 unclaimed.remove(grown[-1])
-                carried.append(_Path(grown, 0, path.sightings + 1))
+                carried.append(_Path(path.start, grown, 0, path.sightings + 1))
             elif path.misses < coast:
-                carried.append(_Path((*path.seen, predict_next(path.seen)),
+                carried.append(_Path(path.start, (*path.seen, predict_next(path.seen)),
                                      path.misses + 1, path.sightings))
             else:
                 _judge(path, accepted, least=least, tolerance_px=tolerance_px)
-        live = carried + [_Path((blob,), 0, 1) for blob in unclaimed]
+        live = carried + [_Path(frame, (blob,), 0, 1) for blob in unclaimed]
 
     for path in live:
         _judge(path, accepted, least=least, tolerance_px=tolerance_px)
@@ -153,12 +168,13 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
 class _Path:
     """One candidate ball being followed: where it has been, and how surely."""
 
+    start: int
     seen: tuple[Point, ...]
     misses: int
     sightings: int
 
 
-def _judge(path: _Path, accepted: list[tuple[Point, ...]], *,
+def _judge(path: _Path, accepted: list[Track], *,
            least: int, tolerance_px: float) -> None:
     """Keep a finished path if enough of it was seen and all of it fell.
 
@@ -169,4 +185,4 @@ def _judge(path: _Path, accepted: list[tuple[Point, ...]], *,
     settled = path.seen[:len(path.seen) - path.misses]
     if path.sightings >= least and is_ballistic(settled, tolerance_px=tolerance_px,
                                                 least=least):
-        accepted.append(settled)
+        accepted.append(Track(path.start, settled))
