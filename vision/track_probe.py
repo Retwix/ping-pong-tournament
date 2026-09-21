@@ -26,7 +26,7 @@ from probe import DEFAULT_GATE
 
 
 def candidates_per_frame(clip: str, calibration, gate: dict[str, int], every: int,
-                         motion: bool):
+                         motion: bool, margin_cm: float):
     """Image-space candidate positions, one list per sampled frame.
 
     Sampling every Nth frame is safe for the motion model as long as N never
@@ -50,7 +50,8 @@ def candidates_per_frame(clip: str, calibration, gate: dict[str, int], every: in
         if index % every:
             continue
         yield [centre for centre, _, _
-               in ball_candidates(frame, calibration, gate, foreground=foreground)]
+               in ball_candidates(frame, calibration, gate, foreground=foreground,
+                                  margin_cm=margin_cm)]
     capture.release()
 
 
@@ -65,6 +66,8 @@ def main() -> int:
     ap.add_argument("--least", type=int, default=6, help="sightings before a track is believed")
     ap.add_argument("--tolerance", type=float, default=30.0, help="px a sighting may miss its arc by")
     ap.add_argument("--motion", action="store_true", help="§5 step 1: require MOG2 foreground")
+    ap.add_argument("--margin", type=float, default=150.0,
+                    help="cm past the table edge a candidate may project to")
     args = ap.parse_args()
 
     calibration = load_calibration(args.calibration)
@@ -74,11 +77,11 @@ def main() -> int:
 
     print(f"\n  sat_min {gate['sat_min']}, gate {args.gate:.0f} px, coast {args.coast}, "
           f"least {args.least}, tolerance {args.tolerance:.0f} px, every {args.every}, "
-          f"motion {'on' if args.motion else 'off'}\n")
+          f"motion {'on' if args.motion else 'off'}, margin {args.margin:.0f} cm\n")
     print(f"    {'clip':22} {'frames':>7} {'tracks':>7} {'tracked':>8} {'longest':>8}")
 
     for clip in args.clips:
-        per_frame = list(candidates_per_frame(clip, calibration, gate, args.every, args.motion))
+        per_frame = list(candidates_per_frame(clip, calibration, gate, args.every, args.motion, args.margin))
         if not per_frame:
             print(f"    {clip:22}   no frames read", file=sys.stderr)
             continue

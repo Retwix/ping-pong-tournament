@@ -127,3 +127,26 @@ def test_a_ball_shaped_blob_that_did_not_move_is_not_a_candidate() -> None:
     assert len(ball_candidates(frame, TABLE, DEFAULT_GATE)) == 2
     seen = ball_candidates(frame, TABLE, DEFAULT_GATE, foreground=foreground)
     assert [table_point for _, table_point, _ in seen] == [pytest.approx(moving_at, abs=3.0)]
+
+
+def test_a_ball_in_flight_is_not_discarded_for_leaving_the_table() -> None:
+    """The homography assumes the ball is on the plane. In flight it is not.
+
+    A ball 30 cm up is seen along a ray that meets the plane well beyond it,
+    so its table coordinates land past the far edge — further the higher it
+    goes. Rejecting candidates by the table polygon therefore discards
+    exactly the frames a rally is made of and keeps the ones where the ball
+    is lying still, which is the shape of what d7a2179 measured: 69.2% at
+    rest, 18.0% in flight. §7 uses the polygon for bounces, which really are
+    on the plane.
+
+    The margin still has to stop somewhere, though it is no longer asking
+    about the table: at 700 cm the ray is pointing at the back wall, and a
+    plane projection that far out means nothing at all. Keeping a bound is
+    what stops the ceiling joining the rally.
+    """
+    airborne = frame_with_smear((70.0, 330.0), long_by=5.0, wide_by=1.0)
+    off_in_the_room = frame_with_smear((70.0, 700.0), long_by=5.0, wide_by=1.0)
+
+    assert len(ball_candidates(airborne, TABLE, DEFAULT_GATE)) == 1
+    assert ball_candidates(off_in_the_room, TABLE, DEFAULT_GATE) == []
