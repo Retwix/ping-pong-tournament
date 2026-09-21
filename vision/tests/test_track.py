@@ -204,3 +204,57 @@ def test_a_path_that_was_mostly_guessed_is_not_evidence_of_a_ball() -> None:
     glimpsed = [[] if t in (4, 5, 6) else [arc(8)[t]] for t in range(8)]
 
     assert follow(glimpsed, **POLICY) == []
+
+
+def test_the_ball_is_found_even_when_it_is_not_the_first_blob_in_the_frame() -> None:
+    """Following one blob at a time means following the wrong one at random.
+
+    Identical to the clutter test above with the two blobs listed the other
+    way round, which is a difference nothing physical should care about. A
+    single follower bootstraps on whichever candidate the contour finder
+    happened to emit first, spends the rally locked to a forearm, and reports
+    nothing. On real footage that is not an edge case: with the table-polygon
+    bug fixed, 77% of rally frames carry a candidate and most carry several,
+    so the first one is rarely the ball.
+
+    Every unclaimed candidate has to start a path of its own, and the arc
+    test decides between them at the end.
+    """
+    arm_first = [[arm, ball] for ball, arm in zip(FLIGHT, FOREARM)]
+
+    assert follow(arm_first, **POLICY) == [FLIGHT]
+
+
+def test_exactly_enough_sightings_is_enough() -> None:
+    """`least` is a floor, not a threshold to clear — six sightings is six.
+
+    Off by one here is invisible on any longer clip and decides every short
+    one, and short is what a rally is made of: the ball is lost behind a
+    player and found again, so most paths finish near the minimum.
+    """
+    assert follow([[p] for p in arc(6)], **POLICY) == [arc(6)]
+    assert follow([[p] for p in arc(5)], **POLICY) == []
+
+
+def test_an_established_path_keeps_its_ball_against_a_newcomer() -> None:
+    """When two paths want the same blob, evidence decides, not arrival.
+
+    `bait` sits 40 px off wherever the ball will be next and flips side each
+    frame, so it spawns a newcomer every frame whose one-point prediction
+    lands within reach of the ball — and its own trail zig-zags, so it is no
+    parabola and could never be accepted on its own merits.
+
+    Let the newcomer choose first and it takes the ball every frame: the real
+    path is starved into coasting and dies, while each thief holds the ball
+    for one frame before the next one takes it. Seven sightings become seven
+    paths of one. The run of history is the thing being protected, not any
+    single association.
+    """
+    def bait(t: int) -> tuple[float, float]:
+        x, y = FLIGHT[t + 1]
+        return (x, y + (40.0 if t % 2 else -40.0))
+
+    baited = [[FLIGHT[t], bait(t)] if t + 1 < len(FLIGHT) else [FLIGHT[t]]
+              for t in range(len(FLIGHT))]
+
+    assert follow(baited, **POLICY) == [FLIGHT]

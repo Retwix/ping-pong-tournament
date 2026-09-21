@@ -15,8 +15,9 @@ plane — throws it far from where it really is. Centimetres are for bounces.
 
 from __future__ import annotations
 
-from math import hypot
 from collections.abc import Iterable
+from dataclasses import dataclass
+from math import hypot
 
 Point = tuple[float, float]
 
@@ -96,10 +97,17 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
            least: int, tolerance_px: float) -> list[tuple[Point, ...]]:
     """Every path through a clip that behaved like a ball.
 
-    Takes one candidate list per frame and returns the tracks worth believing.
-    A frame offering two blobs says nothing about which is the ball; held
-    against its own past, only one of them is falling, and that is the whole
-    reason this exists.
+    Takes one candidate list per frame and returns the tracks worth
+    believing. A frame offering several blobs says nothing about which is the
+    ball; held against its own past, only one of them is falling, and that is
+    the whole reason this exists.
+
+    Every candidate no live path claims starts a path of its own. Following
+    only one at a time means following whichever blob the contour finder
+    emitted first, and with the table-polygon fix in place most rally frames
+    carry several. Spurious paths cost little: they fail to associate within
+    a few frames and die unaccepted, so the population stays near the number
+    of blobs per frame times `coast`.
 
     A missed frame is filled with the prediction rather than skipped, so the
     positions stay one frame apart and `predict_next` keeps meaning what it
@@ -108,53 +116,57 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
     separately. `gate_px` may be generous without loosening what is accepted,
     because `tolerance_px` is applied again at the end.
 
-    A track ends at its last real sighting, not at the end of its coasting:
-    the invented positions that follow were guesses about a ball nobody could
-    see, and leaving them on would plant a bounce where none was observed.
+    A path ends at its last real sighting: the invented positions after it
+    were guesses about a ball nobody could see, and leaving them on would
+    plant a bounce where none was observed.
 
-    The first candidate of a frame starts a track when none is running: with
-    no history there is nothing to prefer one blob by. A track started on the
-    wrong blob is not recovered — the ball is picked up on a later restart
-    instead. One track at a time is a real limit of this, not an oversight.
+    Two paths cannot share a blob, and the one with more sightings behind it
+    chooses first. Evidence, not arrival order: a path that has watched the
+    ball for six frames has a better claim on the next blob than one born
+    last frame from a speck, and letting the newcomer take it shreds a good
+    path into stubs that each die below `least`.
     """
     accepted: list[tuple[Point, ...]] = []
-    seen: tuple[Point, ...] = ()
-    misses = observations = 0
+    live: list[_Path] = []
 
     for candidates in per_frame:
-        if not seen:
-            if candidates:
-                seen, misses, observations = (candidates[0],), 0, 1
-            continue
-        grown = advance(seen, candidates, gate_px=gate_px)
-        if len(grown) > len(seen):
-            seen, misses, observations = grown, 0, observations + 1
-        elif misses < coast:
-            seen, misses = (*seen, predict_next(seen)), misses + 1
-        else:
-            settled = _settled(seen, misses)
-            if _believable(settled, observations, least=least, tolerance_px=tolerance_px):
-                accepted.append(settled)
-            seen, misses, observations = (), 0, 0
+        unclaimed = list(candidates)
+        carried: list[_Path] = []
+        for path in sorted(live, key=lambda path: -path.sightings):
+            grown = advance(path.seen, unclaimed, gate_px=gate_px)
+            if len(grown) > len(path.seen):
+                unclaimed.remove(grown[-1])
+                carried.append(_Path(grown, 0, path.sightings + 1))
+            elif path.misses < coast:
+                carried.append(_Path((*path.seen, predict_next(path.seen)),
+                                     path.misses + 1, path.sightings))
+            else:
+                _judge(path, accepted, least=least, tolerance_px=tolerance_px)
+        live = carried + [_Path((blob,), 0, 1) for blob in unclaimed]
 
-    settled = _settled(seen, misses)
-    if _believable(settled, observations, least=least, tolerance_px=tolerance_px):
-        accepted.append(settled)
+    for path in live:
+        _judge(path, accepted, least=least, tolerance_px=tolerance_px)
     return accepted
 
 
-def _settled(seen: tuple[Point, ...], misses: int) -> tuple[Point, ...]:
-    """The track without the positions it was only guessing at the end."""
-    return seen[:len(seen) - misses]
+@dataclass(frozen=True)
+class _Path:
+    """One candidate ball being followed: where it has been, and how surely."""
+
+    seen: tuple[Point, ...]
+    misses: int
+    sightings: int
 
 
-def _believable(seen: tuple[Point, ...], observations: int, *,
-                least: int, tolerance_px: float) -> bool:
-    """Enough of the path actually seen, and all of it falling like a ball.
+def _judge(path: _Path, accepted: list[tuple[Point, ...]], *,
+           least: int, tolerance_px: float) -> None:
+    """Keep a finished path if enough of it was seen and all of it fell.
 
     Both guards use `least` for the same reason — a handful of frames — but
-    they catch different frauds: a long track that was mostly coasted, and a
-    long track that was watched the whole way and never fell.
+    they catch different frauds: a long path that was mostly coasted, and a
+    long path that was watched the whole way and never fell.
     """
-    return (observations >= least
-            and is_ballistic(seen, tolerance_px=tolerance_px, least=least))
+    settled = path.seen[:len(path.seen) - path.misses]
+    if path.sightings >= least and is_ballistic(settled, tolerance_px=tolerance_px,
+                                                least=least):
+        accepted.append(settled)
