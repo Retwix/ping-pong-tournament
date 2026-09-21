@@ -292,11 +292,17 @@ rather than assumed (§4), and camera drift is detected rather than hoped for �
 their README lists automatic compensation for camera motion as a wanted
 improvement.
 
-### What the gate actually does on the clips (measured 2026-09-21)
+### What the pipeline actually does on the clips (measured 2026-09-21)
 
-Steps 1-2 only — there is no tracker yet. `detect_probe.py`, every 2nd frame,
-`sat_min = 180`, the 2026-09-16 calibration, and the size gate measuring the
-streak's width rather than its area.
+**The headline: the ball was being discarded for being in the air, and the
+first reading of these clips blamed motion blur for it.** That reading is
+corrected below. Both sets of numbers are kept, because the wrong one is the
+more instructive.
+
+#### The false trail
+
+The first measurement ran the colour-and-size gate over all four clips and
+found this:
 
 | clip | what is in it | nothing found | exactly one |
 |---|---|---|---|
@@ -305,26 +311,75 @@ streak's width rather than its area.
 | `warmup.mp4` | knocking about | 75.9% | 17.0% |
 | `ball-positions.mp4` | ball placed by hand, at rest | 27.8% | 69.2% |
 
-**The gate finds the ball at rest and loses it in flight.** 69.2% on a still
-ball against 18.0% in a rally — same table, same calibration, same threshold,
-the only difference being that the ball is moving. That answers §17.3: 180 does
-not survive flight.
+69.2% on a resting ball against 18.0% on a struck one looks conclusive: the
+ball blurs in flight, the saturation drops, the gate loses it. It was read
+that way, and §17.3 was answered "180 does not survive flight."
 
-**A rally and a warm-up look the same to it.** 18.0% against 17.0%. Whatever is
-being counted during a point is mostly not the point, and no tracker layered on
-top can invent a distinction the candidates do not contain.
+Two things were wrong with that. The reading of rally against warm-up as "in
+play" against "between points" is the smaller one — `warmup.mp4` is ten
+minutes of knocking a ball about, so it is *full* of ball, and a ball detector
+scoring the same on both is the right answer rather than a failure. Searching
+for a distinction that was never going to be there cost an afternoon.
 
-**The static scene is clean.** Zero candidates on the empty table at every
-threshold from 70 to 180, so none of this is sensor noise or table texture. The
-failure mode is missing the ball, not inventing one — which is the better of
-the two to have, since §15's phantom-point target is the strict one.
+#### What it actually was
 
-Lowering the threshold does raise the count — 27.2% exactly-one at `sat_min =
-70` against 19.5% at 180, on the same clip. **This is not yet evidence that 70
-is better.** The probe counts candidates, not correct ones, and §17.3 records
-that skin re-enters below 140, so the extra blobs are as likely to be arms.
-Separating those needs per-frame ground truth, which `rally.truth.csv` (twelve
-bounces) does not provide.
+§4's homography maps an image point to where that ray meets the **table
+plane**. A ball in flight is above the plane, so it lands past the far edge —
+further the higher it goes. The candidate filter rejected anything off the
+table, with a 10 cm margin. It was therefore discarding the ball precisely
+while it was in play, and keeping it whenever it was lying still.
+
+Sweeping that margin on `rally.mp4`, frames with at least one candidate:
+
+| margin | `rally.mp4` (ball in play) | `ball-positions.mp4` (ball at rest) |
+|---|---|---|
+| 10 cm | 25.3% | 86.8% |
+| 60 cm | 57.5% | 90.1% |
+| 150 cm | **77.0%** | 90.7% |
+| 400 cm | 94.0% | 90.7% |
+
+A filter that costs three quarters of the moving ball and nothing of the still
+one is not measuring saturation. **§17.3 is answered the other way: there is
+no evidence here that `sat_min = 180` fails in flight.** The margin is now
+150 cm and no longer asks a question about the table at all — far enough out
+the plane projection degenerates, and the bound only keeps the ceiling and the
+back wall out. §7 asks the polygon question properly, of bounces, which really
+are on the plane.
+
+Two repairs that were tried and did **not** help, recorded so they are not
+tried again. Lowering `sat_min` raises the raw count but inverts the result
+once tracking is applied — the warm-up overtakes the rally, which is skin
+returning below 140 exactly as §17.3 predicted. Adding MOG2 motion on top of
+`sat_min = 180` changes almost nothing, because colour is the tighter
+constraint of the two, not because motion is worthless.
+
+#### With the tracker, against real bounces
+
+Coverage is distinct frames inside an accepted track. Paths overlap, so adding
+their lengths double-counts — it read 29.9% where the truth was 22.1%.
+
+"Bounces held" is the only ground truth in the repo: the twelve hand-marked
+frames in `rally.truth.csv`, asking whether the tracker had the ball at the
+moment somebody watched it hit the table. It is the metric that matters,
+because those are the frames §7 and §8 decide points from.
+
+| tracker | `rally.mp4` coverage | bounces held |
+|---|---|---|
+| one path at a time, gate 200 px | 1.3% | — |
+| one path at a time, gate 60 px | 8.0% | — |
+| every blob starts a path, gate 60 px | 22.1% | 4 of 12 |
+| every blob starts a path, gate 25 px | **48.2%** | **6 of 12** |
+
+Following one path at a time got *worse* as detection improved: at 77% of
+frames carrying a candidate and most carrying several, a single follower
+spends the rally locked onto clutter.
+
+**Twelve bounces cannot tune four parameters.** Across gates from 12 to 100 px
+and tolerances of 15 and 30 px the count moves between 0 and 6, and every
+value from 4 to 6 is one bounce from its neighbours. Treat the table above as
+a baseline, not a tuned configuration. The next honest step is more ground
+truth, not more sweeping: §14's M2 asks for a measured detection rate, and
+half the bounces held is not yet one.
 
 ---
 
@@ -616,12 +671,12 @@ Still open:
    and the ball is lost in it. Skin collapses by 140, the ball survives past
    240, and at 180 the ball is usually the *only* blob in frame. Its area runs
    ~100 px² at the far end to ~900 px² near the camera, which is the §5 size
-   gate measured rather than guessed. **Reopened 2026-09-21:** every one of those
-   numbers was a ball at rest, and §5's clip measurements find a resting ball in
-   69.2% of frames and a struck one in 18.0%. Motion blur lowers saturation
-   exactly when it matters, and 180 does not survive it. What replaces 180 is
-   open: a lower threshold finds more blobs, but skin collapses only by 140, so
-   it also finds more arms.
+   gate measured rather than guessed. **Reopened and re-closed 2026-09-21:**
+   the resting-ball numbers looked suspect once §5 measured a struck ball at
+   18.0% against 69.2% at rest, and that gap was read as motion blur. It was
+   not: the table-polygon filter was discarding the airborne ball, and fixing
+   it took the rally to 77.0% at this same threshold. 180 stands. Lowering it
+   was tried and measured worse, skin returning below 140 as recorded here.
 Closed 2026-09-14: **end-to-end capture latency is ~160 ms** (§13), measured by
 flashing the screen and timing the step rather than reading a counter by eye.
 Two lessons came out of getting there, and both apply to the ball detector:
