@@ -102,3 +102,28 @@ def test_a_ball_smeared_by_motion_is_still_the_ball() -> None:
     assert len(ball_candidates(streak, TABLE, DEFAULT_GATE)) == 1
     assert ball_candidates(wrist, TABLE, DEFAULT_GATE) == []
     assert ball_candidates(speck, TABLE, DEFAULT_GATE) == []
+
+
+def test_a_ball_shaped_blob_that_did_not_move_is_not_a_candidate() -> None:
+    """§5 step 1, the stage this pipeline never had: motion.
+
+    Colour cannot find a struck ball — d7a2179 measured 69.2% on a resting
+    ball against 18.0% on a moving one, because blur washes the orange out —
+    and the obvious repair, loosening the threshold, lets skin back in and
+    made a warm-up outscore a rally. Motion is the signal that says "the ball"
+    without saying "orange": whatever else a struck ball is, it was not there
+    a moment ago. Anything the background model already knows about is out,
+    however perfectly ball-coloured and ball-sized it is.
+    """
+    moving_at, parked_at = (40.0, 80.0), (100.0, 200.0)
+    frame = np.maximum(frame_with_smear(moving_at, long_by=5.0, wide_by=1.0),
+                       frame_with_smear(parked_at, long_by=5.0, wide_by=1.0))
+    homography = homography_of(TABLE)
+    foreground = np.zeros(frame.shape[:2], np.uint8)
+    cx, cy = to_image_px(homography, moving_at)
+    cv2.circle(foreground, (round(cx), round(cy)),
+               round(5 * expected_ball_px(homography, moving_at)), 255, -1)
+
+    assert len(ball_candidates(frame, TABLE, DEFAULT_GATE)) == 2
+    seen = ball_candidates(frame, TABLE, DEFAULT_GATE, foreground=foreground)
+    assert [table_point for _, table_point, _ in seen] == [pytest.approx(moving_at, abs=3.0)]

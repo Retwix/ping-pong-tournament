@@ -25,24 +25,32 @@ from pingpong_vision.track import follow
 from probe import DEFAULT_GATE
 
 
-def candidates_per_frame(clip: str, calibration, gate: dict[str, int], every: int):
+def candidates_per_frame(clip: str, calibration, gate: dict[str, int], every: int,
+                         motion: bool):
     """Image-space candidate positions, one list per sampled frame.
 
     Sampling every Nth frame is safe for the motion model as long as N never
     changes — the arc is still an arc at any uniform spacing — but it does
     multiply how far the ball moves between samples, so --gate has to grow
     with it.
+
+    The background model is fed every frame even when the frame is not
+    sampled: it is learning what the room looks like, and skipping frames
+    would have it learn a room that flickers.
     """
     capture = cv2.VideoCapture(clip)
+    background = cv2.createBackgroundSubtractorMOG2(detectShadows=False) if motion else None
     index = 0
     while True:
         ok, frame = capture.read()
         if not ok:
             break
+        foreground = background.apply(frame) if background else None
         index += 1
         if index % every:
             continue
-        yield [centre for centre, _, _ in ball_candidates(frame, calibration, gate)]
+        yield [centre for centre, _, _
+               in ball_candidates(frame, calibration, gate, foreground=foreground)]
     capture.release()
 
 
@@ -56,6 +64,7 @@ def main() -> int:
     ap.add_argument("--coast", type=int, default=4, help="frames a track survives unseen")
     ap.add_argument("--least", type=int, default=6, help="sightings before a track is believed")
     ap.add_argument("--tolerance", type=float, default=30.0, help="px a sighting may miss its arc by")
+    ap.add_argument("--motion", action="store_true", help="§5 step 1: require MOG2 foreground")
     args = ap.parse_args()
 
     calibration = load_calibration(args.calibration)
@@ -64,11 +73,12 @@ def main() -> int:
         gate["sat_min"] = args.sat_min
 
     print(f"\n  sat_min {gate['sat_min']}, gate {args.gate:.0f} px, coast {args.coast}, "
-          f"least {args.least}, tolerance {args.tolerance:.0f} px, every {args.every}\n")
+          f"least {args.least}, tolerance {args.tolerance:.0f} px, every {args.every}, "
+          f"motion {'on' if args.motion else 'off'}\n")
     print(f"    {'clip':22} {'frames':>7} {'tracks':>7} {'tracked':>8} {'longest':>8}")
 
     for clip in args.clips:
-        per_frame = list(candidates_per_frame(clip, calibration, gate, args.every))
+        per_frame = list(candidates_per_frame(clip, calibration, gate, args.every, args.motion))
         if not per_frame:
             print(f"    {clip:22}   no frames read", file=sys.stderr)
             continue

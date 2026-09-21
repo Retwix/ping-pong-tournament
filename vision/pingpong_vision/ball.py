@@ -45,12 +45,19 @@ def on_the_table(table_point: Point, calibration: Calibration, *, margin_cm: flo
 
 
 def ball_candidates(frame, calibration: Calibration, gate: dict[str, int], *,
-                    margin_cm: float = 10.0, tolerance: tuple[float, float] = (0.5, 2.5)):
+                    margin_cm: float = 10.0, tolerance: tuple[float, float] = (0.5, 2.5),
+                    foreground=None):
     """Blobs that are the ball's colour, on the table, and the right size there.
 
     Size is judged across the blob's narrow axis, never by area: §5's "the ball
     is a streak, not a circle". A ball in flight smears along its path, so its
     area runs several times a circle's while its width stays the ball's width.
+
+    `foreground` is §5 step 1: a mask of what the background model considers
+    new. Given one, a blob has to be moving as well as orange. Colour alone
+    cannot find a struck ball — blur washes the saturation out — and loosening
+    the threshold to compensate lets skin back in. Motion is the signal that
+    says "the ball" without saying "orange".
 
     Returns (image point, table point, area) for each survivor.
     """
@@ -60,6 +67,8 @@ def ball_candidates(frame, calibration: Calibration, gate: dict[str, int], *,
         np.array([gate["hue_lo"], gate["sat_min"], gate["val_min"]], np.uint8),
         np.array([gate["hue_hi"], 255, 255], np.uint8),
     )
+    if foreground is not None:
+        mask = cv2.bitwise_and(mask, foreground)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
