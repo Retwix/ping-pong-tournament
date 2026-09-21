@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pingpong_vision.track import advance, is_ballistic, predict_next
+from pingpong_vision.track import advance, follow, is_ballistic, predict_next
 
 
 def test_a_falling_ball_is_predicted_onto_its_arc_not_its_last_heading() -> None:
@@ -93,3 +93,114 @@ def test_only_a_path_that_keeps_curving_the_same_way_is_a_ball() -> None:
     assert is_ballistic(early, tolerance_px=6.0, least=6) is False
     assert is_ballistic(late, tolerance_px=6.0, least=6) is False
     assert is_ballistic(flight[:4], tolerance_px=6.0, least=6) is False
+
+
+def arc(frames: int) -> tuple[tuple[float, float], ...]:
+    """A ball in free fall: 60 px across per frame, the drop growing by 20."""
+    return tuple((100.0 + 60 * t, 500.0 + 20 * t + 10 * t * t) for t in range(frames))
+
+
+FLIGHT = arc(8)
+FOREARM = ((700.0, 400.0), (730.0, 380.0), (710.0, 420.0), (745.0, 395.0),
+           (705.0, 415.0), (740.0, 400.0), (715.0, 410.0), (735.0, 390.0))
+# gate_px has to exceed how far the ball travels in one frame, not how
+# accurately the arc is known: with a single sighting the prediction is
+# "stays put", so a gate under the ball's own speed can never reach frame
+# two and no track ever starts. The arc is policed afterwards, by
+# tolerance_px, which is why the gate can afford to be this loose.
+POLICY = dict(gate_px=120.0, coast=3, least=6, tolerance_px=6.0)
+
+
+def test_the_ball_is_picked_out_of_the_clutter_and_the_clutter_is_not() -> None:
+    """The measurement d7a2179 could not make: which blobs were the point.
+
+    Every frame here offers two blobs, and nothing in any single frame says
+    which is which — that is exactly the situation the colour and size gates
+    leave behind. Held up against their own past, only one of them is falling.
+    """
+    together = [[ball, arm] for ball, arm in zip(FLIGHT, FOREARM)]
+
+    assert follow(together, **POLICY) == [FLIGHT]
+    assert follow([[arm] for arm in FOREARM], **POLICY) == []
+
+
+def test_a_ball_hidden_for_exactly_the_coast_is_still_the_same_ball() -> None:
+    """§5: "occlusion is normal" — behind a player, a bat, the net.
+
+    Ending a track at the first empty frame would end almost every track at
+    once, since d7a2179 measured 73.5% of rally frames yielding no candidate.
+    Coasting fills the gap with the prediction, which keeps the positions one
+    frame apart so `predict_next` keeps meaning what it says.
+
+    The gap here is exactly `coast` long, so a limit one frame tighter drops
+    the ball and the track never reaches `least` sightings.
+    """
+    hidden = [[] if t in (4, 5, 6) else [arc(10)[t]] for t in range(10)]
+
+    assert follow(hidden, **POLICY) == [arc(10)]
+
+
+def test_a_ball_gone_too_long_is_not_the_ball_that_comes_back() -> None:
+    """Coasting has to expire, or one track swallows a whole rally.
+
+    Without a limit the tracker bridges any gap, and two different balls — or
+    a ball and the next serve — become one path that still fits an arc, since
+    the invented positions in between are placed on that arc by construction.
+    The gap here is one frame longer than `coast`, so the first track is
+    abandoned at four sightings and the second never gathers six. One frame
+    shorter and it would survive, which is what pins the limit to a number.
+
+    The two short gaps in the second clip are each within `coast` and add up
+    to more than it. They must not accumulate: a sighting clears the debt, or
+    a rally with a hidden ball every few frames dies of attrition.
+    """
+    long_gap = [[] if 4 <= t <= 7 else [arc(14)[t]] for t in range(14)]
+    twice_hidden = [[] if t in (3, 4, 7, 8) else [arc(12)[t]] for t in range(12)]
+
+    assert follow(long_gap, **POLICY) == []
+    assert follow(twice_hidden, **POLICY) == [arc(12)]
+
+
+def test_a_blob_that_moves_smoothly_and_then_turns_round_is_not_a_ball() -> None:
+    """The case the gate cannot catch, and the reason the arc is rechecked.
+
+    A forearm jerks enough that association loses it on its own. A bat swept
+    steadily across and back does not: every position lands inside `gate_px`
+    of the prediction, so it collects a full track of eight sightings and
+    reaches acceptance with nothing but the arc left to stop it. A thrown
+    object does not reverse.
+    """
+    swept = [[(x, 0.0)] for x in (0.0, 50.0, 100.0, 150.0, 200.0, 150.0, 100.0, 50.0)]
+
+    assert follow(swept, **POLICY) == []
+
+
+def test_a_track_that_ends_before_the_clip_does_is_still_reported() -> None:
+    """A rally is many tracks, and only the last of them ends with the clip.
+
+    The ball is seen for eight frames and then never again. The track closes
+    partway through, and closing is the only moment it can be judged — a
+    tracker that only reported whatever it happened to be holding at the end
+    would report at most one path per clip.
+
+    It is reported as the eight frames that were seen, not the eleven it
+    occupied. The three coasted positions at the end were guesses about a
+    ball nobody could see, and §7 reads bounces off these coordinates.
+    """
+    then_gone = [[arc(8)[t]] if t < 8 else [] for t in range(14)]
+
+    assert follow(then_gone, **POLICY) == [arc(8)]
+
+
+def test_a_path_that_was_mostly_guessed_is_not_evidence_of_a_ball() -> None:
+    """Coasting keeps a track alive; it must not be what makes it believable.
+
+    Eight frames long, five of them actually seen and three invented. The
+    invented ones sit on the arc by construction, so the arc check passes on
+    a path that is three-eighths fiction — counting entries would call this a
+    ball. Only real sightings count, so a glimpse either side of a long guess
+    is not a rally. The same clip two frames longer is accepted, above.
+    """
+    glimpsed = [[] if t in (4, 5, 6) else [arc(8)[t]] for t in range(8)]
+
+    assert follow(glimpsed, **POLICY) == []

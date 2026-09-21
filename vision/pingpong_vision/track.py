@@ -16,6 +16,7 @@ plane — throws it far from where it really is. Centimetres are for bounces.
 from __future__ import annotations
 
 from math import hypot
+from collections.abc import Iterable
 
 Point = tuple[float, float]
 
@@ -89,3 +90,71 @@ def _apart(a: Point, b: Point) -> float:
     distance it was tuned as.
     """
     return hypot(a[0] - b[0], a[1] - b[1])
+
+
+def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
+           least: int, tolerance_px: float) -> list[tuple[Point, ...]]:
+    """Every path through a clip that behaved like a ball.
+
+    Takes one candidate list per frame and returns the tracks worth believing.
+    A frame offering two blobs says nothing about which is the ball; held
+    against its own past, only one of them is falling, and that is the whole
+    reason this exists.
+
+    A missed frame is filled with the prediction rather than skipped, so the
+    positions stay one frame apart and `predict_next` keeps meaning what it
+    says. A coasted position asserts nothing about the path — it sits exactly
+    on the arc by construction — which is why acceptance counts *observations*
+    separately. `gate_px` may be generous without loosening what is accepted,
+    because `tolerance_px` is applied again at the end.
+
+    A track ends at its last real sighting, not at the end of its coasting:
+    the invented positions that follow were guesses about a ball nobody could
+    see, and leaving them on would plant a bounce where none was observed.
+
+    The first candidate of a frame starts a track when none is running: with
+    no history there is nothing to prefer one blob by. A track started on the
+    wrong blob is not recovered — the ball is picked up on a later restart
+    instead. One track at a time is a real limit of this, not an oversight.
+    """
+    accepted: list[tuple[Point, ...]] = []
+    seen: tuple[Point, ...] = ()
+    misses = observations = 0
+
+    for candidates in per_frame:
+        if not seen:
+            if candidates:
+                seen, misses, observations = (candidates[0],), 0, 1
+            continue
+        grown = advance(seen, candidates, gate_px=gate_px)
+        if len(grown) > len(seen):
+            seen, misses, observations = grown, 0, observations + 1
+        elif misses < coast:
+            seen, misses = (*seen, predict_next(seen)), misses + 1
+        else:
+            settled = _settled(seen, misses)
+            if _believable(settled, observations, least=least, tolerance_px=tolerance_px):
+                accepted.append(settled)
+            seen, misses, observations = (), 0, 0
+
+    settled = _settled(seen, misses)
+    if _believable(settled, observations, least=least, tolerance_px=tolerance_px):
+        accepted.append(settled)
+    return accepted
+
+
+def _settled(seen: tuple[Point, ...], misses: int) -> tuple[Point, ...]:
+    """The track without the positions it was only guessing at the end."""
+    return seen[:len(seen) - misses]
+
+
+def _believable(seen: tuple[Point, ...], observations: int, *,
+                least: int, tolerance_px: float) -> bool:
+    """Enough of the path actually seen, and all of it falling like a ball.
+
+    Both guards use `least` for the same reason — a handful of frames — but
+    they catch different frauds: a long track that was mostly coasted, and a
+    long track that was watched the whole way and never fell.
+    """
+    return (observations >= least
+            and is_ballistic(seen, tolerance_px=tolerance_px, least=least))
