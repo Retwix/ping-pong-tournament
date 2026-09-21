@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pingpong_vision.track import predict_next
+from pingpong_vision.track import advance, predict_next
 
 
 def test_a_falling_ball_is_predicted_onto_its_arc_not_its_last_heading() -> None:
@@ -37,3 +37,28 @@ def test_a_short_history_predicts_with_what_little_it_has() -> None:
     """
     assert predict_next([(100.0, 500.0), (160.0, 520.0)]) == pytest.approx((220.0, 540.0))
     assert predict_next([(100.0, 500.0)]) == pytest.approx((100.0, 500.0))
+
+
+def test_the_track_takes_the_candidate_nearest_where_it_expected_the_ball() -> None:
+    """This is the whole point of predicting: it makes a choice possible.
+
+    A frame hands over several orange blobs and nothing to rank them by. The
+    prediction supplies the ranking — and a limit, because a blob across the
+    room is not the same ball however lonely the frame is. Without the limit
+    the track would snap onto a player's shirt the moment the ball vanished.
+
+    `below` and `aside` each beat `nearby` on one axis alone and lose badly on
+    both together — 80 px out either way. Comparing a single axis would take
+    one of them, and a ball dropping onto the table moves almost entirely in
+    y, so a one-axis comparison fails at the bounce that decides the point.
+
+    The empty frame is the common case, not the edge case: d7a2179 measured
+    73.5% of rally frames yielding no candidate at all.
+    """
+    seen = ((100.0, 500.0), (160.0, 520.0), (220.0, 560.0))   # predicts (280, 620)
+    nearby, elsewhere = (286.0, 614.0), (900.0, 200.0)
+    below, aside = (282.0, 700.0), (360.0, 618.0)
+
+    assert advance(seen, [below, nearby, aside, elsewhere], gate_px=40.0)[-1] == nearby
+    assert advance(seen, [elsewhere], gate_px=40.0) == seen
+    assert advance(seen, [], gate_px=40.0) == seen

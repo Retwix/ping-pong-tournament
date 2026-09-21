@@ -15,6 +15,8 @@ plane — throws it far from where it really is. Centimetres are for bounces.
 
 from __future__ import annotations
 
+from math import hypot
+
 Point = tuple[float, float]
 
 
@@ -36,3 +38,34 @@ def predict_next(seen: list[Point]) -> Point:
         return (2.0 * cx - bx, 2.0 * cy - by)
     (ax, ay), (bx, by), (cx, cy) = seen[-3:]
     return (3.0 * cx - 3.0 * bx + ax, 3.0 * cy - 3.0 * by + ay)
+
+
+def advance(seen: tuple[Point, ...], candidates: list[Point], *, gate_px: float) -> tuple[Point, ...]:
+    """Extend the track with whichever candidate best matches the prediction.
+
+    A frame arrives as an unordered pile of orange blobs with nothing to rank
+    them by. The prediction is the ranking, and `gate_px` is the limit on it:
+    a blob further than that from where the ball was due is not the ball,
+    however alone it is in the frame. Without the limit a track snaps onto a
+    player's shirt the instant the ball is missed, and then stays there.
+
+    Returns the track unchanged when nothing qualifies, so a lean frame costs
+    the track nothing but a position.
+    """
+    if not candidates:
+        return seen
+    prediction = predict_next(seen)
+    nearest = min(candidates, key=lambda c: _apart(prediction, c))
+    if _apart(prediction, nearest) > gate_px:
+        return seen
+    return (*seen, nearest)
+
+
+def _apart(a: Point, b: Point) -> float:
+    """One definition of distance, used both to rank and to reject.
+
+    Two copies of it could drift into meaning different things — squared
+    against unsquared, say — and the gate would quietly stop being the
+    distance it was tuned as.
+    """
+    return hypot(a[0] - b[0], a[1] - b[1])
