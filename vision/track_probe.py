@@ -22,7 +22,8 @@ import cv2
 
 from pingpong_vision.ball import ball_candidates
 from pingpong_vision.calibration import load_calibration
-from pingpong_vision.track import follow
+from pingpong_vision.labels import read_labels, score_tracks
+from pingpong_vision.track import Track, follow
 from probe import DEFAULT_GATE
 
 
@@ -90,6 +91,10 @@ def main() -> int:
     ap.add_argument("--motion", action="store_true", help="§5 step 1: require MOG2 foreground")
     ap.add_argument("--margin", type=float, default=150.0,
                     help="cm past the table edge a candidate may project to")
+    ap.add_argument("--labels", type=Path, default=None,
+                    help="clicked ball positions from label_ball.py; reports found/missed")
+    ap.add_argument("--within", type=float, default=25.0,
+                    help="px a track may sit from a clicked ball and still count")
     ap.add_argument("--truth", type=Path, default=None,
                     help="frames where a point was marked won; reports rallies followed")
     ap.add_argument("--travel", type=float, default=150.0,
@@ -110,8 +115,15 @@ def main() -> int:
     if args.truth and len(args.clips) != 1:
         print("--truth describes one clip; pass exactly one", file=sys.stderr)
         return 2
+    if args.labels and args.every != 1:
+        print("--labels needs --every 1; a sampled clip has no frame to score",
+              file=sys.stderr)
+        return 2
+    labels = read_labels(args.labels) if args.labels else []
+    clicked = [label for label in labels if label.at]
     truth = read_truth(args.truth) if args.truth else []
     print(f"    {'clip':22} {'frames':>7} {'tracks':>7} {'tracked':>8} {'longest':>8}"
+          + (f" {'ball found':>12} {'invented':>9}" if labels else "")
           + (f" {'rallies followed':>17} {'(chance)':>9}" if truth else ""))
 
     for clip in args.clips:
@@ -127,6 +139,12 @@ def main() -> int:
         longest = max((len(t.seen) for t in tracks), default=0)
         line = (f"    {clip:22} {len(per_frame):7d} {len(tracks):7d} "
                 f"{len(covered) / len(per_frame) * 100:7.1f}% {longest:8d}")
+        if labels:
+            # sample k is video frame (k + 1) * every, which --every 1 makes k + 1
+            score = score_tracks(labels, [Track(t.start + 1, t.seen) for t in tracks],
+                                 within_px=args.within)
+            line += (f"  {score.found:3d}/{len(clicked):<3d} {score.found / len(clicked) * 100:4.1f}%"
+                     f" {score.invented:9d}")
         if truth:
             def followed(marks: list[int]) -> int:
                 return sum(any(sample in covered

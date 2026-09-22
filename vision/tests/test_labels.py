@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from pingpong_vision.labels import (
     Label,
+    Score,
+    score_tracks,
     append_label,
     drop_last_label,
     read_labels,
     unlabelled,
 )
+from pingpong_vision.track import Track
 
 
 def test_labelling_survives_being_interrupted(tmp_path) -> None:
@@ -62,3 +65,40 @@ def test_a_misclick_can_be_taken_back(tmp_path) -> None:
         drop_last_label(store)
 
     assert read_labels(store) == []
+
+
+def test_a_ball_counts_as_found_only_if_a_track_was_on_it() -> None:
+    """Being busy in the right frame is not the same as following the ball.
+
+    The measurement §5 has lacked all along. A track covering a frame proves
+    nothing by itself — 7aecc88 showed a coverage-shaped metric scoring worse
+    than chance — so a sighting counts only when a track's position for that
+    frame lands within `within_px` of where the ball was actually clicked.
+
+    The first track spans two frames and is in the wrong place for the first
+    of them, so reading a track's position one frame out of step shows up
+    here rather than passing silently. The second is almost exactly above the
+    ball it misses and the last is level with it and far across, so measuring
+    either axis alone would score one of them a hit.
+
+    A track sitting somewhere else in the frame is counted separately and
+    against us: it is a claim of a ball that was not there, and §15's
+    phantom-point target is the strict one. A frame the labeller marked
+    hidden is held to the same standard.
+    """
+    labels = [
+        Label(10, (100.0, 100.0)),   # a track is on it
+        Label(20, (100.0, 100.0)),   # a track is in frame, but 400 px below
+        Label(30, None),             # no ball visible, yet a track claims one
+        Label(40, (100.0, 100.0)),   # nothing covers this frame at all
+        Label(50, (100.0, 100.0)),   # a track is level with it, 400 px across
+    ]
+    tracks = [
+        Track(9, ((999.0, 999.0), (105.0, 102.0))),   # frame 9 elsewhere, frame 10 on it
+        Track(20, ((104.0, 500.0), (104.0, 500.0))),  # spans 20-21, right across, far down
+        Track(30, ((100.0, 100.0),)),
+        Track(50, ((500.0, 102.0),)),
+    ]
+
+    assert score_tracks(labels, tracks, within_px=20.0) == Score(
+        judged=5, found=1, missed=3, invented=3)
