@@ -91,6 +91,8 @@ def main() -> int:
                     help="cm past the table edge a candidate may project to")
     ap.add_argument("--truth", type=Path, default=None,
                     help="frames where a point was marked won; reports rallies followed")
+    ap.add_argument("--travel", type=float, default=100.0,
+                    help="px a path must span before it counts as a ball in play")
     ap.add_argument("--lookback", type=int, default=60,
                     help="frames before a point mark to count as that rally")
     args = ap.parse_args()
@@ -102,7 +104,8 @@ def main() -> int:
 
     print(f"\n  sat_min {gate['sat_min']}, gate {args.gate:.0f} px, coast {args.coast}, "
           f"least {args.least}, tolerance {args.tolerance:.0f} px, every {args.every}, "
-          f"motion {'on' if args.motion else 'off'}, margin {args.margin:.0f} cm\n")
+          f"motion {'on' if args.motion else 'off'}, margin {args.margin:.0f} cm, "
+          f"travel {args.travel:.0f} px\n")
     if args.truth and len(args.clips) != 1:
         print("--truth describes one clip; pass exactly one", file=sys.stderr)
         return 2
@@ -116,7 +119,8 @@ def main() -> int:
             print(f"    {clip:22}   no frames read", file=sys.stderr)
             continue
         tracks = follow(per_frame, gate_px=args.gate, coast=args.coast,
-                        least=args.least, tolerance_px=args.tolerance)
+                        least=args.least, tolerance_px=args.tolerance,
+                        least_travel_px=args.travel)
         covered = {sample for track in tracks
                    for sample in range(track.start, track.start + len(track.seen))}
         longest = max((len(t.seen) for t in tracks), default=0)

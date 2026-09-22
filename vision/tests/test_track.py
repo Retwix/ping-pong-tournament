@@ -108,7 +108,8 @@ FOREARM = ((700.0, 400.0), (730.0, 380.0), (710.0, 420.0), (745.0, 395.0),
 # "stays put", so a gate under the ball's own speed can never reach frame
 # two and no track ever starts. The arc is policed afterwards, by
 # tolerance_px, which is why the gate can afford to be this loose.
-POLICY = dict(gate_px=120.0, coast=3, least=6, tolerance_px=6.0)
+POLICY = dict(gate_px=120.0, coast=3, least=6, tolerance_px=6.0,
+              least_travel_px=100.0)
 
 
 def test_the_ball_is_picked_out_of_the_clutter_and_the_clutter_is_not() -> None:
@@ -272,3 +273,30 @@ def test_a_track_says_which_frame_it_started_on() -> None:
     late = [[], [], *[[p] for p in arc(8)]]
 
     assert follow(late, **POLICY) == [Track(2, arc(8))]
+
+
+def test_a_ball_that_never_goes_anywhere_is_not_a_ball_in_play() -> None:
+    """A held ball passes the arc test perfectly, and that is the flaw.
+
+    Standing still is constant acceleration with a = 0, so every prediction
+    lands exactly on the next position and the path is flawlessly consistent
+    for as long as somebody holds it. On rally.mp4 the longest accepted path
+    was a ball waiting in a hand before a serve — 84 frames of it, longer
+    than any rally in the clip.
+
+    Nothing about that is wrong colour, wrong size or wrong shape, so no
+    gate upstream can catch it. It has to be caught here, by asking the one
+    thing an arc test cannot: did it actually go anywhere.
+
+    Both axes count, and each alone would be wrong. A serve toss dropping
+    straight down moves only in y; a ball rolling across the table moves
+    only in x. Measuring one axis throws away whichever of those the camera
+    happens to be square-on to.
+    """
+    held = [[(500.0, 500.0)] for _ in range(12)]
+    dropped = tuple((500.0, 100.0 + 5 * t * t) for t in range(8))
+    rolled = tuple((100.0 + 60 * t, 500.0) for t in range(8))
+
+    assert follow(held, **POLICY) == []
+    assert follow([[p] for p in dropped], **POLICY) == [Track(0, dropped)]
+    assert follow([[p] for p in rolled], **POLICY) == [Track(0, rolled)]

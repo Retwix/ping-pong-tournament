@@ -109,7 +109,7 @@ class Track:
 
 
 def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
-           least: int, tolerance_px: float) -> list[Track]:
+           least: int, tolerance_px: float, least_travel_px: float) -> list[Track]:
     """Every path through a clip that behaved like a ball.
 
     Takes one candidate list per frame and returns the tracks worth
@@ -130,6 +130,12 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
     on the arc by construction — which is why acceptance counts *observations*
     separately. `gate_px` may be generous without loosening what is accepted,
     because `tolerance_px` is applied again at the end.
+
+    `least_travel_px` asks the one thing the arc test cannot: did it go
+    anywhere. Standing still is constant acceleration with a = 0, so a ball
+    waiting in a hand fits an arc perfectly for as long as it is held, and
+    nothing about it is the wrong colour, size or shape. On rally.mp4 that
+    was the single longest accepted path.
 
     A path ends at its last real sighting: the invented positions after it
     were guesses about a ball nobody could see, and leaving them on would
@@ -156,11 +162,13 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
                 carried.append(_Path(path.start, (*path.seen, predict_next(path.seen)),
                                      path.misses + 1, path.sightings))
             else:
-                _judge(path, accepted, least=least, tolerance_px=tolerance_px)
+                _judge(path, accepted, least=least, tolerance_px=tolerance_px,
+                       least_travel_px=least_travel_px)
         live = carried + [_Path(frame, (blob,), 0, 1) for blob in unclaimed]
 
     for path in live:
-        _judge(path, accepted, least=least, tolerance_px=tolerance_px)
+        _judge(path, accepted, least=least, tolerance_px=tolerance_px,
+               least_travel_px=least_travel_px)
     return accepted
 
 
@@ -175,14 +183,31 @@ class _Path:
 
 
 def _judge(path: _Path, accepted: list[Track], *,
-           least: int, tolerance_px: float) -> None:
+           least: int, tolerance_px: float, least_travel_px: float) -> None:
     """Keep a finished path if enough of it was seen and all of it fell.
 
-    Both guards use `least` for the same reason — a handful of frames — but
-    they catch different frauds: a long path that was mostly coasted, and a
-    long path that was watched the whole way and never fell.
+    Three frauds, three guards: a long path that was mostly coasted, one
+    that never left the spot it started on, and one that was watched the
+    whole way and never fell.
     """
     settled = path.seen[:len(path.seen) - path.misses]
-    if path.sightings >= least and is_ballistic(settled, tolerance_px=tolerance_px,
-                                                least=least):
+    if (path.sightings >= least
+            and _travelled(settled) >= least_travel_px
+            and is_ballistic(settled, tolerance_px=tolerance_px, least=least)):
         accepted.append(Track(path.start, settled))
+
+
+def _travelled(seen: tuple[Point, ...]) -> float:
+    """How far apart the extremes of a path are, across the frame.
+
+    The diagonal of its bounding box rather than start-to-end distance: a
+    ball thrown up and caught ends where it began, and is still a ball that
+    went somewhere.
+
+    `seen` is never empty here: a path opens with one sighting and only ever
+    gains a coasted position alongside a miss, so trimming the coasted tail
+    always leaves the sighting it started from.
+    """
+    xs = [x for x, _ in seen]
+    ys = [y for _, y in seen]
+    return hypot(max(xs) - min(xs), max(ys) - min(ys))
