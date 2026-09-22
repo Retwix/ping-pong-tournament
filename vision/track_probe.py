@@ -82,7 +82,8 @@ def main() -> int:
     ap.add_argument("--calibration", type=Path, required=True)
     ap.add_argument("--every", type=int, default=1)
     ap.add_argument("--sat-min", type=int, default=None)
-    ap.add_argument("--gate", type=float, default=200.0, help="px a candidate may sit from the prediction")
+    ap.add_argument("--gate", type=float, default=25.0,
+                    help="px a candidate may sit from the prediction")
     ap.add_argument("--coast", type=int, default=4, help="frames a track survives unseen")
     ap.add_argument("--least", type=int, default=6, help="sightings before a track is believed")
     ap.add_argument("--tolerance", type=float, default=30.0, help="px a sighting may miss its arc by")
@@ -91,7 +92,7 @@ def main() -> int:
                     help="cm past the table edge a candidate may project to")
     ap.add_argument("--truth", type=Path, default=None,
                     help="frames where a point was marked won; reports rallies followed")
-    ap.add_argument("--travel", type=float, default=100.0,
+    ap.add_argument("--travel", type=float, default=150.0,
                     help="px a path must span before it counts as a ball in play")
     ap.add_argument("--lookback", type=int, default=60,
                     help="frames before a point mark to count as that rally")
