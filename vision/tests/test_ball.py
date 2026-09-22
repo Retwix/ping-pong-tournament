@@ -65,7 +65,7 @@ def to_image_px(homography, table_point: tuple[float, float]) -> tuple[float, fl
     return float(x), float(y)
 
 
-def frame_with_smear(table_point, *, long_by: float, wide_by: float):
+def frame_with_smear(table_point, *, long_by: float, wide_by: float, colour=ORANGE):
     """One orange mark on black, sized in multiples of the ball's width there.
 
     Both dimensions are expressed against `expected_ball_px` so the shapes mean
@@ -82,7 +82,7 @@ def frame_with_smear(table_point, *, long_by: float, wide_by: float):
     dx, dy = reach * np.cos(along), reach * np.sin(along)
     frame = np.zeros((1080, 1920, 3), np.uint8)
     cv2.line(frame, (round(cx - dx), round(cy - dy)), (round(cx + dx), round(cy + dy)),
-             ORANGE, round(diameter * wide_by))
+             colour, round(diameter * wide_by))
     return frame
 
 
@@ -150,3 +150,41 @@ def test_a_ball_in_flight_is_not_discarded_for_leaving_the_table() -> None:
 
     assert len(ball_candidates(airborne, TABLE, DEFAULT_GATE)) == 1
     assert ball_candidates(off_in_the_room, TABLE, DEFAULT_GATE) == []
+
+
+def hsv_bgr(hue: int, sat: int = 215, val: int = 240) -> tuple[int, ...]:
+    """A BGR colour named by the hue it is, because hue is what the gate reads."""
+    return tuple(int(c) for c in cv2.cvtColor(np.uint8([[[hue, sat, val]]]),
+                                              cv2.COLOR_HSV2BGR)[0][0])
+
+
+def test_a_red_shirt_is_not_an_orange_ball() -> None:
+    """Measured on rally.mp4: the ball sits at hue 14-18, red kit at 2-5.
+
+    The gate opened at hue 3, so a red jumper and the red face of a bat both
+    passed it — and being clothing they are large, close, and present in
+    every frame. Sampling the tracker's own output found 90% of all tracked
+    frames sitting below hue 6. The player wears red; the bat is red; almost
+    nothing being followed was the ball.
+
+    The shaded ball in a player's hand reads around hue 8 and is lost by this
+    floor. That is not a cost worth paying attention to: a ball held before a
+    serve is not in play, and §7 reads bounces, not grips.
+
+    The ceiling matters as much as the floor and had nothing holding it: with
+    no upper bound a green or blue object of the right size passes as readily
+    as the ball, and §16's rooms are not all this one. Nor was anything
+    holding the saturation floor, which is the one that keeps the table
+    itself out: this table is white, it fills the frame, and washed-out
+    pixels at the ball's hue are exactly what its lit edge looks like.
+    """
+    ball = frame_with_smear((70.0, 140.0), long_by=5.0, wide_by=1.0, colour=hsv_bgr(16))
+    kit = frame_with_smear((70.0, 200.0), long_by=5.0, wide_by=1.0, colour=hsv_bgr(3))
+    greenery = frame_with_smear((70.0, 200.0), long_by=5.0, wide_by=1.0, colour=hsv_bgr(60))
+    washed = frame_with_smear((70.0, 200.0), long_by=5.0, wide_by=1.0,
+                              colour=hsv_bgr(16, sat=40))
+
+    assert len(ball_candidates(ball, TABLE, DEFAULT_GATE)) == 1
+    assert ball_candidates(kit, TABLE, DEFAULT_GATE) == []
+    assert ball_candidates(greenery, TABLE, DEFAULT_GATE) == []
+    assert ball_candidates(washed, TABLE, DEFAULT_GATE) == []
