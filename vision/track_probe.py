@@ -89,7 +89,7 @@ def main() -> int:
     ap.add_argument("--least", type=int, default=6, help="sightings before a track is believed")
     ap.add_argument("--tolerance", type=float, default=30.0, help="px a sighting may miss its arc by")
     ap.add_argument("--motion", action="store_true", help="§5 step 1: require MOG2 foreground")
-    ap.add_argument("--margin", type=float, default=150.0,
+    ap.add_argument("--margin", type=float, default=900.0,
                     help="cm past the table edge a candidate may project to")
     ap.add_argument("--labels", type=Path, default=None,
                     help="clicked ball positions from label_ball.py; reports found/missed")

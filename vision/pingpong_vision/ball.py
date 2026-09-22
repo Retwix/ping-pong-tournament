@@ -45,13 +45,20 @@ def on_the_table(table_point: Point, calibration: Calibration, *, margin_cm: flo
 
 
 def ball_candidates(frame, calibration: Calibration, gate: dict[str, int], *,
-                    margin_cm: float = 150.0, tolerance: tuple[float, float] = (0.5, 2.5),
+                    margin_cm: float = 900.0, tolerance: tuple[float, float] = (0.25, 6.0),
                     foreground=None):
     """Blobs that are the ball's colour, on the table, and the right size there.
 
     Size is judged across the blob's narrow axis, never by area: §5's "the ball
     is a streak, not a circle". A ball in flight smears along its path, so its
     area runs several times a circle's while its width stays the ball's width.
+
+    Both `margin_cm` and `tolerance` are deliberately loose, and both were
+    measured rather than reasoned: against 213 hand-labelled frames, widening
+    them took recall from 13.0% to 26.7% while invented balls went from 1 to
+    0. The per-frame gates only have to exclude the absurd. §5 steps 3 and 4
+    -- the arc and the travel it covers -- do the discriminating, and they do
+    it across frames, which is the only place a ball and a forearm differ.
 
     `margin_cm` is deliberately enormous, and the reason is §4's homography:
     it maps an image point to where that ray meets the *table plane*. A ball

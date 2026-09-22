@@ -92,16 +92,29 @@ def test_a_ball_smeared_by_motion_is_still_the_ball() -> None:
     At 30 fps a ball crossing the table smears several diameters along its path,
     so its area runs many times a circle's. Judging area against π/4·d² rejects
     precisely the moving ball this exists to find. Length therefore carries no
-    information; width still does, in both directions — a wrist is too thick to
-    be the ball and a speck of sensor noise is too thin.
+    information; width still does, in both directions — but only loosely. The
+    bounds sit at a quarter and six times the expected width, which is a
+    sanity check rather than a filter: blur, partial occlusion and the lit
+    edge of a white table all move the apparent width around, and 19c2e45
+    measured that tightening this costs recall without buying any precision.
+    The arc and travel tests do the discriminating; this only has to exclude
+    a forearm and a thread. `fat` is four times the ball's width and is kept
+    on purpose: under the tight gate this stride replaced it was rejected,
+    and rejecting it was costing real sightings.
+
+    `thread` is drawn near the camera, where the ball is ~43 px across, so
+    that a fifth of that width is still several pixels and genuinely reaches
+    the gate rather than being erased by the morphological opening first.
     """
     streak = frame_with_smear((70.0, 140.0), long_by=5.0, wide_by=1.0)
-    wrist = frame_with_smear((70.0, 140.0), long_by=5.0, wide_by=3.0)
-    speck = frame_with_smear((70.0, 140.0), long_by=0.3, wide_by=0.3)
+    forearm = frame_with_smear((70.0, 140.0), long_by=5.0, wide_by=9.0)
+    fat = frame_with_smear((70.0, 140.0), long_by=5.0, wide_by=4.0)
+    thread = frame_with_smear((70.0, 20.0), long_by=20.0, wide_by=0.15)
 
     assert len(ball_candidates(streak, TABLE, DEFAULT_GATE)) == 1
-    assert ball_candidates(wrist, TABLE, DEFAULT_GATE) == []
-    assert ball_candidates(speck, TABLE, DEFAULT_GATE) == []
+    assert ball_candidates(forearm, TABLE, DEFAULT_GATE) == []
+    assert len(ball_candidates(fat, TABLE, DEFAULT_GATE)) == 1
+    assert ball_candidates(thread, TABLE, DEFAULT_GATE) == []
 
 
 def test_a_ball_shaped_blob_that_did_not_move_is_not_a_candidate() -> None:
@@ -140,15 +153,20 @@ def test_a_ball_in_flight_is_not_discarded_for_leaving_the_table() -> None:
     rest, 18.0% in flight. §7 uses the polygon for bounces, which really are
     on the plane.
 
-    The margin still has to stop somewhere, though it is no longer asking
-    about the table: at 700 cm the ray is pointing at the back wall, and a
-    plane projection that far out means nothing at all. Keeping a bound is
-    what stops the ceiling joining the rally.
+    The margin still has to stop somewhere, though it no longer asks anything
+    about the table: at 15 m the ray is through the wall and the plane
+    projection has stopped meaning anything. 19c2e45 measured recall rising
+    all the way out to 900 cm with no loss of precision, so the bound is a
+    guard against degenerate geometry and nothing more. A ball projecting 8 m
+    beyond a 2.8 m table is still a candidate, which is the whole point:
+    that is what a high ball looks like through a plane homography.
     """
     airborne = frame_with_smear((70.0, 330.0), long_by=5.0, wide_by=1.0)
-    off_in_the_room = frame_with_smear((70.0, 700.0), long_by=5.0, wide_by=1.0)
+    well_past_it = frame_with_smear((70.0, 800.0), long_by=5.0, wide_by=1.0)
+    off_in_the_room = frame_with_smear((70.0, 1500.0), long_by=5.0, wide_by=1.0)
 
     assert len(ball_candidates(airborne, TABLE, DEFAULT_GATE)) == 1
+    assert len(ball_candidates(well_past_it, TABLE, DEFAULT_GATE)) == 1
     assert ball_candidates(off_in_the_room, TABLE, DEFAULT_GATE) == []
 
 
