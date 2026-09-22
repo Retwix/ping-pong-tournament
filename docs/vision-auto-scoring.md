@@ -402,6 +402,35 @@ three minutes of play is far fewer than the number of shots played, so the
 tracker is missing most of the ball's flights — it just is not inventing any.
 That is the right way round: §15's phantom-point target is the strict one.
 
+#### Measured against hand-labelled frames (2026-09-22)
+
+213 frames of `rally.mp4`, one every 25, labelled with `label_ball.py`. Every
+planned frame was answered, so the sample is not skewed towards the easy ones.
+**131 had the ball visible; 82 did not** — the ball is genuinely unfindable in
+38% of frames, before any algorithm is blamed.
+
+| | |
+|---|---|
+| ball found | **17 of 131 — 13.0%** |
+| invented | **1 of 213** |
+
+**Recall is 13%. Precision is near-perfect.** The tracker misses six flights in
+seven and almost never claims a ball that is not there. That is the right way
+round for §15, whose phantom-point target is the strict one, and it is a long
+way from M2 being done.
+
+The match radius barely matters — 12.2% at 10 px against 13.0% at 25, 50 and
+100 px — so the hits are not marginal. When a track is on the ball it is within
+ten pixels of it, and there is no band of near-misses to recover by loosening
+anything.
+
+Dropping the travel guard takes recall to 23.7% and invented from 1 to 5.
+Recorded, not taken: that trade wants deciding against point accuracy, not
+against a detection rate.
+
+A ball counts as found only when a track's position *for that frame* lands near
+the click. Merely covering the frame counts for nothing, for the reason above.
+
 Quantifying the miss rate needs somebody to mark where the ball is in a sample
 of frames, which nobody has done and which no amount of parameter sweeping
 substitutes for. tennis-cv managed on ~200 such frames, and three minutes of
