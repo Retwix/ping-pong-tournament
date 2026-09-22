@@ -409,18 +409,53 @@ planned frame was answered, so the sample is not skewed towards the easy ones.
 **131 had the ball visible; 82 did not** — the ball is genuinely unfindable in
 38% of frames, before any algorithm is blamed.
 
-| | |
-|---|---|
-| ball found | **17 of 131 — 13.0%** |
-| invented | **1 of 213** |
+| | before | after widening the gates |
+|---|---|---|
+| ball found | 17 of 131 — 13.0% | **35 of 131 — 26.7%** |
+| invented | 1 of 213 | **0 of 213** |
 
-**Recall is 13%. Precision is near-perfect.** The tracker misses six flights in
-seven and almost never claims a ball that is not there. That is the right way
-round for §15, whose phantom-point target is the strict one, and it is a long
-way from M2 being done.
+#### Why the misses happened
 
-The match radius barely matters — 12.2% at 10 px against 13.0% at 25, 50 and
-100 px — so the hits are not marginal. When a track is on the ball it is within
+Every one of the 114 misses was diagnosed against the labels, and the order was
+not the expected one:
+
+| cause | frames | share |
+|---|---|---|
+| detected, but never became a track | 49 | 43% |
+| projected off the table (margin) | 37 | 32% |
+| size gate — too thick | 16 | 14% |
+| size gate — too thin | 12 | 11% |
+| **colour gate** | **0** | **0%** |
+
+**The colour gate never fails.** On every missed frame the ball reads hue
+12–17, saturation 186–230, value 221–252 — comfortably inside it. The
+saturation threshold, motion blur and MOG2 all stopped being the problem the
+moment the hue floor was fixed, and the effort spent on them was aimed at
+something that had already gone.
+
+Two of the remaining causes are thresholds. Widening both — `margin_cm`
+150 → 900, `tolerance` (0.5, 2.5) → (0.25, 6.0) — takes recall from 13.0% to
+26.7% while invented balls fall from 1 to 0. Margin kept paying at every step
+out to 900 cm at no cost in precision; 2000 cm bought one more sighting and
+started inventing.
+
+**The design that settles.** The per-frame gates only have to exclude the
+absurd. A forearm and a ball are alike in one frame and nothing alike over six,
+so the discriminating belongs to steps 3–4, across frames, which is where it
+now happens. A blob four times the expected width is deliberately kept; a ball
+projecting 8 m past a 2.8 m table is still a candidate, because that is what a
+high ball looks like through a plane homography.
+
+**Still open: 43% of misses are detected and never tracked.** The blob is
+found and no accepted track forms around it. That is the largest remaining
+cause and it is entirely in `track.py`.
+
+**Precision is near-perfect.** The tracker misses roughly three flights in four and claims no ball that is
+not there. That is the right way round for §15, whose phantom-point target is
+the strict one, and it is a long way from M2 being done.
+
+The match radius barely mattered at 13% — 12.2% at 10 px against 13.0% at 25,
+50 and 100 px — so the hits are not marginal. When a track is on the ball it is within
 ten pixels of it, and there is no band of near-misses to recover by loosening
 anything.
 
