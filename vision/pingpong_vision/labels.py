@@ -60,3 +60,19 @@ def unlabelled(planned: list[int], labels: list[Label]) -> list[int]:
     """The frames still to answer, in the order they were planned."""
     done = {label.frame for label in labels}
     return [frame for frame in planned if frame not in done]
+
+
+def drop_last_label(path: Path) -> None:
+    """Remove the most recent answer, putting that frame back in the queue.
+
+    A ball 15 px across, clicked at speed, gets missed sometimes. Stepping
+    backwards without removing the row would leave the frame counted as done,
+    so the one answer the labeller knows is wrong is the one they cannot fix.
+    Doing nothing to an empty or missing store keeps undo safe to lean on.
+    """
+    labels = read_labels(path)
+    if not labels:
+        return
+    keep = [f"{label.frame},{label.at[0]},{label.at[1]}" if label.at else f"{label.frame},,"
+            for label in labels[:-1]]
+    path.write_text("\n".join([HEADER, *keep]) + "\n")
