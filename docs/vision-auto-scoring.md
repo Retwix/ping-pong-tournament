@@ -358,43 +358,60 @@ constraint of the two, not because motion is worthless.
 Coverage is distinct frames inside an accepted track. Paths overlap, so adding
 their lengths double-counts — it read 29.9% where the truth was 22.1%.
 
-**There is no ground truth for ball tracking in this repo, and the table below
-is therefore uncalibrated.** `rally.truth.csv` is not what it was briefly taken
-for. Its twelve rows are *point outcomes* — a human watching the clip and
-pressing a key for who won, as §12's README describes — so they are rally
-endings plus reaction time, at moments when the ball is in the net or on the
-floor. They say nothing about where the ball was.
+#### With the tracker
 
-Asking instead whether a track was alive in the two seconds before each mark
-gives 10 of 12, which also means nothing: twelve random frames score **10.5 of
-12** on the same test, and 86% of random draws match or beat the real marks. At
-48% coverage a two-second window lands on some track almost wherever it is put.
-`track_probe.py` now prints that chance figure beside the score, so the number
-cannot be read naively again.
+There is still no *labelled* ground truth for ball position. `rally.truth.csv`
+is not it: its twelve rows are point outcomes — a human pressing a key for who
+won, as §12's README describes — so they are rally endings plus reaction time,
+at moments when the ball is in the net or on the floor. Scoring against them
+gave 10 of 12, and twelve *random* frames score 10.5 on the same test. At high
+coverage a two-second window lands on some track wherever it is put.
+`track_probe.py` prints that chance figure beside the score so it cannot be
+read naively again.
 
-| tracker | `rally.mp4` coverage |
-|---|---|
-| one path at a time, gate 200 px | 1.3% |
-| one path at a time, gate 60 px | 8.0% |
-| every blob starts a path, gate 60 px | 22.1% |
-| every blob starts a path, gate 25 px | 48.2% |
+What *was* done instead, and should have been done first: **draw the accepted
+tracks onto the frames and look at them.** It settled in minutes what the
+percentages could not.
 
-Coverage is distinct frames inside an accepted track. Paths overlap, so adding
-their lengths double-counts — it read 29.9% where the truth was 22.1%.
+| gate | coverage | what the longest tracks were |
+|---|---|---|
+| one path at a time, 200 px | 1.3% | — |
+| every blob starts a path, 25 px | 48.2% | a ball held in a hand; the player's red jumper |
+| + hue floor at 10 | 14.9% | a ball held in a hand |
+| + travel ≥ 150 px | **8.6%** | the ball, dropping and bouncing |
 
-Following one path at a time got *worse* as detection improved: at 77% of
-frames carrying a candidate and most carrying several, a single follower spends
-the rally locked onto clutter.
+The two repairs that produced that came straight off the images. The colour
+gate opened at hue 3; the ball reads 14–18 and the player's red jumper and the
+red bat face read 2–5, and **90% of all tracked frames sat below hue 6**.
+Separately, standing still is constant acceleration with a = 0, so a ball
+waiting in a hand fitted the arc test perfectly and was the single longest
+accepted path in the clip — longer than any rally in it.
 
-**Coverage is not accuracy.** A track is "accepted" because it fits an arc, and
-a steadily-moving arm fits an arc too (§5's check accepts constant velocity,
-which is constant acceleration with a = 0). Nothing above distinguishes 48% of
-frames tracking the ball from 48% tracking a sleeve. Deciding that needs
-somebody to mark **where the ball is**, in a sample of frames, which nobody has
-done. The tennis project managed on ~200 such frames, and this repo has three
-minutes of rally footage already recorded — so the next step is labelling, not
-filming. §15's "≥ 90% of points to the correct player" is a separate need and
-does want more footage: it asks for ~100 points and `rally.truth.csv` has 12.
+Coverage *fell* at every repair, and that is the point: the earlier figures
+were mostly jumper.
+
+**All 26 surviving tracks were then inspected by eye.** None is clothing, bat
+or background — every one sits on the ball. Twenty show the ball in free
+motion: arcs over the net, bounces off the table, rolls along it, serve
+tosses. Six show the ball held or carried in a hand, which is the ball
+correctly found at a moment that is not play, and is §8's problem rather than
+§5's.
+
+So **precision is high and recall is unmeasured**. Twenty-six trajectories in
+three minutes of play is far fewer than the number of shots played, so the
+tracker is missing most of the ball's flights — it just is not inventing any.
+That is the right way round: §15's phantom-point target is the strict one.
+
+Quantifying the miss rate needs somebody to mark where the ball is in a sample
+of frames, which nobody has done and which no amount of parameter sweeping
+substitutes for. tennis-cv managed on ~200 such frames, and three minutes of
+rally footage is already recorded — so it is labelling work, not filming.
+
+Filming is separately needed for §15's ~100 points, and **those need not be one
+clip**: several shorter clips are fine and give more varied lighting and
+positions. Each clip needs its own four-corner calibration, since the camera
+moves between sessions — `drift.py` exists to catch it when it moves within
+one.
 
 ---
 
