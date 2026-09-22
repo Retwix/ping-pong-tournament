@@ -358,28 +358,43 @@ constraint of the two, not because motion is worthless.
 Coverage is distinct frames inside an accepted track. Paths overlap, so adding
 their lengths double-counts — it read 29.9% where the truth was 22.1%.
 
-"Bounces held" is the only ground truth in the repo: the twelve hand-marked
-frames in `rally.truth.csv`, asking whether the tracker had the ball at the
-moment somebody watched it hit the table. It is the metric that matters,
-because those are the frames §7 and §8 decide points from.
+**There is no ground truth for ball tracking in this repo, and the table below
+is therefore uncalibrated.** `rally.truth.csv` is not what it was briefly taken
+for. Its twelve rows are *point outcomes* — a human watching the clip and
+pressing a key for who won, as §12's README describes — so they are rally
+endings plus reaction time, at moments when the ball is in the net or on the
+floor. They say nothing about where the ball was.
 
-| tracker | `rally.mp4` coverage | bounces held |
-|---|---|---|
-| one path at a time, gate 200 px | 1.3% | — |
-| one path at a time, gate 60 px | 8.0% | — |
-| every blob starts a path, gate 60 px | 22.1% | 4 of 12 |
-| every blob starts a path, gate 25 px | **48.2%** | **6 of 12** |
+Asking instead whether a track was alive in the two seconds before each mark
+gives 10 of 12, which also means nothing: twelve random frames score **10.5 of
+12** on the same test, and 86% of random draws match or beat the real marks. At
+48% coverage a two-second window lands on some track almost wherever it is put.
+`track_probe.py` now prints that chance figure beside the score, so the number
+cannot be read naively again.
+
+| tracker | `rally.mp4` coverage |
+|---|---|
+| one path at a time, gate 200 px | 1.3% |
+| one path at a time, gate 60 px | 8.0% |
+| every blob starts a path, gate 60 px | 22.1% |
+| every blob starts a path, gate 25 px | 48.2% |
+
+Coverage is distinct frames inside an accepted track. Paths overlap, so adding
+their lengths double-counts — it read 29.9% where the truth was 22.1%.
 
 Following one path at a time got *worse* as detection improved: at 77% of
-frames carrying a candidate and most carrying several, a single follower
-spends the rally locked onto clutter.
+frames carrying a candidate and most carrying several, a single follower spends
+the rally locked onto clutter.
 
-**Twelve bounces cannot tune four parameters.** Across gates from 12 to 100 px
-and tolerances of 15 and 30 px the count moves between 0 and 6, and every
-value from 4 to 6 is one bounce from its neighbours. Treat the table above as
-a baseline, not a tuned configuration. The next honest step is more ground
-truth, not more sweeping: §14's M2 asks for a measured detection rate, and
-half the bounces held is not yet one.
+**Coverage is not accuracy.** A track is "accepted" because it fits an arc, and
+a steadily-moving arm fits an arc too (§5's check accepts constant velocity,
+which is constant acceleration with a = 0). Nothing above distinguishes 48% of
+frames tracking the ball from 48% tracking a sleeve. Deciding that needs
+somebody to mark **where the ball is**, in a sample of frames, which nobody has
+done. The tennis project managed on ~200 such frames, and this repo has three
+minutes of rally footage already recorded — so the next step is labelling, not
+filming. §15's "≥ 90% of points to the correct player" is a separate need and
+does want more footage: it asks for ~100 points and `rally.truth.csv` has 12.
 
 ---
 

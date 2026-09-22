@@ -14,6 +14,7 @@ here, and an empty table should score zero.
 from __future__ import annotations
 
 import argparse
+import random
 import sys
 from pathlib import Path
 
@@ -56,12 +57,20 @@ def candidates_per_frame(clip: str, calibration, gate: dict[str, int], every: in
 
 
 def read_truth(path: Path) -> list[int]:
-    """The hand-marked bounce frames — the only ground truth this repo has.
+    """The frames where a human marked a point as won — see the README.
 
-    Twelve bounces is far too few to tune against, but it answers a question
-    no amount of coverage percentage can: at the moments somebody watched the
-    ball hit the table, was the tracker holding it? Coverage counts frames;
-    this counts the frames that decide points.
+    These are *point endings*, not bounces, and not ball positions. By the
+    time one is marked the rally is over: the ball is in the net, on the
+    floor, or being picked up, and a few hundred ms of reaction time has
+    passed on top. Asking whether a track was alive on that exact frame
+    asks whether the tracker was following a dead ball.
+
+    What the file can honestly answer is whether the rally *leading up to*
+    each point was being followed at all. That is what `--lookback` is for —
+    and the answer, measured, is that it answers nothing: at 48% coverage a
+    window that size lands on some track almost wherever it is put. The
+    printed score is therefore shown against the same score for random
+    frames, and has meant nothing so far.
     """
     rows = path.read_text().strip().splitlines()[1:]
     return [int(row.split(",")[0]) for row in rows]
@@ -81,7 +90,9 @@ def main() -> int:
     ap.add_argument("--margin", type=float, default=150.0,
                     help="cm past the table edge a candidate may project to")
     ap.add_argument("--truth", type=Path, default=None,
-                    help="hand-marked bounce frames; reports how many were being tracked")
+                    help="frames where a point was marked won; reports rallies followed")
+    ap.add_argument("--lookback", type=int, default=60,
+                    help="frames before a point mark to count as that rally")
     args = ap.parse_args()
 
     calibration = load_calibration(args.calibration)
@@ -97,7 +108,7 @@ def main() -> int:
         return 2
     truth = read_truth(args.truth) if args.truth else []
     print(f"    {'clip':22} {'frames':>7} {'tracks':>7} {'tracked':>8} {'longest':>8}"
-          + (f" {'bounces held':>13}" if truth else ""))
+          + (f" {'rallies followed':>17} {'(chance)':>9}" if truth else ""))
 
     for clip in args.clips:
         per_frame = list(candidates_per_frame(clip, calibration, gate, args.every, args.motion, args.margin))
@@ -112,8 +123,17 @@ def main() -> int:
         line = (f"    {clip:22} {len(per_frame):7d} {len(tracks):7d} "
                 f"{len(covered) / len(per_frame) * 100:7.1f}% {longest:8d}")
         if truth:
-            samples = {(frame - 1) // args.every for frame in truth}
-            line += f" {len(samples & covered):6d} of {len(samples):<4d}"
+            def followed(marks: list[int]) -> int:
+                return sum(any(sample in covered
+                               for sample in range((mark - args.lookback - 1) // args.every,
+                                                   (mark - 1) // args.every + 1))
+                           for mark in marks)
+
+            rng = random.Random(0)
+            population = range(args.lookback + 1, len(per_frame) * args.every)
+            chance = [followed(rng.sample(population, len(truth))) for _ in range(200)]
+            line += (f" {followed(truth):9d} of {len(truth):<4d}"
+                     f" {sum(chance) / len(chance):8.1f}")
         print(line)
     print()
     return 0
