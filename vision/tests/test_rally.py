@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pingpong_vision.rally import Event, awarded_to, points_from
+from pingpong_vision.calibration import Calibration
+from pingpong_vision.rally import Event, awarded_to, events_from, points_from
+from pingpong_vision.track import Track
 
 COOLDOWN = 90          # ~3 s at 30 fps, §8
 
@@ -117,3 +119,64 @@ def test_the_ball_being_tossed_back_is_not_the_next_point() -> None:
     ]
 
     assert points_from(stream, cooldown_frames=COOLDOWN) == ["far", "near"]
+
+
+TABLE = Calibration(
+    corners=((200.0, 1000.0), (1700.0, 1000.0), (1200.0, 400.0), (700.0, 400.0)),
+    net_ends=((430.0, 620.0), (1130.0, 620.0)),
+    length_cm=280.0,
+    width_cm=140.0,
+)
+
+
+def test_a_track_becomes_the_events_a_rally_is_judged_from() -> None:
+    """The join between §7 and §8, and the only place they meet.
+
+    Everything upstream works in pixels; everything downstream works in sides
+    and frames. This is the translation, and it is where a bounce stops being
+    a local maximum and becomes something that decides a point.
+
+    The ball bounces once on the near half, once on the far half, then a
+    third time past the far edge onto the floor. The floor bounce keeps its
+    frame and loses its side: §8 reads sides to award the point and must not
+    be handed one for a ball that missed the table.
+
+    The track ends in a `lost` on its own last frame. Without it nothing ever
+    closes a rally and no point is awarded — events would accumulate to the
+    end of the match.
+    """
+    heights = (750.0, 800.0, 600.0, 450.0, 500.0, 450.0, 300.0, 350.0, 300.0)
+    track = Track(100, tuple((950.0, y) for y in heights))
+
+    assert events_from([track], TABLE) == [
+        Event(101, "bounce", "near"),
+        Event(104, "bounce", "far"),
+        Event(107, "floor"),
+        Event(108, "lost"),
+    ]
+
+
+def test_events_come_out_in_frame_order_however_the_tracks_arrive() -> None:
+    """§8 replays the stream in order, and `follow` does not produce one.
+
+    A path is reported when it closes, so a long rally that started early
+    and ended late is appended after a short one that began after it. Feed
+    that order straight through and the cooldown compares frames that run
+    backwards, the guard counts bounces from two rallies at once, and the
+    point goes to whichever side the arithmetic happened to land on.
+
+    The earlier track is passed second here, which is exactly the shape
+    `follow` produces.
+    """
+    late = Track(100, tuple((950.0, y) for y in
+                            (750.0, 800.0, 600.0, 450.0, 500.0, 450.0, 300.0, 350.0, 300.0)))
+    early = Track(50, ((950.0, 800.0), (950.0, 850.0), (950.0, 800.0)))
+
+    assert events_from([late, early], TABLE) == [
+        Event(51, "bounce", "near"),
+        Event(52, "lost"),
+        Event(101, "bounce", "near"),
+        Event(104, "bounce", "far"),
+        Event(107, "floor"),
+        Event(108, "lost"),
+    ]

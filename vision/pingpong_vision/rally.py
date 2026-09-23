@@ -15,6 +15,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .bounce import bounces, table_half
+from .calibration import Calibration
+from .track import Track
+
 OPPOSITE = {"near": "far", "far": "near"}
 
 
@@ -94,3 +98,31 @@ def points_from(events: list[Event], *, cooldown_frames: int) -> list[str]:
                 scored_at = event.frame
             crossed, halves = False, []
     return points
+
+
+def events_from(tracks: list[Track], calibration: Calibration) -> list[Event]:
+    """The event stream a set of tracks produces, in frame order.
+
+    The join between §7 and §8, and the only place they meet. Everything
+    above works in pixels; everything below works in sides and frames. Here
+    a bounce stops being a local maximum in image y and becomes something
+    that decides a point.
+
+    A bounce that missed the table keeps its frame and loses its side: §8
+    reads sides to award the point, and handing it one for a ball that
+    landed on the floor would award the point to whoever just won it.
+
+    Each track ends in a `lost` on its own last frame. Without it nothing
+    closes a rally and no point is ever awarded — events would accumulate to
+    the end of the match. Whether a gap between tracks is really the end of
+    a rally or the ball being briefly unseen is §8's T_dwell, and is not
+    decided here.
+    """
+    stream: list[Event] = []
+    for track in tracks:
+        for bounce in bounces(track):
+            half = table_half(bounce, calibration)
+            stream.append(Event(bounce.frame, "bounce", half) if half
+                          else Event(bounce.frame, "floor"))
+        stream.append(Event(track.start + len(track.seen) - 1, "lost"))
+    return sorted(stream, key=lambda event: event.frame)
