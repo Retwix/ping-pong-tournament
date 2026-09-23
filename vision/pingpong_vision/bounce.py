@@ -15,6 +15,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .ball import on_the_table
+from .calibration import (
+    Calibration,
+    half_of_bounce,
+    homography_of,
+    net_cm_of,
+    to_table_cm,
+)
 from .track import Point, Track
 
 
@@ -40,3 +48,27 @@ def bounces(track: Track) -> list[Bounce]:
         if falling > 0 and rising < 0:
             found.append(Bounce(track.start + i, track.seen[i]))
     return found
+
+
+def table_half(bounce: Bounce, calibration: Calibration, *,
+               margin_cm: float = 8.0) -> str | None:
+    """Which half a bounce landed on, or None if it missed the table.
+
+    None is not "unknown". It means the ball hit the floor, which §7 calls
+    the strongest rally-end signal there is, so the caller has a decision to
+    make rather than a gap to fill.
+
+    This is the one place §4's homography can be trusted without reservation.
+    A ball in flight is above the plane and its table coordinates are fiction
+    — §5's candidate margin had to reach 900 cm for exactly that reason. A
+    bounce is the ball touching the surface, so here the projection means
+    what it says and the polygon can be tight again.
+
+    The margin is for the clicks and the blob centroid, neither of which is
+    exact; a ball clipping the edge is a table bounce.
+    """
+    homography = homography_of(calibration)
+    point = to_table_cm(homography, bounce.at)
+    if not on_the_table(point, calibration, margin_cm=margin_cm):
+        return None
+    return half_of_bounce(point[1], net_cm=net_cm_of(calibration))
