@@ -52,6 +52,13 @@ end $$;
 
 -- ---------- row level security ----------
 -- Open policy to match the rest of this casual, unauthenticated office tool.
+--
+-- Supabase stopped auto-granting new public tables to the Data API roles
+-- (2026-10-30), so each table grants its own access. The anon key does every
+-- write in this app, so anon needs full DML; the policies below still decide
+-- which rows each command may touch.
+grant select, insert, update, delete on public.rating_events to anon, authenticated, service_role;
+
 alter table public.rating_events enable row level security;
 drop policy if exists "public access rating_events" on public.rating_events;
 create policy "public access rating_events" on public.rating_events
