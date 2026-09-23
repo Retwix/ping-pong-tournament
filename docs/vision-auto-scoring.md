@@ -606,6 +606,52 @@ by ~100 ms at 60 fps. Irrelevant: points are only emitted at rally end anyway.
 Known soft spot: at 30 fps a bounce can fall entirely between two frames on a
 hard smash. Another reason for 60.
 
+### Measured end to end (2026-09-23): no points, and why
+
+§7 and §8 are built and unit-tested, and running the whole chain over
+`rally.mp4` awards **zero points against the 12 hand-marked outcomes**. The
+reason is upstream of both, and it is not a threshold.
+
+| | |
+|---|---|
+| tracks | 126 (median length **11 frames**, 0.37 s) |
+| tracks containing any reversal in y | **17 of 126** |
+| reversals found | 48 |
+| reversals landing on the table | **9** |
+| reversals landing off it | 39 |
+
+**Bounces are not being captured.** A bounce is a reversal, and a reversal needs
+three consecutive tracked positions spanning the turn. Tracks are third-second
+fragments, so 109 of 126 contain no reversal at all — they catch one side of an
+arc and stop. §7 already warned that at 30 fps a bounce can fall entirely
+between two frames; this is that, made worse by the ball being tracked in only
+half of them.
+
+**And the reversals that are found are mostly not on the table.** Median x of
+−61 cm on a table spanning 0–140, with 30 of the 39 misses off the *side*
+rather than the ends. These are turns in tracks following the ball around the
+players — a serve toss, a catch, the ball in a hand — not table bounces
+projected badly. Widening the bounce margin does not recover them: it would
+take 250 cm to sweep in 45 of 48, by which point the polygon has stopped
+meaning anything and floor bounces are gone as a rally-end signal.
+
+T_dwell is necessary and not sufficient. Joining fragments took rallies from 35
+to 12 and points from 0 to 2, and neither of those 2 lands near a real one.
+
+**What this says about the milestones.** M3 cannot be evaluated until bounces
+are captured, so the earlier reading — that M3 unblocks M2 — was half right:
+the travel trade still needs point-level judgement, but no point-level
+judgement is possible yet. Both wait on the same thing.
+
+**The promising direction, not yet tried:** stop requiring the reversal to be
+sampled. A track either side of a bounce is two parabolic arcs, and where they
+meet is the contact — fit them and solve for it. That works with the samples
+already in hand, needs no extra frames, and would also place the contact at the
+surface rather than at the lowest *sampled* point a few centimetres above it.
+It is a change to how §7 detects, not a threshold, which is why it is recorded
+here rather than swept.
+
+
 ---
 
 ## 8. Point attribution — one rule
