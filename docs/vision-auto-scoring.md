@@ -409,10 +409,10 @@ planned frame was answered, so the sample is not skewed towards the easy ones.
 **131 had the ball visible; 82 did not** — the ball is genuinely unfindable in
 38% of frames, before any algorithm is blamed.
 
-| | before | after widening the gates |
-|---|---|---|
-| ball found | 17 of 131 — 13.0% | **35 of 131 — 26.7%** |
-| invented | 1 of 213 | **0 of 213** |
+| | first measured | per-frame gates widened | split association gate |
+|---|---|---|---|
+| ball found | 17 — 13.0% | 35 — 26.7% | **67 of 131 — 51.1%** |
+| invented | 1 of 213 | 0 of 213 | **1 of 213** |
 
 #### Why the misses happened
 
@@ -464,11 +464,23 @@ size gate. Detection is no longer the constraint.
 pipeline *sees* the ball nearly nine times in ten, and the tracker discards
 two thirds of that.
 
-**The ball is seen in isolated frames.** Requiring two sightings instead of one
-drops it from 87.8% to 55.0%, so roughly forty of the detections have no
-neighbour to chain to. That is a ceiling no threshold can lift: a tracker that
-needs continuity cannot exceed ~55% on this footage, and closing that gap means
-detecting the ball in the frames *between* the ones it already gets.
+~~**The ball is seen in isolated frames.**~~ **Wrong, corrected 2026-09-23.**
+Requiring two sightings rather than one drops 87.8% to 55.0%, and that was read
+as the detections having no neighbour to chain to. Measured directly, the
+missed frames carry almost as many neighbouring detections as the tracked ones
+— a mean of 3.39 of the 4 surrounding frames against 3.69 — so the ball *is*
+being detected either side. The drop was the tracker failing to link
+detections, not detections being absent, and the "~55% ceiling" read off it did
+not exist.
+
+**It was the association gate.** The ball moves a median 25 px per frame and
+75 px at the 90th percentile; the gate was 25 px. A path with one sighting has
+no velocity to extrapolate, so its prediction is "stays put" and it reached the
+ball's next frame about half the time. Splitting that into `reach_px` while a
+path is still guessing and `gate_px` once it has three positions and a real arc
+took recall from 26.7% to **51.1%** for one extra invented ball in 213 frames.
+A uniformly wide gate had already measured worse, which is why one number could
+not serve both jobs.
 
 **Only the travel rule binds.** Varying `least` from 3 to 6 changes nothing at
 all — found and invented are identical at every value — because a path that
@@ -493,7 +505,7 @@ not about detections, and §15 measures points. It should be decided at M3
 against point accuracy rather than guessed at now, and with more than one clip:
 131 labelled frames is a thin basis for picking among six configurations.
 
-**Precision is near-perfect.** The tracker misses roughly three flights in four and claims no ball that is
+**Precision is near-perfect.** The tracker finds about half the visible ball and claims almost none that is
 not there. That is the right way round for §15, whose phantom-point target is
 the strict one, and it is a long way from M2 being done.
 
