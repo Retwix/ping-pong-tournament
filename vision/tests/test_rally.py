@@ -7,6 +7,7 @@ from pingpong_vision.rally import Event, awarded_to, events_from, points_from
 from pingpong_vision.track import Track
 
 COOLDOWN = 90          # ~3 s at 30 fps, §8
+DWELL = 21             # ~0.7 s at 30 fps, §8
 
 
 def test_the_point_goes_to_the_side_opposite_the_last_table_bounce() -> None:
@@ -151,7 +152,7 @@ def test_a_track_becomes_the_events_a_rally_is_judged_from() -> None:
     heights = (750.0, 800.0, 600.0, 450.0, 500.0, 450.0, 300.0, 350.0, 300.0)
     track = Track(100, tuple((950.0, y) for y in heights))
 
-    assert events_from([track], TABLE) == [
+    assert events_from([track], TABLE, dwell_frames=DWELL) == [
         Event(101, "bounce", "near"),
         Event(102, "crossed"),
         Event(104, "bounce", "far"),
@@ -176,7 +177,7 @@ def test_events_come_out_in_frame_order_however_the_tracks_arrive() -> None:
                             (750.0, 800.0, 600.0, 450.0, 500.0, 450.0, 300.0, 350.0, 300.0)))
     early = Track(50, ((950.0, 800.0), (950.0, 850.0), (950.0, 800.0)))
 
-    assert events_from([late, early], TABLE) == [
+    assert events_from([late, early], TABLE, dwell_frames=DWELL) == [
         Event(51, "bounce", "near"),
         Event(52, "lost"),
         Event(101, "bounce", "near"),
@@ -213,8 +214,8 @@ def test_the_ball_passing_the_net_line_is_an_event() -> None:
     patted = Track(300, ((950.0, 800.0), (950.0, 850.0), (950.0, 800.0),
                          (950.0, 860.0), (950.0, 800.0)))
 
-    assert Event(202, "crossed") in events_from([returned], TABLE)
-    assert [e for e in events_from([patted], TABLE) if e.kind == "crossed"] == []
+    assert Event(202, "crossed") in events_from([returned], TABLE, dwell_frames=DWELL)
+    assert [e for e in events_from([patted], TABLE, dwell_frames=DWELL) if e.kind == "crossed"] == []
 
 
 TILTED = Calibration(
@@ -242,6 +243,38 @@ def test_the_net_line_is_the_one_that_was_clicked_not_a_level_one() -> None:
     """
     across = Track(400, ((1200.0, 480.0), (1280.0, 480.0), (1350.0, 480.0)))
 
-    crossings = [e for e in events_from([across], TILTED) if e.kind == "crossed"]
+    crossings = [e for e in events_from([across], TILTED, dwell_frames=DWELL) if e.kind == "crossed"]
 
     assert crossings == [Event(401, "crossed")]
+
+
+def test_a_briefly_lost_ball_does_not_end_the_rally() -> None:
+    """§8's T_dwell, and on real footage it is not a refinement.
+
+    Measured on rally.mp4: 126 tracks with a median length of 11 frames, and
+    92 of the 125 gaps between them shorter than 0.7 s. The tracker does not
+    follow a rally, it follows a dozen fragments of one. End the rally at
+    every fragment and §8's two-bounce guard never sees two bounces, because
+    the bounces are spread across fragments that were all closed early.
+
+    So a `lost` is only emitted where the ball really went away. `skipped`
+    picks up 8 frames after `opening` ends and `resumed` picks up exactly
+    `DWELL` frames after `skipped` ends — the last gap that is still the same
+    rally. All three are one rally with one ending. `much_later` starts well
+    outside and is its own.
+
+    The gap is measured to where the next fragment *starts*, not where it
+    finishes. `skipped` runs 25 frames, so measuring to its end would put it
+    32 frames from `opening` and split a rally on the length of the fragment
+    that continued it — the longer the ball is successfully followed, the
+    more certainly the rally is declared over.
+    """
+    opening = Track(100, ((950.0, 800.0), (950.0, 850.0), (950.0, 800.0)))
+    skipped = Track(110, tuple((950.0, 700.0 + (i % 2) * 60) for i in range(25)))
+    resumed = Track(155, ((950.0, 800.0), (950.0, 850.0), (950.0, 800.0)))
+    much_later = Track(400, ((950.0, 800.0), (950.0, 850.0), (950.0, 800.0)))
+
+    lost = [e for e in events_from([opening, skipped, resumed, much_later], TABLE,
+                                   dwell_frames=DWELL) if e.kind == "lost"]
+
+    assert lost == [Event(157, "lost"), Event(402, "lost")]

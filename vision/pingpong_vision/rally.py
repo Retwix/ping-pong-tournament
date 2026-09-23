@@ -100,7 +100,8 @@ def points_from(events: list[Event], *, cooldown_frames: int) -> list[str]:
     return points
 
 
-def events_from(tracks: list[Track], calibration: Calibration) -> list[Event]:
+def events_from(tracks: list[Track], calibration: Calibration, *,
+                dwell_frames: int) -> list[Event]:
     """The event stream a set of tracks produces, in frame order.
 
     The join between §7 and §8, and the only place they meet. Everything
@@ -112,20 +113,26 @@ def events_from(tracks: list[Track], calibration: Calibration) -> list[Event]:
     reads sides to award the point, and handing it one for a ball that
     landed on the floor would award the point to whoever just won it.
 
-    Each track ends in a `lost` on its own last frame. Without it nothing
-    closes a rally and no point is ever awarded — events would accumulate to
-    the end of the match. Whether a gap between tracks is really the end of
-    a rally or the ball being briefly unseen is §8's T_dwell, and is not
-    decided here.
+    A `lost` is emitted only where the ball really went away: a track whose
+    successor picks up within `dwell_frames` is a fragment of the same rally,
+    not the end of one. On rally.mp4 that is the common case rather than the
+    edge case — 126 tracks with a median length of 11 frames, and 92 of the
+    125 gaps between them under 0.7 s. Closing a rally at every fragment
+    means §8's two-bounce guard never sees two bounces, because they are
+    spread across fragments that were all closed early.
     """
+    ordered = sorted(tracks, key=lambda track: track.start)
     stream: list[Event] = []
-    for track in tracks:
+    for i, track in enumerate(ordered):
         stream.extend(_crossings(track, calibration.net_ends))
         for bounce in bounces(track):
             half = table_half(bounce, calibration)
             stream.append(Event(bounce.frame, "bounce", half) if half
                           else Event(bounce.frame, "floor"))
-        stream.append(Event(track.start + len(track.seen) - 1, "lost"))
+        ends = track.start + len(track.seen) - 1
+        resumes = ordered[i + 1].start if i + 1 < len(ordered) else None
+        if resumes is None or resumes - ends > dwell_frames:
+            stream.append(Event(ends, "lost"))
     return sorted(stream, key=lambda event: event.frame)
 
 
