@@ -500,6 +500,47 @@ in a hand and anything else that sits still. Between 150 and 30 there is a
 genuine frontier — 15 points of recall for 4 false claims in 213 frames — and
 `empty-table.mp4` stays at zero tracks across all of it.
 
+#### Re-diagnosed at 51% (2026-09-23)
+
+With the association gate split, the tracker's other rules stop blocking
+anything. Of 64 remaining misses, 48 have a candidate sitting on the ball, and
+relaxing each rule alone recovers:
+
+| relaxation | recovers, of the 48 |
+|---|---|
+| no travel rule | 32 |
+| travel 60 px | 18 |
+| sighting minimum (`least` 1 or 3) | 4 |
+| association gate, reach, coasting | 1 each |
+| **the arc rule** | **0** |
+
+The remaining 16 have no candidate at all: twelve project past even the 900 cm
+margin, four fail the size gate.
+
+**Recall is now bounded by a precision trade, not by a fixable fault.** Every
+lever except the travel rule is exhausted, and the travel rule is priced:
+
+| `least_travel_px` | found | counted invented |
+|---|---|---|
+| 150 (current) | 67 — 51.1% | 1 |
+| 100 | 76 — 58.0% | 3 |
+| 60 | 85 — 64.9% | 6 |
+| 30 | 98 — 74.8% | 15 |
+
+**And "invented" overstates the harm.** The six at travel 60, inspected: one is
+the dog in the doorway, one is a track up a forearm, two sit 2.7 and 3.6
+ball-widths from the click — on the hand gripping the ball, not an invention —
+and two are on frames marked hidden, one of which is a clean ball-like
+trajectory down the table that the labeller could not see. The genuine phantom
+rate at travel 60 is about **2 in 213**, and both are objects that never bounce
+on the table, which is what §7 and §8 key on.
+
+**Still not chosen here**, and now for a better reason than caution: the
+remaining question is what a phantom track costs in *points*, and §8's rally
+logic may discard a dog and a forearm for free. That is measurable at M3 and
+guessable at M2. Raising recall further means taking this trade, so M3 is the
+work that unblocks M2 rather than the other way round.
+
 **Not chosen here.** Where to sit on that frontier is a judgement about points,
 not about detections, and §15 measures points. It should be decided at M3
 against point accuracy rather than guessed at now, and with more than one clip:
