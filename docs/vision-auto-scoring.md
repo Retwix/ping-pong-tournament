@@ -446,9 +446,52 @@ now happens. A blob four times the expected width is deliberately kept; a ball
 projecting 8 m past a 2.8 m table is still a candidate, because that is what a
 high ball looks like through a plane homography.
 
-**Still open: 43% of misses are detected and never tracked.** The blob is
-found and no accepted track forms around it. That is the largest remaining
-cause and it is entirely in `track.py`.
+#### Where the remaining misses go (diagnosed 2026-09-23)
+
+Re-run at the widened gates, and attributed by relaxing one rule at a time in
+the real `follow` rather than by re-implementing its logic:
+
+| | frames |
+|---|---|
+| a candidate sat on the ball, but no track formed | 80 of 96 |
+| no candidate at all | 16 of 96 |
+
+Of the 16, twelve still project past even the 900 cm margin and four fail the
+size gate. Detection is no longer the constraint.
+
+**Detection is at 88%.** Accepting any single candidate as a track
+(`least=1, travel=0`) finds the ball in 115 of 131 labelled frames. So the
+pipeline *sees* the ball nearly nine times in ten, and the tracker discards
+two thirds of that.
+
+**The ball is seen in isolated frames.** Requiring two sightings instead of one
+drops it from 87.8% to 55.0%, so roughly forty of the detections have no
+neighbour to chain to. That is a ceiling no threshold can lift: a tracker that
+needs continuity cannot exceed ~55% on this footage, and closing that gap means
+detecting the ball in the frames *between* the ones it already gets.
+
+**Only the travel rule binds.** Varying `least` from 3 to 6 changes nothing at
+all — found and invented are identical at every value — because a path that
+spans 150 px has plenty of sightings anyway. The two guards overlap and travel
+does all the work.
+
+| `least_travel_px` | found | invented |
+|---|---|---|
+| 150 (current) | 35 — 26.7% | **0** |
+| 100 | 44 — 33.6% | 2 |
+| 60 | 54 — 41.2% | 4 |
+| 30 | 68 — 51.9% | 12 |
+| 0 | 69 — 52.7% | **89** |
+
+The cliff at 0 is the rule earning its place: it is what rejects a ball resting
+in a hand and anything else that sits still. Between 150 and 30 there is a
+genuine frontier — 15 points of recall for 4 false claims in 213 frames — and
+`empty-table.mp4` stays at zero tracks across all of it.
+
+**Not chosen here.** Where to sit on that frontier is a judgement about points,
+not about detections, and §15 measures points. It should be decided at M3
+against point accuracy rather than guessed at now, and with more than one clip:
+131 labelled frames is a thin basis for picking among six configurations.
 
 **Precision is near-perfect.** The tracker misses roughly three flights in four and claims no ball that is
 not there. That is the right way round for §15, whose phantom-point target is
