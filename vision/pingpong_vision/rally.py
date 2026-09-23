@@ -120,9 +120,32 @@ def events_from(tracks: list[Track], calibration: Calibration) -> list[Event]:
     """
     stream: list[Event] = []
     for track in tracks:
+        stream.extend(_crossings(track, calibration.net_ends))
         for bounce in bounces(track):
             half = table_half(bounce, calibration)
             stream.append(Event(bounce.frame, "bounce", half) if half
                           else Event(bounce.frame, "floor"))
         stream.append(Event(track.start + len(track.seen) - 1, "lost"))
     return sorted(stream, key=lambda event: event.frame)
+
+
+def _crossings(track: Track, net_ends) -> list[Event]:
+    """Frames where the ball changed sides of the clicked net line.
+
+    Measured in image space, against the line through the two net ends, and
+    not in table centimetres. §5 established that a ball in flight is above
+    the plane and its table coordinates are fiction; asking which half it is
+    over gets a made-up answer, and a crossing is by definition asked while
+    the ball is in the air.
+
+    A ball lobbed high over its own half rises above the net line without
+    going near the net, and reads as a crossing. That is accepted: it makes
+    §8's guard more permissive rather than less, and a lob that then bounces
+    twice on its own half is the "double bounce" row of §8's table, which is
+    meant to score.
+    """
+    (ax, ay), (bx, by) = net_ends
+    side = [(bx - ax) * (y - ay) - (by - ay) * (x - ax) for x, y in track.seen]
+    return [Event(track.start + i, "crossed")
+            for i in range(1, len(side))
+            if (side[i] > 0) != (side[i - 1] > 0)]

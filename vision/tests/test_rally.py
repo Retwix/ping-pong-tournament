@@ -141,6 +141,9 @@ def test_a_track_becomes_the_events_a_rally_is_judged_from() -> None:
     frame and loses its side: §8 reads sides to award the point and must not
     be handed one for a ball that missed the table.
 
+    It crosses the net line on the way, between the two bounces, which is
+    what §8 needs to accept the rally at all.
+
     The track ends in a `lost` on its own last frame. Without it nothing ever
     closes a rally and no point is awarded — events would accumulate to the
     end of the match.
@@ -150,6 +153,7 @@ def test_a_track_becomes_the_events_a_rally_is_judged_from() -> None:
 
     assert events_from([track], TABLE) == [
         Event(101, "bounce", "near"),
+        Event(102, "crossed"),
         Event(104, "bounce", "far"),
         Event(107, "floor"),
         Event(108, "lost"),
@@ -176,7 +180,68 @@ def test_events_come_out_in_frame_order_however_the_tracks_arrive() -> None:
         Event(51, "bounce", "near"),
         Event(52, "lost"),
         Event(101, "bounce", "near"),
+        Event(102, "crossed"),
         Event(104, "bounce", "far"),
         Event(107, "floor"),
         Event(108, "lost"),
     ]
+
+
+def test_the_ball_passing_the_net_line_is_an_event() -> None:
+    """§8 starts a rally on a crossing and refuses to score without one.
+
+    The test is in image space, against the line through the two clicked net
+    ends, rather than in table centimetres. §5 spent a week establishing that
+    a ball in flight is above the plane and its table coordinates are fiction
+    — asking "which half is it over" of a ball in mid-air gets a made-up
+    answer, and the crossing is by definition asked while the ball is in the
+    air.
+
+    `returned` starts below the net line and ends above it; the crossing is
+    reported on the first frame on the new side. `patted` never leaves the
+    near side, which is what knocking about on one half looks like and is
+    exactly what the guard exists to refuse.
+
+    Known and accepted: a ball lobbed high over the near half rises above the
+    net line without going anywhere near the net, and reads as a crossing.
+    That makes the guard more permissive, never less, and a lob that then
+    bounces twice on its own half is §8's "double bounce" row, which is
+    supposed to score.
+    """
+    returned = Track(200, ((950.0, 800.0), (950.0, 700.0), (950.0, 550.0),
+                           (950.0, 500.0), (950.0, 560.0), (950.0, 500.0)))
+    patted = Track(300, ((950.0, 800.0), (950.0, 850.0), (950.0, 800.0),
+                         (950.0, 860.0), (950.0, 800.0)))
+
+    assert Event(202, "crossed") in events_from([returned], TABLE)
+    assert [e for e in events_from([patted], TABLE) if e.kind == "crossed"] == []
+
+
+TILTED = Calibration(
+    corners=((425.0, 618.0), (1200.0, 1040.0), (1715.0, 398.0), (1150.0, 352.0)),
+    net_ends=((935.0, 420.0), (1600.0, 540.0)),
+    length_cm=280.0,
+    width_cm=140.0,
+)
+
+
+def test_the_net_line_is_the_one_that_was_clicked_not_a_level_one() -> None:
+    """A clicked net is never level, and the session's real one is not close.
+
+    `TILTED` carries the net ends from `fixtures/calibration-2026-09-16.json`:
+    (935, 420) to (1600, 540), dropping 120 px across 665. Treat that as a
+    horizontal line and every crossing is judged against a boundary up to
+    120 px from the real one — the same class of error §4 warns about for the
+    net's position along the table, where bounces in the band are not blurred
+    but awarded to the wrong player.
+
+    The ball here travels flat across the frame at a constant height and
+    still crosses, because the line slopes underneath it. Against a level
+    line it never changes side at all and the rally is never allowed to
+    start.
+    """
+    across = Track(400, ((1200.0, 480.0), (1280.0, 480.0), (1350.0, 480.0)))
+
+    crossings = [e for e in events_from([across], TILTED) if e.kind == "crossed"]
+
+    assert crossings == [Event(401, "crossed")]
