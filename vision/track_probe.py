@@ -97,6 +97,8 @@ def main() -> int:
                     help="px a track may sit from a clicked ball and still count")
     ap.add_argument("--truth", type=Path, default=None,
                     help="frames where a point was marked won; reports rallies followed")
+    ap.add_argument("--reach", type=float, default=100.0,
+                    help="px a path may reach while it has no arc to predict from")
     ap.add_argument("--travel", type=float, default=150.0,
                     help="px a path must span before it counts as a ball in play")
     ap.add_argument("--lookback", type=int, default=60,
@@ -111,7 +113,7 @@ def main() -> int:
     print(f"\n  sat_min {gate['sat_min']}, gate {args.gate:.0f} px, coast {args.coast}, "
           f"least {args.least}, tolerance {args.tolerance:.0f} px, every {args.every}, "
           f"motion {'on' if args.motion else 'off'}, margin {args.margin:.0f} cm, "
-          f"travel {args.travel:.0f} px\n")
+          f"travel {args.travel:.0f} px, reach {args.reach:.0f} px\n")
     if args.truth and len(args.clips) != 1:
         print("--truth describes one clip; pass exactly one", file=sys.stderr)
         return 2
@@ -132,7 +134,7 @@ def main() -> int:
             print(f"    {clip:22}   no frames read", file=sys.stderr)
             continue
         tracks = follow(per_frame, gate_px=args.gate, coast=args.coast,
-                        least=args.least, tolerance_px=args.tolerance,
+                        reach_px=args.reach, least=args.least, tolerance_px=args.tolerance,
                         least_travel_px=args.travel)
         covered = {sample for track in tracks
                    for sample in range(track.start, track.start + len(track.seen))}

@@ -108,7 +108,7 @@ FOREARM = ((700.0, 400.0), (730.0, 380.0), (710.0, 420.0), (745.0, 395.0),
 # "stays put", so a gate under the ball's own speed can never reach frame
 # two and no track ever starts. The arc is policed afterwards, by
 # tolerance_px, which is why the gate can afford to be this loose.
-POLICY = dict(gate_px=120.0, coast=3, least=6, tolerance_px=6.0,
+POLICY = dict(gate_px=120.0, reach_px=120.0, coast=3, least=6, tolerance_px=6.0,
               least_travel_px=100.0)
 
 
@@ -300,3 +300,29 @@ def test_a_ball_that_never_goes_anywhere_is_not_a_ball_in_play() -> None:
     assert follow(held, **POLICY) == []
     assert follow([[p] for p in dropped], **POLICY) == [Track(0, dropped)]
     assert follow([[p] for p in rolled], **POLICY) == [Track(0, rolled)]
+
+
+def test_a_new_path_reaches_further_than_an_established_one() -> None:
+    """One gate cannot do both jobs, and it was measured doing neither well.
+
+    A path with one sighting has no velocity to predict from, so its guess is
+    "stays put" and it must reach a whole frame of travel to find the ball
+    again — a median 25 px on rally.mp4, 75 px at the 90th percentile. A path
+    with three has a real arc, and then the same distance is slack that lets
+    it wander onto clutter; widening the gate everywhere measured worse, not
+    better.
+
+    So `reach_px` is used while a path is still guessing and `gate_px` once it
+    can predict. Here the ball moves ~60 px a frame, which only `reach_px`
+    covers, and at frame 5 the only candidate sits 60 px off the arc — the
+    established path has to refuse it and coast, landing back on the ball at
+    frame 6 rather than following the impostor.
+    """
+    arc = tuple((100.0 + 60 * t, 500.0 + 5 * t * t) for t in range(8))
+    decoyed = [[arc[t]] for t in range(8)]
+    decoyed[5] = [(arc[5][0] + 60.0, arc[5][1])]
+
+    policy = dict(POLICY, gate_px=25.0, reach_px=100.0, least_travel_px=100.0)
+
+    assert follow([[p] for p in arc], **policy) == [Track(0, arc)]
+    assert follow(decoyed, **policy) == [Track(0, arc)]

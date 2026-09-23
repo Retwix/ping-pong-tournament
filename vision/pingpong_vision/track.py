@@ -108,8 +108,9 @@ class Track:
     seen: tuple[Point, ...]
 
 
-def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
-           least: int, tolerance_px: float, least_travel_px: float) -> list[Track]:
+def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
+           coast: int, least: int, tolerance_px: float,
+           least_travel_px: float) -> list[Track]:
     """Every path through a clip that behaved like a ball.
 
     Takes one candidate list per frame and returns the tracks worth
@@ -130,6 +131,14 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
     on the arc by construction — which is why acceptance counts *observations*
     separately. `gate_px` may be generous without loosening what is accepted,
     because `tolerance_px` is applied again at the end.
+
+    A path still guessing reaches `reach_px`; one that can predict is held to
+    `gate_px`. With fewer than three positions there is no acceleration to
+    extrapolate, so the guess is little better than "stays put" and has to
+    span a whole frame of the ball's travel — a median 25 px on rally.mp4 and
+    75 px at the 90th percentile. With three, the prediction is the arc and
+    the same distance becomes slack that lets a path wander onto clutter.
+    Widening one gate for both jobs measured worse than either.
 
     `least_travel_px` asks the one thing the arc test cannot: did it go
     anywhere. Standing still is constant acceleration with a = 0, so a ball
@@ -154,7 +163,8 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, coast: int,
         unclaimed = list(candidates)
         carried: list[_Path] = []
         for path in sorted(live, key=lambda path: -path.sightings):
-            grown = advance(path.seen, unclaimed, gate_px=gate_px)
+            within = gate_px if len(path.seen) >= 3 else reach_px
+            grown = advance(path.seen, unclaimed, gate_px=within)
             if len(grown) > len(path.seen):
                 unclaimed.remove(grown[-1])
                 carried.append(_Path(path.start, grown, 0, path.sightings + 1))
