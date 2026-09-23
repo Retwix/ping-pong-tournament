@@ -43,11 +43,12 @@ class Event:
     camera behind it.
     """
 
+    frame: int
     kind: str                      # "crossed" | "bounce" | "floor" | "lost"
     half: str | None = None
 
 
-def points_from(events: list[Event]) -> list[str]:
+def points_from(events: list[Event], *, cooldown_frames: int) -> list[str]:
     """The side that won each rally in a stream of events.
 
     §8's guard, and the reason an imperfect tracker is tolerable: **a rally
@@ -62,12 +63,26 @@ def points_from(events: list[Event]) -> list[str]:
 
     A floor bounce or a lost ball ends the rally; §7 calls the floor bounce
     the strongest rally-end signal there is.
+
+    For `cooldown_frames` after a point the stream is ignored, and §8 calls
+    that the single most likely source of garbage points. The guard above
+    cannot help: fetching the ball and lobbing it back over the table really
+    does cross the net and really does bounce on both halves, so it is a
+    rally by every measure except when it happened. Only the clock tells
+    them apart.
+
+    In frames rather than seconds, and with no default, because the caller
+    is the only one who knows the frame rate — §8 asks for about three
+    seconds, which is 90 frames at the 30 fps §2 is stuck with.
     """
     points: list[str] = []
     crossed = False
     halves: list[str | None] = []
+    scored_at: int | None = None
 
     for event in events:
+        if scored_at is not None and event.frame - scored_at < cooldown_frames:
+            continue
         if event.kind == "crossed":
             crossed = True
         elif event.kind == "bounce":
@@ -76,5 +91,6 @@ def points_from(events: list[Event]) -> list[str]:
             won = awarded_to(halves) if crossed and len(halves) >= 2 else None
             if won:
                 points.append(won)
+                scored_at = event.frame
             crossed, halves = False, []
     return points

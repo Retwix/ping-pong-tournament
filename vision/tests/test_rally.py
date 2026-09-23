@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pingpong_vision.rally import Event, awarded_to, points_from
 
+COOLDOWN = 90          # ~3 s at 30 fps, §8
+
 
 def test_the_point_goes_to_the_side_opposite_the_last_table_bounce() -> None:
     """§8's whole rule, and most of its table of cases collapses onto it.
@@ -46,38 +48,72 @@ def test_only_something_that_looked_like_a_rally_scores() -> None:
     Either a floor bounce or losing the ball ends the rally; §7 calls the
     floor bounce the strongest rally-end signal there is.
     """
-    rally = [Event("crossed"), Event("bounce", "far"), Event("bounce", "near"),
-             Event("lost")]
-    ended_on_the_floor = [Event("crossed"), Event("bounce", "far"),
-                          Event("bounce", "near"), Event("floor")]
-    rolled_across = [Event("crossed"), Event("bounce", "near"), Event("lost")]
-    knocked_about = [Event("bounce", "near"), Event("bounce", "far"), Event("lost")]
+    rally = [Event(10, "crossed"), Event(20, "bounce", "far"),
+             Event(30, "bounce", "near"), Event(40, "lost")]
+    ended_on_the_floor = [Event(10, "crossed"), Event(20, "bounce", "far"),
+                          Event(30, "bounce", "near"), Event(40, "floor")]
+    rolled_across = [Event(10, "crossed"), Event(20, "bounce", "near"),
+                     Event(30, "lost")]
+    knocked_about = [Event(10, "bounce", "near"), Event(20, "bounce", "far"),
+                     Event(30, "lost")]
 
-    assert points_from(rally) == ["far"]
-    assert points_from(ended_on_the_floor) == ["far"]
-    assert points_from(rolled_across) == []
-    assert points_from(knocked_about) == []
+    assert points_from(rally, cooldown_frames=COOLDOWN) == ["far"]
+    assert points_from(ended_on_the_floor, cooldown_frames=COOLDOWN) == ["far"]
+    assert points_from(rolled_across, cooldown_frames=COOLDOWN) == []
+    assert points_from(knocked_about, cooldown_frames=COOLDOWN) == []
 
 
 def test_each_rally_is_judged_on_its_own() -> None:
     """A match is a stream, and the previous point must not fund the next one.
 
-    Everything after the first rally here is meant to score nothing. The
-    stray has one bounce and the knockabout never crosses the net, and both
-    are exactly the between-points noise §8's guard exists to swallow — a
-    ball being fetched, tossed back over, patted about while somebody finds
-    the score.
+    Everything after the first rally here is meant to score nothing, and all
+    of it happens long after the cooldown has lapsed so that the cooldown is
+    not what is being tested. The stray has one bounce; the knockabout never
+    crosses the net.
 
-    Carry the state forward and both of them pass the gate on bounces the
-    previous rally paid for, which turns the guard into a counter that only
-    ever goes up. The failure is silent and it invents points during the
-    quietest part of a match.
+    Carry the state forward and both pass the gate on bounces the previous
+    rally paid for, which turns the guard into a counter that only ever goes
+    up. The failure is silent and it invents points during the quietest part
+    of a match.
     """
     stream = [
-        Event("crossed"), Event("bounce", "far"), Event("bounce", "near"),
-        Event("lost"),
-        Event("crossed"), Event("bounce", "near"), Event("lost"),
-        Event("bounce", "near"), Event("bounce", "far"), Event("lost"),
+        Event(10, "crossed"), Event(20, "bounce", "far"),
+        Event(30, "bounce", "near"), Event(40, "lost"),
+        Event(300, "crossed"), Event(310, "bounce", "near"), Event(320, "lost"),
+        Event(600, "bounce", "near"), Event(610, "bounce", "far"),
+        Event(620, "lost"),
     ]
 
-    assert points_from(stream) == ["far"]
+    assert points_from(stream, cooldown_frames=COOLDOWN) == ["far"]
+
+
+def test_the_ball_being_tossed_back_is_not_the_next_point() -> None:
+    """§8 calls this the single most likely source of garbage points.
+
+    The guard cannot catch it, and that is the whole difficulty: fetching the
+    ball and lobbing it back over the table genuinely crosses the net and
+    genuinely bounces on both halves. It is a rally by every measure the
+    previous test applies. Only the clock tells it apart.
+
+    So the seconds after a point are deaf. The toss-back below would
+    otherwise score a second point immediately, off the same rally the
+    players are still reacting to, and the real rally that follows would be
+    the third.
+
+    The real rally opens on frame 130, exactly `cooldown_frames` after the
+    point at 40 — the first frame that is no longer deaf. A cooldown one
+    frame too generous swallows that crossing, and the rally then scores
+    nothing at all rather than scoring late.
+    """
+    stream = [
+        Event(10, "crossed"), Event(20, "bounce", "far"),
+        Event(30, "bounce", "near"), Event(40, "lost"),
+        # fetched and lobbed back over the table, well inside the cooldown
+        Event(50, "crossed"), Event(60, "bounce", "far"),
+        Event(70, "bounce", "near"), Event(80, "lost"),
+        # the next real rally, opening on the first frame the cooldown allows
+        Event(130, "crossed"), Event(140, "bounce", "near"),
+        Event(150, "bounce", "far"), Event(160, "lost"),
+    ]
+
+    assert points_from(stream, cooldown_frames=COOLDOWN) == ["far", "near"]
