@@ -652,6 +652,50 @@ It is a change to how §7 detects, not a threshold, which is why it is recorded
 here rather than swept.
 
 
+### Points, at last (2026-09-23)
+
+The chain awards points. Against the 12 hand-marked outcomes in
+`rally.truth.csv`, at the settings whose tracks were inspected frame by frame:
+
+| | travel 150, dwell 21 | travel 150, dwell 45 | travel 60, dwell 45 |
+|---|---|---|---|
+| points found | 6 of 12 | 8 of 12 | 8 of 12 |
+| **awarded to the right side** | **6 of 6** | 6 of 8 | 7 of 8 |
+| spurious | 1 | 2 | 3 |
+
+**Half the points are missed and the ones found are mostly right.** That is the
+shape §15 wants — its phantom-point target is the strict one — but it is
+6 of 12, not 90%.
+
+**The side mapping is settled, and measured rather than chosen.** `near` is the
+camera's left: 6 correct against 0 for the opposite mapping, and the same
+ordering at every other setting. §1 leaves this to the operator at session
+start; for this footage it is not in doubt.
+
+#### Two corrections to the previous entry
+
+The "39 floor bounces" above were almost all **a ball held in a hand before the
+match began** — every one inspected, and all before frame 900 when the first
+point is at 1753. Measuring only the window where points are played gives 115
+tracks, 15 sampled reversals, 5 of them on the table. The statistic was not
+measuring play.
+
+And the turns are not missing. **57 of the 91 in-play fragment pairs** have the
+first ending downward and the next beginning upward, with a **median gap of one
+frame**. The ball is lost for a single frame at exactly the moment it bounces —
+fastest, lowest, against the table edge. Requiring the reversal to be sampled
+threw away four bounces in five.
+
+`bounce_between` solves for it: each arm is a straight run, and the two meet in
+a V whose vertex is the contact. That also places the contact *below* both
+fragments, at the surface the ball touched rather than at the lowest frame that
+happened to be caught — a difference §7 magnifies by projecting it into table
+centimetres. Table bounces go from 9 to 49 at unchanged settings.
+
+Only within a dwell the tracker already treats as one rally. Across a real loss,
+a descent followed by a rise is just the next serve.
+
+
 ---
 
 ## 8. Point attribution — one rule
