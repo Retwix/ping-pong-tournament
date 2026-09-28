@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pingpong_vision.bounce import Bounce, bounces, table_half
+from pingpong_vision.bounce import Bounce, bounce_between, bounces, table_half
 from pingpong_vision.calibration import Calibration
 from pingpong_vision.track import Track
 
@@ -80,3 +80,61 @@ def test_a_bounce_is_placed_on_a_half_or_off_the_table_entirely() -> None:
     assert table_half(just_over, TABLE) == "far"
     assert table_half(clipping, TABLE) == "near"
     assert table_half(long, TABLE) is None
+
+
+def test_a_bounce_that_falls_between_two_fragments_is_still_found() -> None:
+    """§7's soft spot, measured: the turn is usually in the gap.
+
+    On rally.mp4 during play, 115 tracks yield 15 sampled reversals — and 57
+    pairs of consecutive fragments where the first ends going down and the
+    next begins going up, with a median gap of a single frame. The ball is
+    lost for one frame at precisely the moment it bounces, which is when it
+    is fastest, lowest and against the table edge. Requiring the turn to be
+    sampled throws away four bounces in five.
+
+    It does not have to be sampled. Either side of a bounce is a straight
+    enough run over a few frames, and the two runs meet in a V whose vertex
+    is the contact. Here the ball falls 40 px a frame to (580, 180) and rises
+    40 px a frame from (660, 180): the arms cross at frame 103 at (620, 220),
+    a frame nobody saw and a position nothing reported.
+
+    The contact also lands lower than either fragment reaches, which is the
+    other half of the point — a sampled reversal reports the lowest frame
+    that happened to be caught, always short of the surface the ball touched,
+    and §7 then projects that gap into table centimetres.
+    """
+    falling = Track(100, ((500.0, 100.0), (540.0, 140.0), (580.0, 180.0)))
+    rising = Track(104, ((660.0, 180.0), (700.0, 140.0), (740.0, 100.0)))
+
+    assert bounce_between(falling, rising) == Bounce(103, (620.0, 220.0))
+
+    # The two arms rarely agree on horizontal speed — a bounce sheds some of
+    # it, and three points is a short baseline to measure any of it from. Here
+    # they read 40 px and 60 px a frame and place the contact at x = 620 and
+    # x = 630, so the answer is the average rather than whichever arm was
+    # asked first.
+    slowing = Track(200, ((500.0, 100.0), (540.0, 140.0), (580.0, 180.0)))
+    quickened = Track(204, ((690.0, 180.0), (750.0, 140.0), (810.0, 100.0)))
+
+    assert bounce_between(slowing, quickened) == Bounce(203, (625.0, 220.0))
+
+
+def test_two_fragments_that_are_not_a_turn_are_not_a_bounce() -> None:
+    """A gap is not evidence. Only a fall followed by a rise is.
+
+    The ball is lost and re-found constantly — 91 of the in-play fragment
+    pairs sit within the dwell — so reading every gap as a contact would
+    invent a bounce several times a second and hand §8 a rally built out of
+    noise. `falling`/`still_falling` are both descending: the ball was missed
+    on its way down and nothing happened in between. `climbing` and
+    `still_climbing` are both rising, which is the same non-event on the way
+    up — and it has to be refused on the strength of the *first* arm, since
+    the second is ascending exactly as it would be after a real bounce.
+    """
+    falling = Track(100, ((500.0, 100.0), (540.0, 140.0), (580.0, 180.0)))
+    still_falling = Track(104, ((660.0, 260.0), (700.0, 300.0), (740.0, 340.0)))
+    climbing = Track(200, ((500.0, 180.0), (540.0, 140.0), (580.0, 100.0)))
+    still_climbing = Track(204, ((660.0, 60.0), (700.0, 20.0), (740.0, 4.0)))
+
+    assert bounce_between(falling, still_falling) is None
+    assert bounce_between(climbing, still_climbing) is None

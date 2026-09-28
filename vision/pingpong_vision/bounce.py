@@ -50,6 +50,44 @@ def bounces(track: Track) -> list[Bounce]:
     return found
 
 
+def bounce_between(before: Track, after: Track) -> Bounce | None:
+    """The contact in the gap between two fragments, if there was one.
+
+    §7's soft spot, measured rather than assumed: on rally.mp4 during play,
+    115 tracks yield 15 sampled reversals and 57 pairs of fragments where the
+    first ends going down and the next begins going up — with a median gap of
+    a single frame. The ball is lost for one frame at exactly the moment it
+    bounces, which is when it is fastest, lowest and against the table edge.
+    Insisting the turn be sampled throws away four bounces in five.
+
+    It need not be sampled. Either side of a bounce is a straight enough run
+    over a few frames, and the two runs meet in a V whose vertex is the
+    contact. That also places it *below* both fragments, at the surface the
+    ball actually touched, rather than at the lowest frame that happened to
+    be caught — a difference §7 then magnifies by projecting it into table
+    centimetres.
+
+    None unless the first really is descending and the second ascending. The
+    ball is lost and re-found constantly, so reading every gap as a contact
+    would invent bounces several times a second and hand §8 a rally built out
+    of noise.
+    """
+    if len(before.seen) < 2 or len(after.seen) < 2:
+        return None
+    falling = before.seen[-1][1] - before.seen[-2][1]
+    rising = after.seen[1][1] - after.seen[0][1]
+    if falling <= 0 or rising >= 0:
+        return None
+
+    last, first = before.start + len(before.seen) - 1, after.start
+    (bx, by), (ax, ay) = before.seen[-1], after.seen[0]
+    at = (ay - by + falling * last - rising * first) / (falling - rising)
+    across = (before.seen[-1][0] - before.seen[-2][0],
+              after.seen[1][0] - after.seen[0][0])
+    x = ((bx + across[0] * (at - last)) + (ax + across[1] * (at - first))) / 2
+    return Bounce(round(at), (x, by + falling * (at - last)))
+
+
 def table_half(bounce: Bounce, calibration: Calibration, *,
                margin_cm: float = 8.0) -> str | None:
     """Which half a bounce landed on, or None if it missed the table.

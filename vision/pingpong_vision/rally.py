@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .bounce import bounces, table_half
+from .bounce import bounce_between, bounces, table_half
 from .calibration import Calibration
 from .track import Track
 
@@ -109,9 +109,11 @@ def events_from(tracks: list[Track], calibration: Calibration, *,
     a bounce stops being a local maximum in image y and becomes something
     that decides a point.
 
-    A bounce that missed the table keeps its frame and loses its side: §8
-    reads sides to award the point, and handing it one for a ball that
-    landed on the floor would award the point to whoever just won it.
+    Contacts come from two places. A fragment long enough to contain the
+    turn reports it directly; a turn that fell in the gap between two
+    fragments the dwell has joined is solved for. On rally.mp4 during play
+    the second kind outnumbers the first roughly four to one, so leaving it
+    out starves §8's two-bounce guard.
 
     A `lost` is emitted only where the ball really went away: a track whose
     successor picks up within `dwell_frames` is a fragment of the same rally,
@@ -126,14 +128,27 @@ def events_from(tracks: list[Track], calibration: Calibration, *,
     for i, track in enumerate(ordered):
         stream.extend(_crossings(track, calibration.net_ends))
         for bounce in bounces(track):
-            half = table_half(bounce, calibration)
-            stream.append(Event(bounce.frame, "bounce", half) if half
-                          else Event(bounce.frame, "floor"))
+            stream.append(_contact(bounce, calibration))
         ends = track.start + len(track.seen) - 1
         resumes = ordered[i + 1].start if i + 1 < len(ordered) else None
         if resumes is None or resumes - ends > dwell_frames:
             stream.append(Event(ends, "lost"))
+            continue
+        gap = bounce_between(track, ordered[i + 1])
+        if gap is not None:
+            stream.append(_contact(gap, calibration))
     return sorted(stream, key=lambda event: event.frame)
+
+
+def _contact(bounce, calibration: Calibration) -> Event:
+    """One contact, tagged with the half it landed on or marked as the floor.
+
+    A bounce that missed the table keeps its frame and loses its side: §8
+    reads sides to award the point, and handing it one for a ball that landed
+    on the floor awards the point to whoever just won it.
+    """
+    half = table_half(bounce, calibration)
+    return Event(bounce.frame, "bounce", half) if half else Event(bounce.frame, "floor")
 
 
 def _crossings(track: Track, net_ends) -> list[Event]:

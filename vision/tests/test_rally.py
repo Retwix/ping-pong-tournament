@@ -278,3 +278,37 @@ def test_a_briefly_lost_ball_does_not_end_the_rally() -> None:
                                    dwell_frames=DWELL) if e.kind == "lost"]
 
     assert lost == [Event(157, "lost"), Event(402, "lost")]
+
+
+def test_a_bounce_in_the_gap_reaches_the_rally_as_an_event() -> None:
+    """The recovered bounces have to arrive where §8 can count them.
+
+    Measured on rally.mp4 during play: 15 bounces are sampled inside
+    fragments, and 57 more sit in the gaps between fragments that the dwell
+    already joins. Finding them in `bounce.py` and not forwarding them here
+    would leave §8's two-bounce guard starved exactly as before.
+
+    Neither fragment below contains a reversal of its own — each is a
+    straight run — so this bounce exists only because the gap was examined.
+    It lands at (950, 800), which is 40 cm down the near half, and it has to
+    arrive tagged that way rather than as a bare contact.
+    """
+    falling = Track(100, ((830.0, 680.0), (870.0, 720.0), (910.0, 760.0)))
+    rising = Track(104, ((990.0, 760.0), (1030.0, 720.0), (1070.0, 680.0)))
+
+    assert events_from([falling, rising], TABLE, dwell_frames=DWELL) == [
+        Event(103, "bounce", "near"),
+        Event(106, "lost"),
+    ]
+
+    # The same V, with the halves a hundred frames apart. Solving across that
+    # gap would invent a contact in a stretch where the rally had already
+    # ended and the ball may not even be the same one — a serve later is a
+    # descent followed by a rise too. A turn is only recoverable inside a
+    # dwell the tracker already considers one rally.
+    much_later = Track(200, ((990.0, 760.0), (1030.0, 720.0), (1070.0, 680.0)))
+
+    assert events_from([falling, much_later], TABLE, dwell_frames=DWELL) == [
+        Event(102, "lost"),
+        Event(202, "lost"),
+    ]
