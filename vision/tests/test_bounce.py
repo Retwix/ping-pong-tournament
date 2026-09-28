@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from pingpong_vision.bounce import Bounce, bounce_between, bounces, table_half
 from pingpong_vision.calibration import Calibration
 from pingpong_vision.track import Track
@@ -96,7 +98,9 @@ def test_a_bounce_that_falls_between_two_fragments_is_still_found() -> None:
     enough run over a few frames, and the two runs meet in a V whose vertex
     is the contact. Here the ball falls 40 px a frame to (580, 180) and rises
     40 px a frame from (660, 180): the arms cross at frame 103 at (620, 220),
-    a frame nobody saw and a position nothing reported.
+    a frame nobody saw and a position nothing reported. The positions are
+    compared approximately: the arms are fitted rather than solved in closed
+    form, so exact arithmetic comes back a thousandth of a pixel out.
 
     The contact also lands lower than either fragment reaches, which is the
     other half of the point — a sampled reversal reports the lowest frame
@@ -106,7 +110,9 @@ def test_a_bounce_that_falls_between_two_fragments_is_still_found() -> None:
     falling = Track(100, ((500.0, 100.0), (540.0, 140.0), (580.0, 180.0)))
     rising = Track(104, ((660.0, 180.0), (700.0, 140.0), (740.0, 100.0)))
 
-    assert bounce_between(falling, rising) == Bounce(103, (620.0, 220.0))
+    solved = bounce_between(falling, rising)
+    assert solved.frame == 103
+    assert solved.at == pytest.approx((620.0, 220.0))
 
     # The two arms rarely agree on horizontal speed — a bounce sheds some of
     # it, and three points is a short baseline to measure any of it from. Here
@@ -116,7 +122,9 @@ def test_a_bounce_that_falls_between_two_fragments_is_still_found() -> None:
     slowing = Track(200, ((500.0, 100.0), (540.0, 140.0), (580.0, 180.0)))
     quickened = Track(204, ((690.0, 180.0), (750.0, 140.0), (810.0, 100.0)))
 
-    assert bounce_between(slowing, quickened) == Bounce(203, (625.0, 220.0))
+    uneven = bounce_between(slowing, quickened)
+    assert uneven.frame == 203
+    assert uneven.at == pytest.approx((625.0, 220.0))
 
 
 def test_two_fragments_that_are_not_a_turn_are_not_a_bounce() -> None:
@@ -138,3 +146,32 @@ def test_two_fragments_that_are_not_a_turn_are_not_a_bounce() -> None:
 
     assert bounce_between(falling, still_falling) is None
     assert bounce_between(climbing, still_climbing) is None
+
+
+def test_the_arms_are_curved_and_the_contact_follows_the_curve() -> None:
+    """A falling ball accelerates, so its arm is not a straight line.
+
+    Reading the last two positions gives the average speed over that pair,
+    which is slower than the ball is actually going by the time it lands.
+    Extrapolate at that speed and the contact comes out short of the table —
+    and §7 then projects the shortfall into centimetres, where a bounce
+    16 cm off the near edge stops being a bounce and becomes a floor contact
+    that ends the rally.
+
+    The arms below are an exact parabola: 5 px of extra drop per frame, a
+    fall from frame 100 and the mirror of it rising to frame 113. The turn
+    is at frame 107 at y = 345, and the ball is never seen at frames 106 or
+    107. Straight arms put it at y = 324, twenty-one pixels high.
+
+    Measured on rally.mp4 across 55 solved contacts, fitting the curve leaves
+    the same 41 on the table and pulls the misses in: the median miss falls
+    from 38.7 cm to 32.0, and the count landing more than 30 cm out from 9
+    to 7.
+    """
+    fall = tuple((500.0 + 40 * t, 100.0 + 5 * t * t) for t in range(6))
+    climb = tuple((500.0 + 40 * t, 100.0 + 5 * (14 - t) ** 2) for t in range(8, 14))
+
+    contact = bounce_between(Track(100, fall), Track(108, climb))
+
+    assert contact.frame == 107
+    assert contact.at == pytest.approx((780.0, 345.0))
