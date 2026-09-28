@@ -149,6 +149,24 @@ function buildStructure(p: number): MatchNode[] {
 
 const BRACKET_ORDER: Record<Bracket, number> = { W: 0, L: 1, GF: 2 }
 
+/**
+ * The earliest "wave" each match can be played in: one past the latest match
+ * feeding it. Walkovers resolved at creation are never played, so they count 0.
+ */
+function playWaves(nodes: MatchNode[], consumed: Set<string>): (node: MatchNode) => number {
+  const wave = new Map<string, number>()
+  const waveOf = (node: MatchNode): number => {
+    if (consumed.has(node.key)) return 0
+    const known = wave.get(node.key)
+    if (known !== undefined) return known
+    const feeders = nodes.filter((f) => f.win_to === node.key || f.lose_to === node.key)
+    const own = 1 + Math.max(0, ...feeders.map(waveOf))
+    wave.set(node.key, own)
+    return own
+  }
+  return waveOf
+}
+
 /** A match row ready to be persisted (db layer adds ids, defaults, tournament_id). */
 export interface GenMatchRow {
   round: number
@@ -218,15 +236,20 @@ export function buildDoubleElim(players: string[]): GenMatchRow[] {
     }
   }
 
-  // Emit every non-consumed node as a real/pending match, ordered for display.
+  // Emit every non-consumed node as a real/pending match, in play order: each
+  // match as early as its feeders allow, so the losers bracket interleaves with
+  // the winners bracket instead of waiting for it to finish.
+  const wave = playWaves(nodes, consumed)
   const live = nodes
     .filter((node) => !consumed.has(node.key))
     .sort((a, b) =>
-      BRACKET_ORDER[a.bracket] !== BRACKET_ORDER[b.bracket]
-        ? BRACKET_ORDER[a.bracket] - BRACKET_ORDER[b.bracket]
-        : a.round !== b.round
-          ? a.round - b.round
-          : a.pos - b.pos
+      wave(a) !== wave(b)
+        ? wave(a) - wave(b)
+        : BRACKET_ORDER[a.bracket] !== BRACKET_ORDER[b.bracket]
+          ? BRACKET_ORDER[a.bracket] - BRACKET_ORDER[b.bracket]
+          : a.round !== b.round
+            ? a.round - b.round
+            : a.pos - b.pos
     )
 
   return live.map((node, idx) => {
