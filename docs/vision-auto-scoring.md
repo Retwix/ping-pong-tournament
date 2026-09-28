@@ -732,6 +732,50 @@ themselves — where `bounce_between`'s V-vertex lands relative to the real
 contact — not where the boundaries are drawn around them.
 
 
+### The travel trade, settled (2026-09-23)
+
+Deferred three times as "a judgement about points, not detections". With the
+pipeline scoring, it can be judged — and it resolves against loosening.
+
+| `least_travel_px` | points found | correct | awarded | **accuracy** |
+|---|---|---|---|---|
+| **150 (current)** | 7 of 12 | 7 | 8 | **87.5%** |
+| 100 | 6 of 12 | 6 | 10 | 60.0% |
+| 60 | 6 of 12 | 6 | 10 | 60.0% |
+| 30 | 5 of 12 | 5 | 8 | 62.5% |
+
+**Loosening loses both accuracy and recall.** Not a trade at all. The extra
+tracks that a looser rule admits raise the detection rate — 51% to 65%,
+measured — and then make the scoring worse, because a rally holding one real
+ball and several fragments of an arm has a last table bounce that belongs to
+neither. The detection figure was measuring the wrong thing all along, which is
+the argument for judging at M3 rather than M2, arrived at from the other
+direction.
+
+§15's target is 90% of awarded points to the correct player. 87.5% of 8 is
+within one point of it, on 12.
+
+#### What still misses, traced individually
+
+| point | cause |
+|---|---|
+| f3183 | two good bounces, split by a **27-frame gap** — 6 frames past the dwell |
+| f3494 | two good bounces, split by a contact **23 cm past the near edge**, read as the floor |
+| f2075 | one bounce; the ball is barely tracked through the rally |
+| f4518 | last fragment ends at f4447, point marked at f4518 — **71 frames untracked** |
+| f1753 | no table bounce at all in the rally |
+
+Two of the five are rallies **cut in half**, not rallies missed. Widening the
+bounce margin to 20 cm reattaches one of them: 8 found and 8 correct, at 2
+spurious rather than 1 — 80% accuracy against 87.5%. One more correct point for
+one more wrong one, on twelve. Left at 8 cm, because §15 weights accuracy and
+the difference is a coin-flip at this sample size, not because 8 is known to be
+right.
+
+The other three are the tracker losing the ball for seconds at a time, which no
+threshold downstream can repair.
+
+
 ---
 
 ## 8. Point attribution — one rule
