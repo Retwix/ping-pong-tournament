@@ -696,6 +696,42 @@ Only within a dwell the tracker already treats as one rally. Across a real loss,
 a descent followed by a rise is just the next serve.
 
 
+#### Why the other six are missed, and what does not fix it
+
+Diagnosed per point. One rally never registers a net crossing; the other four
+cross and register **a single table bounce**.
+
+Tracing one of them (the point at f3678) shows the mechanism, and it is not a
+missing bounce. The rally contains two good table bounces, at f3555 and f3610 —
+and between them a contact at f3572 projecting to **16 cm past the near edge**,
+classified as the floor. A floor bounce ends the rally. So one rally becomes
+two, each left holding a single bounce, and neither can score.
+
+The obvious repair is a looser bounce margin, and it was measured rather than
+assumed:
+
+| bounce margin | points found | **correct** | awarded |
+|---|---|---|---|
+| 8 cm | 6 of 12 | **6** | 7 |
+| 30 cm | 9 of 12 | **6** | 11 |
+| 50 cm | 10 of 12 | 7 | 12 |
+| 80 cm | 10 of 12 | 7 | 13 |
+
+**The correct count does not move.** Loosening finds more points and the extra
+ones go to the wrong player, because widening the margin also destroys the
+floor bounce as a rally-end signal and real rallies start merging.
+
+A two-threshold version was tried too — count a contact as a table bounce only
+when clearly on the table, end the rally only when clearly off it, ignore the
+band between. Across six combinations of the two thresholds the correct count
+sat at 6 every time. It was measured before being built, and it is not built.
+
+**So thresholds are exhausted.** Six correct points is what this bounce data
+supports, whatever the margins. The next lever is the quality of the contacts
+themselves — where `bounce_between`'s V-vertex lands relative to the real
+contact — not where the boundaries are drawn around them.
+
+
 ---
 
 ## 8. Point attribution — one rule
