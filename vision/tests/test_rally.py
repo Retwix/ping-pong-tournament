@@ -312,3 +312,51 @@ def test_a_bounce_in_the_gap_reaches_the_rally_as_an_event() -> None:
         Event(102, "lost"),
         Event(202, "lost"),
     ]
+
+
+def test_a_net_crossing_in_the_gap_still_counts() -> None:
+    """The same one-frame hole that hid the bounces hides the crossings.
+
+    Measured in play on rally.mp4: 43 crossings fall inside a fragment and 12
+    fall in the gap between two the dwell already joins. §8 refuses to score
+    a rally that never crossed, so each of those is a point that cannot be
+    awarded however cleanly its bounces were found — and two of the six
+    points missed at the last measurement failed for exactly this.
+
+    Neither fragment here crosses anything on its own: the first stays below
+    the net line the whole way, the second stays above it. The crossing
+    exists only in the two frames between them, and is reported on the first
+    frame on the new side, as a crossing inside a fragment would be.
+    """
+    below = Track(100, ((900.0, 740.0), (920.0, 700.0), (940.0, 660.0)))
+    above = Track(104, ((980.0, 580.0), (1000.0, 540.0), (1020.0, 500.0)))
+    stays_below = Track(204, ((980.0, 700.0), (1000.0, 680.0), (1020.0, 660.0)))
+
+    assert events_from([below, above], TABLE, dwell_frames=DWELL) == [
+        Event(104, "crossed"),
+        Event(106, "lost"),
+    ]
+    assert [e for e in events_from([below, stays_below], TABLE, dwell_frames=DWELL)
+            if e.kind == "crossed"] == []
+
+    # A fragment that crosses on its own ends on the far side, and the next
+    # one begins there too, so nothing happened in the gap. Comparing where
+    # the first fragment *started* instead reports the same crossing twice —
+    # once where it happened and once a few frames later, out of nothing.
+    crosses_midway = Track(300, ((900.0, 700.0), (920.0, 640.0), (940.0, 580.0)))
+    then_above = Track(304, ((980.0, 540.0), (1000.0, 520.0), (1020.0, 500.0)))
+
+    assert [e for e in events_from([crosses_midway, then_above], TABLE,
+                                   dwell_frames=DWELL)
+            if e.kind == "crossed"] == [Event(302, "crossed")]
+
+    # The mirror of it: the gap is clean and the *second* fragment crosses
+    # partway through. Comparing where that one ends rather than where it
+    # begins again doubles the crossing, and dates the copy to before the
+    # ball had gone anywhere.
+    resumes_then_crosses = Track(104, ((980.0, 680.0), (1000.0, 640.0),
+                                       (1020.0, 580.0)))
+
+    assert [e for e in events_from([below, resumes_then_crosses], TABLE,
+                                   dwell_frames=DWELL)
+            if e.kind == "crossed"] == [Event(106, "crossed")]

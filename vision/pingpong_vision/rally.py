@@ -109,6 +109,11 @@ def events_from(tracks: list[Track], calibration: Calibration, *,
     a bounce stops being a local maximum in image y and becomes something
     that decides a point.
 
+    Contacts and crossings both come from two places, for the same reason: a
+    one-frame hole between fragments hides whichever happened in it. In play
+    on rally.mp4 that is 57 turns and 12 crossings, against 15 and 43 found
+    inside fragments.
+
     Contacts come from two places. A fragment long enough to contain the
     turn reports it directly; a turn that fell in the gap between two
     fragments the dwell has joined is solved for. On rally.mp4 during play
@@ -137,6 +142,10 @@ def events_from(tracks: list[Track], calibration: Calibration, *,
         gap = bounce_between(track, ordered[i + 1])
         if gap is not None:
             stream.append(_contact(gap, calibration))
+        resuming = ordered[i + 1]
+        if (_beyond_the_net(track.seen[-1], calibration.net_ends)
+                != _beyond_the_net(resuming.seen[0], calibration.net_ends)):
+            stream.append(Event(resuming.start, "crossed"))
     return sorted(stream, key=lambda event: event.frame)
 
 
@@ -166,8 +175,18 @@ def _crossings(track: Track, net_ends) -> list[Event]:
     twice on its own half is the "double bounce" row of §8's table, which is
     meant to score.
     """
-    (ax, ay), (bx, by) = net_ends
-    side = [(bx - ax) * (y - ay) - (by - ay) * (x - ax) for x, y in track.seen]
+    side = [_beyond_the_net(point, net_ends) for point in track.seen]
     return [Event(track.start + i, "crossed")
             for i in range(1, len(side))
-            if (side[i] > 0) != (side[i - 1] > 0)]
+            if side[i] != side[i - 1]]
+
+
+def _beyond_the_net(point: tuple[float, float], net_ends) -> bool:
+    """Which side of the clicked net line a point falls on.
+
+    A sign, not a distance, and deliberately: the two sides are all §8 asks
+    for, and the magnitude would be pixels rather than anything physical.
+    """
+    (ax, ay), (bx, by) = net_ends
+    x, y = point
+    return (bx - ax) * (y - ay) - (by - ay) * (x - ax) > 0
