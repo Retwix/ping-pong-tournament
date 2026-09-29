@@ -173,13 +173,41 @@ language. The service is a sensor, not a referee.
 ## 4. Table calibration
 
 Once per session (the camera doesn't move between matches), the operator clicks
-the **four table corners** in a still frame. That gives a homography `H` mapping
-image pixels → the table plane in centimetres (274 × 152.5, net at y = 137).
+the **four table corners** in a still frame, **and the two ends of the net**.
+That gives a homography `H` mapping image pixels → the table plane in
+centimetres, plus the net's real position on it.
+
+### The table is not a regulation table, and the net is not at its middle
+
+Measured 2026-09-17. The playing surface is **two 140 × 140 cm office desks**
+pushed together: **280 × 140 cm** overall. Close to regulation in length (274)
+and 12.5 cm narrower, but the proportions differ — 2:1 against 1.8:1 — so the
+dimensions are a **parameter, not a constant**. Another room will differ again.
+
+The net matters more. It is a clamp-on net, and where it can sit is constrained
+by the desks' legs, so it lands **up to ±25 cm off the centre line**, on either
+side. One half can be 165 cm and the other 115 cm.
+
+That is why the net is clicked rather than assumed. §8's rule is *"the point
+goes to the player on the side opposite the last table bounce"* — the net line
+**is** the decision boundary, and the whole scoring rule rests on it. Assuming
+`y = length / 2` would silently misattribute every bounce landing in a 25 cm
+band near the middle, and misattribution doesn't degrade a point, it **inverts**
+it. It also cannot be caught by inspection: the system would look confident and
+be wrong only for balls near the net, which is where a lot of play happens.
+
+Re-clamping the net between sessions moves it again, so this is per-session
+calibration, never a stored constant.
 
 Any camera angle works, so the framing can be tweaked freely to fit the room —
 the homography absorbs arbitrary perspective. The two real constraints are that
 **all four corners stay visible** and that **the camera does not move** once
 calibrated. Nothing else about the angle matters.
+
+The camera does **not** need to return to the same spot between sessions — it is
+re-calibrated each time, so there is no mark to preserve on the floor. Equally,
+the table and net must not move *relative to the camera* after calibration;
+moving the whole rig together is harmless, nudging one of them is not.
 
 Auto-detecting the table by colour segmentation is possible and is not worth it
 for v1 — four clicks take five seconds and never fail. Calibration is persisted
@@ -230,8 +258,320 @@ Two things to get right, which will otherwise burn a day each:
 **Upgrade path, if §14's accuracy target isn't met:** a TrackNet-style model —
 three consecutive frames in, a heatmap out — which is the standard answer for
 small fast balls, precisely because motion helps it instead of hurting it.
-That's ~1–2k labelled frames, and Roboflow-style labelling is exactly the tennis
-project's workflow. Deferred, not dismissed; §14 defines the trigger.
+Deferred, not dismissed; §14 defines the trigger.
+
+### What the tennis project actually did (read 2026-09-21)
+
+[collidingScopes/tennis-cv](https://github.com/collidingScopes/tennis-cv). Three
+corrections to the assumptions above, and one lesson that applies either way.
+
+**The labelling cost was overestimated by 5–10×.** Their entire dataset is
+**~200 frames**, sampled at 2 fps from three 30-second clips, auto-labelled
+zero-shot by a vision-language model and then reviewed by hand. "~1–2k labelled
+frames" was the main reason this section deferred a trained model, and it is
+wrong. We have 13 minutes of footage; they had ninety seconds.
+
+**Keep the input resolution high.** Their sharpest practical finding: *"In a
+1920×1080 frame the ball is about 25px across. The conventional 640×640 resize
+shrinks it to roughly 8px."* They train at 1024×1024 with **stretching, not
+letterboxing**. Our own measurements agree — the ball runs 100–900 px², so
+11–34 px across. This applies to the classical pipeline too: downscaling frames
+for speed destroys the very signal being detected.
+
+**A trained model does not solve motion blur.** They report ball detection as
+their weakest class, with "invented balls" and **motion-blur misses** among the
+common failures. So blur is a problem for both routes, and 60 fps helps either.
+
+What stands from the original reasoning: they run **offline, with cached
+inference on a hosted GPU endpoint**, and report no inference speed. Nothing
+there shows RF-DETR running live on a laptop, which is now the principal
+objection rather than the labelling cost.
+
+Two things we already do that they list as missing: the net line is clicked
+rather than assumed (§4), and camera drift is detected rather than hoped for —
+their README lists automatic compensation for camera motion as a wanted
+improvement.
+
+### What the pipeline actually does on the clips (measured 2026-09-21)
+
+**The headline: the ball was being discarded for being in the air, and the
+first reading of these clips blamed motion blur for it.** That reading is
+corrected below. Both sets of numbers are kept, because the wrong one is the
+more instructive.
+
+#### The false trail
+
+The first measurement ran the colour-and-size gate over all four clips and
+found this:
+
+| clip | what is in it | nothing found | exactly one |
+|---|---|---|---|
+| `empty-table.mp4` | table, no ball, nobody | 100.0% | 0.0% |
+| `rally.mp4` | points being played | 73.5% | 18.0% |
+| `warmup.mp4` | knocking about | 75.9% | 17.0% |
+| `ball-positions.mp4` | ball placed by hand, at rest | 27.8% | 69.2% |
+
+69.2% on a resting ball against 18.0% on a struck one looks conclusive: the
+ball blurs in flight, the saturation drops, the gate loses it. It was read
+that way, and §17.3 was answered "180 does not survive flight."
+
+Two things were wrong with that. The reading of rally against warm-up as "in
+play" against "between points" is the smaller one — `warmup.mp4` is ten
+minutes of knocking a ball about, so it is *full* of ball, and a ball detector
+scoring the same on both is the right answer rather than a failure. Searching
+for a distinction that was never going to be there cost an afternoon.
+
+#### What it actually was
+
+§4's homography maps an image point to where that ray meets the **table
+plane**. A ball in flight is above the plane, so it lands past the far edge —
+further the higher it goes. The candidate filter rejected anything off the
+table, with a 10 cm margin. It was therefore discarding the ball precisely
+while it was in play, and keeping it whenever it was lying still.
+
+Sweeping that margin on `rally.mp4`, frames with at least one candidate:
+
+| margin | `rally.mp4` (ball in play) | `ball-positions.mp4` (ball at rest) |
+|---|---|---|
+| 10 cm | 25.3% | 86.8% |
+| 60 cm | 57.5% | 90.1% |
+| 150 cm | **77.0%** | 90.7% |
+| 400 cm | 94.0% | 90.7% |
+
+A filter that costs three quarters of the moving ball and nothing of the still
+one is not measuring saturation. **§17.3 is answered the other way: there is
+no evidence here that `sat_min = 180` fails in flight.** The margin is now
+150 cm and no longer asks a question about the table at all — far enough out
+the plane projection degenerates, and the bound only keeps the ceiling and the
+back wall out. §7 asks the polygon question properly, of bounces, which really
+are on the plane.
+
+Two repairs that were tried and did **not** help, recorded so they are not
+tried again. Lowering `sat_min` raises the raw count but inverts the result
+once tracking is applied — the warm-up overtakes the rally, which is skin
+returning below 140 exactly as §17.3 predicted. Adding MOG2 motion on top of
+`sat_min = 180` changes almost nothing, because colour is the tighter
+constraint of the two, not because motion is worthless.
+
+#### With the tracker, against real bounces
+
+Coverage is distinct frames inside an accepted track. Paths overlap, so adding
+their lengths double-counts — it read 29.9% where the truth was 22.1%.
+
+#### With the tracker
+
+There is still no *labelled* ground truth for ball position. `rally.truth.csv`
+is not it: its twelve rows are point outcomes — a human pressing a key for who
+won, as §12's README describes — so they are rally endings plus reaction time,
+at moments when the ball is in the net or on the floor. Scoring against them
+gave 10 of 12, and twelve *random* frames score 10.5 on the same test. At high
+coverage a two-second window lands on some track wherever it is put.
+`track_probe.py` prints that chance figure beside the score so it cannot be
+read naively again.
+
+What *was* done instead, and should have been done first: **draw the accepted
+tracks onto the frames and look at them.** It settled in minutes what the
+percentages could not.
+
+| gate | coverage | what the longest tracks were |
+|---|---|---|
+| one path at a time, 200 px | 1.3% | — |
+| every blob starts a path, 25 px | 48.2% | a ball held in a hand; the player's red jumper |
+| + hue floor at 10 | 14.9% | a ball held in a hand |
+| + travel ≥ 150 px | **8.6%** | the ball, dropping and bouncing |
+
+The two repairs that produced that came straight off the images. The colour
+gate opened at hue 3; the ball reads 14–18 and the player's red jumper and the
+red bat face read 2–5, and **90% of all tracked frames sat below hue 6**.
+Separately, standing still is constant acceleration with a = 0, so a ball
+waiting in a hand fitted the arc test perfectly and was the single longest
+accepted path in the clip — longer than any rally in it.
+
+Coverage *fell* at every repair, and that is the point: the earlier figures
+were mostly jumper.
+
+**All 26 surviving tracks were then inspected by eye.** None is clothing, bat
+or background — every one sits on the ball. Twenty show the ball in free
+motion: arcs over the net, bounces off the table, rolls along it, serve
+tosses. Six show the ball held or carried in a hand, which is the ball
+correctly found at a moment that is not play, and is §8's problem rather than
+§5's.
+
+So **precision is high and recall is unmeasured**. Twenty-six trajectories in
+three minutes of play is far fewer than the number of shots played, so the
+tracker is missing most of the ball's flights — it just is not inventing any.
+That is the right way round: §15's phantom-point target is the strict one.
+
+#### Measured against hand-labelled frames (2026-09-22)
+
+213 frames of `rally.mp4`, one every 25, labelled with `label_ball.py`. Every
+planned frame was answered, so the sample is not skewed towards the easy ones.
+**131 had the ball visible; 82 did not** — the ball is genuinely unfindable in
+38% of frames, before any algorithm is blamed.
+
+| | first measured | per-frame gates widened | split association gate |
+|---|---|---|---|
+| ball found | 17 — 13.0% | 35 — 26.7% | **67 of 131 — 51.1%** |
+| invented | 1 of 213 | 0 of 213 | **1 of 213** |
+
+#### Why the misses happened
+
+Every one of the 114 misses was diagnosed against the labels, and the order was
+not the expected one:
+
+| cause | frames | share |
+|---|---|---|
+| detected, but never became a track | 49 | 43% |
+| projected off the table (margin) | 37 | 32% |
+| size gate — too thick | 16 | 14% |
+| size gate — too thin | 12 | 11% |
+| **colour gate** | **0** | **0%** |
+
+**The colour gate never fails.** On every missed frame the ball reads hue
+12–17, saturation 186–230, value 221–252 — comfortably inside it. The
+saturation threshold, motion blur and MOG2 all stopped being the problem the
+moment the hue floor was fixed, and the effort spent on them was aimed at
+something that had already gone.
+
+Two of the remaining causes are thresholds. Widening both — `margin_cm`
+150 → 900, `tolerance` (0.5, 2.5) → (0.25, 6.0) — takes recall from 13.0% to
+26.7% while invented balls fall from 1 to 0. Margin kept paying at every step
+out to 900 cm at no cost in precision; 2000 cm bought one more sighting and
+started inventing.
+
+**The design that settles.** The per-frame gates only have to exclude the
+absurd. A forearm and a ball are alike in one frame and nothing alike over six,
+so the discriminating belongs to steps 3–4, across frames, which is where it
+now happens. A blob four times the expected width is deliberately kept; a ball
+projecting 8 m past a 2.8 m table is still a candidate, because that is what a
+high ball looks like through a plane homography.
+
+#### Where the remaining misses go (diagnosed 2026-09-23)
+
+Re-run at the widened gates, and attributed by relaxing one rule at a time in
+the real `follow` rather than by re-implementing its logic:
+
+| | frames |
+|---|---|
+| a candidate sat on the ball, but no track formed | 80 of 96 |
+| no candidate at all | 16 of 96 |
+
+Of the 16, twelve still project past even the 900 cm margin and four fail the
+size gate. Detection is no longer the constraint.
+
+**Detection is at 88%.** Accepting any single candidate as a track
+(`least=1, travel=0`) finds the ball in 115 of 131 labelled frames. So the
+pipeline *sees* the ball nearly nine times in ten, and the tracker discards
+two thirds of that.
+
+~~**The ball is seen in isolated frames.**~~ **Wrong, corrected 2026-09-23.**
+Requiring two sightings rather than one drops 87.8% to 55.0%, and that was read
+as the detections having no neighbour to chain to. Measured directly, the
+missed frames carry almost as many neighbouring detections as the tracked ones
+— a mean of 3.39 of the 4 surrounding frames against 3.69 — so the ball *is*
+being detected either side. The drop was the tracker failing to link
+detections, not detections being absent, and the "~55% ceiling" read off it did
+not exist.
+
+**It was the association gate.** The ball moves a median 25 px per frame and
+75 px at the 90th percentile; the gate was 25 px. A path with one sighting has
+no velocity to extrapolate, so its prediction is "stays put" and it reached the
+ball's next frame about half the time. Splitting that into `reach_px` while a
+path is still guessing and `gate_px` once it has three positions and a real arc
+took recall from 26.7% to **51.1%** for one extra invented ball in 213 frames.
+A uniformly wide gate had already measured worse, which is why one number could
+not serve both jobs.
+
+**Only the travel rule binds.** Varying `least` from 3 to 6 changes nothing at
+all — found and invented are identical at every value — because a path that
+spans 150 px has plenty of sightings anyway. The two guards overlap and travel
+does all the work.
+
+| `least_travel_px` | found | invented |
+|---|---|---|
+| 150 (current) | 35 — 26.7% | **0** |
+| 100 | 44 — 33.6% | 2 |
+| 60 | 54 — 41.2% | 4 |
+| 30 | 68 — 51.9% | 12 |
+| 0 | 69 — 52.7% | **89** |
+
+The cliff at 0 is the rule earning its place: it is what rejects a ball resting
+in a hand and anything else that sits still. Between 150 and 30 there is a
+genuine frontier — 15 points of recall for 4 false claims in 213 frames — and
+`empty-table.mp4` stays at zero tracks across all of it.
+
+#### Re-diagnosed at 51% (2026-09-23)
+
+With the association gate split, the tracker's other rules stop blocking
+anything. Of 64 remaining misses, 48 have a candidate sitting on the ball, and
+relaxing each rule alone recovers:
+
+| relaxation | recovers, of the 48 |
+|---|---|
+| no travel rule | 32 |
+| travel 60 px | 18 |
+| sighting minimum (`least` 1 or 3) | 4 |
+| association gate, reach, coasting | 1 each |
+| **the arc rule** | **0** |
+
+The remaining 16 have no candidate at all: twelve project past even the 900 cm
+margin, four fail the size gate.
+
+**Recall is now bounded by a precision trade, not by a fixable fault.** Every
+lever except the travel rule is exhausted, and the travel rule is priced:
+
+| `least_travel_px` | found | counted invented |
+|---|---|---|
+| 150 (current) | 67 — 51.1% | 1 |
+| 100 | 76 — 58.0% | 3 |
+| 60 | 85 — 64.9% | 6 |
+| 30 | 98 — 74.8% | 15 |
+
+**And "invented" overstates the harm.** The six at travel 60, inspected: one is
+the dog in the doorway, one is a track up a forearm, two sit 2.7 and 3.6
+ball-widths from the click — on the hand gripping the ball, not an invention —
+and two are on frames marked hidden, one of which is a clean ball-like
+trajectory down the table that the labeller could not see. The genuine phantom
+rate at travel 60 is about **2 in 213**, and both are objects that never bounce
+on the table, which is what §7 and §8 key on.
+
+**Still not chosen here**, and now for a better reason than caution: the
+remaining question is what a phantom track costs in *points*, and §8's rally
+logic may discard a dog and a forearm for free. That is measurable at M3 and
+guessable at M2. Raising recall further means taking this trade, so M3 is the
+work that unblocks M2 rather than the other way round.
+
+**Not chosen here.** Where to sit on that frontier is a judgement about points,
+not about detections, and §15 measures points. It should be decided at M3
+against point accuracy rather than guessed at now, and with more than one clip:
+131 labelled frames is a thin basis for picking among six configurations.
+
+**Precision is near-perfect.** The tracker finds about half the visible ball and claims almost none that is
+not there. That is the right way round for §15, whose phantom-point target is
+the strict one, and it is a long way from M2 being done.
+
+The match radius barely mattered at 13% — 12.2% at 10 px against 13.0% at 25,
+50 and 100 px — so the hits are not marginal. When a track is on the ball it is within
+ten pixels of it, and there is no band of near-misses to recover by loosening
+anything.
+
+Dropping the travel guard takes recall to 23.7% and invented from 1 to 5.
+Recorded, not taken: that trade wants deciding against point accuracy, not
+against a detection rate.
+
+A ball counts as found only when a track's position *for that frame* lands near
+the click. Merely covering the frame counts for nothing, for the reason above.
+
+Quantifying the miss rate needs somebody to mark where the ball is in a sample
+of frames, which nobody has done and which no amount of parameter sweeping
+substitutes for. tennis-cv managed on ~200 such frames, and three minutes of
+rally footage is already recorded — so it is labelling work, not filming.
+
+Filming is separately needed for §15's ~100 points, and **those need not be one
+clip**: several shorter clips are fine and give more varied lighting and
+positions. Each clip needs its own four-corner calibration, since the camera
+moves between sessions — `drift.py` exists to catch it when it moves within
+one.
 
 ---
 
@@ -265,6 +605,176 @@ by ~100 ms at 60 fps. Irrelevant: points are only emitted at rally end anyway.
 
 Known soft spot: at 30 fps a bounce can fall entirely between two frames on a
 hard smash. Another reason for 60.
+
+### Measured end to end (2026-09-23): no points, and why
+
+§7 and §8 are built and unit-tested, and running the whole chain over
+`rally.mp4` awards **zero points against the 12 hand-marked outcomes**. The
+reason is upstream of both, and it is not a threshold.
+
+| | |
+|---|---|
+| tracks | 126 (median length **11 frames**, 0.37 s) |
+| tracks containing any reversal in y | **17 of 126** |
+| reversals found | 48 |
+| reversals landing on the table | **9** |
+| reversals landing off it | 39 |
+
+**Bounces are not being captured.** A bounce is a reversal, and a reversal needs
+three consecutive tracked positions spanning the turn. Tracks are third-second
+fragments, so 109 of 126 contain no reversal at all — they catch one side of an
+arc and stop. §7 already warned that at 30 fps a bounce can fall entirely
+between two frames; this is that, made worse by the ball being tracked in only
+half of them.
+
+**And the reversals that are found are mostly not on the table.** Median x of
+−61 cm on a table spanning 0–140, with 30 of the 39 misses off the *side*
+rather than the ends. These are turns in tracks following the ball around the
+players — a serve toss, a catch, the ball in a hand — not table bounces
+projected badly. Widening the bounce margin does not recover them: it would
+take 250 cm to sweep in 45 of 48, by which point the polygon has stopped
+meaning anything and floor bounces are gone as a rally-end signal.
+
+T_dwell is necessary and not sufficient. Joining fragments took rallies from 35
+to 12 and points from 0 to 2, and neither of those 2 lands near a real one.
+
+**What this says about the milestones.** M3 cannot be evaluated until bounces
+are captured, so the earlier reading — that M3 unblocks M2 — was half right:
+the travel trade still needs point-level judgement, but no point-level
+judgement is possible yet. Both wait on the same thing.
+
+**The promising direction, not yet tried:** stop requiring the reversal to be
+sampled. A track either side of a bounce is two parabolic arcs, and where they
+meet is the contact — fit them and solve for it. That works with the samples
+already in hand, needs no extra frames, and would also place the contact at the
+surface rather than at the lowest *sampled* point a few centimetres above it.
+It is a change to how §7 detects, not a threshold, which is why it is recorded
+here rather than swept.
+
+
+### Points, at last (2026-09-23)
+
+The chain awards points. Against the 12 hand-marked outcomes in
+`rally.truth.csv`, at the settings whose tracks were inspected frame by frame:
+
+| | travel 150, dwell 21 | travel 150, dwell 45 | travel 60, dwell 45 |
+|---|---|---|---|
+| points found | 6 of 12 | 8 of 12 | 8 of 12 |
+| **awarded to the right side** | **6 of 6** | 6 of 8 | 7 of 8 |
+| spurious | 1 | 2 | 3 |
+
+**Half the points are missed and the ones found are mostly right.** That is the
+shape §15 wants — its phantom-point target is the strict one — but it is
+6 of 12, not 90%.
+
+**The side mapping is settled, and measured rather than chosen.** `near` is the
+camera's left: 6 correct against 0 for the opposite mapping, and the same
+ordering at every other setting. §1 leaves this to the operator at session
+start; for this footage it is not in doubt.
+
+#### Two corrections to the previous entry
+
+The "39 floor bounces" above were almost all **a ball held in a hand before the
+match began** — every one inspected, and all before frame 900 when the first
+point is at 1753. Measuring only the window where points are played gives 115
+tracks, 15 sampled reversals, 5 of them on the table. The statistic was not
+measuring play.
+
+And the turns are not missing. **57 of the 91 in-play fragment pairs** have the
+first ending downward and the next beginning upward, with a **median gap of one
+frame**. The ball is lost for a single frame at exactly the moment it bounces —
+fastest, lowest, against the table edge. Requiring the reversal to be sampled
+threw away four bounces in five.
+
+`bounce_between` solves for it: each arm is a straight run, and the two meet in
+a V whose vertex is the contact. That also places the contact *below* both
+fragments, at the surface the ball touched rather than at the lowest frame that
+happened to be caught — a difference §7 magnifies by projecting it into table
+centimetres. Table bounces go from 9 to 49 at unchanged settings.
+
+Only within a dwell the tracker already treats as one rally. Across a real loss,
+a descent followed by a rise is just the next serve.
+
+
+#### Why the other six are missed, and what does not fix it
+
+Diagnosed per point. One rally never registers a net crossing; the other four
+cross and register **a single table bounce**.
+
+Tracing one of them (the point at f3678) shows the mechanism, and it is not a
+missing bounce. The rally contains two good table bounces, at f3555 and f3610 —
+and between them a contact at f3572 projecting to **16 cm past the near edge**,
+classified as the floor. A floor bounce ends the rally. So one rally becomes
+two, each left holding a single bounce, and neither can score.
+
+The obvious repair is a looser bounce margin, and it was measured rather than
+assumed:
+
+| bounce margin | points found | **correct** | awarded |
+|---|---|---|---|
+| 8 cm | 6 of 12 | **6** | 7 |
+| 30 cm | 9 of 12 | **6** | 11 |
+| 50 cm | 10 of 12 | 7 | 12 |
+| 80 cm | 10 of 12 | 7 | 13 |
+
+**The correct count does not move.** Loosening finds more points and the extra
+ones go to the wrong player, because widening the margin also destroys the
+floor bounce as a rally-end signal and real rallies start merging.
+
+A two-threshold version was tried too — count a contact as a table bounce only
+when clearly on the table, end the rally only when clearly off it, ignore the
+band between. Across six combinations of the two thresholds the correct count
+sat at 6 every time. It was measured before being built, and it is not built.
+
+**So thresholds are exhausted.** Six correct points is what this bounce data
+supports, whatever the margins. The next lever is the quality of the contacts
+themselves — where `bounce_between`'s V-vertex lands relative to the real
+contact — not where the boundaries are drawn around them.
+
+
+### The travel trade, settled (2026-09-23)
+
+Deferred three times as "a judgement about points, not detections". With the
+pipeline scoring, it can be judged — and it resolves against loosening.
+
+| `least_travel_px` | points found | correct | awarded | **accuracy** |
+|---|---|---|---|---|
+| **150 (current)** | 7 of 12 | 7 | 8 | **87.5%** |
+| 100 | 6 of 12 | 6 | 10 | 60.0% |
+| 60 | 6 of 12 | 6 | 10 | 60.0% |
+| 30 | 5 of 12 | 5 | 8 | 62.5% |
+
+**Loosening loses both accuracy and recall.** Not a trade at all. The extra
+tracks that a looser rule admits raise the detection rate — 51% to 65%,
+measured — and then make the scoring worse, because a rally holding one real
+ball and several fragments of an arm has a last table bounce that belongs to
+neither. The detection figure was measuring the wrong thing all along, which is
+the argument for judging at M3 rather than M2, arrived at from the other
+direction.
+
+§15's target is 90% of awarded points to the correct player. 87.5% of 8 is
+within one point of it, on 12.
+
+#### What still misses, traced individually
+
+| point | cause |
+|---|---|
+| f3183 | two good bounces, split by a **27-frame gap** — 6 frames past the dwell |
+| f3494 | two good bounces, split by a contact **23 cm past the near edge**, read as the floor |
+| f2075 | one bounce; the ball is barely tracked through the rally |
+| f4518 | last fragment ends at f4447, point marked at f4518 — **71 frames untracked** |
+| f1753 | no table bounce at all in the rally |
+
+Two of the five are rallies **cut in half**, not rallies missed. Widening the
+bounce margin to 20 cm reattaches one of them: 8 found and 8 correct, at 2
+spurious rather than 1 — 80% accuracy against 87.5%. One more correct point for
+one more wrong one, on twelve. Left at 8 cm, because §15 weights accuracy and
+the difference is a coin-flip at this sample size, not because 8 is known to be
+right.
+
+The other three are the tracker losing the ball for seconds at a time, which no
+threshold downstream can repair.
+
 
 ---
 
@@ -517,9 +1027,18 @@ Still open:
    operator window, or does it run headless with a phone or TV showing
    `SpectatorView` as the only display? Decides how much the overlay in §12
    matters versus the toast in §11. Not blocking.
-3. **The exact saturation threshold for the orange gate**, which depends on the
-   room's lighting and how glossy the table is. `probe.py --mask` has live
-   sliders for this; the numbers become the defaults. Needs the table and a ball.
+3. ~~**The exact saturation threshold for the orange gate.**~~ **Settled
+   2026-09-14 → measured 2026-09-17: `sat_min = 180`**, now the default. The
+   original guess of 110 was far too low — at 110 an arm is an 11,498 px² blob
+   and the ball is lost in it. Skin collapses by 140, the ball survives past
+   240, and at 180 the ball is usually the *only* blob in frame. Its area runs
+   ~100 px² at the far end to ~900 px² near the camera, which is the §5 size
+   gate measured rather than guessed. **Reopened and re-closed 2026-09-21:**
+   the resting-ball numbers looked suspect once §5 measured a struck ball at
+   18.0% against 69.2% at rest, and that gap was read as motion blur. It was
+   not: the table-polygon filter was discarding the airborne ball, and fixing
+   it took the rally to 77.0% at this same threshold. 180 stands. Lowering it
+   was tried and measured worse, skin returning below 140 as recorded here.
 Closed 2026-09-14: **end-to-end capture latency is ~160 ms** (§13), measured by
 flashing the screen and timing the step rather than reading a counter by eye.
 Two lessons came out of getting there, and both apply to the ball detector:
