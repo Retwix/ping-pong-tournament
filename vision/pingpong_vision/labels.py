@@ -116,3 +116,61 @@ def score_tracks(labels: list[Label], tracks: list, *, within_px: float) -> Scor
 
 def _within(a: Point, b: Point, limit: float) -> bool:
     return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 <= limit ** 2
+
+
+@dataclass(frozen=True)
+class Outcome:
+    """One point a person marked: the frame they marked it on, and who won.
+
+    `side` is written in the watcher's own terms — `left` and `right` as seen
+    from where the camera stands — not the `near`/`far` the pipeline reasons
+    in. Translating between them is §1's session-start question, and the two
+    vocabularies are kept apart here so that a wrong answer to it shows up as
+    a wrong score rather than as silence.
+    """
+
+    frame: int
+    side: str
+
+
+@dataclass(frozen=True)
+class PointScore:
+    """How the scoring did against the points a person marked."""
+
+    marked: int       # points a person wrote down
+    found: int        # marked points the pipeline also awarded
+    correct: int      # ...and awarded to the player who really won it
+    spurious: int     # awarded points matching no marked point
+
+
+def score_points(marked: list[Outcome], awarded: list, *, sides: dict[str, str],
+                 before_frames: int, after_frames: int) -> PointScore:
+    """Mark the pipeline's points against the ones a person saw.
+
+    Three numbers rather than one: §15 asks for accuracy and for rally-end
+    recall separately, and §7 measured settings that move them opposite ways.
+    Reporting a single figure would have hidden the trade it was measuring.
+
+    The window is lopsided because a mark follows the point it records — the
+    ball has still to land and the marker still to react — so an award may
+    precede its mark by seconds and should never follow it by more than the
+    moment it takes to spot the rally is over.
+
+    An award inside some marked point's window counts that point found; the
+    last such award decides whether it was awarded correctly, being the one
+    closest to the ending. Every award that lands in nobody's window is
+    spurious, so a rally awarded twice costs a spurious point rather than
+    passing for free.
+    """
+    found = correct = 0
+    matched: set[int] = set()
+    for outcome in marked:
+        inside = [i for i, point in enumerate(awarded)
+                  if outcome.frame - before_frames <= point.frame <= outcome.frame + after_frames]
+        if not inside:
+            continue
+        found += 1
+        matched.update(inside)
+        correct += sides[awarded[inside[-1]].side] == outcome.side
+    return PointScore(marked=len(marked), found=found, correct=correct,
+                      spurious=len(awarded) - len(matched))

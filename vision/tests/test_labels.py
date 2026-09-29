@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from pingpong_vision.labels import (
     Label,
+    Outcome,
+    PointScore,
     Score,
+    score_points,
     score_tracks,
     append_label,
     drop_last_label,
@@ -102,3 +107,45 @@ def test_a_ball_counts_as_found_only_if_a_track_was_on_it() -> None:
 
     assert score_tracks(labels, tracks, within_px=20.0) == Score(
         judged=5, found=1, missed=3, invented=3)
+
+
+def test_awarded_points_are_marked_against_the_ones_a_person_saw() -> None:
+    """§15 is three numbers, and they are not the same question.
+
+    *Found* asks whether the rally was noticed at all; *correct* asks whether
+    the right player got it; *spurious* asks what was invented. A pipeline can
+    move all three in different directions at once — §7 measured a looser
+    bounce margin finding three more points while the correct count sat still
+    — so collapsing them into one score hides exactly the trade being judged.
+
+    The window reaches back much further than forward because a human marks a
+    point after seeing it end: the ball still has to hit the floor and the
+    marker still has to react, so the award precedes the mark by up to a few
+    seconds and essentially never follows it by more than a few frames.
+
+    Sides are the caller's to name. The pipeline knows `near` and `far`, which
+    are the halves of the table; a person writes down `left` and `right`,
+    which is where they were sitting. §1 leaves that mapping to whoever starts
+    the session, and nothing here may assume it.
+    """
+    marked = [Outcome(1000, "left"), Outcome(2000, "right"), Outcome(3000, "left"),
+              Outcome(4000, "right")]   # this rally the pipeline never noticed
+    awarded = [
+        _Awarded(880, "near"),    # the oldest frame f1000's window still reaches
+        _Awarded(2015, "near"),   # the newest f2000's does — and the wrong player
+        _Awarded(2500, "far"),    # in nobody's window: spurious
+        _Awarded(2950, "far"),    # f3000 awarded twice; this one is the wrong player
+        _Awarded(2990, "near"),   # ...and this one, nearer the ending, is right
+    ]
+
+    assert score_points(marked, awarded, sides={"near": "left", "far": "right"},
+                        before_frames=120, after_frames=15) == PointScore(
+        marked=4, found=3, correct=2, spurious=1)
+
+
+@dataclass(frozen=True)
+class _Awarded:
+    """Stands in for rally.Awarded: scoring reads a frame and a side, no more."""
+
+    frame: int
+    side: str
