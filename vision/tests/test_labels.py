@@ -8,6 +8,7 @@ from pingpong_vision.labels import (
     Label,
     Outcome,
     PointScore,
+    read_outcomes,
     Score,
     score_points,
     score_tracks,
@@ -107,6 +108,23 @@ def test_a_ball_counts_as_found_only_if_a_track_was_on_it() -> None:
 
     assert score_tracks(labels, tracks, within_px=20.0) == Score(
         judged=5, found=1, missed=3, invented=3)
+
+
+def test_the_marked_points_are_read_back_with_the_side_that_won(tmp_path) -> None:
+    """The side is the whole reason this file is read, and it was being dropped.
+
+    track_probe read the same file for its frames alone, because coverage was
+    the only question then. Scoring asks who won, and a reader that silently
+    keeps one column of two turns a wrong answer into a missing one.
+
+    The seconds column is not read at all: it restates the frame at the clip's
+    frame rate, and a reader that believed it would be wrong on any clip shot
+    at a different one.
+    """
+    store = tmp_path / "rally.truth.csv"
+    store.write_text("frame,seconds,side\n1753,59.121,left\n2421,81.679,right\n")
+
+    assert read_outcomes(store) == [Outcome(1753, "left"), Outcome(2421, "right")]
 
 
 def test_awarded_points_are_marked_against_the_ones_a_person_saw() -> None:

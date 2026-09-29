@@ -22,7 +22,7 @@ import cv2
 
 from pingpong_vision.ball import ball_candidates
 from pingpong_vision.calibration import load_calibration
-from pingpong_vision.labels import read_labels, score_tracks
+from pingpong_vision.labels import read_labels, read_outcomes, score_tracks
 from pingpong_vision.track import Track, follow
 from probe import DEFAULT_GATE
 
@@ -57,26 +57,6 @@ def candidates_per_frame(clip: str, calibration, gate: dict[str, int], every: in
     capture.release()
 
 
-def read_truth(path: Path) -> list[int]:
-    """The frames where a human marked a point as won — see the README.
-
-    These are *point endings*, not bounces, and not ball positions. By the
-    time one is marked the rally is over: the ball is in the net, on the
-    floor, or being picked up, and a few hundred ms of reaction time has
-    passed on top. Asking whether a track was alive on that exact frame
-    asks whether the tracker was following a dead ball.
-
-    What the file can honestly answer is whether the rally *leading up to*
-    each point was being followed at all. That is what `--lookback` is for —
-    and the answer, measured, is that it answers nothing: at 48% coverage a
-    window that size lands on some track almost wherever it is put. The
-    printed score is therefore shown against the same score for random
-    frames, and has meant nothing so far.
-    """
-    rows = path.read_text().strip().splitlines()[1:]
-    return [int(row.split(",")[0]) for row in rows]
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("clips", nargs="+")
@@ -96,7 +76,14 @@ def main() -> int:
     ap.add_argument("--within", type=float, default=25.0,
                     help="px a track may sit from a clicked ball and still count")
     ap.add_argument("--truth", type=Path, default=None,
-                    help="frames where a point was marked won; reports rallies followed")
+                    help="points a person marked; reports rallies followed. The mark "
+                         "lands after the rally is over — ball on the floor, plus the "
+                         "marker's reaction — so asking whether a track was alive on "
+                         "that exact frame asks about a dead ball. --lookback asks "
+                         "about the rally before it instead, and measured against the "
+                         "same score for random frames it has meant nothing: at 48% "
+                         "coverage a window that size lands on some track wherever "
+                         "it is put.")
     ap.add_argument("--reach", type=float, default=100.0,
                     help="px a path may reach while it has no arc to predict from")
     ap.add_argument("--travel", type=float, default=150.0,
@@ -123,7 +110,7 @@ def main() -> int:
         return 2
     labels = read_labels(args.labels) if args.labels else []
     clicked = [label for label in labels if label.at]
-    truth = read_truth(args.truth) if args.truth else []
+    truth = [outcome.frame for outcome in read_outcomes(args.truth)] if args.truth else []
     print(f"    {'clip':22} {'frames':>7} {'tracks':>7} {'tracked':>8} {'longest':>8}"
           + (f" {'ball found':>12} {'invented':>9}" if labels else "")
           + (f" {'rallies followed':>17} {'(chance)':>9}" if truth else ""))

@@ -133,6 +133,21 @@ class Outcome:
     side: str
 
 
+def read_outcomes(path: Path) -> list[Outcome]:
+    """The points a person marked, in the order they were played.
+
+    The seconds column the file also carries is ignored: it restates the
+    frame at the clip's frame rate, and reading it would make this wrong on
+    any clip shot at a different one.
+    """
+    rows = path.read_text().strip().splitlines()[1:]
+    outcomes = []
+    for row in rows:
+        frame, _seconds, side = row.split(",")
+        outcomes.append(Outcome(int(frame), side))
+    return outcomes
+
+
 @dataclass(frozen=True)
 class PointScore:
     """How the scoring did against the points a person marked."""
