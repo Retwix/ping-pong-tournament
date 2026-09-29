@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pingpong_vision.track import Track, advance, follow, is_ballistic, predict_next
+from pingpong_vision.track import Discarded, sift, Track, advance, follow, is_ballistic, predict_next
 
 
 def test_a_falling_ball_is_predicted_onto_its_arc_not_its_last_heading() -> None:
@@ -297,9 +297,14 @@ def test_a_ball_that_never_goes_anywhere_is_not_a_ball_in_play() -> None:
     dropped = tuple((500.0, 100.0 + 5 * t * t) for t in range(8))
     rolled = tuple((100.0 + 60 * t, 500.0) for t in range(8))
 
+    exactly_far_enough = tuple((20.0 * t, 0.0) for t in range(6))   # spans 100 px
+
     assert follow(held, **POLICY) == []
     assert follow([[p] for p in dropped], **POLICY) == [Track(0, dropped)]
     assert follow([[p] for p in rolled], **POLICY) == [Track(0, rolled)]
+    # `least_travel_px` is a floor like `least`: travelling it exactly is enough
+    assert follow([[p] for p in exactly_far_enough], **POLICY) == [
+        Track(0, exactly_far_enough)]
 
 
 def test_a_new_path_reaches_further_than_an_established_one() -> None:
@@ -326,3 +331,44 @@ def test_a_new_path_reaches_further_than_an_established_one() -> None:
 
     assert follow([[p] for p in arc], **policy) == [Track(0, arc)]
     assert follow(decoyed, **policy) == [Track(0, arc)]
+
+
+def test_a_discarded_path_names_the_guard_that_discarded_it() -> None:
+    """Three guards throw paths away, and until now all three did it silently.
+
+    §7 left five of twelve points unscored, and two of those are stretches
+    where every frame offers two or three candidates and almost none of them
+    reach an accepted path — 15 frames tracked out of 101 at f1660. Which
+    guard is doing that decides what to fix, and nothing recorded it. Asking
+    the question meant a script that re-read the three conditions from here
+    and applied them again, which is how a measurement ends up describing the
+    copy rather than the code.
+
+    The reason is the first guard that refused, in the order they are asked:
+    a path too little seen is not judged on where it went, and one that never
+    moved is not judged on its arc. Naming a later guard would send the fix
+    at the wrong threshold.
+    """
+    seen_too_little = [[p] for p in arc(5)]
+    held = [[(500.0, 500.0)] for _ in range(12)]
+    swept = [[(x, 0.0)] for x in (0.0, 50.0, 100.0, 150.0, 200.0, 150.0, 100.0, 50.0)]
+
+    assert sift(seen_too_little, **POLICY) == ([], [Discarded(0, 5, "too few sightings")])
+    assert sift(held, **POLICY) == ([], [Discarded(0, 12, "went nowhere")])
+    assert sift(swept, **POLICY) == ([], [Discarded(0, 8, "never fell")])
+    assert sift([[p] for p in FLIGHT], **POLICY) == ([Track(0, FLIGHT)], [])
+
+    # held still for three frames from frame 2, then gone: too little seen to
+    # be asked where it went, and reported as the three frames it was seen
+    # for rather than the six it occupied while being guessed at
+    glimpsed_still = [[] if t < 2 or t > 4 else [(500.0, 500.0)] for t in range(9)]
+
+    assert sift(glimpsed_still, **POLICY) == ([], [Discarded(2, 3, "too few sightings")])
+
+    # jitter in one spot fails both remaining guards, and "went nowhere" is
+    # the truer of the two: §5's held ball fits an arc perfectly, so "never
+    # fell" would send a fix at `tolerance_px` for something standing still
+    jitter = [[(500.0, 500.0)], [(510.0, 500.0)], [(500.0, 510.0)],
+              [(510.0, 500.0)], [(500.0, 510.0)], [(510.0, 500.0)]]
+
+    assert sift(jitter, **POLICY) == ([], [Discarded(0, 6, "went nowhere")])

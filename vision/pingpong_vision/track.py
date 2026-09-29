@@ -108,10 +108,31 @@ class Track:
     seen: tuple[Point, ...]
 
 
-def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
-           coast: int, least: int, tolerance_px: float,
-           least_travel_px: float) -> list[Track]:
-    """Every path through a clip that behaved like a ball.
+@dataclass(frozen=True)
+class Discarded:
+    """A path that was followed and then thrown away, and the guard that did it.
+
+    Three guards refuse a path and until this existed all three refused
+    silently, so a stretch of clip where the ball is never tracked looked the
+    same whatever had gone wrong. §7 has two unscored points of exactly that
+    shape — every frame offering candidates, almost none of them reaching an
+    accepted path — and no way to ask which threshold was doing it short of
+    re-reading the conditions into a script, which is how a measurement comes
+    to describe the copy rather than the code.
+    """
+
+    start: int
+    length: int
+    reason: str
+
+
+def sift(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
+         coast: int, least: int, tolerance_px: float,
+         least_travel_px: float) -> tuple[list[Track], list[Discarded]]:
+    """Every path through a clip, sorted into believed and refused.
+
+    `follow` is this without the refusals, and is what the pipeline uses; the
+    refusals are for asking why a clip went untracked.
 
     Takes one candidate list per frame and returns the tracks worth
     believing. A frame offering several blobs says nothing about which is the
@@ -157,6 +178,7 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
     path into stubs that each die below `least`.
     """
     accepted: list[Track] = []
+    discarded: list[Discarded] = []
     live: list[_Path] = []
 
     for frame, candidates in enumerate(per_frame):
@@ -172,14 +194,23 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
                 carried.append(_Path(path.start, (*path.seen, predict_next(path.seen)),
                                      path.misses + 1, path.sightings))
             else:
-                _judge(path, accepted, least=least, tolerance_px=tolerance_px,
+                _judge(path, accepted, discarded, least=least, tolerance_px=tolerance_px,
                        least_travel_px=least_travel_px)
         live = carried + [_Path(frame, (blob,), 0, 1) for blob in unclaimed]
 
     for path in live:
-        _judge(path, accepted, least=least, tolerance_px=tolerance_px,
+        _judge(path, accepted, discarded, least=least, tolerance_px=tolerance_px,
                least_travel_px=least_travel_px)
-    return accepted
+    return accepted, discarded
+
+
+def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
+           coast: int, least: int, tolerance_px: float,
+           least_travel_px: float) -> list[Track]:
+    """Every path through a clip that behaved like a ball."""
+    return sift(per_frame, gate_px=gate_px, reach_px=reach_px, coast=coast,
+                least=least, tolerance_px=tolerance_px,
+                least_travel_px=least_travel_px)[0]
 
 
 @dataclass(frozen=True)
@@ -192,19 +223,38 @@ class _Path:
     sightings: int
 
 
-def _judge(path: _Path, accepted: list[Track], *,
+def _judge(path: _Path, accepted: list[Track], discarded: list[Discarded], *,
            least: int, tolerance_px: float, least_travel_px: float) -> None:
-    """Keep a finished path if enough of it was seen and all of it fell.
+    """File a finished path under believed or refused."""
+    settled = path.seen[:len(path.seen) - path.misses]
+    reason = _refused(path.sightings, settled, least=least, tolerance_px=tolerance_px,
+                      least_travel_px=least_travel_px)
+    if reason is None:
+        accepted.append(Track(path.start, settled))
+    else:
+        discarded.append(Discarded(path.start, len(settled), reason))
+
+
+def _refused(sightings: int, settled: tuple[Point, ...], *,
+             least: int, tolerance_px: float, least_travel_px: float) -> str | None:
+    """Which guard turned this path away, or None if none of them did.
 
     Three frauds, three guards: a long path that was mostly coasted, one
     that never left the spot it started on, and one that was watched the
     whole way and never fell.
+
+    The first refusal is the answer, and the order is not arbitrary. A path
+    barely seen has no travel worth measuring and no arc worth testing, so
+    reporting a later guard would point a fix at a threshold that was never
+    what stopped it.
     """
-    settled = path.seen[:len(path.seen) - path.misses]
-    if (path.sightings >= least
-            and _travelled(settled) >= least_travel_px
-            and is_ballistic(settled, tolerance_px=tolerance_px, least=least)):
-        accepted.append(Track(path.start, settled))
+    if sightings < least:
+        return "too few sightings"
+    if _travelled(settled) < least_travel_px:
+        return "went nowhere"
+    if not is_ballistic(settled, tolerance_px=tolerance_px, least=least):
+        return "never fell"
+    return None
 
 
 def _travelled(seen: tuple[Point, ...]) -> float:
