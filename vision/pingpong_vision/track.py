@@ -5,8 +5,13 @@ an orange-ish blob of roughly the right size, which is why §5's colour and size
 gates plateau at a rally rate indistinguishable from a warm-up's. Across frames
 there is something to tell them apart with, because a struck ball is in free
 flight and a forearm is not. This module is only the memory that makes the
-comparison possible; whether it separates them in practice is unmeasured, and
-§5 step 4 is where that gets decided.
+comparison possible.
+
+Which part of it does the separating is now measured, and it is not the part
+§5 step 4 nominates. `is_ballistic` refused none of the 1024 paths
+`rally.mp4` discarded, and cannot refuse any while `tolerance_px` is the
+looser of the two arc bounds. What separates a ball from an arm here is
+`advance`'s gate — a per-frame bound with a track's history behind it.
 
 Prediction is in **image pixels, not table centimetres**. A ball in flight is
 above the table plane, so the homography — which assumes points lie *on* the
@@ -76,6 +81,18 @@ def is_ballistic(seen: tuple[Point, ...], *, tolerance_px: float, least: int) ->
     three points fit a curve through themselves whatever they are. Neither
     bound is defaulted: §5 wants both tuned against footage, and a guessed
     constant in a signature is how a guess becomes a fact nobody rechecks.
+
+    **At the tuned settings this refuses nothing, and that is structural.**
+    `advance` admits a position only within `gate_px` of the same prediction
+    and coasts exactly onto the arc, so every position examined here already
+    passed a tighter bound than `tolerance_px` applies. Whenever
+    `tolerance_px >= gate_px` — 30 against 25, as tuned — the answer is
+    always yes.
+
+    Tightening it below the gate does not recover a guard. A path holding a
+    table contact is two parabolas rather than one, so the check eats those
+    first: at tolerance 20 it refused 18 paths, 28% of them carrying a
+    bounce against 13% of the paths kept, and points found fell from 7 to 6.
     """
     if len(seen) < least:
         return False
@@ -150,8 +167,12 @@ def sift(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
     positions stay one frame apart and `predict_next` keeps meaning what it
     says. A coasted position asserts nothing about the path — it sits exactly
     on the arc by construction — which is why acceptance counts *observations*
-    separately. `gate_px` may be generous without loosening what is accepted,
-    because `tolerance_px` is applied again at the end.
+    separately.
+
+    `gate_px` is therefore the arc test, and the only one: re-applying
+    `tolerance_px` at the end catches nothing it let through, since it is the
+    looser of the two. Loosening the gate loosens what is accepted, with
+    nothing behind it to compensate.
 
     A path still guessing reaches `reach_px`; one that can predict is held to
     `gate_px`. With fewer than three positions there is no acceleration to

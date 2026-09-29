@@ -242,8 +242,12 @@ and zero training loop:
 3. Associate the surviving candidates to a track with a constant-acceleration
    motion model, so the tracker predicts where the ball should be next and
    prefers the candidate nearest that prediction.
-4. Accept a track only once it shows several frames of consistent, near-ballistic
-   motion. A hand or a racket produces blobs; it does not produce a parabola.
+4. ~~Accept a track only once it shows several frames of consistent,
+   near-ballistic motion. A hand or a racket produces blobs; it does not
+   produce a parabola.~~ **Inert, measured 2026-09-29** — see "Step 4 never
+   fires" below. The association in step 3 already enforces the arc; the
+   acceptance check re-applies it at a looser bound and therefore never
+   refuses anything.
 
 Two things to get right, which will otherwise burn a day each:
 
@@ -572,6 +576,54 @@ clip**: several shorter clips are fine and give more varied lighting and
 positions. Each clip needs its own four-corner calibration, since the camera
 moves between sessions — `drift.py` exists to catch it when it moves within
 one.
+
+### Step 4 never fires, and cannot (2026-09-29)
+
+`follow` refused 1024 paths across `rally.mp4`. Every one of them was refused
+for being too little seen (752) or for never leaving the spot it started on
+(272). **Not one was refused for failing the arc test** — the check that step 4
+above describes as the thing separating a ball from a forearm.
+
+That is not a property of this clip. Step 3 admits a candidate only when it
+lies within `gate_px` of the arc prediction, and coasted positions are placed
+*on* the arc by construction. Step 4 then re-tests the same predictions against
+`tolerance_px`. With the tuned values — gate 25 px, tolerance 30 px — every
+position it examines was already admitted under a tighter bound than the one it
+applies. **Whenever `tolerance_px >= gate_px` the acceptance check is dead
+code**, and the sweep confirms it: at tolerance 25, exactly equal to the gate,
+it still refuses nothing.
+
+Tightening it below the gate does not wake a useful guard. It wakes a harmful
+one:
+
+| `tolerance_px` | tracks kept | refused "never fell" | points found | **correct** | awarded | accuracy |
+|---|---|---|---|---|---|---|
+| **30 (current)** | 126 | **0** | 7 of 12 | **7** | 8 | **87.5%** |
+| 25 (= gate) | 126 | **0** | 7 of 12 | **7** | 8 | **87.5%** |
+| 20 | 108 | 18 | 6 of 12 | 5 | 6 | 83.3% |
+| 15 | 91 | 35 | 4 of 12 | 3 | 4 | 75.0% |
+| 10 | 69 | 57 | 2 of 12 | 1 | 3 | 33.3% |
+
+**The mechanism is the bounce.** The arc test asks whether a whole path is one
+parabola, and a path that contains a table contact is two. Of the 18 tracks the
+guard eats at tolerance 20, 5 contain a sampled bounce — 28%, against 13% of
+the 126 tracks kept at the current setting. Tightening it destroys, at twice
+the base rate, precisely the tracks §7 needs in order to score anything. The
+longest track in the clip, 114 frames, is among them.
+
+**So `tolerance_px` is not a lever, and the arc never was the discriminator.**
+Whatever separates a ball from an arm here is step 3's association gate, which
+is a per-frame bound with a track's history behind it, not step 4's per-path
+one. §7's reading of the travel trade — "the extra tracks a looser rule admits
+are arms" — was measured with step 4 inert throughout, so it records what the
+gate alone achieves. The conclusion stands; the credit was misassigned.
+
+What this leaves: 752 of the 1024 refusals are paths that never reached six
+sightings, median length 3. In the two stretches where a point is missed with
+candidates present in every frame, that is the guard doing the refusing —
+f1660-1760 offers 208 blobs over 101 frames and hands 15 of them to paths that
+die between 1 and 9 sightings. The long refusals there go nowhere: 53 frames
+and 40 frames of something sitting still, which is clutter, not the ball.
 
 ---
 
