@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from pingpong_vision.calibration import Calibration
-from pingpong_vision.rally import Event, awarded_to, events_from, points_from
+from pingpong_vision.rally import (Awarded, Event, awarded_to, events_from,
+                                   points_from)
 from pingpong_vision.track import Track
 
 COOLDOWN = 90          # ~3 s at 30 fps, §8
@@ -60,8 +61,8 @@ def test_only_something_that_looked_like_a_rally_scores() -> None:
     knocked_about = [Event(10, "bounce", "near"), Event(20, "bounce", "far"),
                      Event(30, "lost")]
 
-    assert points_from(rally, cooldown_frames=COOLDOWN) == ["far"]
-    assert points_from(ended_on_the_floor, cooldown_frames=COOLDOWN) == ["far"]
+    assert points_from(rally, cooldown_frames=COOLDOWN) == [Awarded(40, "far")]
+    assert points_from(ended_on_the_floor, cooldown_frames=COOLDOWN) == [Awarded(40, "far")]
     assert points_from(rolled_across, cooldown_frames=COOLDOWN) == []
     assert points_from(knocked_about, cooldown_frames=COOLDOWN) == []
 
@@ -87,7 +88,7 @@ def test_each_rally_is_judged_on_its_own() -> None:
         Event(620, "lost"),
     ]
 
-    assert points_from(stream, cooldown_frames=COOLDOWN) == ["far"]
+    assert points_from(stream, cooldown_frames=COOLDOWN) == [Awarded(40, "far")]
 
 
 def test_the_ball_being_tossed_back_is_not_the_next_point() -> None:
@@ -119,7 +120,32 @@ def test_the_ball_being_tossed_back_is_not_the_next_point() -> None:
         Event(150, "bounce", "far"), Event(160, "lost"),
     ]
 
-    assert points_from(stream, cooldown_frames=COOLDOWN) == ["far", "near"]
+    assert points_from(stream, cooldown_frames=COOLDOWN) == [Awarded(40, "far"), Awarded(160, "near")]
+
+
+def test_a_point_says_when_it_was_awarded_as_well_as_to_whom() -> None:
+    """The frame is what lets a measured point be matched to a real one.
+
+    §15 is scored against `rally.truth.csv`, which is a list of frames a human
+    marked a point on. A bare list of sides cannot be held against it — six
+    "far"s in a row say nothing about whether they are the same six rallies —
+    so every measurement so far has replayed this function's rule in a script
+    of its own to recover the frames. Two copies of §8's rule is one too many,
+    and the copy is the one the published figures were measured with.
+
+    The frame is the rally's ending, not its first bounce: that is the moment
+    the point is decided, the moment the cooldown starts from, and the thing
+    the human was reacting to when they marked it.
+    """
+    stream = [
+        Event(10, "crossed"), Event(20, "bounce", "far"),
+        Event(30, "bounce", "near"), Event(40, "lost"),
+        Event(130, "crossed"), Event(140, "bounce", "near"),
+        Event(150, "bounce", "far"), Event(160, "lost"),
+    ]
+
+    assert points_from(stream, cooldown_frames=COOLDOWN) == [
+        Awarded(40, "far"), Awarded(160, "near")]
 
 
 TABLE = Calibration(

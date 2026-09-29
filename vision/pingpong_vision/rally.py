@@ -52,8 +52,24 @@ class Event:
     half: str | None = None
 
 
-def points_from(events: list[Event], *, cooldown_frames: int) -> list[str]:
-    """The side that won each rally in a stream of events.
+@dataclass(frozen=True)
+class Awarded:
+    """A point: who won it, and the frame the rally ended on.
+
+    The frame is not decoration either. §15 scores this pipeline against a
+    list of frames a human marked points on, and a bare list of sides cannot
+    be held against one — six "far"s say nothing about whether they are the
+    same six rallies. Without it every measurement has to replay the rule
+    below in a script of its own, and then the published figures are measured
+    with the copy rather than with this.
+    """
+
+    frame: int
+    side: str
+
+
+def points_from(events: list[Event], *, cooldown_frames: int) -> list[Awarded]:
+    """Each rally's winner, and the frame that rally ended on.
 
     §8's guard, and the reason an imperfect tracker is tolerable: **a rally
     only scores if it crossed the net and bounced on the table at least
@@ -79,7 +95,7 @@ def points_from(events: list[Event], *, cooldown_frames: int) -> list[str]:
     is the only one who knows the frame rate — §8 asks for about three
     seconds, which is 90 frames at the 30 fps §2 is stuck with.
     """
-    points: list[str] = []
+    points: list[Awarded] = []
     crossed = False
     halves: list[str | None] = []
     scored_at: int | None = None
@@ -94,7 +110,7 @@ def points_from(events: list[Event], *, cooldown_frames: int) -> list[str]:
         elif event.kind in ("floor", "lost"):
             won = awarded_to(halves) if crossed and len(halves) >= 2 else None
             if won:
-                points.append(won)
+                points.append(Awarded(event.frame, won))
                 scored_at = event.frame
             crossed, halves = False, []
     return points
