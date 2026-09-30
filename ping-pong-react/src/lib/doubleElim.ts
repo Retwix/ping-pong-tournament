@@ -147,8 +147,6 @@ function buildStructure(p: number): MatchNode[] {
   return nodes
 }
 
-const BRACKET_ORDER: Record<Bracket, number> = { W: 0, L: 1, GF: 2 }
-
 /**
  * The earliest "wave" each match can be played in: one past the latest match
  * feeding it. Walkovers resolved at creation are never played, so they count 0.
@@ -165,6 +163,31 @@ function playWaves(nodes: MatchNode[], consumed: Set<string>): (node: MatchNode)
     return own
   }
   return waveOf
+}
+
+/** Interleave two lists (first, second, first, …), appending whatever is left of the longer one. */
+function alternate<T>(first: T[], second: T[]): T[] {
+  return Array.from({ length: Math.max(first.length, second.length) }, (_, i) => [first[i], second[i]])
+    .flat()
+    .filter((item): item is T => item !== undefined)
+}
+
+/**
+ * Reorder games so no game directly follows one that sends it a player, unless
+ * every game ready at that point does.
+ */
+function spaceOut(priority: MatchNode[], nodes: MatchNode[]): MatchNode[] {
+  const feeders = (node: MatchNode): string[] =>
+    nodes.filter((f) => f.win_to === node.key || f.lose_to === node.key).map((f) => f.key)
+  const scheduled = new Set(priority.map((node) => node.key))
+  return priority.reduce<MatchNode[]>((order, _, i) => {
+    const placed = new Set(order.map((node) => node.key))
+    const ready = priority.filter(
+      (node) => !placed.has(node.key) && feeders(node).every((f) => !scheduled.has(f) || placed.has(f))
+    )
+    const previous = order[i - 1]?.key
+    return [...order, ready.find((node) => !feeders(node).some((f) => f === previous)) ?? ready[0]]
+  }, [])
 }
 
 /** A match row ready to be persisted (db layer adds ids, defaults, tournament_id). */
@@ -238,19 +261,27 @@ export function buildDoubleElim(players: string[]): GenMatchRow[] {
 
   // Emit every non-consumed node as a real/pending match, in play order: each
   // match as early as its feeders allow, so the losers bracket interleaves with
-  // the winners bracket instead of waiting for it to finish.
+  // the winners bracket instead of waiting for it to finish. Games ready at the
+  // same time alternate, losers first, so neither bracket runs ahead, and no one
+  // plays twice in a row while another game is ready.
   const wave = playWaves(nodes, consumed)
-  const live = nodes
+  const sorted = nodes
     .filter((node) => !consumed.has(node.key))
     .sort((a, b) =>
       wave(a) !== wave(b)
         ? wave(a) - wave(b)
-        : BRACKET_ORDER[a.bracket] !== BRACKET_ORDER[b.bracket]
-          ? BRACKET_ORDER[a.bracket] - BRACKET_ORDER[b.bracket]
-          : a.round !== b.round
-            ? a.round - b.round
-            : a.pos - b.pos
+        : a.round !== b.round
+          ? a.round - b.round
+          : a.pos - b.pos
     )
+  const waves = [...new Set(sorted.map(wave))].map((w) => sorted.filter((node) => wave(node) === w))
+  const priority = waves.flatMap((games) =>
+    alternate(
+      games.filter((node) => node.bracket === 'L'),
+      games.filter((node) => node.bracket !== 'L')
+    )
+  )
+  const live = spaceOut(priority, nodes)
 
   return live.map((node, idx) => {
     const s = slots.get(node.key)!
