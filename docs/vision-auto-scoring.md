@@ -242,8 +242,12 @@ and zero training loop:
 3. Associate the surviving candidates to a track with a constant-acceleration
    motion model, so the tracker predicts where the ball should be next and
    prefers the candidate nearest that prediction.
-4. Accept a track only once it shows several frames of consistent, near-ballistic
-   motion. A hand or a racket produces blobs; it does not produce a parabola.
+4. ~~Accept a track only once it shows several frames of consistent,
+   near-ballistic motion. A hand or a racket produces blobs; it does not
+   produce a parabola.~~ **Inert, measured 2026-09-29** — see "Step 4 never
+   fires" below. The association in step 3 already enforces the arc; the
+   acceptance check re-applies it at a looser bound and therefore never
+   refuses anything.
 
 Two things to get right, which will otherwise burn a day each:
 
@@ -573,6 +577,209 @@ positions. Each clip needs its own four-corner calibration, since the camera
 moves between sessions — `drift.py` exists to catch it when it moves within
 one.
 
+### Step 4 never fires, and cannot (2026-09-29)
+
+`follow` refused 1024 paths across `rally.mp4`. Every one of them was refused
+for being too little seen (752) or for never leaving the spot it started on
+(272). **Not one was refused for failing the arc test** — the check that step 4
+above describes as the thing separating a ball from a forearm.
+
+That is not a property of this clip. Step 3 admits a candidate only when it
+lies within `gate_px` of the arc prediction, and coasted positions are placed
+*on* the arc by construction. Step 4 then re-tests the same predictions against
+`tolerance_px`. With the tuned values — gate 25 px, tolerance 30 px — every
+position it examines was already admitted under a tighter bound than the one it
+applies. **Whenever `tolerance_px >= gate_px` the acceptance check is dead
+code**, and the sweep confirms it: at tolerance 25, exactly equal to the gate,
+it still refuses nothing.
+
+Tightening it below the gate does not wake a useful guard. It wakes a harmful
+one:
+
+| `tolerance_px` | tracks kept | refused "never fell" | points found | **correct** | awarded | accuracy |
+|---|---|---|---|---|---|---|
+| **30 (current)** | 126 | **0** | 7 of 12 | **7** | 8 | **87.5%** |
+| 25 (= gate) | 126 | **0** | 7 of 12 | **7** | 8 | **87.5%** |
+| 20 | 108 | 18 | 6 of 12 | 5 | 6 | 83.3% |
+| 15 | 91 | 35 | 4 of 12 | 3 | 4 | 75.0% |
+| 10 | 69 | 57 | 2 of 12 | 1 | 3 | 33.3% |
+
+**The mechanism is the bounce.** The arc test asks whether a whole path is one
+parabola, and a path that contains a table contact is two. Of the 18 tracks the
+guard eats at tolerance 20, 5 contain a sampled bounce — 28%, against 13% of
+the 126 tracks kept at the current setting. Tightening it destroys, at twice
+the base rate, precisely the tracks §7 needs in order to score anything. The
+longest track in the clip, 114 frames, is among them.
+
+**So `tolerance_px` is not a lever, and the arc never was the discriminator.**
+Whatever separates a ball from an arm here is step 3's association gate, which
+is a per-frame bound with a track's history behind it, not step 4's per-path
+one. §7's reading of the travel trade — "the extra tracks a looser rule admits
+are arms" — was measured with step 4 inert throughout, so it records what the
+gate alone achieves. The conclusion stands; the credit was misassigned.
+
+What this leaves: 752 of the 1024 refusals are paths that never reached six
+sightings, median length 3. In the two stretches where a point is missed with
+candidates present in every frame, that is the guard doing the refusing —
+f1660-1760 offers 208 blobs over 101 frames and hands 15 of them to paths that
+die between 1 and 9 sightings. The long refusals there go nowhere: 53 frames
+and 40 frames of something sitting still, which is clutter, not the ball.
+
+### The gate is already at its best, and the fragments are not its fault (2026-10-01)
+
+752 of the 1024 refusals are paths that never reached six sightings, so the
+obvious suspect was `gate_px`. A path with three positions is held to 25 px
+while the ball's own travel is a median 25 px per frame and 75 px at the 90th
+percentile, which reads like a gate set at the speed it has to follow. The
+refusal lengths look like it too: they peak at 3 frames (202 of them), which is
+exactly where `reach_px` hands over to `gate_px`.
+
+Swept, and the reading is wrong:
+
+| `gate_px` | kept | longest track | "too few sightings" | "never fell" | found | **correct** | awarded | accuracy |
+|---|---|---|---|---|---|---|---|---|
+| **25 (current)** | 126 | 114 | 752 | 0 | 7 of 12 | **7** | 8 | **87.5%** |
+| 30 | 128 | 114 | 710 | 0 | 7 of 12 | **7** | 9 | 77.8% |
+| 35 | 109 | 67 | 659 | 18 | 7 of 12 | **7** | 9 | 77.8% |
+| 45 | 83 | 37 | 563 | 36 | 5 of 12 | 5 | 5 | 100.0% |
+| 60 | 48 | 29 | 506 | 62 | 0 of 12 | 0 | 0 | — |
+| 100 | 24 | 26 | 450 | 70 | 0 of 12 | 0 | 0 | — |
+
+**Loosening it reduces the fragments and destroys the tracking anyway.** The
+short refusals fall from 752 to 506 while the longest track in the clip falls
+from 114 frames to 29, and by gate 60 nothing scores at all. A wider gate does
+not help a path follow a fast ball; it lets paths snap onto clutter, which is
+what `follow`'s docstring said it would and what the sweep now measures.
+
+Two notes from the same table. The accuracy drop at gate 30 is one extra
+spurious point, not a lost correct one — the correct count holds at 7 until
+gate 45. And the "never fell" column confirms the entry above from the other
+direction: it is empty until the gate passes `tolerance_px` at 30, then wakes
+and climbs, and every row where it is non-empty is worse than the rows where
+it sleeps.
+
+So the ball is not outrunning the gate, and the fragments are not a threshold
+that is set too tight. What a fixed gate cannot do is serve both jobs at once:
+25 px is too little for a blurred ball crossing the frame and too much for a
+blob sitting on a chair, and no single value in the table is good at both.
+That is the shape of the next thing to try, and it is a change rather than a
+sweep.
+
+### The speed-scaled gate works, and loses anyway (2026-10-01)
+
+If one fixed gate cannot serve a blurred ball and a static blob, scale it by
+what tells them apart: `slack` buys `gate_px` plus that many pixels of
+allowance per pixel the path travelled last frame. Built and swept.
+
+The first sweep was confounded, and the confound is the entry two above. As
+`slack` widens the effective gate past `tolerance_px`, the arc check wakes up
+and refuses the very sightings `slack` just admitted — "never fell" climbs 0,
+7, 18, 39 across the sweep. Holding it inert at `tolerance_px` 200 measures
+the gate change on its own:
+
+| `slack` | kept | longest track | "too few sightings" | found | **correct** | spurious | awarded | accuracy |
+|---|---|---|---|---|---|---|---|---|
+| **0 (current)** | 126 | 114 | 752 | 7 of 12 | **7** | 1 | 8 | **87.5%** |
+| 0.2 | 127 | 114 | 713 | 7 of 12 | **7** | 2 | 9 | 77.8% |
+| 0.3 | 128 | 114 | 710 | 7 of 12 | **7** | 2 | 9 | 77.8% |
+| 0.5 | 119 | 187 | 677 | 6 of 12 | 5 | 4 | 10 | 50.0% |
+| 0.75 | 116 | 180 | 615 | 6 of 12 | 4 | 5 | 11 | 36.4% |
+| 1.0 | 110 | 182 | 551 | **8 of 12** | 5 | 5 | 13 | 38.5% |
+
+**The mechanism works and the points reject it.** Fragmentation really does
+fall — short refusals 752 to 551, the longest track in the clip 114 frames to
+187 — and at `slack` 1.0 the pipeline finds more rally ends than it ever has,
+8 of 12. Five of the 13 points it awards are right. The guard is kept at 0,
+which is the value that changes nothing rather than the value that is right.
+
+#### Three sweeps, one line
+
+`least_travel_px` (2026-09-23), `gate_px` (2026-10-01), `slack` (2026-10-01).
+Every one of them trades recall against accuracy along the same line, and
+every one of them is already at the accuracy end of it. That is not three
+coincidences; it is one fact about the stage being tuned. **Association has
+nothing to tell a ball from clutter with**, so any threshold that admits more
+candidates admits more clutter, and the only question a knob can answer is
+where on that line to sit. §15 weights accuracy, so the answer is always the
+tight end, and the remaining five points are not reachable by tuning.
+
+What is left is a discriminator that is not a threshold — something that says
+"ball" rather than "orange blob near the table, within so many pixels".
+
+**§5 step 1 is one, and it has never been switched on in any measurement
+here.** `ball_candidates` takes a `foreground` mask and the §5 text calls it
+essential: "Colour alone cannot find a struck ball — blur washes the
+saturation out — and loosening the threshold to compensate lets skin back in.
+Motion is the signal that says 'the ball' without saying 'orange'." Every
+figure in §5 and §7, including all three sweeps above, was measured with it
+off: `track_probe.py --motion` defaults to off and `score_probe.py` passes
+`False` with no flag at all. A fixed camera is the one situation where
+background subtraction is nearly free, and a player's forearm moves while a
+chair does not — which is exactly the distinction the thresholds cannot draw.
+
+Measuring that is the next thing, and it is not a sweep.
+
+### Step 1 was switched on, and it changes nothing that matters (2026-10-01)
+
+MOG2 foreground had never been enabled in any measurement in this project.
+It is now, and it does what §5 promised to the candidate pool and nothing at
+all to the points:
+
+| | blobs found | blank frames | tracks kept | ball found | invented | points found | **correct** | accuracy |
+|---|---|---|---|---|---|---|---|---|
+| motion off | 7791 | 1469 | 126 | 67/131 | 1 | 7 of 12 | **7** | **87.5%** |
+| motion on | 3632 | 2393 | 126 | 67/131 | 1 | 7 of 12 | **7** | **87.5%** |
+
+Half the candidates gone, and the paths that die before six sightings fall
+from 752 to 378. The accepted set is all but unchanged: 126 tracks either way,
+differing by 3 in each direction, the same longest track of 114 frames, the
+same 67 of 131 hand-clicked balls found, the same single invented one.
+
+**The clutter it removes was never reaching acceptance.** That is the whole
+result. Background subtraction answers "is this pixel new", and the false
+candidates that survive association are not still — they are arms, bodies, a
+player's kit, all moving as freely as the ball. MOG2 cannot separate a forearm
+from a ball because a forearm is foreground too. It deletes the chair.
+
+And it does not make loosening affordable, which was the reason to try it. The
+same knobs, with and without it:
+
+| knob | motion off: found / correct / awarded | motion on: found / correct / awarded |
+|---|---|---|
+| **baseline** | 7 / **7** / 8 — **87.5%** | 7 / **7** / 8 — **87.5%** |
+| `least_travel_px` 100 | 6 / 6 / 10 — 60.0% | 6 / 6 / 10 — 60.0% |
+| `least_travel_px` 60 | 6 / 6 / 10 — 60.0% | 6 / 6 / 10 — 60.0% |
+| `slack` 0.5 | 6 / 5 / 10 — 50.0% | 6 / 5 / 10 — 50.0% |
+| `slack` 1.0 | 8 / 5 / 13 — 38.5% | 8 / 6 / 13 — 46.2% |
+| `least` 4 | 8 / **7** / 10 — 70.0% | 8 / **7** / 10 — 70.0% |
+| `coast` 8 | 7 / **7** / 8 — 87.5% | 7 / **7** / 8 — 87.5% |
+
+Every row moves by at most a point. The one real gain motion buys is at
+`slack` 1.0, where it takes accuracy from 38.5% to 46.2% — an improvement
+between two settings that are both unusable.
+
+**`least` 4 is the recall frontier worth remembering**: 8 of 12 rally ends, 7
+of them correct, at 70% of awarded. It is the only setting found so far that
+raises recall without losing a correct point. §15 weights accuracy, so it is
+not taken — but it is the honest statement of where the trade sits, and a
+better one than the baseline for anyone who wants §15's 95% rally-end target.
+
+#### What this exhausts, and what it does not
+
+Four knobs and one discriminator, all measured against points: the tuning of
+the classical pipeline is done. 7 of 12 at 87.5% is what colour, size, table
+geometry and constant-acceleration association support on this footage, and
+§5's upgrade path — a TrackNet-style model, three frames in and a heatmap out
+— is the thing §14 was holding in reserve for exactly this.
+
+**But the sample is 12 points, and that is the more urgent problem.** Every
+decision above turns on one or two points: 87.5% is 7 of 8, 70% is 7 of 10,
+and the difference between them is two awards. §15 asks for ~100 points, §5
+already notes that three minutes of rally footage is recorded and unlabelled,
+and the labelling is the cheap half of this project. Deciding between a
+classical pipeline and a learned one on a 12-point sample is deciding it on
+noise, whichever way the numbers fall.
+
 ---
 
 ## 6. Person detection — what it's actually for
@@ -826,6 +1033,66 @@ The state machine consumes an **event stream** (`ball_seen`, `bounce(side)`,
 synthetic event sequences, with no video and no camera — every row of the table
 above becomes a test. See §12.
 
+### The phantom criterion cannot be met by vision, measured (2026-10-01)
+
+§15 asks for **0 phantom points during 10 minutes of knocking about**. It had
+never been measured. `warmup.mp4` is 17807 frames — 9.9 minutes at 30 fps — of
+exactly that, and `empty-table.mp4` is 445 frames of nobody there.
+
+Empty table: 0 tracks, 0 points. Warm-up, at the tuned settings: **42 points**.
+
+Sweeping the guard this entry is about moves it and never clears it:
+
+| `least_bounces` | points found | **correct** | awarded | accuracy | **rally ends** | phantoms / 10 min |
+|---|---|---|---|---|---|---|
+| 1 | 10 of 12 | 9 | 19 | 47.4% | **83.3%** | 65.7 |
+| **2 (current)** | 7 of 12 | **7** | 8 | **87.5%** | 58.3% | 42.5 |
+| 3 | 4 of 12 | 4 | 5 | 80.0% | 33.3% | 26.3 |
+| 4 | 1 of 12 | 1 | 1 | 100.0% | 8.3% | 14.2 |
+
+**At four bounces the pipeline finds one real point in twelve and still
+invents fourteen per ten minutes.** There is no value of this threshold, or of
+any threshold measured so far, that reaches zero. Tightening it throws away
+real rallies faster than it throws away warm-up ones.
+
+**The reason is that the warm-up is not noise.** It is two people hitting a
+ball over a net, and every point the pipeline reports in it crossed the net
+and bounced on both halves, because that is what was happening. The scoring
+rate makes it plain: `rally.mp4` awards 8 points across 3.0 minutes, 2.7 a
+minute, and the warm-up awards 4.2 a minute — the warm-up scores *faster* than
+the match clip, because a match has gaps between points and a warm-up does
+not.
+
+§8 already contained this argument and did not follow it to its conclusion:
+"fetching the ball and lobbing it back over the table really does cross the
+net and really does bounce on both halves, so it is a rally by every measure
+except when it happened. Only the clock tells them apart." The clock cannot
+tell ten minutes of warm-up apart either. **"Is this a point?" is not a
+visual question**, and no detector, learned or classical, answers it — a
+TrackNet model would track the warm-up ball better and invent more points, not
+fewer.
+
+#### What this changes
+
+The 87.5% in §7 is accuracy *given a clip that contains only real points*. It
+is not deployment accuracy, and nothing measured so far is. Reading it as the
+latter was the mistake this measurement corrects.
+
+**The signal has to come from outside the camera, and the app already has
+it.** §10 integrates with an app that owns the bracket and knows which match
+is in progress; §11 gives the operator an undo. A "scoring is live" gate is
+the same shape as both and costs nothing in vision: points are computed always
+and committed only while a match is live. That turns §15's criterion from
+unreachable into trivially satisfied, and leaves a real question behind it —
+phantom points *during* a live match, when the ball is being fetched or the
+players are stretching between points. That is what the cooldown defends, it
+is far narrower than a warm-up, and it has never been measured separately
+because no footage is marked that way.
+
+**Proposed amendment to §15**, not yet taken: replace "0 during 10 min of
+knocking about" with "0 while scoring is live and no rally is in progress",
+and make the live gate a requirement on §10 rather than a target for §5.
+
 ---
 
 ## 9. Refinements deliberately deferred
@@ -988,13 +1255,28 @@ Recorded across ~100 real points, hand-scored as ground truth:
 |---|---|
 | **Points awarded to the correct player** | **≥ 90%** |
 | Rally ends detected (neither missed nor invented) | ≥ 95% |
-| Phantom points during 10 min of knocking about / warm-up | 0 |
+| ~~Phantom points during 10 min of knocking about / warm-up~~ | ~~0~~ |
 | Latency, real point → score on screen | < 1.5 s |
 | Sustained processing rate | ≥ input fps |
 
 Point accuracy is the only metric that matters; the rest explain failures.
 **Below 85%, stop tuning heuristics and go train the detector** (§5) — that
 threshold is what makes "classical first" a decision rather than a gamble.
+
+**The phantom row is struck through, measured 2026-10-01**: a warm-up is two
+people hitting a ball over a net, so every "phantom" in one is a correctly
+detected rally that nobody was scoring. 42 of them in 9.9 minutes at the tuned
+settings, and 14 still at a guard tight enough to find one real point in
+twelve — no threshold reaches zero, and a better detector would make it worse.
+See §8. The replacement this wants is "0 while scoring is live and no rally is
+in progress", with the live gate a requirement on §10; it is written up but
+not adopted, because adopting it is a decision about the product and not a
+measurement.
+
+**And the accuracy row needs reading carefully.** 87.5% is measured on a clip
+that contains only real points. It is not deployment accuracy, and the 85%
+abandon rule should not be applied to it in either direction until there is a
+live gate to measure behind.
 
 ---
 

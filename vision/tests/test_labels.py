@@ -8,6 +8,8 @@ from pingpong_vision.labels import (
     Label,
     Outcome,
     PointScore,
+    append_outcome,
+    drop_last_outcome,
     read_outcomes,
     Score,
     score_points,
@@ -167,3 +169,47 @@ class _Awarded:
 
     frame: int
     side: str
+
+
+def test_marking_points_survives_being_interrupted(tmp_path) -> None:
+    """The 12-point sample is what every §15 decision now turns on.
+
+    87.5% accuracy is 7 of 8 awards and 70% is 7 of 10; the gap between the
+    settings §7 argues over is two points. §15 asks for ~100 and there is no
+    tool for marking even one — `rally.truth.csv` was filled in by hand, which
+    is why it holds twelve. `warmup.mp4` alone contains about forty rallies,
+    each still ending in a fault by one player.
+
+    So the same contract as `label_ball.py`: every answer written the moment
+    it is given, undo reaching back into an earlier sitting, and closing the
+    window costing nothing. Marking points means watching in real time, which
+    is the one job that cannot be resumed from a frame number alone — the
+    stopping point is in the file, not in the operator's memory.
+
+    Undo trims the file rather than rebuilding it from what was read back.
+    `read_outcomes` deliberately drops the seconds column, so rebuilding
+    would quietly discard it from every surviving row.
+    """
+    store = tmp_path / "rally.truth.csv"
+    append_outcome(store, Outcome(1753, "left"), seconds=59.121)
+    append_outcome(store, Outcome(2075, "left"), seconds=69.979)
+    append_outcome(store, Outcome(2421, "right"), seconds=81.679)
+    drop_last_outcome(store)
+
+    assert read_outcomes(store) == [Outcome(1753, "left"), Outcome(2075, "left")]
+    assert store.read_text().splitlines() == [
+        "frame,seconds,side", "1753,59.121,left", "2075,69.979,left"]
+
+
+def test_an_unstarted_point_store_is_not_an_error(tmp_path) -> None:
+    """Undo on nothing does nothing, so the key is safe to lean on."""
+    store = tmp_path / "nothing.csv"
+    drop_last_outcome(store)
+    append_outcome(store, Outcome(10, "left"), seconds=0.333)
+    drop_last_outcome(store)
+    drop_last_outcome(store)
+
+    assert read_outcomes(store) == []
+    # the header survives being undone past the start: eat it and the next
+    # read treats the first real point as the header and drops it silently
+    assert store.read_text().splitlines() == ["frame,seconds,side"]

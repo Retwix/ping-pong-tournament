@@ -20,6 +20,7 @@ from pathlib import Path
 Point = tuple[float, float]
 
 HEADER = "frame,x,y"
+OUTCOME_HEADER = "frame,seconds,side"
 
 
 @dataclass(frozen=True)
@@ -146,6 +147,41 @@ def read_outcomes(path: Path) -> list[Outcome]:
         frame, _seconds, side = row.split(",")
         outcomes.append(Outcome(int(frame), side))
     return outcomes
+
+
+def append_outcome(path: Path, outcome: Outcome, *, seconds: float) -> None:
+    """Write one marked point immediately, same contract as `append_label`.
+
+    Marking points means watching the clip in real time, which is the one job
+    here that cannot be resumed from a frame number alone — whoever stops
+    halfway has to be able to reopen and carry on, and the only record of
+    where they got to is this file.
+
+    `seconds` is the caller's because only it knows the frame rate, and the
+    column is kept because the file is read by people as well as by
+    `read_outcomes`: a timestamp is what lets someone scrub to a point and
+    check it, and a frame number is not.
+    """
+    new = not path.exists()
+    with path.open("a") as out:
+        if new:
+            out.write(OUTCOME_HEADER + "\n")
+        out.write(f"{outcome.frame},{seconds:.3f},{outcome.side}\n")
+
+
+def drop_last_outcome(path: Path) -> None:
+    """Remove the most recent marked point. Doing nothing to an empty store is safe.
+
+    Trims the file rather than rebuilding it from `read_outcomes`, which drops
+    the seconds column on purpose — rebuilding would discard it from every
+    surviving row to undo one.
+    """
+    if not path.exists():
+        return
+    rows = path.read_text().strip().splitlines()
+    if len(rows) < 2:
+        return
+    path.write_text("\n".join(rows[:-1]) + "\n")
 
 
 @dataclass(frozen=True)

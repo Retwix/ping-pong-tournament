@@ -68,18 +68,37 @@ class Awarded:
     side: str
 
 
-def points_from(events: list[Event], *, cooldown_frames: int) -> list[Awarded]:
+def points_from(events: list[Event], *, cooldown_frames: int,
+                least_bounces: int) -> list[Awarded]:
     """Each rally's winner, and the frame that rally ended on.
 
     §8's guard, and the reason an imperfect tracker is tolerable: **a rally
     only scores if it crossed the net and bounced on the table at least
-    twice.** §5 measured the tracker following the dog in the doorway and a
-    player's forearm, and neither of those ever bounces on a table. The
-    detector does not have to be right about everything; it has to be wrong
-    in ways that cannot fake a rally.
+    `least_bounces` times.** §5 measured the tracker following the dog in the
+    doorway and a player's forearm, and neither of those ever bounces on a
+    table. The detector does not have to be right about everything; it has to
+    be wrong in ways that cannot fake a rally.
 
-    A ball rolled across the table crosses the net and bounces once. Knocking
-    about on one half bounces plenty and never crosses. Neither scores.
+    The count is the caller's and has no default, because it is the binding
+    threshold in the whole pipeline and has to be measured from both ends. At
+    two, four of the five rally ends §15 misses are rallies that were seen,
+    crossed the net, and held exactly one table bounce — which is most of why
+    the rally-end figure sits at 58% against a target of 95%. At one, those
+    come back and so does anything else that crossed the net and touched the
+    table once. What that costs is §15's phantom-point criterion, measured
+    over a warm-up, and it is not a question this function can answer.
+
+    The crossing is a separate condition and stays absolute. A ball rolled
+    across the table crosses the net and bounces once, so at `least_bounces`
+    of one it scores — a cost, not a bug. Knocking about on one half bounces
+    plenty, never crosses, and must not score at any count.
+
+    Only contacts that landed *on the table* count towards the guard, which
+    is §8's wording and not a restatement of it. `events_from` tags an
+    off-table contact `floor` rather than a half-less bounce, so today the
+    distinction is unreachable from there — but this function is public, it
+    consumes events a caller may build, and a guard that counted the floor
+    would let a rally with one real bounce pass for two.
 
     A floor bounce or a lost ball ends the rally; §7 calls the floor bounce
     the strongest rally-end signal there is.
@@ -108,7 +127,8 @@ def points_from(events: list[Event], *, cooldown_frames: int) -> list[Awarded]:
         elif event.kind == "bounce":
             halves.append(event.half)
         elif event.kind in ("floor", "lost"):
-            won = awarded_to(halves) if crossed and len(halves) >= 2 else None
+            landed = sum(1 for half in halves if half is not None)
+            won = awarded_to(halves) if crossed and landed >= least_bounces else None
             if won:
                 points.append(Awarded(event.frame, won))
                 scored_at = event.frame

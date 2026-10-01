@@ -5,8 +5,13 @@ an orange-ish blob of roughly the right size, which is why §5's colour and size
 gates plateau at a rally rate indistinguishable from a warm-up's. Across frames
 there is something to tell them apart with, because a struck ball is in free
 flight and a forearm is not. This module is only the memory that makes the
-comparison possible; whether it separates them in practice is unmeasured, and
-§5 step 4 is where that gets decided.
+comparison possible.
+
+Which part of it does the separating is now measured, and it is not the part
+§5 step 4 nominates. `is_ballistic` refused none of the 1024 paths
+`rally.mp4` discarded, and cannot refuse any while `tolerance_px` is the
+looser of the two arc bounds. What separates a ball from an arm here is
+`advance`'s gate — a per-frame bound with a track's history behind it.
 
 Prediction is in **image pixels, not table centimetres**. A ball in flight is
 above the table plane, so the homography — which assumes points lie *on* the
@@ -42,7 +47,8 @@ def predict_next(seen: list[Point]) -> Point:
     return (3.0 * cx - 3.0 * bx + ax, 3.0 * cy - 3.0 * by + ay)
 
 
-def advance(seen: tuple[Point, ...], candidates: list[Point], *, gate_px: float) -> tuple[Point, ...]:
+def advance(seen: tuple[Point, ...], candidates: list[Point], *, gate_px: float,
+            slack: float) -> tuple[Point, ...]:
     """Extend the track with whichever candidate best matches the prediction.
 
     A frame arrives as an unordered pile of orange blobs with nothing to rank
@@ -58,9 +64,37 @@ def advance(seen: tuple[Point, ...], candidates: list[Point], *, gate_px: float)
         return seen
     prediction = predict_next(seen)
     nearest = min(candidates, key=lambda c: _apart(prediction, c))
-    if _apart(prediction, nearest) > gate_px:
+    if _apart(prediction, nearest) > _allowed(seen, gate_px=gate_px, slack=slack):
         return seen
     return (*seen, nearest)
+
+
+def _allowed(seen: tuple[Point, ...], *, gate_px: float, slack: float) -> float:
+    """How far from the prediction a sighting may sit, given how fast it is going.
+
+    One fixed distance cannot do this job. Sweeping it was measured on
+    2026-10-01 and loses both ways: at 25 px, 752 paths die before six
+    sightings, and at 60 px the longest track in the clip collapses from 114
+    frames to 29 and nothing scores at all, because slack meant for a fast
+    ball is slack a static blob uses to wander onto the next one.
+
+    Speed is what tells them apart. A ball crossing the frame smears along
+    its path, so its centroid says less about where it actually is the faster
+    it goes; a blob that moved five pixels has earned no forgiveness. `slack`
+    is how many pixels of allowance each pixel of travel buys, and `gate_px`
+    stays the floor under it.
+
+    `slack` is not defaulted, for the same reason nothing else here is: it
+    has to be measured against points, and a guessed constant in a signature
+    is how a guess becomes a fact nobody rechecks. Zero is the behaviour
+    every measurement before 2026-10-01 was taken with, so it is the value
+    that changes nothing — not the value that is right.
+
+    A path with one position has no step to measure and gets the floor.
+    """
+    if len(seen) < 2:
+        return gate_px
+    return gate_px + slack * _apart(seen[-2], seen[-1])
 
 
 def is_ballistic(seen: tuple[Point, ...], *, tolerance_px: float, least: int) -> bool:
@@ -76,6 +110,18 @@ def is_ballistic(seen: tuple[Point, ...], *, tolerance_px: float, least: int) ->
     three points fit a curve through themselves whatever they are. Neither
     bound is defaulted: §5 wants both tuned against footage, and a guessed
     constant in a signature is how a guess becomes a fact nobody rechecks.
+
+    **At the tuned settings this refuses nothing, and that is structural.**
+    `advance` admits a position only within `gate_px` of the same prediction
+    and coasts exactly onto the arc, so every position examined here already
+    passed a tighter bound than `tolerance_px` applies. Whenever
+    `tolerance_px >= gate_px` — 30 against 25, as tuned — the answer is
+    always yes.
+
+    Tightening it below the gate does not recover a guard. A path holding a
+    table contact is two parabolas rather than one, so the check eats those
+    first: at tolerance 20 it refused 18 paths, 28% of them carrying a
+    bounce against 13% of the paths kept, and points found fell from 7 to 6.
     """
     if len(seen) < least:
         return False
@@ -108,10 +154,31 @@ class Track:
     seen: tuple[Point, ...]
 
 
-def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
-           coast: int, least: int, tolerance_px: float,
-           least_travel_px: float) -> list[Track]:
-    """Every path through a clip that behaved like a ball.
+@dataclass(frozen=True)
+class Discarded:
+    """A path that was followed and then thrown away, and the guard that did it.
+
+    Three guards refuse a path and until this existed all three refused
+    silently, so a stretch of clip where the ball is never tracked looked the
+    same whatever had gone wrong. §7 has two unscored points of exactly that
+    shape — every frame offering candidates, almost none of them reaching an
+    accepted path — and no way to ask which threshold was doing it short of
+    re-reading the conditions into a script, which is how a measurement comes
+    to describe the copy rather than the code.
+    """
+
+    start: int
+    length: int
+    reason: str
+
+
+def sift(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
+         coast: int, least: int, tolerance_px: float, least_travel_px: float,
+         slack: float) -> tuple[list[Track], list[Discarded]]:
+    """Every path through a clip, sorted into believed and refused.
+
+    `follow` is this without the refusals, and is what the pipeline uses; the
+    refusals are for asking why a clip went untracked.
 
     Takes one candidate list per frame and returns the tracks worth
     believing. A frame offering several blobs says nothing about which is the
@@ -129,8 +196,12 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
     positions stay one frame apart and `predict_next` keeps meaning what it
     says. A coasted position asserts nothing about the path — it sits exactly
     on the arc by construction — which is why acceptance counts *observations*
-    separately. `gate_px` may be generous without loosening what is accepted,
-    because `tolerance_px` is applied again at the end.
+    separately.
+
+    `gate_px` is therefore the arc test, and the only one: re-applying
+    `tolerance_px` at the end catches nothing it let through, since it is the
+    looser of the two. Loosening the gate loosens what is accepted, with
+    nothing behind it to compensate.
 
     A path still guessing reaches `reach_px`; one that can predict is held to
     `gate_px`. With fewer than three positions there is no acceleration to
@@ -157,6 +228,7 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
     path into stubs that each die below `least`.
     """
     accepted: list[Track] = []
+    discarded: list[Discarded] = []
     live: list[_Path] = []
 
     for frame, candidates in enumerate(per_frame):
@@ -164,7 +236,7 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
         carried: list[_Path] = []
         for path in sorted(live, key=lambda path: -path.sightings):
             within = gate_px if len(path.seen) >= 3 else reach_px
-            grown = advance(path.seen, unclaimed, gate_px=within)
+            grown = advance(path.seen, unclaimed, gate_px=within, slack=slack)
             if len(grown) > len(path.seen):
                 unclaimed.remove(grown[-1])
                 carried.append(_Path(path.start, grown, 0, path.sightings + 1))
@@ -172,14 +244,23 @@ def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
                 carried.append(_Path(path.start, (*path.seen, predict_next(path.seen)),
                                      path.misses + 1, path.sightings))
             else:
-                _judge(path, accepted, least=least, tolerance_px=tolerance_px,
+                _judge(path, accepted, discarded, least=least, tolerance_px=tolerance_px,
                        least_travel_px=least_travel_px)
         live = carried + [_Path(frame, (blob,), 0, 1) for blob in unclaimed]
 
     for path in live:
-        _judge(path, accepted, least=least, tolerance_px=tolerance_px,
+        _judge(path, accepted, discarded, least=least, tolerance_px=tolerance_px,
                least_travel_px=least_travel_px)
-    return accepted
+    return accepted, discarded
+
+
+def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
+           coast: int, least: int, tolerance_px: float, least_travel_px: float,
+           slack: float) -> list[Track]:
+    """Every path through a clip that behaved like a ball."""
+    return sift(per_frame, gate_px=gate_px, reach_px=reach_px, coast=coast,
+                least=least, tolerance_px=tolerance_px,
+                least_travel_px=least_travel_px, slack=slack)[0]
 
 
 @dataclass(frozen=True)
@@ -192,19 +273,38 @@ class _Path:
     sightings: int
 
 
-def _judge(path: _Path, accepted: list[Track], *,
+def _judge(path: _Path, accepted: list[Track], discarded: list[Discarded], *,
            least: int, tolerance_px: float, least_travel_px: float) -> None:
-    """Keep a finished path if enough of it was seen and all of it fell.
+    """File a finished path under believed or refused."""
+    settled = path.seen[:len(path.seen) - path.misses]
+    reason = _refused(path.sightings, settled, least=least, tolerance_px=tolerance_px,
+                      least_travel_px=least_travel_px)
+    if reason is None:
+        accepted.append(Track(path.start, settled))
+    else:
+        discarded.append(Discarded(path.start, len(settled), reason))
+
+
+def _refused(sightings: int, settled: tuple[Point, ...], *,
+             least: int, tolerance_px: float, least_travel_px: float) -> str | None:
+    """Which guard turned this path away, or None if none of them did.
 
     Three frauds, three guards: a long path that was mostly coasted, one
     that never left the spot it started on, and one that was watched the
     whole way and never fell.
+
+    The first refusal is the answer, and the order is not arbitrary. A path
+    barely seen has no travel worth measuring and no arc worth testing, so
+    reporting a later guard would point a fix at a threshold that was never
+    what stopped it.
     """
-    settled = path.seen[:len(path.seen) - path.misses]
-    if (path.sightings >= least
-            and _travelled(settled) >= least_travel_px
-            and is_ballistic(settled, tolerance_px=tolerance_px, least=least)):
-        accepted.append(Track(path.start, settled))
+    if sightings < least:
+        return "too few sightings"
+    if _travelled(settled) < least_travel_px:
+        return "went nowhere"
+    if not is_ballistic(settled, tolerance_px=tolerance_px, least=least):
+        return "never fell"
+    return None
 
 
 def _travelled(seen: tuple[Point, ...]) -> float:
