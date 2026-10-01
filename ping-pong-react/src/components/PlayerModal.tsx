@@ -1,4 +1,4 @@
-import { IconX } from '@tabler/icons-react'
+import { IconLogout, IconX } from '@tabler/icons-react'
 import { useEffect } from 'react'
 import type { RatingRow } from '../hooks/useRatings'
 import type { PlayerHistory } from '../lib/playerHistory'
@@ -16,15 +16,19 @@ const topPct = (rank: number, total: number): string =>
  * Chess.com-style player card: rating trajectory + headline stats.
  * Data comes from the live replay (playerHistory), so it updates in place
  * if a match finishes while the modal is open.
+ *
+ * Passing `onSignOut` marks the card as the viewer's own and offers sign-out.
  */
 export default function PlayerModal({
   row,
   history,
   onClose,
+  onSignOut,
 }: {
   row: RatingRow
   history: PlayerHistory | null
   onClose: () => void
+  onSignOut?: () => void
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -108,6 +112,15 @@ export default function PlayerModal({
           </>
         ) : (
           <p className="empty">Aucun match noté pour l'instant.</p>
+        )}
+
+        {onSignOut && (
+          <div className="modal-actions">
+            <button className="rv-nav-link rv-nav-auth" onClick={onSignOut}>
+              <IconLogout size={16} stroke={1.8} />
+              Se déconnecter
+            </button>
+          </div>
         )}
       </div>
     </div>
