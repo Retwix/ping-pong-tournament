@@ -5,10 +5,60 @@ service tracks the ball, and points land on the existing live scorer.
 
 Design and decisions: [`docs/vision-auto-scoring.md`](../docs/vision-auto-scoring.md).
 
-**Status: M0, mostly answered.** Only the capture probe exists — a measuring
-instrument, not part of the pipeline. Its numbers become the constants
-everything else is tuned against, which is why it comes first. Transport is
-settled (§2 of the spec); the orange gate and latency are still open.
+**Status: M0 and M1 merged (#54, #57); M2 measured and tuned out.** The whole
+chain runs — candidates, tracking, bounces, rally events, points — and awards
+points at **7 of 12 of the hand-marked ones, 7 correct, 87.5% of awarded**,
+against §15's 90% target. Rally-end detection is 58.3% against a 95% target.
+
+Both figures are stuck: four thresholds and §5's motion gate have each been
+swept against points and every one already sits at the best setting it has.
+§5, §7 and §8 carry the tables. **Do not re-sweep them** — read the entries
+first.
+
+**And §15's phantom criterion turned out to be unreachable by vision**: 9.9
+minutes of warm-up yields 42 points, because a warm-up is two people hitting a
+ball over a net and the camera cannot know nobody is scoring. §8 has the
+measurement and the proposed amendment.
+
+The binding constraint now is the sample: every one of those decisions turns on
+one or two points out of twelve, and §15 asks for ~100. `label_points.py` is
+for fixing that.
+
+## The tools, and which question each answers
+
+Measuring instruments, not pipeline stages. Judge any change with
+`score_probe.py` — **never by detection rate**, which §7 measured moving the
+opposite way to accuracy.
+
+| script | question |
+|---|---|
+| `calibrate.py` | where is the table? Six clicks, persisted, drawn back over the frame |
+| `probe.py` | does the capture work, and at what rate and latency? (M0) |
+| `detect_probe.py` | what does a single frame contain? |
+| `track_probe.py` | how much of a clip does a believable path cover? **Means less than it looks** — §7 |
+| `label_ball.py` | where was the ball really? Click it, frame by frame |
+| `label_points.py` | who won each point? Play the clip, press `l`/`r` as each ends |
+| `score_probe.py` | **how many points does the chain get right?** The one that decides things |
+
+```sh
+# the figures in §7, reproduced
+python3 score_probe.py rally.mp4 \
+    --calibration fixtures/calibration-2026-09-16.json \
+    --truth rally.truth.csv
+
+# §15's phantom criterion: no --truth means "this clip holds no points"
+python3 score_probe.py warmup.mp4 \
+    --calibration fixtures/calibration-2026-09-16.json
+```
+
+The clips are gitignored and the test suite is built not to need them: every
+test is pure logic over synthetic events, tracks and frames, which is why CI
+can run it (`.github/workflows/ci.yml`, job `vision`). The figures above come
+from the scripts against footage, by hand, and CI cannot check those.
+
+```sh
+python3 -m pytest -q        # 98 tests, 0.4 s
+```
 
 ## Setup (macOS, Apple Silicon)
 
