@@ -665,6 +665,60 @@ blob sitting on a chair, and no single value in the table is good at both.
 That is the shape of the next thing to try, and it is a change rather than a
 sweep.
 
+### The speed-scaled gate works, and loses anyway (2026-10-01)
+
+If one fixed gate cannot serve a blurred ball and a static blob, scale it by
+what tells them apart: `slack` buys `gate_px` plus that many pixels of
+allowance per pixel the path travelled last frame. Built and swept.
+
+The first sweep was confounded, and the confound is the entry two above. As
+`slack` widens the effective gate past `tolerance_px`, the arc check wakes up
+and refuses the very sightings `slack` just admitted — "never fell" climbs 0,
+7, 18, 39 across the sweep. Holding it inert at `tolerance_px` 200 measures
+the gate change on its own:
+
+| `slack` | kept | longest track | "too few sightings" | found | **correct** | spurious | awarded | accuracy |
+|---|---|---|---|---|---|---|---|---|
+| **0 (current)** | 126 | 114 | 752 | 7 of 12 | **7** | 1 | 8 | **87.5%** |
+| 0.2 | 127 | 114 | 713 | 7 of 12 | **7** | 2 | 9 | 77.8% |
+| 0.3 | 128 | 114 | 710 | 7 of 12 | **7** | 2 | 9 | 77.8% |
+| 0.5 | 119 | 187 | 677 | 6 of 12 | 5 | 4 | 10 | 50.0% |
+| 0.75 | 116 | 180 | 615 | 6 of 12 | 4 | 5 | 11 | 36.4% |
+| 1.0 | 110 | 182 | 551 | **8 of 12** | 5 | 5 | 13 | 38.5% |
+
+**The mechanism works and the points reject it.** Fragmentation really does
+fall — short refusals 752 to 551, the longest track in the clip 114 frames to
+187 — and at `slack` 1.0 the pipeline finds more rally ends than it ever has,
+8 of 12. Five of the 13 points it awards are right. The guard is kept at 0,
+which is the value that changes nothing rather than the value that is right.
+
+#### Three sweeps, one line
+
+`least_travel_px` (2026-09-23), `gate_px` (2026-10-01), `slack` (2026-10-01).
+Every one of them trades recall against accuracy along the same line, and
+every one of them is already at the accuracy end of it. That is not three
+coincidences; it is one fact about the stage being tuned. **Association has
+nothing to tell a ball from clutter with**, so any threshold that admits more
+candidates admits more clutter, and the only question a knob can answer is
+where on that line to sit. §15 weights accuracy, so the answer is always the
+tight end, and the remaining five points are not reachable by tuning.
+
+What is left is a discriminator that is not a threshold — something that says
+"ball" rather than "orange blob near the table, within so many pixels".
+
+**§5 step 1 is one, and it has never been switched on in any measurement
+here.** `ball_candidates` takes a `foreground` mask and the §5 text calls it
+essential: "Colour alone cannot find a struck ball — blur washes the
+saturation out — and loosening the threshold to compensate lets skin back in.
+Motion is the signal that says 'the ball' without saying 'orange'." Every
+figure in §5 and §7, including all three sweeps above, was measured with it
+off: `track_probe.py --motion` defaults to off and `score_probe.py` passes
+`False` with no flag at all. A fixed camera is the one situation where
+background subtraction is nearly free, and a player's forearm moves while a
+chair does not — which is exactly the distinction the thresholds cannot draw.
+
+Measuring that is the next thing, and it is not a sweep.
+
 ---
 
 ## 6. Person detection — what it's actually for
