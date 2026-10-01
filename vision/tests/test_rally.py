@@ -61,10 +61,10 @@ def test_only_something_that_looked_like_a_rally_scores() -> None:
     knocked_about = [Event(10, "bounce", "near"), Event(20, "bounce", "far"),
                      Event(30, "lost")]
 
-    assert points_from(rally, cooldown_frames=COOLDOWN) == [Awarded(40, "far")]
-    assert points_from(ended_on_the_floor, cooldown_frames=COOLDOWN) == [Awarded(40, "far")]
-    assert points_from(rolled_across, cooldown_frames=COOLDOWN) == []
-    assert points_from(knocked_about, cooldown_frames=COOLDOWN) == []
+    assert points_from(rally, cooldown_frames=COOLDOWN, least_bounces=2) == [Awarded(40, "far")]
+    assert points_from(ended_on_the_floor, cooldown_frames=COOLDOWN, least_bounces=2) == [Awarded(40, "far")]
+    assert points_from(rolled_across, cooldown_frames=COOLDOWN, least_bounces=2) == []
+    assert points_from(knocked_about, cooldown_frames=COOLDOWN, least_bounces=2) == []
 
 
 def test_each_rally_is_judged_on_its_own() -> None:
@@ -88,7 +88,7 @@ def test_each_rally_is_judged_on_its_own() -> None:
         Event(620, "lost"),
     ]
 
-    assert points_from(stream, cooldown_frames=COOLDOWN) == [Awarded(40, "far")]
+    assert points_from(stream, cooldown_frames=COOLDOWN, least_bounces=2) == [Awarded(40, "far")]
 
 
 def test_the_ball_being_tossed_back_is_not_the_next_point() -> None:
@@ -120,7 +120,7 @@ def test_the_ball_being_tossed_back_is_not_the_next_point() -> None:
         Event(150, "bounce", "far"), Event(160, "lost"),
     ]
 
-    assert points_from(stream, cooldown_frames=COOLDOWN) == [Awarded(40, "far"), Awarded(160, "near")]
+    assert points_from(stream, cooldown_frames=COOLDOWN, least_bounces=2) == [Awarded(40, "far"), Awarded(160, "near")]
 
 
 def test_a_point_says_when_it_was_awarded_as_well_as_to_whom() -> None:
@@ -144,7 +144,7 @@ def test_a_point_says_when_it_was_awarded_as_well_as_to_whom() -> None:
         Event(150, "bounce", "far"), Event(160, "lost"),
     ]
 
-    assert points_from(stream, cooldown_frames=COOLDOWN) == [
+    assert points_from(stream, cooldown_frames=COOLDOWN, least_bounces=2) == [
         Awarded(40, "far"), Awarded(160, "near")]
 
 
@@ -386,3 +386,43 @@ def test_a_net_crossing_in_the_gap_still_counts() -> None:
     assert [e for e in events_from([below, resumes_then_crosses], TABLE,
                                    dwell_frames=DWELL)
             if e.kind == "crossed"] == [Event(106, "crossed")]
+
+
+def test_how_many_bounces_a_rally_must_show_is_the_callers_to_set() -> None:
+    """§8's guard is a threshold like every other, and it is the binding one.
+
+    Measured 2026-09-23 and again on 2026-10-01: four of the five rally ends
+    the pipeline misses are rallies it saw, crossed the net on, and found
+    exactly one table bounce in. Two bounces is what stands between a tracker
+    that follows forearms and a stream of invented points, and it is also the
+    reason §15's rally-end figure sits at 58% against a target of 95%.
+
+    Which side of that it should be on is a measurement, not a principle, and
+    the measurement needs both numbers: what one bounce costs in phantom
+    points over a warm-up, against what it buys in rally ends over a match.
+    So the count is a parameter, with no default, like the thresholds in
+    `track`.
+
+    A ball rolled across the table crosses the net and bounces once. At one
+    bounce it scores — and that is the cost being quantified, not a bug.
+    Knocking about on one half never crosses the net and still must not
+    score, whatever the count is: the crossing and the bounces are two
+    separate conditions and relaxing one must not relax the other.
+    """
+    rolled_across = [Event(10, "crossed"), Event(20, "bounce", "near"),
+                     Event(30, "lost")]
+    knocked_about = [Event(10, "bounce", "near"), Event(20, "bounce", "far"),
+                     Event(30, "lost")]
+
+    assert points_from(rolled_across, cooldown_frames=COOLDOWN, least_bounces=1) == [
+        Awarded(30, "far")]
+    assert points_from(knocked_about, cooldown_frames=COOLDOWN, least_bounces=1) == []
+
+    # a contact that missed the table does not help a rally reach its count:
+    # one real bounce plus one on the floor is one bounce, not two
+    off_the_table = [Event(10, "crossed"), Event(20, "bounce", "near"),
+                     Event(30, "bounce", None), Event(40, "lost")]
+
+    assert points_from(off_the_table, cooldown_frames=COOLDOWN, least_bounces=2) == []
+    assert points_from(off_the_table, cooldown_frames=COOLDOWN, least_bounces=1) == [
+        Awarded(40, "far")]
