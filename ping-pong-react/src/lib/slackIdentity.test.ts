@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Player } from '../types'
+import type { RatingRow } from './rating'
 import {
   claimErrorMessage,
   claimNameWarning,
@@ -7,6 +8,7 @@ import {
   claimPrompt,
   deleteAttempt,
   matchPlayer,
+  ownRatingRow,
 } from './slackIdentity'
 
 function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
@@ -21,6 +23,44 @@ function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
     ...over,
   }
 }
+
+function ratingRow(over: Partial<RatingRow> & Pick<RatingRow, 'key' | 'playerId' | 'name'>): RatingRow {
+  return {
+    rating: 1500,
+    rd: 80,
+    vol: 0.06,
+    games: 10,
+    peak: 1500,
+    lastPlayedAt: '2026-07-01T00:00:00.000Z',
+    rank: 1,
+    provisional: false,
+    team: 'tech',
+    avatar_url: null,
+    trend: 0,
+    ...over,
+  }
+}
+
+describe('ownRatingRow', () => {
+  const roster = [
+    player({ id: 'p1', name: 'Thomas', auth_user_id: 'someone-else' }),
+    player({ id: 'p2', name: 'Léo', auth_user_id: 'me' }),
+  ]
+  const thomas = ratingRow({ key: 'p1', playerId: 'p1', name: 'Thomas' })
+  const leo = ratingRow({ key: 'p2', playerId: 'p2', name: 'Léo', rank: 2 })
+
+  it("finds the ladder row of the player the signed-in account is linked to", () => {
+    expect(ownRatingRow('me', roster, [thomas, leo])).toBe(leo)
+  })
+
+  it('finds nothing for an account not linked to any player', () => {
+    expect(ownRatingRow('stranger', roster, [thomas, leo])).toBeNull()
+  })
+
+  it('finds nothing for a linked player who has no rated match on this ladder yet', () => {
+    expect(ownRatingRow('me', roster, [thomas])).toBeNull()
+  })
+})
 
 describe('matchPlayer', () => {
   it('picks out the roster entry bearing the name Slack knows the person by', () => {
