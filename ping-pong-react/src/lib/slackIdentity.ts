@@ -1,5 +1,6 @@
 import type { Player } from '../types'
 import { fold } from './fold'
+import type { RatingRow } from './rating'
 
 /** What Slack tells us about the person signing in, narrowed to what we match a roster row on. */
 export interface SlackProfile {
@@ -37,11 +38,21 @@ export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMat
  *
  * Unlike matchPlayer, this may take the first hit: players_auth_user_id_key
  * makes auth_user_id unique among claimed rows, so there is never a second one
- * to choose between. That uniqueness is also why no caller ever asks which row
- * came back, only whether one did.
+ * to choose between.
  */
 function linkedPlayer(userId: string, players: Player[]): Player | null {
   return players.find((p) => p.auth_user_id === userId) ?? null
+}
+
+/**
+ * The signed-in account's own line on a ladder, or null when it is unlinked or
+ * its player has no rated match on that ladder yet — in both cases there is no
+ * card to show.
+ */
+export function ownRatingRow(userId: string, players: Player[], rows: RatingRow[]): RatingRow | null {
+  const me = linkedPlayer(userId, players)
+  if (me === null) return null
+  return rows.find((r) => r.playerId === me.id) ?? null
 }
 
 /**
