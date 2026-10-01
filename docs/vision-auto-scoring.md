@@ -719,6 +719,67 @@ chair does not — which is exactly the distinction the thresholds cannot draw.
 
 Measuring that is the next thing, and it is not a sweep.
 
+### Step 1 was switched on, and it changes nothing that matters (2026-10-01)
+
+MOG2 foreground had never been enabled in any measurement in this project.
+It is now, and it does what §5 promised to the candidate pool and nothing at
+all to the points:
+
+| | blobs found | blank frames | tracks kept | ball found | invented | points found | **correct** | accuracy |
+|---|---|---|---|---|---|---|---|---|
+| motion off | 7791 | 1469 | 126 | 67/131 | 1 | 7 of 12 | **7** | **87.5%** |
+| motion on | 3632 | 2393 | 126 | 67/131 | 1 | 7 of 12 | **7** | **87.5%** |
+
+Half the candidates gone, and the paths that die before six sightings fall
+from 752 to 378. The accepted set is all but unchanged: 126 tracks either way,
+differing by 3 in each direction, the same longest track of 114 frames, the
+same 67 of 131 hand-clicked balls found, the same single invented one.
+
+**The clutter it removes was never reaching acceptance.** That is the whole
+result. Background subtraction answers "is this pixel new", and the false
+candidates that survive association are not still — they are arms, bodies, a
+player's kit, all moving as freely as the ball. MOG2 cannot separate a forearm
+from a ball because a forearm is foreground too. It deletes the chair.
+
+And it does not make loosening affordable, which was the reason to try it. The
+same knobs, with and without it:
+
+| knob | motion off: found / correct / awarded | motion on: found / correct / awarded |
+|---|---|---|
+| **baseline** | 7 / **7** / 8 — **87.5%** | 7 / **7** / 8 — **87.5%** |
+| `least_travel_px` 100 | 6 / 6 / 10 — 60.0% | 6 / 6 / 10 — 60.0% |
+| `least_travel_px` 60 | 6 / 6 / 10 — 60.0% | 6 / 6 / 10 — 60.0% |
+| `slack` 0.5 | 6 / 5 / 10 — 50.0% | 6 / 5 / 10 — 50.0% |
+| `slack` 1.0 | 8 / 5 / 13 — 38.5% | 8 / 6 / 13 — 46.2% |
+| `least` 4 | 8 / **7** / 10 — 70.0% | 8 / **7** / 10 — 70.0% |
+| `coast` 8 | 7 / **7** / 8 — 87.5% | 7 / **7** / 8 — 87.5% |
+
+Every row moves by at most a point. The one real gain motion buys is at
+`slack` 1.0, where it takes accuracy from 38.5% to 46.2% — an improvement
+between two settings that are both unusable.
+
+**`least` 4 is the recall frontier worth remembering**: 8 of 12 rally ends, 7
+of them correct, at 70% of awarded. It is the only setting found so far that
+raises recall without losing a correct point. §15 weights accuracy, so it is
+not taken — but it is the honest statement of where the trade sits, and a
+better one than the baseline for anyone who wants §15's 95% rally-end target.
+
+#### What this exhausts, and what it does not
+
+Four knobs and one discriminator, all measured against points: the tuning of
+the classical pipeline is done. 7 of 12 at 87.5% is what colour, size, table
+geometry and constant-acceleration association support on this footage, and
+§5's upgrade path — a TrackNet-style model, three frames in and a heatmap out
+— is the thing §14 was holding in reserve for exactly this.
+
+**But the sample is 12 points, and that is the more urgent problem.** Every
+decision above turns on one or two points: 87.5% is 7 of 8, 70% is 7 of 10,
+and the difference between them is two awards. §15 asks for ~100 points, §5
+already notes that three minutes of rally footage is recorded and unlabelled,
+and the labelling is the cheap half of this project. Deciding between a
+classical pipeline and a learned one on a 12-point sample is deciding it on
+noise, whichever way the numbers fall.
+
 ---
 
 ## 6. Person detection — what it's actually for
