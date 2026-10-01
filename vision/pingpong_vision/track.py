@@ -47,7 +47,8 @@ def predict_next(seen: list[Point]) -> Point:
     return (3.0 * cx - 3.0 * bx + ax, 3.0 * cy - 3.0 * by + ay)
 
 
-def advance(seen: tuple[Point, ...], candidates: list[Point], *, gate_px: float) -> tuple[Point, ...]:
+def advance(seen: tuple[Point, ...], candidates: list[Point], *, gate_px: float,
+            slack: float) -> tuple[Point, ...]:
     """Extend the track with whichever candidate best matches the prediction.
 
     A frame arrives as an unordered pile of orange blobs with nothing to rank
@@ -63,9 +64,37 @@ def advance(seen: tuple[Point, ...], candidates: list[Point], *, gate_px: float)
         return seen
     prediction = predict_next(seen)
     nearest = min(candidates, key=lambda c: _apart(prediction, c))
-    if _apart(prediction, nearest) > gate_px:
+    if _apart(prediction, nearest) > _allowed(seen, gate_px=gate_px, slack=slack):
         return seen
     return (*seen, nearest)
+
+
+def _allowed(seen: tuple[Point, ...], *, gate_px: float, slack: float) -> float:
+    """How far from the prediction a sighting may sit, given how fast it is going.
+
+    One fixed distance cannot do this job. Sweeping it was measured on
+    2026-10-01 and loses both ways: at 25 px, 752 paths die before six
+    sightings, and at 60 px the longest track in the clip collapses from 114
+    frames to 29 and nothing scores at all, because slack meant for a fast
+    ball is slack a static blob uses to wander onto the next one.
+
+    Speed is what tells them apart. A ball crossing the frame smears along
+    its path, so its centroid says less about where it actually is the faster
+    it goes; a blob that moved five pixels has earned no forgiveness. `slack`
+    is how many pixels of allowance each pixel of travel buys, and `gate_px`
+    stays the floor under it.
+
+    `slack` is not defaulted, for the same reason nothing else here is: it
+    has to be measured against points, and a guessed constant in a signature
+    is how a guess becomes a fact nobody rechecks. Zero is the behaviour
+    every measurement before 2026-10-01 was taken with, so it is the value
+    that changes nothing — not the value that is right.
+
+    A path with one position has no step to measure and gets the floor.
+    """
+    if len(seen) < 2:
+        return gate_px
+    return gate_px + slack * _apart(seen[-2], seen[-1])
 
 
 def is_ballistic(seen: tuple[Point, ...], *, tolerance_px: float, least: int) -> bool:
@@ -144,8 +173,8 @@ class Discarded:
 
 
 def sift(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
-         coast: int, least: int, tolerance_px: float,
-         least_travel_px: float) -> tuple[list[Track], list[Discarded]]:
+         coast: int, least: int, tolerance_px: float, least_travel_px: float,
+         slack: float) -> tuple[list[Track], list[Discarded]]:
     """Every path through a clip, sorted into believed and refused.
 
     `follow` is this without the refusals, and is what the pipeline uses; the
@@ -207,7 +236,7 @@ def sift(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
         carried: list[_Path] = []
         for path in sorted(live, key=lambda path: -path.sightings):
             within = gate_px if len(path.seen) >= 3 else reach_px
-            grown = advance(path.seen, unclaimed, gate_px=within)
+            grown = advance(path.seen, unclaimed, gate_px=within, slack=slack)
             if len(grown) > len(path.seen):
                 unclaimed.remove(grown[-1])
                 carried.append(_Path(path.start, grown, 0, path.sightings + 1))
@@ -226,12 +255,12 @@ def sift(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
 
 
 def follow(per_frame: Iterable[list[Point]], *, gate_px: float, reach_px: float,
-           coast: int, least: int, tolerance_px: float,
-           least_travel_px: float) -> list[Track]:
+           coast: int, least: int, tolerance_px: float, least_travel_px: float,
+           slack: float) -> list[Track]:
     """Every path through a clip that behaved like a ball."""
     return sift(per_frame, gate_px=gate_px, reach_px=reach_px, coast=coast,
                 least=least, tolerance_px=tolerance_px,
-                least_travel_px=least_travel_px)[0]
+                least_travel_px=least_travel_px, slack=slack)[0]
 
 
 @dataclass(frozen=True)

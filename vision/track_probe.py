@@ -88,6 +88,10 @@ def main() -> int:
                     help="px a path may reach while it has no arc to predict from")
     ap.add_argument("--travel", type=float, default=150.0,
                     help="px a path must span before it counts as a ball in play")
+    ap.add_argument("--slack", type=float, default=0.0,
+                    help="px of extra gate per px the path travelled last frame; "
+                         "0 is the behaviour every figure before 2026-10-01 was "
+                         "measured with, not a tuned value")
     ap.add_argument("--lookback", type=int, default=60,
                     help="frames before a point mark to count as that rally")
     args = ap.parse_args()
@@ -122,7 +126,7 @@ def main() -> int:
             continue
         tracks = follow(per_frame, gate_px=args.gate, coast=args.coast,
                         reach_px=args.reach, least=args.least, tolerance_px=args.tolerance,
-                        least_travel_px=args.travel)
+                        least_travel_px=args.travel, slack=args.slack)
         covered = {sample for track in tracks
                    for sample in range(track.start, track.start + len(track.seen))}
         longest = max((len(t.seen) for t in tracks), default=0)

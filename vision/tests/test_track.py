@@ -59,9 +59,10 @@ def test_the_track_takes_the_candidate_nearest_where_it_expected_the_ball() -> N
     nearby, elsewhere = (286.0, 614.0), (900.0, 200.0)
     below, aside = (282.0, 700.0), (360.0, 618.0)
 
-    assert advance(seen, [below, nearby, aside, elsewhere], gate_px=40.0)[-1] == nearby
-    assert advance(seen, [elsewhere], gate_px=40.0) == seen
-    assert advance(seen, [], gate_px=40.0) == seen
+    assert advance(seen, [below, nearby, aside, elsewhere], gate_px=40.0,
+                   slack=0.0)[-1] == nearby
+    assert advance(seen, [elsewhere], gate_px=40.0, slack=0.0) == seen
+    assert advance(seen, [], gate_px=40.0, slack=0.0) == seen
 
 
 def test_only_a_path_that_keeps_curving_the_same_way_is_a_ball() -> None:
@@ -109,7 +110,7 @@ FOREARM = ((700.0, 400.0), (730.0, 380.0), (710.0, 420.0), (745.0, 395.0),
 # two and no track ever starts. The arc is policed afterwards, by
 # tolerance_px, which is why the gate can afford to be this loose.
 POLICY = dict(gate_px=120.0, reach_px=120.0, coast=3, least=6, tolerance_px=6.0,
-              least_travel_px=100.0)
+              least_travel_px=100.0, slack=0.0)
 
 
 def test_the_ball_is_picked_out_of_the_clutter_and_the_clutter_is_not() -> None:
@@ -372,3 +373,75 @@ def test_a_discarded_path_names_the_guard_that_discarded_it() -> None:
               [(510.0, 500.0)], [(500.0, 510.0)], [(510.0, 500.0)]]
 
     assert sift(jitter, **POLICY) == ([], [Discarded(0, 6, "went nowhere")])
+
+
+def test_a_fast_path_is_allowed_to_miss_by_more_than_a_slow_one() -> None:
+    """One fixed gate cannot serve a blurred ball and a blob on a chair.
+
+    Measured 2026-10-01: sweeping `gate_px` makes everything worse in both
+    directions. At 25 px, 752 paths die before six sightings; at 60 px the
+    longest track in the clip falls from 114 frames to 29 and nothing scores,
+    because the slack meant for a fast ball is slack a static blob uses to
+    wander. No single value is good at both jobs.
+
+    What tells the two apart is how fast the path is already going. A ball
+    crossing the frame smears, so its centroid is a worse estimate of where it
+    is the faster it travels, and the error it may be forgiven should scale
+    with that. A blob that has moved five pixels in a frame has earned no
+    forgiveness at all.
+
+    Both paths below predict straight ahead and both are offered a candidate
+    40 px past that prediction. The crawling one must refuse — the gate is
+    still the gate for anything that is not moving — and the racing one must
+    take it. With `slack` at zero the allowance is `gate_px` exactly, which is
+    every measurement recorded before today.
+    """
+    crawling = ((100.0, 100.0), (105.0, 100.0), (110.0, 100.0))   # 5 px a frame
+    racing = ((100.0, 100.0), (160.0, 100.0), (220.0, 100.0))     # 60 px a frame
+    past_the_crawl, past_the_race = (155.0, 100.0), (320.0, 100.0)
+
+    assert advance(crawling, [past_the_crawl], gate_px=25.0, slack=0.5) == crawling
+    assert advance(racing, [past_the_race], gate_px=25.0, slack=0.5) == (*racing, past_the_race)
+    assert advance(racing, [past_the_race], gate_px=25.0, slack=0.0) == racing
+
+    just_slowed = ((0.0, 0.0), (100.0, 0.0), (105.0, 0.0))    # predicts (15, 0)
+    opening = ((100.0, 100.0), (160.0, 100.0))                # predicts (220, 100)
+
+    # judged on the 5 px it just moved, not the 105 it covered getting here: a
+    # ball off a bounce is slow and sharp again, whatever it was doing before
+    assert advance(just_slowed, [(55.0, 0.0)], gate_px=25.0, slack=0.5) == just_slowed
+    # two positions are already a step, and a step is all the allowance needs
+    assert advance(opening, [(260.0, 100.0)], gate_px=25.0, slack=0.5) == (
+        *opening, (260.0, 100.0))
+    # 55 px is exactly the allowance at this speed, and like `least` it is a floor
+    assert advance(racing, [(335.0, 100.0)], gate_px=25.0, slack=0.5) == (
+        *racing, (335.0, 100.0))
+
+
+def test_the_speed_allowance_reaches_the_association() -> None:
+    """A policy nothing threads through is a policy that does nothing.
+
+    `advance` is where the allowance is computed and `sift` is the only thing
+    that calls it, so a `slack` that stops at the signature would leave every
+    test above passing and every clip tracked exactly as before. This is the
+    one place that notices.
+
+    Six frames of clean parabola, then a seventh sighting 40 px below where
+    the arc said it would be — a blurred ball whose centroid has slipped, the
+    case `slack` exists for. The gate alone refuses it and the path ends at
+    six positions, its coasted guess trimmed off. At 0.6 px of allowance per
+    px of travel the same sighting is 70 px of allowance against 40 px of
+    miss, and the path keeps it.
+
+    `tolerance_px` is loose here on purpose. At 50 against a gate of 25 the
+    arc check is inert, which §5 measured as its condition at every tuned
+    setting — leaving it tight would refuse the seventh sighting again from
+    the other end and hide what is being tested.
+    """
+    climbing = tuple((100.0 + 60 * t, 500.0 + 5 * t * t) for t in range(6))
+    blurred = (460.0, 720.0)        # frame 6 was predicted at (460, 680)
+    clip = [[position] for position in (*climbing, blurred)]
+    policy = dict(POLICY, gate_px=25.0, reach_px=100.0, tolerance_px=50.0)
+
+    assert follow(clip, **dict(policy, slack=0.0)) == [Track(0, climbing)]
+    assert follow(clip, **dict(policy, slack=0.6)) == [Track(0, (*climbing, blurred))]

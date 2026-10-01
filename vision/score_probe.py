@@ -51,6 +51,10 @@ def main() -> int:
                     help="px a sighting may miss its arc by")
     ap.add_argument("--travel", type=float, default=150.0,
                     help="px a path must span before it counts as a ball in play")
+    ap.add_argument("--slack", type=float, default=0.0,
+                    help="px of extra gate per px the path travelled last frame; "
+                         "0 is the behaviour every figure before 2026-10-01 was "
+                         "measured with, not a tuned value")
     ap.add_argument("--margin", type=float, default=900.0,
                     help="cm past the table edge a candidate may project to")
     ap.add_argument("--dwell", type=int, default=21,
@@ -78,7 +82,7 @@ def main() -> int:
     tracks = [Track(track.start + 1, track.seen) for track in
               follow(per_frame, gate_px=args.gate, reach_px=args.reach, coast=args.coast,
                      least=args.least, tolerance_px=args.tolerance,
-                     least_travel_px=args.travel)]
+                     least_travel_px=args.travel, slack=args.slack)]
     awarded = points_from(events_from(tracks, calibration, dwell_frames=args.dwell),
                           cooldown_frames=args.cooldown)
     sides = {"near": args.near, "far": "right" if args.near == "left" else "left"}
