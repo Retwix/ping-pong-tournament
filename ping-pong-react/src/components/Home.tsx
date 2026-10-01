@@ -3,6 +3,7 @@ import { usePlayers } from '../hooks/usePlayers'
 import { useSession } from '../hooks/useSession'
 import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
+import { buildLabel } from '../lib/buildInfo'
 import { recentTournaments } from '../lib/recentTournaments'
 import { deleteAttempt } from '../lib/slackIdentity'
 import DashboardNav from './DashboardNav'
@@ -130,6 +131,8 @@ export default function Home({
           </div>
         </div>
       </div>
+
+      <div className="rv-build">{buildLabel({ sha: __BUILD_SHA__, builtAt: __BUILD_TIME__ })}</div>
 
       <DashboardTabBar
         active="home"

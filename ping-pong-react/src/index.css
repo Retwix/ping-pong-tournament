@@ -1568,6 +1568,8 @@ td.elo.neg { color: var(--coral); }
     radial-gradient(120% 90% at 100% 0%, #fde7ee 0%, transparent 46%),
     #fbfaff;
 }
+/* Build version, deliberately faint: only there to check which build a device runs */
+.rv-build { margin-top: 28px; text-align: center; font-family: var(--font-body); font-size: 10px; letter-spacing: 0.04em; color: var(--fg-3); opacity: 0.45; user-select: text; }
 [data-theme='dark'] .rv-page {
   background:
     radial-gradient(120% 90% at 0% 0%, #2a1550 0%, transparent 46%),
