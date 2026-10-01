@@ -36,3 +36,6 @@ vision/calibration.json
 vision/.venv/
 vision/**/__pycache__/
 vision/.pytest_cache/
+
+# Vitest browser-mode failure screenshots
+__screenshots__/

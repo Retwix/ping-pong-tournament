@@ -702,6 +702,8 @@ td.elo.neg { color: var(--coral); }
 @keyframes rvpulseW { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5); } 50% { box-shadow: 0 0 0 9px rgba(255, 255, 255, 0); } }
 
 .refscorer { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: var(--ref-page); font-family: var(--font-display); }
+/* Rapid taps on − / zones must count as taps, never as a double-tap zoom */
+.refscorer, .refscorer * { touch-action: manipulation; }
 
 /* Desktop-only top bar (hidden on mobile) */
 .ref-topbar { display: none; flex: none; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 26px; border-bottom: 1px solid var(--ref-bar-border); }
@@ -743,6 +745,8 @@ td.elo.neg { color: var(--coral); }
 
 /* Mobile: in normal flow right under the score (the serve label owns the top edge) */
 .ref-mp-pill { order: 1; z-index: 2; display: inline-flex; align-items: center; padding: 6px 12px; margin-top: 12px; border-radius: 999px; background: #f0c84b; color: #3a2183; font-weight: 800; font-size: 10px; letter-spacing: 0.1em; box-shadow: 0 6px 18px rgba(240, 200, 75, 0.5); animation: rvfloat 2.2s infinite; }
+/* Always laid out so the − button never moves when match point comes and goes */
+.ref-mp-pill.is-reserved, .refzone-caption.is-reserved { visibility: hidden; }
 .refzone.is-capot .ref-mp-pill { background: #f35e68; color: #fff; box-shadow: 0 6px 18px rgba(215, 66, 81, 0.5); }
 
 .refzone-head { display: flex; align-items: center; gap: 10px; }
@@ -792,9 +796,10 @@ td.elo.neg { color: var(--coral); }
 .ref-dock-btn--primary:disabled { opacity: 0.45; box-shadow: none; cursor: not-allowed; }
 
 /* ===== phone landscape: cards left/right around a slim center column ===== */
-@media (max-width: 899px) and (orientation: landscape) {
+/* Phones on their side, including large ones wider than 900px: short screens get this, not desktop */
+@media (max-width: 899px) and (orientation: landscape), (max-height: 500px) and (orientation: landscape) {
   .ref-zones { flex-direction: row; }
-  .ref-zones .refzone:first-child, .ref-zones .refzone:last-child { padding: 16px 18px; }
+  .ref-zones .refzone:first-child, .ref-zones .refzone:last-child { padding: 40px 18px 10px; }
   .ref-zones .refzone:last-child .refzone-score { order: 0; }
   .ref-zones .refzone:last-child .ref-mp-pill { order: 1; }
   .ref-zones .refzone:first-child .refzone-serve { top: 12px; }
@@ -808,7 +813,7 @@ td.elo.neg { color: var(--coral); }
 }
 
 /* ===== desktop reflow: left/right split, keyboard-driven ===== */
-@media (min-width: 900px) {
+@media (min-width: 900px) and (min-height: 501px) {
   .ref-topbar { display: flex; }
   .ref-back--bar { display: inline-flex; }
   .ref-back--float { display: none; }
