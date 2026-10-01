@@ -1033,6 +1033,66 @@ The state machine consumes an **event stream** (`ball_seen`, `bounce(side)`,
 synthetic event sequences, with no video and no camera — every row of the table
 above becomes a test. See §12.
 
+### The phantom criterion cannot be met by vision, measured (2026-10-01)
+
+§15 asks for **0 phantom points during 10 minutes of knocking about**. It had
+never been measured. `warmup.mp4` is 17807 frames — 9.9 minutes at 30 fps — of
+exactly that, and `empty-table.mp4` is 445 frames of nobody there.
+
+Empty table: 0 tracks, 0 points. Warm-up, at the tuned settings: **42 points**.
+
+Sweeping the guard this entry is about moves it and never clears it:
+
+| `least_bounces` | points found | **correct** | awarded | accuracy | **rally ends** | phantoms / 10 min |
+|---|---|---|---|---|---|---|
+| 1 | 10 of 12 | 9 | 19 | 47.4% | **83.3%** | 65.7 |
+| **2 (current)** | 7 of 12 | **7** | 8 | **87.5%** | 58.3% | 42.5 |
+| 3 | 4 of 12 | 4 | 5 | 80.0% | 33.3% | 26.3 |
+| 4 | 1 of 12 | 1 | 1 | 100.0% | 8.3% | 14.2 |
+
+**At four bounces the pipeline finds one real point in twelve and still
+invents fourteen per ten minutes.** There is no value of this threshold, or of
+any threshold measured so far, that reaches zero. Tightening it throws away
+real rallies faster than it throws away warm-up ones.
+
+**The reason is that the warm-up is not noise.** It is two people hitting a
+ball over a net, and every point the pipeline reports in it crossed the net
+and bounced on both halves, because that is what was happening. The scoring
+rate makes it plain: `rally.mp4` awards 8 points across 3.0 minutes, 2.7 a
+minute, and the warm-up awards 4.2 a minute — the warm-up scores *faster* than
+the match clip, because a match has gaps between points and a warm-up does
+not.
+
+§8 already contained this argument and did not follow it to its conclusion:
+"fetching the ball and lobbing it back over the table really does cross the
+net and really does bounce on both halves, so it is a rally by every measure
+except when it happened. Only the clock tells them apart." The clock cannot
+tell ten minutes of warm-up apart either. **"Is this a point?" is not a
+visual question**, and no detector, learned or classical, answers it — a
+TrackNet model would track the warm-up ball better and invent more points, not
+fewer.
+
+#### What this changes
+
+The 87.5% in §7 is accuracy *given a clip that contains only real points*. It
+is not deployment accuracy, and nothing measured so far is. Reading it as the
+latter was the mistake this measurement corrects.
+
+**The signal has to come from outside the camera, and the app already has
+it.** §10 integrates with an app that owns the bracket and knows which match
+is in progress; §11 gives the operator an undo. A "scoring is live" gate is
+the same shape as both and costs nothing in vision: points are computed always
+and committed only while a match is live. That turns §15's criterion from
+unreachable into trivially satisfied, and leaves a real question behind it —
+phantom points *during* a live match, when the ball is being fetched or the
+players are stretching between points. That is what the cooldown defends, it
+is far narrower than a warm-up, and it has never been measured separately
+because no footage is marked that way.
+
+**Proposed amendment to §15**, not yet taken: replace "0 during 10 min of
+knocking about" with "0 while scoring is live and no rally is in progress",
+and make the live gate a requirement on §10 rather than a target for §5.
+
 ---
 
 ## 9. Refinements deliberately deferred
@@ -1195,13 +1255,28 @@ Recorded across ~100 real points, hand-scored as ground truth:
 |---|---|
 | **Points awarded to the correct player** | **≥ 90%** |
 | Rally ends detected (neither missed nor invented) | ≥ 95% |
-| Phantom points during 10 min of knocking about / warm-up | 0 |
+| ~~Phantom points during 10 min of knocking about / warm-up~~ | ~~0~~ |
 | Latency, real point → score on screen | < 1.5 s |
 | Sustained processing rate | ≥ input fps |
 
 Point accuracy is the only metric that matters; the rest explain failures.
 **Below 85%, stop tuning heuristics and go train the detector** (§5) — that
 threshold is what makes "classical first" a decision rather than a gamble.
+
+**The phantom row is struck through, measured 2026-10-01**: a warm-up is two
+people hitting a ball over a net, so every "phantom" in one is a correctly
+detected rally that nobody was scoring. 42 of them in 9.9 minutes at the tuned
+settings, and 14 still at a guard tight enough to find one real point in
+twelve — no threshold reaches zero, and a better detector would make it worse.
+See §8. The replacement this wants is "0 while scoring is live and no rally is
+in progress", with the live gate a requirement on §10; it is written up but
+not adopted, because adopting it is a decision about the product and not a
+measurement.
+
+**And the accuracy row needs reading carefully.** 87.5% is measured on a clip
+that contains only real points. It is not deployment accuracy, and the 85%
+abandon rule should not be applied to it in either direction until there is a
+live gate to measure behind.
 
 ---
 
