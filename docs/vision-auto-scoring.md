@@ -625,6 +625,46 @@ f1660-1760 offers 208 blobs over 101 frames and hands 15 of them to paths that
 die between 1 and 9 sightings. The long refusals there go nowhere: 53 frames
 and 40 frames of something sitting still, which is clutter, not the ball.
 
+### The gate is already at its best, and the fragments are not its fault (2026-10-01)
+
+752 of the 1024 refusals are paths that never reached six sightings, so the
+obvious suspect was `gate_px`. A path with three positions is held to 25 px
+while the ball's own travel is a median 25 px per frame and 75 px at the 90th
+percentile, which reads like a gate set at the speed it has to follow. The
+refusal lengths look like it too: they peak at 3 frames (202 of them), which is
+exactly where `reach_px` hands over to `gate_px`.
+
+Swept, and the reading is wrong:
+
+| `gate_px` | kept | longest track | "too few sightings" | "never fell" | found | **correct** | awarded | accuracy |
+|---|---|---|---|---|---|---|---|---|
+| **25 (current)** | 126 | 114 | 752 | 0 | 7 of 12 | **7** | 8 | **87.5%** |
+| 30 | 128 | 114 | 710 | 0 | 7 of 12 | **7** | 9 | 77.8% |
+| 35 | 109 | 67 | 659 | 18 | 7 of 12 | **7** | 9 | 77.8% |
+| 45 | 83 | 37 | 563 | 36 | 5 of 12 | 5 | 5 | 100.0% |
+| 60 | 48 | 29 | 506 | 62 | 0 of 12 | 0 | 0 | — |
+| 100 | 24 | 26 | 450 | 70 | 0 of 12 | 0 | 0 | — |
+
+**Loosening it reduces the fragments and destroys the tracking anyway.** The
+short refusals fall from 752 to 506 while the longest track in the clip falls
+from 114 frames to 29, and by gate 60 nothing scores at all. A wider gate does
+not help a path follow a fast ball; it lets paths snap onto clutter, which is
+what `follow`'s docstring said it would and what the sweep now measures.
+
+Two notes from the same table. The accuracy drop at gate 30 is one extra
+spurious point, not a lost correct one — the correct count holds at 7 until
+gate 45. And the "never fell" column confirms the entry above from the other
+direction: it is empty until the gate passes `tolerance_px` at 30, then wakes
+and climbs, and every row where it is non-empty is worse than the rows where
+it sleeps.
+
+So the ball is not outrunning the gate, and the fragments are not a threshold
+that is set too tight. What a fixed gate cannot do is serve both jobs at once:
+25 px is too little for a blurred ball crossing the frame and too much for a
+blob sitting on a chair, and no single value in the table is good at both.
+That is the shape of the next thing to try, and it is a change rather than a
+sweep.
+
 ---
 
 ## 6. Person detection — what it's actually for
