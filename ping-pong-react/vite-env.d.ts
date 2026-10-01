@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="@vitest/browser/providers/playwright" />
 
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string

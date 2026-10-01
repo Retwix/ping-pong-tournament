@@ -352,11 +352,9 @@ export default function LiveScorer({
 				}${mpKind === "capot" ? " is-capot" : ""}${d.isWinner ? " is-winner" : ""}`}
 				onClick={() => addPoint(side)}
 			>
-				{mpKind && (
-					<div className="ref-mp-pill">
-						● {mpKind === "capot" ? "BALLE DE CAPOT" : "BALLE DE MATCH"}
-					</div>
-				)}
+				<div className={`ref-mp-pill${mpKind ? "" : " is-reserved"}`}>
+					● {mpKind === "capot" ? "BALLE DE CAPOT" : "BALLE DE MATCH"}
+				</div>
 				<div className="refzone-head">
 					<span className="refzone-name">{d.name}</span>
 					{elo !== null && (
@@ -386,15 +384,14 @@ export default function LiveScorer({
 					</button>
 				)}
 				<div className="refzone-score">{d.score}</div>
-				{mpKind && (
-					<div className="refzone-caption">
+				{d.isWinner ? (
+					<div className="refzone-caption refzone-caption--win">Vainqueur 🏆</div>
+				) : (
+					<div className={`refzone-caption${mpKind ? "" : " is-reserved"}`}>
 						{mpKind === "capot"
 							? "1 point pour le capot !"
 							: "1 point pour gagner le match"}
 					</div>
-				)}
-				{d.isWinner && (
-					<div className="refzone-caption refzone-caption--win">Vainqueur 🏆</div>
 				)}
 				<button
 					className="refzone-minus"
