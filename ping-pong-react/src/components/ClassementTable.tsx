@@ -14,10 +14,12 @@ export type ClassementRow = LadderRow & {
 export default function ClassementTable({
   rows,
   leaderKey,
+  ownKey,
   onSelect,
 }: {
   rows: ClassementRow[]
   leaderKey: string | undefined
+  ownKey?: string
   onSelect: (key: string) => void
 }) {
   return (
@@ -65,6 +67,7 @@ export default function ClassementTable({
           </span>
           <span className="cl-c-name">
             <span className="cl-name-text">{r.name}</span>
+            {r.key === ownKey && <span className="cl-badge cl-badge-me">toi</span>}
             {!r.provisional && r.daysIdle === null && r.streak >= STREAK_BADGE_MIN && (
               <span className="cl-badge cl-badge-streak">{r.streak} victoires</span>
             )}

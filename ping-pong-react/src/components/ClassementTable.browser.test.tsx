@@ -44,4 +44,23 @@ describe('ClassementTable', () => {
 
     expect(onSelect).toHaveBeenCalledWith('p2')
   })
+
+  it('marks your own row « toi », and nobody else’s', async () => {
+    const screen = await render(
+      <ClassementTable
+        rows={[
+          getMockClassementRow({ key: 'p1', name: 'Léo', rank: 1 }),
+          getMockClassementRow({ key: 'p2', playerId: 'p2', name: 'Marc', rank: 2 }),
+        ]}
+        leaderKey="p1"
+        ownKey="p2"
+        onSelect={vi.fn()}
+      />,
+    )
+
+    const rowOf = (name: string) =>
+      screen.getByRole('button', { name: `Voir l'historique de ${name}` })
+    await expect.element(rowOf('Marc').getByText('toi', { exact: true })).toBeVisible()
+    await expect.element(rowOf('Léo').getByText('toi', { exact: true })).not.toBeInTheDocument()
+  })
 })

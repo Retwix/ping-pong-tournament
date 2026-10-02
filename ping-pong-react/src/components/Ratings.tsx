@@ -7,6 +7,7 @@ import {
   IconSearch,
 } from '@tabler/icons-react'
 import { useRatings, type RatingEvent } from '../hooks/useRatings'
+import { useSession } from '../hooks/useSession'
 import { RATING, rankRatings, ratedMatches, replayRatings } from '../lib/rating'
 import { splitLadder } from '../lib/alumni'
 import { INACTIVITY, ladderSections } from '../lib/inactivity'
@@ -23,6 +24,7 @@ import {
   winStreak,
 } from '../lib/classement'
 import { departureLabel, relativeTime } from '../lib/format'
+import { ownRatingRow } from '../lib/slackIdentity'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import EloModal from './EloModal'
@@ -103,6 +105,8 @@ export default function Ratings({
 }: Props) {
   const { rows, events, matches, players, tournaments, matchCount, loading, error, recompute } =
     useRatings(scope)
+  const { userId } = useSession()
+  const ownKey = userId === null ? undefined : ownRatingRow(userId, players, rows)?.key
   const [mode, setMode] = useState<'board' | 'log'>('board')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -423,7 +427,12 @@ export default function Ratings({
                     </button>
                   </div>
                 </div>
-                <ClassementTable rows={tableRows} leaderKey={leader?.key} onSelect={setSelectedKey} />
+                <ClassementTable
+                  rows={tableRows}
+                  leaderKey={leader?.key}
+                  ownKey={ownKey}
+                  onSelect={setSelectedKey}
+                />
                 <p className="cl-note">
                   Un joueur apparaît au classement dès son premier match. En dessous de{' '}
                   {RATING.provisionalGames} parties son Elo est « provisoire » et s'affiche en gris
