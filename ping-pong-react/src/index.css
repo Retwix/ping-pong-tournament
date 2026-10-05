@@ -2093,6 +2093,8 @@ td.elo.neg { color: var(--coral); }
   [data-theme='dark'] .cl-row:hover { background: rgba(255, 255, 255, 0.05); }
 }
 .cl-row:active { transform: scale(0.99); }
+.cl-row[aria-current='true'] { background: rgba(171, 84, 212, 0.1); }
+[data-theme='dark'] .cl-row[aria-current='true'] { background: rgba(171, 84, 212, 0.22); }
 
 .cl-c-rank { text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 13px; color: #847e96; }
 .cl-c-rank.p1 { font-weight: 800; color: #e8b53a; }
@@ -2112,6 +2114,7 @@ td.elo.neg { color: var(--coral); }
   border-radius: 999px; padding: 4px 8px; flex: none;
 }
 .cl-badge-streak { color: #d74251; background: #fee7ee; }
+.cl-badge-me { color: #fff; background: var(--violet); }
 [data-theme='dark'] .cl-badge-streak { color: #ff8a8e; background: rgba(215, 66, 81, 0.18); }
 .cl-badge-prov { color: #847e96; border: 1.5px solid #e8e4f2; padding: 2.5px 6.5px; }
 [data-theme='dark'] .cl-badge-prov { color: #8b82a8; border-color: rgba(255, 255, 255, 0.12); }
