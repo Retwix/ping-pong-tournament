@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { RATING } from '../lib/rating'
 import { STREAK_BADGE_MIN, type PlayerRecord } from '../lib/classement'
 import type { LadderRow } from '../lib/inactivity'
@@ -22,6 +23,12 @@ export default function ClassementTable({
   ownKey?: string
   onSelect: (key: string) => void
 }) {
+  const ownRowRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    ownRowRef.current?.scrollIntoView({ block: 'center' })
+  }, [ownKey])
+
   return (
     <div className="cl-table">
       <div className="cl-tr cl-thead">
@@ -37,6 +44,7 @@ export default function ClassementTable({
       {rows.map((r) => (
         <div
           key={r.key}
+          ref={r.key === ownKey ? ownRowRef : undefined}
           className="cl-tr cl-row"
           onClick={() => onSelect(r.key)}
           onKeyDown={(e) => {

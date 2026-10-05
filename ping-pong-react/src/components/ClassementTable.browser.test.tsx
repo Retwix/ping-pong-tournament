@@ -63,4 +63,49 @@ describe('ClassementTable', () => {
     await expect.element(rowOf('Marc').getByText('toi', { exact: true })).toBeVisible()
     await expect.element(rowOf('Léo').getByText('toi', { exact: true })).not.toBeInTheDocument()
   })
+
+  const getLongLadder = () =>
+    Array.from({ length: 120 }, (_, i) =>
+      getMockClassementRow({
+        key: `p${i + 1}`,
+        playerId: `p${i + 1}`,
+        name: `Joueur ${i + 1}`,
+        rank: i + 1,
+      }),
+    )
+
+  const expectInViewport = (element: Element) => {
+    const { top, bottom } = element.getBoundingClientRect()
+    expect(top).toBeGreaterThanOrEqual(0)
+    expect(bottom).toBeLessThanOrEqual(window.innerHeight)
+  }
+
+  it('scrolls your own row into view when it sits below the fold', async () => {
+    window.scrollTo(0, 0)
+    const screen = await render(
+      <ClassementTable rows={getLongLadder()} leaderKey="p1" ownKey="p60" onSelect={vi.fn()} />,
+    )
+
+    expectInViewport(
+      screen.getByRole('button', { name: "Voir l'historique de Joueur 60" }).element(),
+    )
+  })
+
+  it('scrolls to your row once you are known, after the table is already shown', async () => {
+    window.scrollTo(0, 0)
+    const rows = getLongLadder()
+    const screen = await render(
+      <ClassementTable rows={rows} leaderKey="p1" onSelect={vi.fn()} />,
+    )
+
+    screen.rerender(
+      <ClassementTable rows={rows} leaderKey="p1" ownKey="p60" onSelect={vi.fn()} />,
+    )
+
+    await vi.waitFor(() =>
+      expectInViewport(
+        screen.getByRole('button', { name: "Voir l'historique de Joueur 60" }).element(),
+      ),
+    )
+  })
 })
