@@ -2093,6 +2093,8 @@ td.elo.neg { color: var(--coral); }
   [data-theme='dark'] .cl-row:hover { background: rgba(255, 255, 255, 0.05); }
 }
 .cl-row:active { transform: scale(0.99); }
+.cl-row[aria-current='true'] { background: rgba(171, 84, 212, 0.1); }
+[data-theme='dark'] .cl-row[aria-current='true'] { background: rgba(171, 84, 212, 0.22); }
 
 .cl-c-rank { text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 13px; color: #847e96; }
 .cl-c-rank.p1 { font-weight: 800; color: #e8b53a; }

@@ -45,6 +45,7 @@ export default function ClassementTable({
         <div
           key={r.key}
           ref={r.key === ownKey ? ownRowRef : undefined}
+          aria-current={r.key === ownKey ? 'true' : undefined}
           className="cl-tr cl-row"
           onClick={() => onSelect(r.key)}
           onKeyDown={(e) => {

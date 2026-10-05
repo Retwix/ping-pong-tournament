@@ -64,6 +64,27 @@ describe('ClassementTable', () => {
     await expect.element(rowOf('Léo').getByText('toi', { exact: true })).not.toBeInTheDocument()
   })
 
+  it('highlights your own row, and nobody else’s', async () => {
+    const screen = await render(
+      <ClassementTable
+        rows={[
+          getMockClassementRow({ key: 'p1', name: 'Léo', rank: 1 }),
+          getMockClassementRow({ key: 'p2', playerId: 'p2', name: 'Marc', rank: 2 }),
+        ]}
+        leaderKey="p1"
+        ownKey="p2"
+        onSelect={vi.fn()}
+      />,
+    )
+
+    const rowOf = (name: string) =>
+      screen.getByRole('button', { name: `Voir l'historique de ${name}` })
+    await expect.element(rowOf('Marc')).toHaveAttribute('aria-current', 'true')
+    await expect.element(rowOf('Léo')).not.toHaveAttribute('aria-current')
+    const background = (name: string) => getComputedStyle(rowOf(name).element()).backgroundColor
+    expect(background('Marc')).not.toBe(background('Léo'))
+  })
+
   const getLongLadder = () =>
     Array.from({ length: 120 }, (_, i) =>
       getMockClassementRow({
