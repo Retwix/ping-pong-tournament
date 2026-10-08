@@ -11,6 +11,9 @@ export interface SlackProfile {
 /** Roster names are typed by hand, so compare them past case, accents and stray padding. */
 const canonical = (name: string): string => fold(name).trim().replace(/\s+/g, ' ')
 
+/** Slack sends the full name; the roster mostly keeps only the first one. */
+const firstWord = (name: string): string => canonical(name).split(' ')[0]
+
 /** The rows still up for grabs — no account has linked itself to them. */
 const unclaimed = (players: Player[]): Player[] => players.filter((p) => p.auth_user_id === null)
 
@@ -25,8 +28,8 @@ export type PlayerMatch =
 
 export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMatch {
   const free = unclaimed(players)
-  const wanted = [canonical(profile.displayName), canonical(profile.realName)]
-  const matches = free.filter((p) => wanted.includes(canonical(p.name)))
+  const wanted = [firstWord(profile.displayName), firstWord(profile.realName)]
+  const matches = free.filter((p) => wanted.includes(firstWord(p.name)))
   if (matches.length !== 1) return { kind: 'choose', candidates: free }
   return { kind: 'matched', player: matches[0] }
 }

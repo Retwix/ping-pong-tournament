@@ -90,6 +90,17 @@ describe('matchPlayer', () => {
     expect(result).toEqual({ kind: 'choose', candidates: roster })
   })
 
+  it('picks out the roster entry bearing only the first name of a full Slack name', () => {
+    const thibault = player({ id: 'p2', name: 'Thibault' })
+
+    const result = matchPlayer({ displayName: 'Thibault Pras', realName: 'Thibault Pras' }, [
+      player({ id: 'p1', name: 'Thomas' }),
+      thibault,
+    ])
+
+    expect(result).toEqual({ kind: 'matched', player: thibault })
+  })
+
   it('matches a roster name that differs only by case and accents', () => {
     const leo = player({ id: 'p2', name: 'Léo' })
 
