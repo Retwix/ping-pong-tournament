@@ -42,12 +42,12 @@ opposite way to accuracy.
 
 ```sh
 # the figures in §7, reproduced
-python3 score_probe.py rally.mp4 \
+./.venv/bin/python score_probe.py rally.mp4 \
     --calibration fixtures/calibration-2026-09-16.json \
     --truth rally.truth.csv
 
 # §15's phantom criterion: no --truth means "this clip holds no points"
-python3 score_probe.py warmup.mp4 \
+./.venv/bin/python score_probe.py warmup.mp4 \
     --calibration fixtures/calibration-2026-09-16.json
 ```
 
@@ -57,7 +57,7 @@ can run it (`.github/workflows/ci.yml`, job `vision`). The figures above come
 from the scripts against footage, by hand, and CI cannot check those.
 
 ```sh
-python3 -m pytest -q        # 98 tests, 0.4 s
+./.venv/bin/python -m pytest -q        # 98 tests, 0.4 s
 ```
 
 ## Setup (macOS, Apple Silicon)
@@ -88,7 +88,7 @@ index opens fine and delivers no frames at all.
 **1. Find the iPhone.**
 
 ```sh
-python3 probe.py --list
+./.venv/bin/python probe.py --list
 ```
 
 *Result:* built-in FaceTime HD at `[0]`, iPhone at `[1]`. Do not hard-code that
@@ -98,7 +98,7 @@ python3 probe.py --list
 times the frames as they actually arrive.
 
 ```sh
-python3 probe.py --source 1 --seconds 60
+./.venv/bin/python probe.py --source 1 --seconds 60
 ```
 
 *Result:* 1280×720 at a true **30.0 fps**, p95 35.9 ms, worst frame 46.7 ms,
@@ -111,7 +111,7 @@ takes to come back through the camera. Point the phone at the window and fill
 its frame with it.
 
 ```sh
-python3 probe.py --source 1 --latency
+./.venv/bin/python probe.py --source 1 --latency
 ```
 
 *Result:* median **157–161 ms** over two runs. Resolution is one frame interval
@@ -125,7 +125,7 @@ the ball at the far end and then the near end, and raise `sat_min` until the
 table and the shadows go black and only the ball stays white.
 
 ```sh
-python3 probe.py --source 1 --mask
+./.venv/bin/python probe.py --source 1 --mask
 ```
 
 Note the **largest-blob area at each end** — that pixel count is what the
@@ -135,7 +135,7 @@ depth-aware size gate gets built from.
 just as happily as a camera, and loops it so the sliders stay usable:
 
 ```sh
-python3 probe.py --source rally.mp4 --mask
+./.venv/bin/python probe.py --source rally.mp4 --mask
 ```
 
 So the scarce thing is *footage*, not table time. Record the ball held still at
@@ -160,7 +160,7 @@ through the pipeline you are going to run.
 
 - [ ] iPhone plugged in over USB and **unlocked**. Asleep, it opens fine and
       delivers no frames at all.
-- [ ] `python3 probe.py --list` — confirm the index. It was `[1]` here, but the
+- [ ] `./.venv/bin/python probe.py --list` — confirm the index. It was `[1]` here, but the
       ordering is not guaranteed.
 - [ ] Camera on something **rigid**, elevated ~2–2.5 m, 1–2 m behind one end,
       looking down the long axis, with ~1 m of space beyond each end in frame.

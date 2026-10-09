@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Click the ball, frame by frame, so the tracker can be marked against it.
 
-    python3 label_ball.py rally.mp4
-    python3 label_ball.py rally.mp4 --every 25
+    ./.venv/bin/python label_ball.py rally.mp4
+    ./.venv/bin/python label_ball.py rally.mp4 --every 25
 
 Every answer is written the moment it is given, and reopening offers only what
 is still unanswered — so this is done in whatever time there is, five minutes
