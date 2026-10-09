@@ -13,11 +13,11 @@ report the numbers, and they become the constants everything downstream uses.
 
 Usage
 -----
-    python3 probe.py --list                  # which capture devices exist
-    python3 probe.py --source 1              # measure fps / resolution
-    python3 probe.py --source 1 --latency    # measure end-to-end lag
-    python3 probe.py --source 1 --mask       # tune the orange gate, with sliders
-    python3 probe.py --source 1 --record clip.mp4   # capture footage for dev
+    ./.venv/bin/python probe.py --list                  # which capture devices exist
+    ./.venv/bin/python probe.py --source 1              # measure fps / resolution
+    ./.venv/bin/python probe.py --source 1 --latency    # measure end-to-end lag
+    ./.venv/bin/python probe.py --source 1 --mask       # tune the orange gate, with sliders
+    ./.venv/bin/python probe.py --source 1 --record clip.mp4   # capture footage for dev
 """
 
 from __future__ import annotations

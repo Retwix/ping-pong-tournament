@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Click the table and the net, once per session.
 
-    python3 calibrate.py --source 1
-    python3 calibrate.py --source empty-table.mp4 --out fixtures/calibration.json
+    ./.venv/bin/python calibrate.py --source 1
+    ./.venv/bin/python calibrate.py --source empty-table.mp4 --out fixtures/calibration.json
 
 Six clicks: four corners, then the two ends of the net. The net is clicked and
 never assumed -- a clamp-on net sits where the legs allow, and section 8 awards

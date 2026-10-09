@@ -7,7 +7,7 @@ tell a ball from a forearm. This asks the question that needs several frames.
 If classical detection works at all, a rally should score far above a warm-up
 here, and an empty table should score zero.
 
-    python3 track_probe.py rally.mp4 warmup.mp4 \
+    ./.venv/bin/python track_probe.py rally.mp4 warmup.mp4 \
         --calibration fixtures/calibration-2026-09-16.json
 """
 

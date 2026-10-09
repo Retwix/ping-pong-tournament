@@ -202,8 +202,19 @@ def test_marking_points_survives_being_interrupted(tmp_path) -> None:
 
 
 def test_an_unstarted_point_store_is_not_an_error(tmp_path) -> None:
-    """Undo on nothing does nothing, so the key is safe to lean on."""
+    """A clip nobody has marked yet is the first thing label_points.py reads.
+
+    It asks how many points are already marked before it shows a single
+    frame, so a missing store has to answer "none" rather than raise — the
+    same contract `read_labels` has had since the ball labels existed. This
+    was a crash on the very first run against a new clip, and the test that
+    should have caught it appended a point first, so the file always existed
+    by the time it was read.
+    """
     store = tmp_path / "nothing.csv"
+
+    assert read_outcomes(store) == []
+
     drop_last_outcome(store)
     append_outcome(store, Outcome(10, "left"), seconds=0.333)
     drop_last_outcome(store)
