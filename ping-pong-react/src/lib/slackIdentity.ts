@@ -18,9 +18,10 @@ const firstWord = (name: string): string => canonical(name).split(' ')[0]
 const unclaimed = (players: Player[]): Player[] => players.filter((p) => p.auth_user_id === null)
 
 /**
- * Either the one roster row this Slack account belongs to, or the roster itself
- * for the person to pick from. A wrong confident match is worse than no match,
- * so anything short of a single hit degrades to the picker.
+ * Either the roster row this Slack account most likely belongs to, or the roster
+ * itself for the person to pick from. The match only preselects — the person
+ * still confirms — so when several rows share the first name, the first one in
+ * roster order is suggested rather than none.
  */
 export type PlayerMatch =
   | { kind: 'matched'; player: Player }
@@ -29,9 +30,9 @@ export type PlayerMatch =
 export function matchPlayer(profile: SlackProfile, players: Player[]): PlayerMatch {
   const free = unclaimed(players)
   const wanted = [firstWord(profile.displayName), firstWord(profile.realName)]
-  const matches = free.filter((p) => wanted.includes(firstWord(p.name)))
-  if (matches.length !== 1) return { kind: 'choose', candidates: free }
-  return { kind: 'matched', player: matches[0] }
+  const match = free.find((p) => wanted.includes(firstWord(p.name)))
+  if (match === undefined) return { kind: 'choose', candidates: free }
+  return { kind: 'matched', player: match }
 }
 
 /**

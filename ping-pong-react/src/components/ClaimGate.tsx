@@ -21,8 +21,8 @@ interface Props {
  * channel on every page for a one-off decision is not worth its cost.
  *
  * An auto-match preselects a row; it never confirms it. matchPlayer degrades to
- * the plain picker on zero matches or more than one, and a nameless payload —
- * Slack granted only `openid` — preselects nothing at all.
+ * the plain picker when no first name matches, and a nameless payload — Slack
+ * granted only `openid` — preselects nothing at all.
  *
  * Both branches render through a portal, and that is load-bearing rather than
  * tidy. This component sits inside DashboardNav, whose .rv-nav carries
