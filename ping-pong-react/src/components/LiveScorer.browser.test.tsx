@@ -68,6 +68,11 @@ const tapTwiceInPlace = async (el: Element) => {
   await userEvent.click(underFinger!)
 }
 
+const FINGER_SLOP = 6
+
+const tapAt = (el: Element, position: { x: number; y: number }) =>
+  userEvent.click(el, { position, force: true })
+
 const PHONES = [
   { name: 'phone in landscape', width: 844, height: 390 },
   { name: 'phone in portrait', width: 390, height: 844 },
@@ -89,6 +94,43 @@ describe('referee removing points', () => {
       await expect.element(screen.getByText('8', { exact: true })).toBeVisible()
     }
   )
+
+  it.each(PHONES)(
+    'on a $name, a tap that lands just off the edge of "−1 point" still removes a point',
+    async ({ width, height }) => {
+      const screen = await renderReferee({
+        viewport: { width, height },
+        match: { score_a: 5, score_b: 9 },
+      })
+      const remove = screen.getByRole('button', { name: 'Retirer un point à Thibault' }).element()
+      const { width: w, height: h } = remove.getBoundingClientRect()
+      const aboveBelowLeftRight = [
+        { x: w / 2, y: -FINGER_SLOP },
+        { x: w / 2, y: h + FINGER_SLOP },
+        { x: -FINGER_SLOP, y: h / 2 },
+        { x: w + FINGER_SLOP, y: h / 2 },
+      ]
+
+      for (const [i, justOff] of aboveBelowLeftRight.entries()) {
+        await tapAt(remove, justOff)
+        await expect.element(screen.getByText(String(4 - i), { exact: true })).toBeVisible()
+      }
+    }
+  )
+
+  it('a tap on the greyed-out "−1 point" at zero does not give the player a point', async () => {
+    const screen = await renderReferee({
+      viewport: { width: 844, height: 390 },
+      match: { score_a: 0, score_b: 0 },
+    })
+    const remove = screen.getByRole('button', { name: 'Retirer un point à Thibault' }).element()
+    const { width: w, height: h } = remove.getBoundingClientRect()
+
+    await tapAt(remove, { x: w / 2, y: h / 2 })
+    await screen.getByText('Thibault', { exact: true }).click()
+
+    await expect.element(screen.getByText('1', { exact: true })).toBeVisible()
+  })
 })
 
 describe('referee seeing match point', () => {
