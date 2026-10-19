@@ -762,9 +762,11 @@ td.elo.neg { color: var(--coral); }
 .refzone-caption { order: 2; font-family: var(--font-body); font-weight: 700; font-size: 12px; color: #f0c84b; margin-top: 8px; }
 .refzone.is-capot .refzone-caption { color: #ffc9c2; }
 .refzone-caption--win { color: #fff; }
-.refzone-minus { order: 3; display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 8px 14px; border-radius: 11px; background: rgba(0, 0, 0, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.32); font-family: var(--font-display); font-weight: 800; font-size: 13px; color: #fff; cursor: pointer; transition: all var(--dur) var(--ease); }
+.refzone-minus { order: 3; position: relative; display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 8px 14px; border-radius: 11px; background: rgba(0, 0, 0, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.32); font-family: var(--font-display); font-weight: 800; font-size: 13px; color: #fff; cursor: pointer; transition: all var(--dur) var(--ease); }
+/* Finger-sized hit area around the pill: a near miss would land on the zone, which scores */
+.refzone-minus::before { content: ""; position: absolute; inset: -10px; }
 .refzone-minus:active { transform: scale(0.95); }
-.refzone-minus:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+.refzone-minus:disabled { opacity: 0.35; cursor: default; }
 .refzone-minus-sign { font-weight: 900; font-size: 18px; line-height: 0.5; }
 .refzone-minus-long { display: none; }
 
