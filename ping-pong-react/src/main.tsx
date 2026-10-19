@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import App from './App'
+import { unstickScrollOnResize } from './lib/strandedScroll'
 import './index.css'
+
+unstickScrollOnResize(window)
 
 const rootEl = document.getElementById('root')
 if (!rootEl) throw new Error('Root element #root not found')
