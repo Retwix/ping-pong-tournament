@@ -82,12 +82,24 @@ describe('matchPlayer', () => {
     expect(result).toEqual({ kind: 'choose', candidates: roster })
   })
 
-  it('refuses to guess when two roster entries answer to the same name', () => {
-    const roster = [player({ id: 'p1', name: 'Léo' }), player({ id: 'p2', name: 'Léo' })]
+  it('picks the first in roster order when several entries share the first name', () => {
+    const marieD = player({ id: 'p2', name: 'Marie D.' })
+    const roster = [player({ id: 'p1', name: 'Thomas' }), marieD, player({ id: 'p3', name: 'Marie L.' })]
 
-    const result = matchPlayer({ displayName: 'Léo', realName: 'Léo' }, roster)
+    const result = matchPlayer({ displayName: 'Marie Dupuis', realName: 'Marie Dupuis' }, roster)
 
-    expect(result).toEqual({ kind: 'choose', candidates: roster })
+    expect(result).toEqual({ kind: 'matched', player: marieD })
+  })
+
+  it('picks out the roster entry bearing only the first name of a full Slack name', () => {
+    const thibault = player({ id: 'p2', name: 'Thibault' })
+
+    const result = matchPlayer({ displayName: 'Thibault Pras', realName: 'Thibault Pras' }, [
+      player({ id: 'p1', name: 'Thomas' }),
+      thibault,
+    ])
+
+    expect(result).toEqual({ kind: 'matched', player: thibault })
   })
 
   it('matches a roster name that differs only by case and accents', () => {
