@@ -1,5 +1,4 @@
 import type { Match, MatchSide, StandingRow } from '../types'
-import { finishedSets } from './sets'
 
 /**
  * Score patch removing one point from the given side (referee correction),
@@ -57,7 +56,7 @@ export function serverIsA(
   const total = m.score_a + m.score_b
   const deuce = m.score_a >= target - 1 && m.score_b >= target - 1
   const block = deuce ? total : Math.floor(total / 2)
-  const startA = (m.serve_start === 'a') === (finishedSets(m).length % 2 === 0)
+  const startA = (m.serve_start === 'a') === ((m.sets?.length ?? 0) % 2 === 0)
   return block % 2 === 0 ? startA : !startA
 }
 
