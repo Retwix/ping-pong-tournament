@@ -1,6 +1,13 @@
 import { describe, expect, it, test } from 'vitest'
-import { bestOf, finishedSets, isMatchBall, pointAtStake } from './sets'
-import type { MatchSide, SetScore } from '../types'
+import {
+  bestOf,
+  finishedSets,
+  isMatchBall,
+  pointAtStake,
+  undoSetValidationPatch,
+  validateSetPatch,
+} from './sets'
+import type { Match, MatchSide, SetScore } from '../types'
 
 describe('bestOf', () => {
   it('reads a tournament created before sets existed as a single game', () => {
@@ -58,5 +65,42 @@ describe('isMatchBall', () => {
     { when: 'a capot ball of a single game', bestOf: 1, sets: [], a: 10, b: 0, side: 'a', matchBall: true },
   ])('$when counts as a match ball: $matchBall', ({ bestOf, sets, a, b, side, matchBall }) => {
     expect(isMatchBall({ score_a: a, score_b: b, sets }, side, { target: 11, bestOf })).toBe(matchBall)
+  })
+})
+
+describe('validateSetPatch', () => {
+  const at = '2026-10-22T18:00:00.000Z'
+
+  test.for<{ when: string; bestOf: number; sets: SetScore[]; a: number; b: number; patch: Partial<Match> | null }>([
+    { when: 'A wins set 1 of a Bo3', bestOf: 3, sets: [], a: 11, b: 5, patch: { sets: [[11, 5]], score_a: 0, score_b: 0 } },
+    { when: 'B levels a Bo3 at 1-1', bestOf: 3, sets: [[11, 5]], a: 9, b: 11, patch: { sets: [[11, 5], [9, 11]], score_a: 0, score_b: 0 } },
+    { when: 'A wins a Bo3 2-0', bestOf: 3, sets: [[11, 5]], a: 11, b: 9, patch: { done: true, ended_at: at } },
+    { when: 'A goes 2-0 up in a Bo5', bestOf: 5, sets: [[11, 5]], a: 11, b: 9, patch: { sets: [[11, 5], [11, 9]], score_a: 0, score_b: 0 } },
+    { when: 'a single game is won', bestOf: 1, sets: [], a: 11, b: 9, patch: { done: true, ended_at: at } },
+    { when: 'the set is not won yet', bestOf: 3, sets: [], a: 10, b: 9, patch: null },
+  ])('$when', ({ bestOf, sets, a, b, patch }) => {
+    const match = { score_a: a, score_b: b, sets, done: false }
+    expect(validateSetPatch(match, { target: 11, bestOf }, at)).toEqual(patch)
+  })
+
+  it('does nothing once the match is validated', () => {
+    const match = { score_a: 11, score_b: 9, sets: [[11, 5]] satisfies SetScore[], done: true }
+    expect(validateSetPatch(match, { target: 11, bestOf: 3 }, at)).toBeNull()
+  })
+})
+
+describe('undoSetValidationPatch', () => {
+  it('brings the last validated set back into play while the new set is 0-0', () => {
+    const match = { score_a: 0, score_b: 0, sets: [[11, 5], [8, 11], [11, 7]] satisfies SetScore[] }
+    expect(undoSetValidationPatch(match)).toEqual({ sets: [[11, 5], [8, 11]], score_a: 11, score_b: 7 })
+  })
+
+  it('locks the last set once a point is scored in the new one', () => {
+    const match = { score_a: 0, score_b: 1, sets: [[11, 5]] satisfies SetScore[] }
+    expect(undoSetValidationPatch(match)).toBeNull()
+  })
+
+  it('has nothing to undo before the first set is validated', () => {
+    expect(undoSetValidationPatch({ score_a: 0, score_b: 0, sets: [] })).toBeNull()
   })
 })
