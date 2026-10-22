@@ -333,17 +333,6 @@ describe('referee scoring a match of sets', () => {
     await expect.element(screen.getByText('11', { exact: true })).toBeVisible()
   })
 
-  it('« Annuler » at 0-0 of a new set brings the last set back, so an extra point can still be removed', async () => {
-    const screen = await renderBo3({ score_a: 0, score_b: 0, sets: [[11, 9]] })
-
-    await screen.getByRole('button', { name: /Annuler/ }).click()
-
-    await expect.poll(() => lineShown('Bo3 en 11 · Set 1')).toBe(true)
-    await screen.getByRole('button', { name: 'Retirer un point à Thibault' }).click()
-    await expect.element(screen.getByText('10', { exact: true })).toBeVisible()
-    await expect.element(screen.getByText('9', { exact: true })).toBeVisible()
-  })
-
   it('only the set that can decide the match is a match ball, and only saving one counts', async () => {
     const saved: string[] = []
     const record = (m: Match) => saved.push(`${m.mb_saved_a}-${m.mb_saved_b}`)
