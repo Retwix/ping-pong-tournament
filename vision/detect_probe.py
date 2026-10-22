@@ -5,7 +5,7 @@ A ceiling, not a tracker. No motion model, no track continuity, no bounce
 detection — just: per frame, how many plausible balls are on the table. If this
 cannot find one ball most of the time, no amount of tracking on top will save it.
 
-    python3 detect_probe.py rally.mp4 --calibration fixtures/calibration-2026-09-16.json
+    ./.venv/bin/python detect_probe.py rally.mp4 --calibration fixtures/calibration-2026-09-16.json
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Watch a clip and say who won each point, so §15 has a sample worth deciding on.
 
-    python3 label_points.py warmup.mp4
-    python3 label_points.py warmup.mp4 --out warmup.truth.csv
+    ./.venv/bin/python label_points.py warmup.mp4
+    ./.venv/bin/python label_points.py warmup.mp4 --out warmup.truth.csv
 
 Every §15 number currently rests on twelve hand-typed points: 87.5% accuracy
 is 7 of 8 awards, 70% is 7 of 10, and the gap between the settings §7 argues

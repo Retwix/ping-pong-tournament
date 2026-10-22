@@ -13,7 +13,7 @@ itself, so the published numbers came from a copy of `points_from` rather than
 from `points_from`. This runs the shipped chain end to end and has no rule of
 its own.
 
-    python3 score_probe.py rally.mp4 \\
+    ./.venv/bin/python score_probe.py rally.mp4 \\
         --calibration fixtures/calibration-2026-09-16.json \\
         --truth rally.truth.csv
 

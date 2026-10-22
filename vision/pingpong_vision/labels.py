@@ -140,7 +140,14 @@ def read_outcomes(path: Path) -> list[Outcome]:
     The seconds column the file also carries is ignored: it restates the
     frame at the clip's frame rate, and reading it would make this wrong on
     any clip shot at a different one.
+
+    A missing file is a clip nobody has marked yet, not an error — the same
+    contract `read_labels` has. `label_points.py` asks how many points are
+    already marked before it shows a frame, so raising here crashed it on
+    the first run against every new clip.
     """
+    if not path.exists():
+        return []
     rows = path.read_text().strip().splitlines()[1:]
     outcomes = []
     for row in rows:
