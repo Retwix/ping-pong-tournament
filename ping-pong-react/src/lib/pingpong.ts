@@ -45,13 +45,18 @@ export function matchPointKind(
 
 /**
  * Whether side A is serving. Serve alternates every 2 points,
- * then every point once both players reach target-1 (deuce).
+ * then every point once both players reach target-1 (deuce). In a match of
+ * sets, whoever served first in a set receives first in the next (ITTF), and
+ * the count restarts on each set's points.
  */
-export function serverIsA(m: Pick<Match, 'score_a' | 'score_b' | 'serve_start'>, target: number): boolean {
+export function serverIsA(
+  m: Pick<Match, 'score_a' | 'score_b' | 'serve_start' | 'sets'>,
+  target: number
+): boolean {
   const total = m.score_a + m.score_b
   const deuce = m.score_a >= target - 1 && m.score_b >= target - 1
   const block = deuce ? total : Math.floor(total / 2)
-  const startA = m.serve_start === 'a'
+  const startA = (m.serve_start === 'a') === ((m.sets?.length ?? 0) % 2 === 0)
   return block % 2 === 0 ? startA : !startA
 }
 

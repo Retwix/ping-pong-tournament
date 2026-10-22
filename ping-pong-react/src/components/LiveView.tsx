@@ -8,6 +8,7 @@ import { computeStandings } from '../lib/pingpong'
 import { navigate } from '../lib/router'
 import { isPlayable } from '../lib/doubleElim'
 import { isLive } from '../lib/liveHero'
+import { bestOf } from '../lib/sets'
 import type { Match } from '../types'
 import LiveScorer from './LiveScorer'
 import { RatingMoveRow } from './RatingDelta'
@@ -266,6 +267,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
       key={shownMatch.id}
       match={shownMatch}
       target={tournament.target}
+      bestOf={bestOf(tournament)}
       chaos={chaosSettingsFromTournament(tournament)}
       onPatch={(patch) => patchMatch(shownMatch.id, patch)}
       onClose={onBack}

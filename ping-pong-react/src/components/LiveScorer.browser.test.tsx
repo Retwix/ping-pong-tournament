@@ -265,3 +265,101 @@ describe('referee tapping fast', () => {
     ])
   })
 })
+
+const SetsScreen = ({
+  initial,
+  onFinish = () => {},
+  record = () => {},
+}: {
+  initial: Match
+  onFinish?: () => void
+  record?: (m: Match) => void
+}) => {
+  const [match, setMatch] = useState(initial)
+  return (
+    <LiveScorer
+      match={match}
+      target={11}
+      bestOf={3}
+      onPatch={(patch) =>
+        setMatch((m) => {
+          const next = { ...m, ...patch }
+          record(next)
+          return next
+        })
+      }
+      onFinish={onFinish}
+      onClose={() => {}}
+    />
+  )
+}
+
+const renderBo3 = async (match: Partial<Match>, props: { onFinish?: () => void; record?: (m: Match) => void } = {}) => {
+  await page.viewport(844, 390)
+  return render(<SetsScreen initial={getMockMatch(match)} {...props} />)
+}
+
+const lineShown = (text: string) =>
+  [...document.querySelectorAll('div')].some(
+    (el) => el.children.length === 0 && el.textContent === text && el.checkVisibility({ visibilityProperty: true })
+  )
+
+const zoneText = (screen: Awaited<ReturnType<typeof renderBo3>>, name: string) =>
+  zoneOf(screen.getByRole('button', { name: `Retirer un point à ${name}` }).element()).textContent ?? ''
+
+describe('referee scoring a match of sets', () => {
+  it('a validated set starts the next one at 0-0, with the other player serving first', async () => {
+    const finished: string[] = []
+    const screen = await renderBo3({ score_a: 10, score_b: 5 }, { onFinish: () => finished.push('finished') })
+    await expect.poll(() => lineShown('Bo3 en 11 · Set 1')).toBe(true)
+    expect(zoneText(screen, 'Thibault')).toMatch(/BALLE DE SET.*1 point pour gagner le set/)
+
+    await screen.getByText('Thibault', { exact: true }).click()
+    await expect.poll(() => zoneText(screen, 'Thibault')).toMatch(/Set gagné/)
+    expect(zoneText(screen, 'Thibault')).not.toMatch(/Vainqueur/)
+    await screen.getByRole('button', { name: /Valider/ }).click()
+
+    await expect.poll(() => lineShown('Bo3 en 11 · Set 2 · 11-5')).toBe(true)
+    expect(finished).toEqual([])
+    expect(screen.getByText('0', { exact: true }).elements()).toHaveLength(2)
+    expect(zoneText(screen, 'Alexandre')).toMatch(/AU SERVICE/)
+    expect(zoneText(screen, 'Thibault')).not.toMatch(/AU SERVICE/)
+
+    await screen.getByRole('button', { name: /Inverser/ }).click()
+    await expect.poll(() => lineShown('Bo3 en 11 · Set 2 · 5-11')).toBe(true)
+
+    await screen.getByRole('button', { name: /Annuler/ }).click()
+    await expect.poll(() => lineShown('Bo3 en 11 · Set 1')).toBe(true)
+    await expect.element(screen.getByText('11', { exact: true })).toBeVisible()
+  })
+
+  it('only the set that can decide the match is a match ball, and only saving one counts', async () => {
+    const saved: string[] = []
+    const record = (m: Match) => saved.push(`${m.mb_saved_a}-${m.mb_saved_b}`)
+    const thibaultOnSetBall = await renderBo3({ score_a: 10, score_b: 9 }, { record })
+    await thibaultOnSetBall.getByText('Alexandre', { exact: true }).click()
+    thibaultOnSetBall.unmount()
+    const alexandreOnSetBall = await renderBo3({ score_a: 9, score_b: 10 }, { record })
+    await alexandreOnSetBall.getByText('Thibault', { exact: true }).click()
+    alexandreOnSetBall.unmount()
+    expect(saved).toEqual(['0-0', '0-0'])
+
+    const secondSet = await renderBo3({ score_a: 10, score_b: 9, sets: [[11, 5]] }, { record })
+    expect(zoneText(secondSet, 'Thibault')).toMatch(/BALLE DE MATCH.*1 point pour gagner le match/)
+    await secondSet.getByText('Alexandre', { exact: true }).click()
+    expect(saved).toEqual(['0-0', '0-0', '0-1'])
+  })
+
+  it('validating the set that decides the match ends it', async () => {
+    const finished: string[] = []
+    const screen = await renderBo3(
+      { score_a: 11, score_b: 9, sets: [[11, 5]] },
+      { onFinish: () => finished.push('finished') }
+    )
+
+    await screen.getByRole('button', { name: /Valider/ }).click()
+
+    expect(finished).toEqual(['finished'])
+    await expect.element(screen.getByRole('button', { name: /Validé/ })).toBeDisabled()
+  })
+})
