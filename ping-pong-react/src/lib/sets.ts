@@ -56,6 +56,12 @@ export function isMatchBall(m: LiveScore, side: MatchSide, rules: SetRules): boo
   return stake === 'match' || stake === 'capot'
 }
 
+/** Whether the set in play is won, and winning it takes the match. */
+export function wonSetDecidesMatch(m: LiveScore, rules: SetRules): boolean {
+  if (!isWon(m.score_a, m.score_b, rules.target)) return false
+  return setDecidesMatch(m, m.score_a > m.score_b ? 'a' : 'b', rules)
+}
+
 /**
  * « Valider le set »: a won set either ends the match (the deciding set stays
  * in `score_a/score_b`) or joins `sets` and the next one starts at 0-0. The
@@ -68,8 +74,7 @@ export function validateSetPatch(
   at: string,
 ): Partial<Match> | null {
   if (m.done || !isWon(m.score_a, m.score_b, rules.target)) return null
-  const winner: MatchSide = m.score_a > m.score_b ? 'a' : 'b'
-  if (setDecidesMatch(m, winner, rules)) return { done: true, ended_at: at }
+  if (wonSetDecidesMatch(m, rules)) return { done: true, ended_at: at }
   return { sets: [...finishedSets(m), [m.score_a, m.score_b]], score_a: 0, score_b: 0 }
 }
 

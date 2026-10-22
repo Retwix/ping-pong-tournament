@@ -14,6 +14,7 @@ import { chaosSettingsFromTournament } from '../lib/chaos'
 import { libelleFormat } from '../lib/format'
 import { playerLookup } from '../lib/playerLookup'
 import { navigate } from '../lib/router'
+import { bestOf } from '../lib/sets'
 import { isCapot, winnerLoser } from '../lib/stats'
 import { enteteTournoi, etatChargement } from '../lib/tournamentBoard'
 import type { Match } from '../types'
@@ -151,6 +152,7 @@ export default function Board({
       <LiveScorer
         match={match}
         target={tournament.target}
+        bestOf={bestOf(tournament)}
         chaos={chaosSettingsFromTournament(tournament)}
         onPatch={(patch) => patchMatch(match.id, patch)}
         onClose={onBack}
