@@ -177,6 +177,15 @@ end $$;
 --
 -- The anon key ships inside the Vite bundle, so a guard expressed only in React
 -- is cosmetic; these policies are the real boundary.
+--
+-- Supabase stopped auto-granting new public tables to the Data API roles
+-- (2026-10-30), so each table grants its own access. The anon key does every
+-- write in this app, so anon needs full DML; the policies below still decide
+-- which rows each command may touch.
+grant select, insert, update, delete
+  on public.tournaments, public.matches, public.players
+  to anon, authenticated, service_role;
+
 alter table public.tournaments enable row level security;
 alter table public.matches     enable row level security;
 alter table public.players     enable row level security;
