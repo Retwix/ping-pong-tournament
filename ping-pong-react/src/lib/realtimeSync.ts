@@ -1,4 +1,5 @@
-import type { Match } from '../types'
+import type { Match, SetScore } from '../types'
+import { finishedSets } from './sets'
 
 /**
  * Pure helpers backing the realtime sync in `useTournament`. Extracted so the
@@ -11,6 +12,11 @@ export interface PendingValue {
 	score_a: number
 	score_b: number
 	done: boolean
+	sets: SetScore[]
+}
+
+function sameSets(x: SetScore[], y: SetScore[]): boolean {
+	return x.length === y.length && x.every(([a, b], i) => a === y[i][0] && b === y[i][1])
 }
 
 /** Insert or replace `row` in `list`, keeping it sorted by `idx`. */
@@ -30,7 +36,8 @@ export function echoMatchesPending(pending: PendingValue, row: Match): boolean {
 	return (
 		pending.score_a === row.score_a &&
 		pending.score_b === row.score_b &&
-		pending.done === row.done
+		pending.done === row.done &&
+		sameSets(pending.sets, finishedSets(row))
 	)
 }
 
@@ -61,7 +68,7 @@ export function mergeWithPending(
 	return rows.map((row) => {
 		const p = pending.get(row.id)
 		return p
-			? { ...row, score_a: p.score_a, score_b: p.score_b, done: p.done }
+			? { ...row, score_a: p.score_a, score_b: p.score_b, done: p.done, sets: p.sets }
 			: row
 	})
 }

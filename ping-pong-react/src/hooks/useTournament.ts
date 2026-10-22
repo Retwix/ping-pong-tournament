@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import { uniqueChannelName } from '../lib/realtimeChannel'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
+import { finishedSets } from '../lib/sets'
 import { reconcileBracket } from '../lib/doubleElim'
 import {
   mergeWithPending,
@@ -192,6 +193,7 @@ export function useTournament(id: string | null) {
         score_a: merged.score_a,
         score_b: merged.score_b,
         done: merged.done,
+        sets: finishedSets(merged),
       })
       setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, ...patch } : m)))
       try {
