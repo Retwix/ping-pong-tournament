@@ -13,8 +13,15 @@ export interface CreationState {
   selected: string[]
   /** Raw tournament-name input; quick games auto-name from the matchup. */
   name: string
-  /** Points per game. */
+  /** Points per game (per set in a best-of). */
   target: number
+  /** Sets in a quick game: 1 for a single game, 3 or 5 for a best-of. */
+  bestOf: number
+}
+
+/** « jeu en 11 », or « Bo3 en 11 » for a best-of. */
+function formatJeu(target: number, bestOf: number): string {
+  return bestOf > 1 ? `Bo${bestOf} en ${target}` : `jeu en ${target}`
 }
 
 export interface Recapitulatif {
@@ -25,7 +32,7 @@ export interface Recapitulatif {
 
 /** Live recap for the rail: auto-name, one-line validation hint, and submittability. */
 export function recapitulatif(state: CreationState): Recapitulatif {
-  const { variant, format, selected, target } = state
+  const { variant, format, selected, target, bestOf } = state
   const n = selected.length
 
   if (variant === 'game') {
@@ -33,7 +40,7 @@ export function recapitulatif(state: CreationState): Recapitulatif {
     const matchup = `${selected[0]} vs ${selected[1]}`
     return {
       autoName: valid ? matchup : n === 1 ? `${selected[0]} vs …` : 'Partie rapide',
-      hint: valid ? `${matchup} · jeu en ${target}` : 'Choisis 2 joueurs.',
+      hint: valid ? `${matchup} · ${formatJeu(target, bestOf)}` : 'Choisis 2 joueurs.',
       valid,
     }
   }
@@ -105,7 +112,7 @@ export function retirerJoueurDouble(sel: SelectionDouble, name: string): Selecti
 }
 
 /** Live recap for a 2v2 game: pair auto-name, per-camp counters, submittability. */
-export function recapitulatifDouble(sel: SelectionDouble, target: number): Recapitulatif {
+export function recapitulatifDouble(sel: SelectionDouble, target: number, bestOf = 1): Recapitulatif {
   const { a, b } = sel
   const distincts = new Set([...a, ...b]).size === a.length + b.length
   const valid = a.length === TAILLE_EQUIPE && b.length === TAILLE_EQUIPE && distincts
@@ -113,19 +120,19 @@ export function recapitulatifDouble(sel: SelectionDouble, target: number): Recap
   return {
     autoName: matchup,
     hint: valid
-      ? `${matchup} · jeu en ${target}`
+      ? `${matchup} · ${formatJeu(target, bestOf)}`
       : `Choisis 4 joueurs — 2 par équipe. Équipe A : ${a.length}/2 · Équipe B : ${b.length}/2.`,
     valid,
   }
 }
 
 /** Live recap in « équipes au hasard » mode: the duos don't exist until the draw. */
-export function recapitulatifHasard(n: number, target: number): Recapitulatif {
+export function recapitulatifHasard(n: number, target: number, bestOf = 1): Recapitulatif {
   const valid = n === 2 * TAILLE_EQUIPE
   return {
     autoName: 'Partie en double',
     hint: valid
-      ? `4 joueurs · équipes au hasard · jeu en ${target}`
+      ? `4 joueurs · équipes au hasard · ${formatJeu(target, bestOf)}`
       : `Choisis 4 joueurs — les équipes seront tirées au sort. Joueurs : ${n}/4.`,
     valid,
   }
@@ -142,9 +149,10 @@ export function aideCamp(sel: SelectionDouble): string {
  * Elo. An ancien playing takes precedence over the doubles wording — it is the
  * more specific and more surprising reason the game won't count.
  */
-export function noteEnjeu(unranked: boolean, doubles = false, ancien = false): string {
+export function noteEnjeu(unranked: boolean, doubles = false, ancien = false, sets = false): string {
   if (ancien) return 'Un ancien joue : la partie ne compte pas pour le classement.'
   if (doubles) return 'Les doubles sont non classés en v1 — pas encore d’Elo de paire.'
+  if (sets) return 'Les parties en sets ne comptent pas encore pour le classement.'
   return unranked
     ? 'Aucun impact sur le classement Elo. La partie reste visible dans les parties.'
     : 'Le résultat déplace l’Elo des joueurs et compte dans « Le classement ».'
@@ -156,15 +164,21 @@ export function contientAncien(rows: { status: PlayerStatus }[]): boolean {
 }
 
 /**
- * The enjeu actually applied. Doubles have no pair Elo yet, and an ancien
- * playing must never move a rating in a ladder they no longer appear in —
- * both force « non classée » regardless of the player's manual choice. The
+ * The enjeu actually applied. Doubles have no pair Elo yet, an ancien
+ * playing must never move a rating in a ladder they no longer appear in, and
+ * sets have no Elo weighting yet (S2 of plans/2026-10-21-game-sets.md) —
+ * all force « non classée » regardless of the player's manual choice. The
  * manual choice itself is never overwritten, so releasing the lock (the
  * ancien is deselected, or doubles is turned off) reveals whatever the player
  * had chosen before, rather than resetting to « classée ».
  */
-export function enjeuEffectif(manualUnranked: boolean, doubles: boolean, ancien: boolean): boolean {
-  return doubles || manualUnranked || ancien
+export function enjeuEffectif(
+  manualUnranked: boolean,
+  doubles: boolean,
+  ancien: boolean,
+  sets = false,
+): boolean {
+  return doubles || manualUnranked || ancien || sets
 }
 
 /** Accent- and case-insensitive duplicate check against the registry (« Leo » = « Léo »). */

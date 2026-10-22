@@ -123,8 +123,8 @@ export default function Board({
     if (match.done) {
       // Rematch = a brand-new game with the same players, so the finished one
       // stays in history/stats instead of being overwritten.
-      // Carry the whole setup over: chaos config, « non classée », and the
-      // doubles pairs — a rematch is the same game with fresh scores.
+      // Carry the whole setup over: chaos config, « non classée », the
+      // doubles pairs and the sets — a rematch is the same game with fresh scores.
       const rematch = async () => {
         const newId = await createTournament(
           tournament.name,
@@ -135,6 +135,7 @@ export default function Board({
           chaosSettingsFromTournament(tournament),
           tournament.unranked ?? false,
           tournament.teams === null ? null : [tournament.teams[0] ?? [], tournament.teams[1] ?? []],
+          bestOf(tournament),
         )
         onOpen(newId)
       }
