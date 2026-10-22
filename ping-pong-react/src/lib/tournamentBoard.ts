@@ -49,13 +49,16 @@ export function enteteTournoi(tournoi: EnteteSource): EnteteTournoi {
 export type EtatMatch = 'Terminé' | 'En cours' | 'À jouer'
 
 /**
- * A match counts as under way as soon as either side has scored — the scorer
- * writes points before the match is validated, so a non-zero score is the only
- * signal that someone is at the table.
+ * A match counts as under way once the referee has put it on the table, or as
+ * soon as either side has scored — whichever comes first. Both signals matter:
+ * referee mode starts the match before the first point, and a match scored
+ * without it only ever shows up through its score.
  */
-export function etatMatch(match: Pick<Match, 'done' | 'score_a' | 'score_b'>): EtatMatch {
+export function etatMatch(
+  match: Pick<Match, 'done' | 'score_a' | 'score_b' | 'started_at'>,
+): EtatMatch {
   if (match.done) return 'Terminé'
-  return match.score_a > 0 || match.score_b > 0 ? 'En cours' : 'À jouer'
+  return match.started_at || match.score_a > 0 || match.score_b > 0 ? 'En cours' : 'À jouer'
 }
 
 /** One « Tour N » block: its matches, plus whoever sits the round out. */
@@ -226,7 +229,7 @@ export type EtatNoeud = 'Terminé' | 'En cours' | 'Prêt' | 'En attente'
 
 export function etatNoeud(match: Match): EtatNoeud {
   if (match.done) return 'Terminé'
-  if (match.score_a > 0 || match.score_b > 0) return 'En cours'
+  if (match.started_at || match.score_a > 0 || match.score_b > 0) return 'En cours'
   return isPlayable(match) ? 'Prêt' : 'En attente'
 }
 

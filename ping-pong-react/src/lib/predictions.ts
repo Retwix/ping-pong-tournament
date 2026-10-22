@@ -49,8 +49,9 @@ export function matchIsCapot(m: Match): boolean {
 }
 
 /**
- * A match-winner bet is open only before the match has started — i.e. no points
- * scored, never kicked off, not finished. This is the "lock at first point" rule.
+ * A match-winner bet is open only before the match has been put on the table —
+ * no points scored, never opened in referee mode, not finished. The lock is the
+ * referee opening the match, which is earlier than the first point.
  */
 export function isMatchBettable(m: Match): boolean {
   return !m.done && !m.started_at && m.score_a === 0 && m.score_b === 0

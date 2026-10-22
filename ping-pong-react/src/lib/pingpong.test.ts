@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { decrementPatch, matchPointKind } from './pingpong'
+import {
+	chronoStart,
+	decrementPatch,
+	firstPointPatch,
+	matchDuration,
+	matchPointKind,
+	startPatch,
+} from './pingpong'
 
 describe('decrementPatch', () => {
 	it('removes one point from side a', () => {
@@ -61,5 +68,166 @@ describe('matchPointKind', () => {
 		expect(matchPointKind(20, 5, 21)).toBe('match')
 		expect(matchPointKind(20, 0, 21)).toBe('capot')
 		expect(matchPointKind(19, 5, 21)).toBeNull()
+	})
+})
+
+describe('chronoStart', () => {
+	it('is the first point, not the moment the match was put on the table', () => {
+		expect(
+			chronoStart({
+				started_at: '2026-08-24T10:00:00.000Z',
+				first_point_at: '2026-08-24T10:04:00.000Z',
+				score_a: 1,
+				score_b: 0,
+			}),
+		).toBe('2026-08-24T10:04:00.000Z')
+	})
+
+	it('falls back to started_at on rows written before first_point_at existed', () => {
+		// Those rows stamped started_at on the first point, so it *is* the chrono.
+		expect(
+			chronoStart({
+				started_at: '2026-08-24T10:00:00.000Z',
+				first_point_at: null,
+				score_a: 6,
+				score_b: 4,
+			}),
+		).toBe('2026-08-24T10:00:00.000Z')
+	})
+
+	it('has not started for a match waiting on the table at 0–0', () => {
+		expect(
+			chronoStart({
+				started_at: '2026-08-24T10:00:00.000Z',
+				first_point_at: null,
+				score_a: 0,
+				score_b: 0,
+			}),
+		).toBeNull()
+	})
+
+	it('has not started for an untouched match', () => {
+		expect(
+			chronoStart({ started_at: null, first_point_at: null, score_a: 0, score_b: 0 }),
+		).toBeNull()
+	})
+})
+
+describe('matchDuration', () => {
+	it('measures from the first point to the end, not from the start of the wait', () => {
+		expect(
+			matchDuration({
+				started_at: '2026-08-24T10:00:00.000Z',
+				first_point_at: '2026-08-24T10:05:00.000Z',
+				ended_at: '2026-08-24T10:20:00.000Z',
+				score_a: 11,
+				score_b: 7,
+			}),
+		).toBe(15 * 60_000)
+	})
+
+	it('runs against the clock while the match is still being played', () => {
+		expect(
+			matchDuration(
+				{
+					started_at: '2026-08-24T10:00:00.000Z',
+					first_point_at: '2026-08-24T10:05:00.000Z',
+					ended_at: null,
+					score_a: 3,
+					score_b: 2,
+				},
+				Date.UTC(2026, 7, 24, 10, 7),
+			),
+		).toBe(2 * 60_000)
+	})
+
+	it('stays at zero while the match sits on the table with no point scored', () => {
+		expect(
+			matchDuration(
+				{
+					started_at: '2026-08-24T10:00:00.000Z',
+					first_point_at: null,
+					ended_at: null,
+					score_a: 0,
+					score_b: 0,
+				},
+				Date.UTC(2026, 7, 24, 10, 9),
+			),
+		).toBe(0)
+	})
+})
+
+describe('startPatch', () => {
+	it('puts a fresh match on the table', () => {
+		expect(startPatch({ done: false, started_at: null }, '2026-08-24T10:00:00.000Z')).toEqual({
+			started_at: '2026-08-24T10:00:00.000Z',
+		})
+	})
+
+	it('leaves an already-started match alone, so the start time never moves', () => {
+		expect(
+			startPatch({ done: false, started_at: '2026-08-24T09:00:00.000Z' }, '2026-08-24T10:00:00.000Z'),
+		).toBeNull()
+	})
+
+	it('never starts a finished match', () => {
+		expect(startPatch({ done: true, started_at: null }, '2026-08-24T10:00:00.000Z')).toBeNull()
+	})
+})
+
+describe('firstPointPatch', () => {
+	it('starts the chrono and the match at once when nobody put it on the table', () => {
+		expect(
+			firstPointPatch(
+				{ started_at: null, first_point_at: null, score_a: 0, score_b: 0 },
+				'2026-08-24T10:00:00.000Z',
+			),
+		).toEqual({
+			started_at: '2026-08-24T10:00:00.000Z',
+			first_point_at: '2026-08-24T10:00:00.000Z',
+		})
+	})
+
+	it('only starts the chrono when the referee already started the match', () => {
+		expect(
+			firstPointPatch(
+				{
+					started_at: '2026-08-24T09:50:00.000Z',
+					first_point_at: null,
+					score_a: 0,
+					score_b: 0,
+				},
+				'2026-08-24T10:00:00.000Z',
+			),
+		).toEqual({ first_point_at: '2026-08-24T10:00:00.000Z' })
+	})
+
+	it('leaves a match played before first_point_at existed on its own chrono', () => {
+		// Its chrono lives in started_at; stamping first_point_at now would restart it.
+		expect(
+			firstPointPatch(
+				{
+					started_at: '2026-08-24T09:50:00.000Z',
+					first_point_at: null,
+					score_a: 2,
+					score_b: 4,
+				},
+				'2026-08-24T10:06:00.000Z',
+			),
+		).toEqual({})
+	})
+
+	it('never moves the chrono once the match is under way', () => {
+		expect(
+			firstPointPatch(
+				{
+					started_at: '2026-08-24T09:50:00.000Z',
+					first_point_at: '2026-08-24T10:00:00.000Z',
+					score_a: 4,
+					score_b: 2,
+				},
+				'2026-08-24T10:06:00.000Z',
+			),
+		).toEqual({})
 	})
 })

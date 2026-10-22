@@ -16,6 +16,7 @@ const getMockMatch = (overrides?: Partial<Match>): Match => ({
   done: true,
   serve_start: 'a',
   started_at: null,
+  first_point_at: null,
   ended_at: '2026-07-30T10:00:00.000Z',
   bracket: null,
   match_key: null,

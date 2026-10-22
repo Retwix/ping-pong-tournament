@@ -17,6 +17,7 @@ function makeMatch(overrides: Partial<Match> = {}): Match {
     done: true,
     serve_start: 'a',
     started_at: '2026-07-27T10:00:00Z',
+    first_point_at: null,
     ended_at: '2026-07-27T10:10:00Z',
     bracket: null,
     match_key: null,

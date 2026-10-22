@@ -61,12 +61,55 @@ export function formatDuration(ms: number | null | undefined): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
+type Chrono = Pick<Match, 'started_at' | 'first_point_at' | 'score_a' | 'score_b'>
+
+/**
+ * When the clock started, or null while it has not. A match is started (put on
+ * the table) before it is played, so the chrono is the first point — never
+ * `started_at`, which is the referee opening it.
+ *
+ * Rows written before `first_point_at` existed stamped `started_at` on the
+ * first point, so they fall back to it. The score guard tells the two apart: a
+ * match sitting on the table at 0–0 has no chrono at all.
+ */
+export function chronoStart(m: Chrono): string | null {
+  if (m.first_point_at) return m.first_point_at
+  return m.score_a + m.score_b > 0 ? m.started_at : null
+}
+
 /** Active duration of a match in ms (live = up to now, finished = start→end). */
-export function matchDuration(m: Match, now: number = Date.now()): number {
-  if (!m.started_at) return 0
-  const start = new Date(m.started_at).getTime()
+export function matchDuration(
+  m: Chrono & Pick<Match, 'ended_at'>,
+  now: number = Date.now(),
+): number {
+  const chrono = chronoStart(m)
+  if (!chrono) return 0
+  const start = new Date(chrono).getTime()
   const end = m.ended_at ? new Date(m.ended_at).getTime() : now
   return Math.max(0, end - start)
+}
+
+/**
+ * Puts a match on the table: it reads as live everywhere (dashboard, TV, board)
+ * from that moment, while the chrono waits for the first point. Null when there
+ * is nothing to write — already started, or already played.
+ */
+export function startPatch(
+  m: Pick<Match, 'done' | 'started_at'>,
+  now: string,
+): Partial<Match> | null {
+  if (m.done || m.started_at) return null
+  return { started_at: now }
+}
+
+/**
+ * The timestamps a scored point adds. The first point starts the chrono, and
+ * starts the match itself when it was never opened in referee mode. Empty once
+ * the match is under way — the chrono never moves.
+ */
+export function firstPointPatch(m: Chrono, now: string): Partial<Match> {
+  if (m.score_a + m.score_b > 0 || m.first_point_at) return {}
+  return m.started_at ? { first_point_at: now } : { started_at: now, first_point_at: now }
 }
 
 /** Compute standings from a set of matches, ranked by wins then point differential. */
