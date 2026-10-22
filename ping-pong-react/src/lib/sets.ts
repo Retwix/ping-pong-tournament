@@ -90,3 +90,21 @@ export function undoSetValidationPatch(m: LiveScore): Partial<Match> | null {
   if (!last || m.score_a + m.score_b > 0) return null
   return { sets: sets.slice(0, -1), score_a: last[0], score_b: last[1] }
 }
+
+/** Every set of the match, the set in play (or deciding set) last, from the winner's side. */
+export function setsByWinner(m: LiveScore): { winner: number[]; loser: number[] } {
+  const all = [...finishedSets(m), [m.score_a, m.score_b]]
+  const aWon = m.score_a > m.score_b
+  return {
+    winner: all.map(([a, b]) => (aWon ? a : b)),
+    loser: all.map(([a, b]) => (aWon ? b : a)),
+  }
+}
+
+/**
+ * Set parties stay off Slack until their messages can show the sets (S4):
+ * a deciding-set score posted as the result would mislead, and stay posted.
+ */
+export function postsToSlack(t: Pick<Tournament, 'best_of'>): boolean {
+  return bestOf(t) === 1
+}

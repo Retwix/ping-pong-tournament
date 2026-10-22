@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase'
 import { uniqueChannelName } from '../lib/realtimeChannel'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
-import { finishedSets } from '../lib/sets'
+import { finishedSets, postsToSlack } from '../lib/sets'
 import { reconcileBracket } from '../lib/doubleElim'
 import {
   mergeWithPending,
@@ -251,7 +251,9 @@ export function useTournament(id: string | null) {
     if (champion && tournament.status !== 'done') {
       setTournament((prev) => (prev ? { ...prev, status: 'done', champion } : prev))
       updateTournament(tournament.id, { status: 'done', champion })
-        .then(() => void postSlackResult(tournament.id))
+        .then(() => {
+          if (postsToSlack(tournament)) void postSlackResult(tournament.id)
+        })
         .catch((e) => setError(e instanceof Error ? e.message : String(e)))
     }
   }, [matches, tournament])
@@ -268,7 +270,7 @@ export function useTournament(id: string | null) {
       .then(() => {
         // Post final standings into the Slack invitation thread (no-op unless
         // configured; the Edge Function dedupes so multiple devices are fine).
-        void postSlackResult(tournament.id)
+        if (postsToSlack(tournament)) void postSlackResult(tournament.id)
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [matches, tournament])

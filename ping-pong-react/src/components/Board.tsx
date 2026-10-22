@@ -141,6 +141,7 @@ export default function Board({
       return (
         <GameResult
           match={match}
+          bestOf={bestOf(tournament)}
           onReplay={rematch}
           onHome={onBack}
           ratings={ratingsForMatch(match)}

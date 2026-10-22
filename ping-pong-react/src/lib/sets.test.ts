@@ -4,6 +4,8 @@ import {
   finishedSets,
   isMatchBall,
   pointAtStake,
+  postsToSlack,
+  setsByWinner,
   undoSetValidationPatch,
   validateSetPatch,
 } from './sets'
@@ -102,5 +104,25 @@ describe('undoSetValidationPatch', () => {
 
   it('has nothing to undo before the first set is validated', () => {
     expect(undoSetValidationPatch({ score_a: 0, score_b: 0, sets: [] })).toBeNull()
+  })
+})
+
+describe('setsByWinner', () => {
+  it('lists every set, the deciding one last, from the winner\'s side', () => {
+    const match = { score_a: 9, score_b: 11, sets: [[11, 5], [8, 11]] satisfies SetScore[] }
+    expect(setsByWinner(match)).toEqual({ winner: [5, 11, 11], loser: [11, 8, 9] })
+  })
+
+  it('reads a single game as its one set', () => {
+    expect(setsByWinner({ score_a: 11, score_b: 7, sets: [] })).toEqual({ winner: [11], loser: [7] })
+  })
+})
+
+describe('postsToSlack', () => {
+  it.for([
+    { bestOf: 1, posts: true },
+    { bestOf: 3, posts: false },
+  ])('a party of $bestOf set(s) is announced on Slack: $posts', ({ bestOf, posts }) => {
+    expect(postsToSlack({ best_of: bestOf })).toBe(posts)
   })
 })

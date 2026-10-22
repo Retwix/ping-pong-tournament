@@ -1521,6 +1521,17 @@ td.elo.neg { color: var(--coral); }
   line-height: 1; color: #fff; text-shadow: 0 8px 40px rgba(0, 0, 0, 0.3); white-space: nowrap;
 }
 .tk-score-dash { color: rgba(255, 255, 255, 0.5); margin: 0 10px; }
+.tk-sets { margin: 26px auto 0; border-collapse: collapse; color: #fff; }
+.tk-sets th {
+  font-family: var(--font-display); font-weight: 700; font-size: 17px; text-align: left;
+  padding: 6px 22px 6px 0; white-space: nowrap;
+}
+.tk-sets td {
+  font-family: var(--font-display); font-weight: 900; font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.1; text-align: center; min-width: 1.6em; padding: 2px 10px;
+  font-variant-numeric: tabular-nums;
+}
+.tk-sets tr + tr th, .tk-sets tr + tr td { opacity: 0.6; }
 .tk-actions { display: flex; gap: 12px; margin-top: 28px; width: 100%; max-width: 420px; justify-content: center; }
 .tk-actions .tk-btn { flex: 0 1 auto; padding: 14px 30px; font-size: 15px; border-radius: 14px; }
 
