@@ -36,8 +36,8 @@ const weightOf = (match: Match): number[] =>
 
 describe('the Elo weight of a ranked match of sets', () => {
   it.for<{ result: string; sets: SetScore[]; final: [number, number]; weight: number }>([
-    { result: 'Bo3 2-0', sets: [[11, 5]], final: [11, 7], weight: 1.75 },
-    { result: 'Bo3 2-1', sets: [[11, 5], [8, 11]], final: [11, 9], weight: 1.375 },
+    { result: 'Bo3 2-0 on two deuces', sets: [[12, 10]], final: [13, 11], weight: 1.75 },
+    { result: 'Bo3 2-1 with an 11-0 set', sets: [[11, 0], [8, 11]], final: [11, 9], weight: 1.375 },
     { result: 'Bo3 1-2', sets: [[11, 5], [8, 11]], final: [9, 11], weight: 1.375 },
     { result: 'Bo5 3-1', sets: [[11, 5], [9, 11], [11, 7]], final: [11, 3], weight: 1.5 },
   ])('$result weighs $weight for both players, whatever the points', ({ sets, final, weight }) => {
