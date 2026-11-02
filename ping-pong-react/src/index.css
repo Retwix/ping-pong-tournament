@@ -3056,7 +3056,8 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 [data-theme='dark'] .st-pm-res.w { background: rgba(43, 165, 114, 0.18); color: #4bd69b; }
 [data-theme='dark'] .st-pm-res.l { background: rgba(229, 76, 76, 0.18); color: #ff7676; }
 .st-pm-opp { flex: 1; min-width: 0; font-family: var(--font-body); font-weight: 600; font-size: 13px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.st-pm-score { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--fg-1); }
+.st-pm-score { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--fg-1); display: flex; flex-wrap: wrap; justify-content: flex-end; column-gap: 0.35em; }
+.st-pm-set { white-space: nowrap; }
 .st-pm-date { width: 72px; text-align: right; font-family: var(--font-body); font-weight: 500; font-size: 11.5px; color: #a49eb3; flex: none; }
 [data-theme='dark'] .st-pm-date { color: #8b82a8; }
 .st-pm-sec-row { display: flex; align-items: center; justify-content: space-between; }

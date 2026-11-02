@@ -1,6 +1,6 @@
 // Pure selectors for the « Les stats » page (/stats).
 
-import type { Match, Tournament } from '../types'
+import type { Match, SetScore, Tournament } from '../types'
 import { individualMatches } from './doubles'
 import { relativeTime, signed } from './format'
 import { matchDuration } from './pingpong'
@@ -17,6 +17,7 @@ import {
   type Rivalry,
 } from './stats'
 import { currentSeason } from './seasons'
+import { setsFromSide } from './sets'
 
 export type StatsPeriod = 'tout' | 'saison' | 'mois' | 'semaine'
 export type StatsType = 'tout' | 'tournois' | 'rapides'
@@ -577,7 +578,8 @@ export interface PlayerCardKpi {
 export interface PlayerCardMatch {
   win: boolean
   opponent: string
-  score: string
+  /** Every set, the deciding one last, from this player's side; a single game is its one score. */
+  sets: SetScore[]
   date: string
 }
 
@@ -648,7 +650,7 @@ export function playerCard(
     return {
       win: my > their,
       opponent: meIsA ? m.player_b : m.player_a,
-      score: `${my}-${their}`,
+      sets: setsFromSide(m, meIsA ? 'a' : 'b'),
       date: relativeTime(m.ended_at ?? m.started_at, now),
     }
   })

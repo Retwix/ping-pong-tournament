@@ -791,7 +791,13 @@ function PlayerCardModal({
               <div className="st-pm-match" key={i}>
                 <span className={`st-pm-res ${m.win ? 'w' : 'l'}`}>{m.win ? 'V' : 'D'}</span>
                 <span className="st-pm-opp">vs {m.opponent}</span>
-                <span className="st-pm-score">{m.score}</span>
+                <span className="st-pm-score">
+                  {m.sets.map(([mine, theirs], i) => (
+                    <span key={i} className="st-pm-set">
+                      {mine}-{theirs}
+                    </span>
+                  ))}
+                </span>
                 <span className="st-pm-date">{m.date}</span>
               </div>
             ))}
