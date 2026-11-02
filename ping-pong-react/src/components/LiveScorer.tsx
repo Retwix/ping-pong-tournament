@@ -9,12 +9,18 @@ import { useEffect, useRef, useState } from "react";
 import {
 	decrementPatch,
 	formatDuration,
-	isMatchPoint,
 	isWon,
 	matchDuration,
-	matchPointKind,
 	serverIsA,
 } from "../lib/pingpong";
+import {
+	finishedSets,
+	isMatchBall,
+	pointAtStake,
+	undoSetValidationPatch,
+	validateSetPatch,
+	wonSetDecidesMatch,
+} from "../lib/sets";
 import { playDing } from "../lib/sound";
 import {
 	activeChaosAt,
@@ -29,6 +35,8 @@ import type { SideElos } from "../lib/scorerElo";
 interface Props {
 	match: Match;
 	target: number;
+	/** Sets in the match (Bo3/Bo5); 1, the default, is a single game. */
+	bestOf?: number;
 	onPatch?: (patch: Partial<Match>) => void;
 	onClose?: () => void;
 	onFinish?: () => void;
@@ -51,6 +59,7 @@ const FLIP_KEY = "rv-score-flip";
 export default function LiveScorer({
 	match,
 	target,
+	bestOf = 1,
 	onPatch,
 	onClose,
 	onFinish,
@@ -92,7 +101,9 @@ export default function LiveScorer({
 			return next;
 		});
 
+	const rules = { target, bestOf };
 	const won = isWon(match.score_a, match.score_b, target);
+	const wonMatch = wonSetDecidesMatch(match, rules);
 	const aWon = won && match.score_a > match.score_b;
 	const bWon = won && match.score_b > match.score_a;
 	const aServe = !won && serverIsA(match, target);
@@ -128,10 +139,11 @@ export default function LiveScorer({
 		const savedA = match.mb_saved_a ?? 0;
 		const savedB = match.mb_saved_b ?? 0;
 		historyRef.current.push([match.score_a, match.score_b, savedA, savedB]);
-		// Was the side that did NOT score one point away from winning? If so, the
-		// scoring side just saved a match ball (and the opponent wasted one).
-		const aWasMp = isMatchPoint(true, match.score_a, match.score_b, target);
-		const bWasMp = isMatchPoint(false, match.score_a, match.score_b, target);
+		// Was the side that did NOT score one point away from winning the match?
+		// If so, the scoring side just saved a match ball (and the opponent wasted
+		// one). A set ball that doesn't decide the match is not counted.
+		const aWasMp = isMatchBall(match, "a", rules);
+		const bWasMp = isMatchBall(match, "b", rules);
 		const patch: Partial<Match> =
 			side === "a"
 				? { score_a: match.score_a + 1 }
@@ -158,13 +170,19 @@ export default function LiveScorer({
 	const undo = () => {
 		if (!onPatch) return;
 		const prev = historyRef.current.pop();
-		if (prev)
+		if (prev) {
 			onPatch({
 				score_a: prev[0],
 				score_b: prev[1],
 				mb_saved_a: prev[2],
 				mb_saved_b: prev[3],
 			});
+			return;
+		}
+		// Nothing left to undo in this set: at 0-0, take back the last « Valider
+		// le set ». Read from the stored sets, so it also works after a reload.
+		const unvalidate = undoSetValidationPatch(match);
+		if (unvalidate) onPatch(unvalidate);
 	};
 
 	// Apply a score-mutating legendary (Heist / Wipeout / Mirror). Snapshots the
@@ -189,10 +207,12 @@ export default function LiveScorer({
 	};
 	const finish = () => {
 		if (!onPatch) return;
-		if (match.done) return;
-		if (!isWon(match.score_a, match.score_b, target)) return;
-		onPatch({ done: true, ended_at: new Date().toISOString() });
-		onFinish?.();
+		const patch = validateSetPatch(match, rules, new Date().toISOString());
+		if (!patch) return;
+		// The validated set's points are locked: undo can't reach into them.
+		historyRef.current = [];
+		onPatch(patch);
+		if (patch.done) onFinish?.();
 	};
 	const swapServe = () => {
 		if (!onPatch) return;
@@ -338,22 +358,37 @@ export default function LiveScorer({
 
 	const clock = formatDuration(matchDuration(match));
 	const canSwapServe = !match.done && match.score_a + match.score_b === 0;
+	const finished = finishedSets(match);
+	// Finished sets read in the order the zones are displayed (they follow the swap).
+	const finishedLine = finished
+		.map(([a, b]) => (order[0] === "a" ? `${a}-${b}` : `${b}-${a}`))
+		.join("  ");
+	const formatLine =
+		bestOf === 1
+			? `Jeu en ${target}`
+			: [`Bo${bestOf} en ${target}`, `Set ${finished.length + 1}`, finishedLine]
+					.filter(Boolean)
+					.join(" · ");
 
 	const renderZone = (side: MatchSide) => {
 		const d = sideData[side];
-		const oppScore = sideData[side === "a" ? "b" : "a"].score;
-		const mpKind = matchPointKind(d.score, oppScore, target);
+		const mpKind = pointAtStake(match, side, rules);
 		const elo = elos?.[side] ?? null;
 		return (
 			<div
 				key={side}
 				className={`refzone refzone--${side}${d.serving ? " is-serving" : ""}${
-					mpKind === "match" ? " is-matchpoint" : ""
+					mpKind === "match" || mpKind === "set" ? " is-matchpoint" : ""
 				}${mpKind === "capot" ? " is-capot" : ""}${d.isWinner ? " is-winner" : ""}`}
 				onClick={() => addPoint(side)}
 			>
 				<div className={`ref-mp-pill${mpKind ? "" : " is-reserved"}`}>
-					● {mpKind === "capot" ? "BALLE DE CAPOT" : "BALLE DE MATCH"}
+					●{" "}
+					{mpKind === "capot"
+						? "BALLE DE CAPOT"
+						: mpKind === "set"
+							? "BALLE DE SET"
+							: "BALLE DE MATCH"}
 				</div>
 				<div className="refzone-head">
 					<span className="refzone-name">{d.name}</span>
@@ -385,12 +420,16 @@ export default function LiveScorer({
 				)}
 				<div className="refzone-score">{d.score}</div>
 				{d.isWinner ? (
-					<div className="refzone-caption refzone-caption--win">Vainqueur 🏆</div>
+					<div className="refzone-caption refzone-caption--win">
+						{wonMatch ? "Vainqueur 🏆" : "Set gagné"}
+					</div>
 				) : (
 					<div className={`refzone-caption${mpKind ? "" : " is-reserved"}`}>
 						{mpKind === "capot"
 							? "1 point pour le capot !"
-							: "1 point pour gagner le match"}
+							: mpKind === "set"
+								? "1 point pour gagner le set"
+								: "1 point pour gagner le match"}
 					</div>
 				)}
 				<button
@@ -432,7 +471,8 @@ export default function LiveScorer({
 					<div className="ref-topbar-title">
 						<div className="ref-title">{tournamentName ?? "Tournoi ping-pong"}</div>
 						<div className="ref-subtitle">
-							{subtitle ? `${subtitle} · ` : ""}Jeu en {target}
+							{subtitle ? `${subtitle} · ` : ""}
+							{formatLine}
 						</div>
 					</div>
 				</div>
@@ -470,7 +510,7 @@ export default function LiveScorer({
 						<span className="ref-chrono-label">CHRONO</span>
 					</div>
 					<div className="ref-meta-center">
-						<div className="ref-meta-title">Jeu en {target}</div>
+						<div className="ref-meta-title">{formatLine}</div>
 						{tournamentName && (
 							<div className="ref-meta-sub">{tournamentName}</div>
 						)}
@@ -515,7 +555,11 @@ export default function LiveScorer({
 					<IconCheck size={20} stroke={2.6} />
 					<span className="ref-dock-label">
 						{match.done ? "Validé" : "Valider"}
-						{!match.done && <span className="ref-dock-label-ext"> la partie</span>}
+						{!match.done && (
+							<span className="ref-dock-label-ext">
+								{bestOf > 1 && !wonMatch ? " le set" : " la partie"}
+							</span>
+						)}
 					</span>
 					<kbd>Entrée</kbd>
 				</button>

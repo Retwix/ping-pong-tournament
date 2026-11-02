@@ -161,6 +161,8 @@ export async function createTournament(
   unranked = false,
   /** 2v2: the two id-pairs [[idA1, idA2], [idB1, idB2]]. `players` then holds the pair display names. */
   teams: [string[], string[]] | null = null,
+  /** Sets in a quick game's match: 1 (a single game), or 3 / 5 for a best-of. */
+  bestOf = 1,
 ): Promise<string> {
   // Games are always a single round-robin match regardless of the chosen format.
   const effectiveFormat: TournamentFormat = kind === 'game' ? 'round_robin' : format
@@ -195,6 +197,9 @@ export async function createTournament(
       unranked,
       doubles: teams !== null,
       teams,
+      // Only written for a best-of, so single games keep inserting on a
+      // database that hasn't run the sets migration yet.
+      ...(bestOf > 1 ? { best_of: bestOf } : {}),
       ...chaosColumns(chaos),
     })
     .select()

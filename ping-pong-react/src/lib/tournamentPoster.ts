@@ -208,7 +208,7 @@ export function buildTournamentPosterSvg(
 
 /** Quick-game challenge card to send to an opponent. */
 export function buildChallengePosterSvg(
-  opts: { playerA: string; playerB: string; target: number; date?: Date; time?: string },
+  opts: { playerA: string; playerB: string; target: number; bestOf?: number; date?: Date; time?: string },
   fontCss = '',
 ): PosterResult {
   // Doubles pass pair display names (« Léo & Inès ») — longer lines, so a
@@ -225,7 +225,12 @@ export function buildChallengePosterSvg(
         { text: 'vs', size: 44, weight: 700, color: CORAL, italic: true },
         { text: b, size: nameSize, weight: 800, color: '#ffffff' },
       ],
-      badges: [whenBadge(opts.date ?? new Date(), opts.time), `Game to ${opts.target} points`],
+      badges: [
+        whenBadge(opts.date ?? new Date(), opts.time),
+        (opts.bestOf ?? 1) > 1
+          ? `Best of ${opts.bestOf} · sets to ${opts.target}`
+          : `Game to ${opts.target} points`,
+      ],
       tagline: 'Will you take up the challenge?',
     },
     fontCss,

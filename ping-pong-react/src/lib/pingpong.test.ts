@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { decrementPatch, matchPointKind } from './pingpong'
+import { decrementPatch, matchPointKind, serverIsA } from './pingpong'
+import type { SetScore } from '../types'
 
 describe('decrementPatch', () => {
 	it('removes one point from side a', () => {
@@ -61,5 +62,22 @@ describe('matchPointKind', () => {
 		expect(matchPointKind(20, 5, 21)).toBe('match')
 		expect(matchPointKind(20, 0, 21)).toBe('capot')
 		expect(matchPointKind(19, 5, 21)).toBeNull()
+	})
+})
+
+describe('serverIsA', () => {
+	it.for<{ when: string; a: number; b: number; sets: SetScore[]; aServes: boolean }>([
+		{ when: 'set 1 starts', a: 0, b: 0, sets: [], aServes: true },
+		{ when: 'set 1 after two points', a: 2, b: 0, sets: [], aServes: false },
+		{ when: 'only A has reached 10 (no deuce)', a: 10, b: 0, sets: [], aServes: false },
+		{ when: 'only B has reached 10 (no deuce)', a: 0, b: 10, sets: [], aServes: false },
+		{ when: 'deuce at 11-10', a: 11, b: 10, sets: [], aServes: false },
+		{ when: 'set 2 starts', a: 0, b: 0, sets: [[11, 5]], aServes: false },
+		{ when: 'set 2 after two points', a: 1, b: 1, sets: [[11, 5]], aServes: true },
+		{ when: 'set 3 starts', a: 0, b: 0, sets: [[11, 5], [8, 11]], aServes: true },
+		{ when: 'set 2 at deuce 10-10', a: 10, b: 10, sets: [[11, 5]], aServes: false },
+		{ when: 'set 2 at deuce 10-11', a: 10, b: 11, sets: [[11, 5]], aServes: true },
+	])('when $when, A serves: $aServes', ({ a, b, sets, aServes }) => {
+		expect(serverIsA({ score_a: a, score_b: b, serve_start: 'a', sets }, 11)).toBe(aServes)
 	})
 })

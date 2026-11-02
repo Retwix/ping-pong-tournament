@@ -41,6 +41,7 @@ import {
   retirerJoueurDouble,
   type SelectionDouble,
 } from '../lib/nouvellePartie'
+import { postsToSlack } from '../lib/sets'
 import { inviteToSlack } from '../lib/slack'
 import { TEAMS, teamBadgeStyle, teamColor, teamLabel, type TeamKey } from '../lib/teams'
 import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
@@ -62,6 +63,8 @@ function slugify(s: string, fallback: string): string {
 }
 
 const PRESETS = [11, 21, 15]
+/** Sets in a quick game: a single game, or a best-of-3 / best-of-5. */
+const SET_CHOICES = [1, 3, 5]
 const SELECTION_DOUBLE_VIDE: SelectionDouble = { a: [], b: [], camp: 'A' }
 
 const rowsPour = (annuaire: JoueurRow[], ids: string[]): JoueurRow[] =>
@@ -97,6 +100,7 @@ export default function NouvellePartie({
   const [query, setQuery] = useState('')
   const [preset, setPreset] = useState(11)
   const [autre, setAutre] = useState('')
+  const [sets, setSets] = useState(1)
   const [time, setTime] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
@@ -181,28 +185,34 @@ export default function NouvellePartie({
   const gameFull =
     isGame && (isDouble ? (hasard ? selRows.length >= 4 : nDouble >= 4) : selRows.length >= 2)
   const target = pointsCible(preset, autre)
+  // Tournaments are single games per match; sets are a quick-game option only.
+  const bestOfChoisi = isGame ? sets : 1
+  const enSets = bestOfChoisi > 1
   const selDoubleNoms: SelectionDouble = {
     a: teamRows.a.map((r) => r.name),
     b: teamRows.b.map((r) => r.name),
     camp: selDouble.camp,
   }
   const recap = isHasard
-    ? recapitulatifHasard(selRows.length, target)
+    ? recapitulatifHasard(selRows.length, target, bestOfChoisi)
     : isDouble
-      ? recapitulatifDouble(selDoubleNoms, target)
+      ? recapitulatifDouble(selDoubleNoms, target, bestOfChoisi)
       : recapitulatif({
           variant,
           format,
           selected: selRows.map((r) => r.name),
           name,
           target,
+          bestOf: bestOfChoisi,
         })
   // Whichever rows are actually selected right now, matching the add/remove branching below.
   const selectedRows = isDouble && !hasard ? [...teamRows.a, ...teamRows.b] : selRows
   const ancienSelectionne = contientAncien(selectedRows)
-  // Doubles have no pair Elo in v1, and an ancien must never move a rating in a
-  // ladder they no longer appear in — both lock the enjeu on « Non classée ».
-  const unrankedEffectif = enjeuEffectif(unranked, isDouble, ancienSelectionne)
+  // Doubles have no pair Elo in v1, an ancien must never move a rating in a
+  // ladder they no longer appear in, and sets have no Elo weighting yet — all
+  // lock the enjeu on « Non classée ».
+  const unrankedEffectif = enjeuEffectif(unranked, isDouble, ancienSelectionne, enSets)
+  const enjeuVerrouille = isDouble || ancienSelectionne || enSets
 
   // « Durée estimée » : the cost model is fitted from every timed match the club
   // has played, and re-read as the selection, the format and the target change.
@@ -321,9 +331,10 @@ export default function NouvellePartie({
         chaos,
         unrankedEffectif,
         isDouble ? [equipeA, equipeB] : null,
+        bestOfChoisi,
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
-      void inviteToSlack(id)
+      if (postsToSlack({ best_of: bestOfChoisi })) void inviteToSlack(id)
       onCreated(id)
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : String(e))
@@ -343,7 +354,10 @@ export default function NouvellePartie({
       const paireB = isDouble ? nomPaire(selDoubleNoms.b) : selRows[1].name
       const { svg, width, height, filename } = isGame
         ? {
-            ...buildChallengePosterSvg({ playerA: paireA, playerB: paireB, target, time }, fontCss),
+            ...buildChallengePosterSvg(
+              { playerA: paireA, playerB: paireB, target, bestOf: bestOfChoisi, time },
+              fontCss,
+            ),
             filename: `challenge-${slugify(`${paireA}-vs-${paireB}`, 'challenge')}.png`,
           }
         : {
@@ -865,6 +879,26 @@ export default function NouvellePartie({
                 </label>
               </div>
             </div>
+            {isGame && (
+              <div className="np-points np-sets">
+                <div>
+                  <h2 className="np-card-title">Sets</h2>
+                  <p className="np-card-desc">Le premier à gagner la majorité des sets l’emporte.</p>
+                </div>
+                <div className="np-pts-controls">
+                  {SET_CHOICES.map((v) => (
+                    <button
+                      key={v}
+                      className={`np-pts-chip${sets === v ? ' active' : ''}`}
+                      aria-pressed={sets === v}
+                      onClick={() => setSets(v)}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="np-card">
@@ -1009,7 +1043,7 @@ export default function NouvellePartie({
             <div className="np-enjeu">
               <div className="np-enjeu-head">
                 <div className="np-label">L’enjeu</div>
-                {(isDouble || ancienSelectionne) && (
+                {enjeuVerrouille && (
                   <span className="np-verrou">
                     <IconLock size={12} stroke={2.2} />
                     verrouillé
@@ -1019,21 +1053,21 @@ export default function NouvellePartie({
               <div className="np-enjeu-seg">
                 <button
                   className={`np-enjeu-btn${unrankedEffectif ? '' : ' active'}`}
-                  disabled={isDouble || ancienSelectionne}
+                  disabled={enjeuVerrouille}
                   onClick={() => setUnranked(false)}
                 >
                   Classée
                 </button>
                 <button
                   className={`np-enjeu-btn${unrankedEffectif ? ' active' : ''}`}
-                  disabled={isDouble || ancienSelectionne}
+                  disabled={enjeuVerrouille}
                   onClick={() => setUnranked(true)}
                 >
                   Non classée
                 </button>
               </div>
               <div className="np-enjeu-note">
-                {noteEnjeu(unrankedEffectif, isDouble, ancienSelectionne)}
+                {noteEnjeu(unrankedEffectif, isDouble, ancienSelectionne, enSets)}
               </div>
             </div>
 

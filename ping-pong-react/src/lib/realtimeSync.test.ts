@@ -53,11 +53,25 @@ describe('upsertSorted', () => {
 })
 
 describe('echoMatchesPending / reconcileEcho', () => {
-	const pending: PendingValue = { score_a: 3, score_b: 2, done: false }
+	const pending: PendingValue = { score_a: 3, score_b: 2, done: false, sets: [] }
 
 	it('matches only when score + done all agree', () => {
 		expect(echoMatchesPending(pending, m({ id: 'x', idx: 0, score_a: 3, score_b: 2 }))).toBe(true)
 		expect(echoMatchesPending(pending, m({ id: 'x', idx: 0, score_a: 2, score_b: 2 }))).toBe(false)
+		expect(echoMatchesPending(pending, m({ id: 'x', idx: 0, score_a: 3, score_b: 3 }))).toBe(false)
+		expect(echoMatchesPending(pending, m({ id: 'x', idx: 0, score_a: 3, score_b: 2, done: true }))).toBe(false)
+	})
+
+	it('waits for the echo carrying the validated set, not one at the same score without it', () => {
+		const validated: PendingValue = { score_a: 0, score_b: 0, done: false, sets: [[11, 5]] }
+		expect(echoMatchesPending(validated, m({ id: 'x', idx: 0, sets: [] }))).toBe(false)
+		expect(echoMatchesPending(validated, m({ id: 'x', idx: 0, sets: [[11, 5]] }))).toBe(true)
+	})
+
+	it('does not settle on a stale echo of a set validated before a correction', () => {
+		const corrected: PendingValue = { score_a: 0, score_b: 0, done: false, sets: [[12, 10]] }
+		expect(echoMatchesPending(corrected, m({ id: 'x', idx: 0, sets: [[11, 10]] }))).toBe(false)
+		expect(echoMatchesPending(corrected, m({ id: 'x', idx: 0, sets: [[12, 9]] }))).toBe(false)
 	})
 
 	it('applies a remote change when nothing is pending', () => {
@@ -83,10 +97,18 @@ describe('mergeWithPending', () => {
 	it('preserves an unconfirmed optimistic tap over a stale DB refetch', () => {
 		// DB still says 4-4, but the ref has locally tapped to 5-4 (pending).
 		const rows = [m({ id: 'a', idx: 0, score_a: 4, score_b: 4 })]
-		const pending = new Map<string, PendingValue>([['a', { score_a: 5, score_b: 4, done: false }]])
+		const pending = new Map<string, PendingValue>([['a', { score_a: 5, score_b: 4, done: false, sets: [] }]])
 		const out = mergeWithPending(rows, pending)
 		expect(out[0].score_a).toBe(5)
 		expect(out[0].score_b).toBe(4)
+	})
+
+	it('keeps a pending set validation over a refetch that still has the set in play', () => {
+		const rows = [m({ id: 'a', idx: 0, score_a: 11, score_b: 5, sets: [] })]
+		const pending = new Map<string, PendingValue>([
+			['a', { score_a: 0, score_b: 0, done: false, sets: [[11, 5]] }],
+		])
+		expect(mergeWithPending(rows, pending)[0].sets).toEqual([[11, 5]])
 	})
 })
 

@@ -22,6 +22,7 @@ const getState = (overrides?: Partial<CreationState>): CreationState => ({
   selected: [],
   name: '',
   target: 11,
+  bestOf: 1,
   ...overrides,
 })
 
@@ -59,6 +60,11 @@ describe('récapitulatif — partie rapide', () => {
   it('reflects a custom points target in the hint', () => {
     const result = recapitulatif(getState({ selected: ['Léo', 'Thibault'], target: 21 }))
     expect(result.hint).toBe('Léo vs Thibault · jeu en 21')
+  })
+
+  it('names the sets in the hint of a best-of game', () => {
+    const result = recapitulatif(getState({ selected: ['Léo', 'Thibault'], bestOf: 3 }))
+    expect(result.hint).toBe('Léo vs Thibault · Bo3 en 11')
   })
 
   it('requires exactly 2 players — a third invalidates the game', () => {
@@ -217,6 +223,12 @@ describe('noteEnjeu', () => {
     )
   })
 
+  it('explains that a game of sets does not count for the classement yet', () => {
+    expect(noteEnjeu(false, false, false, true)).toBe(
+      'Les parties en sets ne comptent pas encore pour le classement.',
+    )
+  })
+
   it('lets the ancien reason override the doubles wording when both are true', () => {
     expect(noteEnjeu(false, true, true)).toBe(
       'Un ancien joue : la partie ne compte pas pour le classement.',
@@ -249,6 +261,10 @@ describe('enjeuEffectif', () => {
 
   it('is unranked when the player chose it manually', () => {
     expect(enjeuEffectif(true, false, false)).toBe(true)
+  })
+
+  it('is forced unranked for a game of sets', () => {
+    expect(enjeuEffectif(false, false, false, true)).toBe(true)
   })
 
   it('is forced unranked the moment an ancien joins, even if nothing else forces it', () => {
@@ -385,6 +401,13 @@ describe('choisirJoueurDouble', () => {
   })
 })
 
+describe('récapitulatif — double en sets', () => {
+  it('names the sets once both teams are complete', () => {
+    const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim', 'Julie'] })
+    expect(recapitulatifDouble(sel, 11, 5).hint).toMatch(/ · Bo5 en 11$/)
+  })
+})
+
 describe('retirerJoueurDouble', () => {
   it('removes a player from équipe A without touching the active camp', () => {
     const sel = getSelDouble({ a: ['Léo', 'Inès'], b: ['Karim'], camp: 'B' })
@@ -446,6 +469,11 @@ describe('récapitulatif — équipes au hasard', () => {
   it('rejects an overfull selection defensively', () => {
     expect(recapitulatifHasard(5, 11).valid).toBe(false)
   })
+
+  it('names the sets of a best-of double', () => {
+    expect(recapitulatifHasard(4, 11, 3).hint).toBe('4 joueurs · équipes au hasard · Bo3 en 11')
+  })
+
 })
 
 describe('aideCamp', () => {

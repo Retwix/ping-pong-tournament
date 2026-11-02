@@ -74,7 +74,16 @@ export interface Tournament {
   chaos_interval: number
   chaos_intensity: ChaosIntensity
   chaos_legendary: boolean
+  /**
+   * Sets in the match: 1 for a single game, 3 or 5 for a best-of. Quick games
+   * only. Absent on rows created before the sets migration; read it through
+   * `bestOf`, which treats missing as 1.
+   */
+  best_of?: number
 }
+
+/** One set's points, `[side a, side b]`. */
+export type SetScore = [number, number]
 
 export interface Match {
   id: string
@@ -113,6 +122,13 @@ export interface Match {
    */
   mb_saved_a: number
   mb_saved_b: number
+  /**
+   * The validated sets before the one in play, in order. `score_a`/`score_b`
+   * stay the points of the set in play (or, once `done`, of the deciding set),
+   * so a single game keeps `[]`. Absent on rows created before the sets
+   * migration; read it through `finishedSets`.
+   */
+  sets?: SetScore[]
 }
 
 /** A row in the live standings table. */
