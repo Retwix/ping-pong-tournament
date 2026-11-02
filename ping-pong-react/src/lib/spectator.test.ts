@@ -269,6 +269,7 @@ describe('liveStakes', () => {
     { state: 'Bo3 with A up 1-0, B leads set 2', bestOf: 3, sets: [[11, 5]], score: [3, 7], aWins: false, weight: 1.375 },
     { state: 'Bo3 at 1-1, A leads set 3', bestOf: 3, sets: [[11, 5], [8, 11]], score: [4, 2], aWins: true, weight: 1.375 },
     { state: 'Bo5 with A up 2-1, B leads set 4', bestOf: 5, sets: [[11, 5], [8, 11], [11, 9]], score: [2, 6], aWins: false, weight: 1.25 },
+    { state: 'Bo5 with A up 2-1, A leads set 4', bestOf: 5, sets: [[11, 5], [8, 11], [11, 9]], score: [6, 2], aWins: true, weight: 1.5 },
   ])('$state: the set leader is projected to take every set left', ({ bestOf, sets, score, aWins, weight }) => {
     const side = makeStakeSide()
     const projected = projectDeltas(side, side, aWins, weight)
