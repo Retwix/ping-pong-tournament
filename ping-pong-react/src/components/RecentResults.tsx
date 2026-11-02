@@ -47,7 +47,11 @@ export default function RecentResults({ onOpenTournament, onHistory }: Props) {
                   {row.doubles ? 'battent' : 'bat'} {row.loser} ·{' '}
                 </span>
                 <span className="rvrow-score">
-                  {row.winnerScore}–{row.loserScore}
+                  {row.sets.map(([w, l], i) => (
+                    <span key={i} className="rvrow-set">
+                      {w}–{l}
+                    </span>
+                  ))}
                 </span>
               </div>
               <span className="rvrow-time">{relativeTime(row.endedAt, new Date())}</span>

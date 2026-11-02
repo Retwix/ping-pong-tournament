@@ -1900,11 +1900,12 @@ td.elo.neg { color: var(--coral); }
 .rvrow-text {
   flex: 1; min-width: 0;
   font-family: var(--font-body); font-size: 13.5px; color: var(--fg-2);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 [data-theme='dark'] .rvrow-text { color: #a99fc4; }
 .rvrow-winner { font-weight: 700; color: var(--fg-1); }
-.rvrow-score { font-weight: 700; color: var(--fg-1); }
+.rvrow-score { font-weight: 700; color: var(--fg-1); display: inline-flex; flex-wrap: wrap; column-gap: 0.35em; }
+.rvrow-set { white-space: nowrap; }
 .rvrow-time { flex: none; font-family: var(--font-body); font-size: 12px; color: var(--fg-3); }
 .rvrow-chevron { flex: none; color: var(--fg-3); }
 
