@@ -1,10 +1,11 @@
+import type { SetScore } from '../types'
 import { RATING, type RatingEvent, type RatingRow } from './rating'
 
 /** The match a per-match point was earned in — what the chart tooltip shows. */
 export interface PlayerHistoryMatch {
   opponent: string
-  scoreFor: number
-  scoreAgainst: number
+  /** Every set from this player's side; a single game is its one score. */
+  sets: SetScore[]
   won: boolean
 }
 
@@ -79,8 +80,7 @@ export function playerHistory(
         rating: e.ratingAfter,
         match: {
           opponent: e.opponentName,
-          scoreFor: e.scoreFor,
-          scoreAgainst: e.scoreAgainst,
+          sets: e.sets,
           won: e.won,
         },
       })),

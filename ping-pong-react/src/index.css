@@ -643,7 +643,7 @@ td.elo.neg { color: var(--coral); }
 .rl-tip-res.l { background: #fdeaea; color: #e54c4c; }
 [data-theme='dark'] .rl-tip-res.w { background: rgba(43, 165, 114, 0.18); color: #4bd69b; }
 [data-theme='dark'] .rl-tip-res.l { background: rgba(229, 76, 76, 0.18); color: #ff7676; }
-.rl-tip-score { font-family: var(--font-display); font-weight: 700; color: var(--fg-1); }
+.rl-tip-score { font-family: var(--font-display); font-weight: 700; color: var(--fg-1); display: flex; column-gap: 0.35em; white-space: nowrap; }
 .rl-tip-opp { color: var(--fg-2); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ===== player rating modal ===== */
