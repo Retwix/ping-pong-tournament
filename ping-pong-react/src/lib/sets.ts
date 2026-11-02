@@ -97,12 +97,8 @@ export function undoSetValidationPatch(m: LiveScore): Partial<Match> | null {
 
 /** Every set of the match, the set in play (or deciding set) last, from the winner's side. */
 export function setsByWinner(m: LiveScore): { winner: number[]; loser: number[] } {
-  const all = [...finishedSets(m), [m.score_a, m.score_b]]
-  const aWon = m.score_a > m.score_b
-  return {
-    winner: all.map(([a, b]) => (aWon ? a : b)),
-    loser: all.map(([a, b]) => (aWon ? b : a)),
-  }
+  const sets = setsFromWinner(m)
+  return { winner: sets.map(([w]) => w), loser: sets.map(([, l]) => l) }
 }
 
 /** Every set of a finished match, the deciding set last, each read from the winner's side. */
