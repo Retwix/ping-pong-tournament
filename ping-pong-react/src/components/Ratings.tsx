@@ -73,7 +73,11 @@ function LogLine({ e, win }: { e: RatingEvent; win: boolean }) {
     <div className={`rt-log-line${win ? ' win' : ''}`}>
       <span className="rt-log-name">{e.name}</span>
       <span className="rt-log-score">
-        {e.scoreFor}–{e.scoreAgainst}
+        {e.sets.map(([mine, theirs], i) => (
+          <span key={i} className="rt-log-set">
+            {mine}–{theirs}
+          </span>
+        ))}
       </span>
       <span className="rt-log-move">
         {Math.round(e.ratingBefore)} → <b>{Math.round(e.ratingAfter)}</b>

@@ -11,6 +11,7 @@ const event = (over: Partial<RatingEvent> = {}): RatingEvent => ({
   opponentName: 'Bob',
   scoreFor: 11,
   scoreAgainst: 5,
+  sets: [[11, 5]],
   ratingBefore: 1500,
   ratingAfter: 1512,
   rdBefore: 350,

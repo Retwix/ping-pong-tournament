@@ -187,7 +187,6 @@ export default function NouvellePartie({
   const target = pointsCible(preset, autre)
   // Tournaments are single games per match; sets are a quick-game option only.
   const bestOfChoisi = isGame ? sets : 1
-  const enSets = bestOfChoisi > 1
   const selDoubleNoms: SelectionDouble = {
     a: teamRows.a.map((r) => r.name),
     b: teamRows.b.map((r) => r.name),
@@ -208,11 +207,10 @@ export default function NouvellePartie({
   // Whichever rows are actually selected right now, matching the add/remove branching below.
   const selectedRows = isDouble && !hasard ? [...teamRows.a, ...teamRows.b] : selRows
   const ancienSelectionne = contientAncien(selectedRows)
-  // Doubles have no pair Elo in v1, an ancien must never move a rating in a
-  // ladder they no longer appear in, and sets have no Elo weighting yet — all
-  // lock the enjeu on « Non classée ».
-  const unrankedEffectif = enjeuEffectif(unranked, isDouble, ancienSelectionne, enSets)
-  const enjeuVerrouille = isDouble || ancienSelectionne || enSets
+  // Doubles have no pair Elo in v1, and an ancien must never move a rating in
+  // a ladder they no longer appear in — both lock the enjeu on « Non classée ».
+  const unrankedEffectif = enjeuEffectif(unranked, isDouble, ancienSelectionne)
+  const enjeuVerrouille = isDouble || ancienSelectionne
 
   // « Durée estimée » : the cost model is fitted from every timed match the club
   // has played, and re-read as the selection, the format and the target change.
@@ -1067,7 +1065,7 @@ export default function NouvellePartie({
                 </button>
               </div>
               <div className="np-enjeu-note">
-                {noteEnjeu(unrankedEffectif, isDouble, ancienSelectionne, enSets)}
+                {noteEnjeu(unrankedEffectif, isDouble, ancienSelectionne)}
               </div>
             </div>
 

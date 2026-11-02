@@ -96,6 +96,7 @@ function ev(overrides: Partial<RatingEvent> = {}): RatingEvent {
     opponentName: 'Bob',
     scoreFor: 11,
     scoreAgainst: 0,
+    sets: [[11, 0]],
     ratingBefore: 1500,
     ratingAfter: 1500,
     rdBefore: 60,

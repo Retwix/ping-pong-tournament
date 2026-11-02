@@ -2,7 +2,8 @@ import { serverIsA } from './pingpong'
 import { RATING, gameWeight, projectDeltas, type RatingNumbers, type RatingRow } from './rating'
 import type { Prediction } from './predictions'
 import { sideKey } from './stats'
-import type { Match } from '../types'
+import { finishedSets, setsToWin, setsWonBy, type SetRules } from './sets'
+import type { Match, SetScore } from '../types'
 
 export interface CrowdSplit {
   aPercent: number
@@ -62,8 +63,8 @@ export function ladderAvatar(
 export type StakeSide = RatingNumbers
 
 export interface LiveStakesInput {
-  match: Pick<Match, 'score_a' | 'score_b' | 'done' | 'match_key' | 'win_to'>
-  target: number
+  match: Pick<Match, 'score_a' | 'score_b' | 'done' | 'match_key' | 'win_to' | 'sets'>
+  rules: SetRules
   /** Tie-break for a level score: the serving side is the presumed winner. */
   servingA: boolean
   a: StakeSide | null
@@ -74,24 +75,37 @@ const FRESH: StakeSide = { rating: RATING.R0, rd: RATING.RD0, vol: RATING.VOL0 }
 
 /**
  * Signed "Elo en jeu" per side for a match in progress: the projected rating
- * moves if the current leader closes the game out from here (level score → the
- * server). Null once the match is validated — real deltas take over.
+ * moves if the leader of the set in play closes it out from here (level score
+ * → the server), then wins every set still needed. Null once the match is
+ * validated — real deltas take over.
  */
 export function liveStakes({
   match,
-  target,
+  rules,
   servingA,
   a,
   b,
 }: LiveStakesInput): { a: number; b: number } | null {
   if (match.done) return null
+  const { target } = rules
   const aLeads = match.score_a === match.score_b ? servingA : match.score_a > match.score_b
   const loserScore = aLeads ? match.score_b : match.score_a
   const winnerScore = Math.max(target, loserScore + 2)
+  const asSet = (winner: number, loser: number): SetScore =>
+    aLeads ? [winner, loser] : [loser, winner]
+  const played = finishedSets(match)
+  const setsLeft = setsToWin(rules) - setsWonBy(match, aLeads ? 'a' : 'b') - 1
+  const projected = [
+    ...played,
+    asSet(winnerScore, loserScore),
+    ...Array.from({ length: setsLeft }, () => asSet(target, 0)),
+  ]
+  const [finalA, finalB] = projected[projected.length - 1]
   const weight = gameWeight(
     {
-      score_a: aLeads ? winnerScore : loserScore,
-      score_b: aLeads ? loserScore : winnerScore,
+      score_a: finalA,
+      score_b: finalB,
+      sets: projected.slice(0, -1),
       tournament_id: '',
       match_key: match.match_key,
       win_to: match.win_to,
@@ -114,6 +128,7 @@ type StakesMatch = Pick<
   | 'serve_start'
   | 'match_key'
   | 'win_to'
+  | 'sets'
 >
 
 /**
@@ -123,14 +138,14 @@ type StakesMatch = Pick<
 export function matchStakes(
   rows: RatingRow[],
   match: StakesMatch,
-  target: number
+  rules: SetRules
 ): { a: number; b: number } | null {
   const find = (id: string | null, name: string): StakeSide | null =>
     rows.find((r) => r.key === sideKey(id, name)) ?? null
   return liveStakes({
     match,
-    target,
-    servingA: serverIsA(match, target),
+    rules,
+    servingA: serverIsA(match, rules.target),
     a: find(match.player_a_id, match.player_a),
     b: find(match.player_b_id, match.player_b),
   })

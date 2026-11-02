@@ -19,6 +19,7 @@ import {
 } from '../lib/pingpong'
 import type { RatingRow } from '../lib/rating'
 import { sideElos } from '../lib/scorerElo'
+import { bestOf } from '../lib/sets'
 import { playerInitials } from '../lib/avatar'
 import { ladderAvatar, matchStakes, showsLiveBoard } from '../lib/spectator'
 import type { Match, MatchSide, Tournament } from '../types'
@@ -161,6 +162,7 @@ export default function SpectatorView({
   const [secondsLeft, setSecondsLeft] = useState(REVEAL_SECONDS)
 
   const target = tournament.target
+  const rules = { target, bestOf: bestOf(tournament) }
   const over = tournament.status === 'done'
   const showLive = showsLiveBoard(match, revealedId)
   // Arm the reveal only while a followed match is still waiting to be shown.
@@ -266,7 +268,7 @@ export default function SpectatorView({
   if (!showLive) {
     const next = match ?? matches.find(isPlayable) ?? null
     const nextElos = next ? sideElos(rows, next) : null
-    const nextStakes = next ? matchStakes(rows, next, target) : null
+    const nextStakes = next ? matchStakes(rows, next, rules) : null
     const stakeLine = nextStakes
       ? `${signed(Math.max(nextStakes.a, nextStakes.b))} / ${signed(Math.min(nextStakes.a, nextStakes.b))}`
       : null
@@ -338,7 +340,7 @@ export default function SpectatorView({
   const won = isWon(m.score_a, m.score_b, target)
   const aServe = !won && !m.done && serverIsA(m, target)
   const elos = sideElos(rows, m)
-  const stakes = matchStakes(rows, m, target)
+  const stakes = matchStakes(rows, m, rules)
   const real = m.done ? ratingsFor(m) : { a: null, b: null }
   const clock = formatDuration(matchDuration(m))
 

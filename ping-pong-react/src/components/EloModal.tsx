@@ -74,7 +74,8 @@ export default function EloModal({ example, onClose }: Props) {
           <li>
             <b>La taille du gain</b>
             <span>
-              Un 11–2 pèse plus qu'un 11–9 (jusqu'à ×{RATING.marginCap}), une finale ×
+              Un 11–2 pèse plus qu'un 11–9, et en sets un 2–0 plus qu'un 2–1 (jusqu'à ×
+              {RATING.marginCap}), une finale ×
               {RATING.wFinal}, la grande finale ×{RATING.wGrandFinal}. Sous{' '}
               {RATING.provisionalGames} matchs — ou après une longue absence — le « ± » s'élargit et
               la note bouge plus vite.

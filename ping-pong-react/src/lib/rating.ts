@@ -14,7 +14,8 @@
 // the same order always yields the same ratings. That mirrors how every other
 // stat in the app is derived, and lets ratings be rebuilt from history at will.
 
-import type { Match, Player } from '../types'
+import type { Match, Player, SetScore } from '../types'
+import { finishedSets } from './sets'
 import { sideKey } from './stats'
 
 // ---------- tunables (one place) ----------
@@ -70,6 +71,8 @@ export interface RatingEvent {
   opponentName: string
   scoreFor: number
   scoreAgainst: number
+  /** Every set from this player's side, the deciding set last; one for a single game. */
+  sets: SetScore[]
   ratingBefore: number
   ratingAfter: number
   rdBefore: number
@@ -129,15 +132,29 @@ export function stakesOf(m: Pick<Match, 'match_key' | 'win_to'>): Stakes {
 /** The fields the per-game weight actually reads off a match. */
 export type WeightedMatch = Pick<
   Match,
-  'score_a' | 'score_b' | 'tournament_id' | 'match_key' | 'win_to'
+  'score_a' | 'score_b' | 'tournament_id' | 'match_key' | 'win_to' | 'sets'
 >
+
+/**
+ * How decisive the result was, from 0 to 1. A single game measures its point
+ * gap against the target. A match of sets measures its set gap against the
+ * sets needed to win, which the winner of a finished match holds exactly, and
+ * ignores the points inside the sets.
+ */
+function marginRatio(m: WeightedMatch, opts?: ReplayOptions): number {
+  const sets = finishedSets(m)
+  if (sets.length === 0) {
+    const target = targetFor(m, opts)
+    return Math.min(1, target > 0 ? Math.abs(m.score_a - m.score_b) / target : 0)
+  }
+  const setsA = [...sets, [m.score_a, m.score_b]].filter(([a, b]) => a > b).length
+  const setsB = sets.length + 1 - setsA
+  return Math.abs(setsA - setsB) / Math.max(setsA, setsB)
+}
 
 /** Per-game weight: margin × stakes. */
 export function gameWeight(m: WeightedMatch, opts?: ReplayOptions): number {
-  const target = targetFor(m, opts)
-  const margin = Math.abs(m.score_a - m.score_b)
-  const marginRatio = Math.min(1, target > 0 ? margin / target : 0)
-  const wMargin = Math.min(RATING.marginCap, 1 + RATING.kMargin * marginRatio)
+  const wMargin = Math.min(RATING.marginCap, 1 + RATING.kMargin * marginRatio(m, opts))
   const stakes = stakesOf(m)
   const wStakes =
     stakes === 'grand_final' ? RATING.wGrandFinal : stakes === 'final' ? RATING.wFinal : 1
@@ -338,6 +355,7 @@ export function replayRatings(
 
     const newA = fromGlicko2(updateOne(preA, preB, aWon ? 1 : 0, weight))
     const newB = fromGlicko2(updateOne(preB, preA, aWon ? 0 : 1, weight))
+    const setsA: SetScore[] = [...finishedSets(m), [m.score_a, m.score_b]]
 
     events.push({
       matchId: m.id,
@@ -348,6 +366,7 @@ export function replayRatings(
       opponentName: B.name,
       scoreFor: m.score_a,
       scoreAgainst: m.score_b,
+      sets: setsA,
       ratingBefore: A.rating,
       ratingAfter: newA.rating,
       rdBefore: rdA,
@@ -367,6 +386,7 @@ export function replayRatings(
       opponentName: A.name,
       scoreFor: m.score_b,
       scoreAgainst: m.score_a,
+      sets: setsA.map(([a, b]) => [b, a]),
       ratingBefore: B.rating,
       ratingAfter: newB.rating,
       rdBefore: rdB,

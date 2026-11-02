@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { RatingRow } from './rating'
+import { projectDeltas, type RatingRow } from './rating'
+import type { SetScore } from '../types'
 import {
   crowdSplit,
   ladderAvatar,
@@ -117,7 +118,7 @@ describe('liveStakes', () => {
   it('projects a gain for the leader and a loss for the trailer', () => {
     const stakes = liveStakes({
       match: makeStakeMatch({ score_a: 9, score_b: 7 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: makeStakeSide(),
       b: makeStakeSide(),
@@ -130,7 +131,7 @@ describe('liveStakes', () => {
   it('flips the projection when the other player leads', () => {
     const stakes = liveStakes({
       match: makeStakeMatch({ score_a: 3, score_b: 8 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: makeStakeSide(),
       b: makeStakeSide(),
@@ -144,14 +145,14 @@ describe('liveStakes', () => {
     const underdog = makeStakeSide({ rating: 1350 })
     const upset = liveStakes({
       match: makeStakeMatch({ score_a: 9, score_b: 5 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: underdog,
       b: favourite,
     })
     const expected = liveStakes({
       match: makeStakeMatch({ score_a: 9, score_b: 5 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: favourite,
       b: underdog,
@@ -162,14 +163,14 @@ describe('liveStakes', () => {
   it('puts more Elo in play for a rout than for a close game', () => {
     const rout = liveStakes({
       match: makeStakeMatch({ score_a: 10, score_b: 0 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: makeStakeSide(),
       b: makeStakeSide(),
     })
     const close = liveStakes({
       match: makeStakeMatch({ score_a: 10, score_b: 8 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: makeStakeSide(),
       b: makeStakeSide(),
@@ -180,7 +181,7 @@ describe('liveStakes', () => {
   it('presumes the serving side wins when the score is level', () => {
     const stakes = liveStakes({
       match: makeStakeMatch(),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: false,
       a: makeStakeSide(),
       b: makeStakeSide(),
@@ -192,7 +193,7 @@ describe('liveStakes', () => {
   it('presumes the other side wins when they serve at a level score', () => {
     const stakes = liveStakes({
       match: makeStakeMatch({ score_a: 5, score_b: 5 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: makeStakeSide(),
       b: makeStakeSide(),
@@ -205,7 +206,7 @@ describe('liveStakes', () => {
     const at = (score_a: number, score_b: number) =>
       liveStakes({
         match: makeStakeMatch({ score_a, score_b }),
-        target: 11,
+        rules: { target: 11, bestOf: 1 },
         servingA: true,
         a: makeStakeSide(),
         b: makeStakeSide(),
@@ -218,7 +219,7 @@ describe('liveStakes', () => {
     const at = (score_a: number, score_b: number) =>
       liveStakes({
         match: makeStakeMatch({ score_a, score_b }),
-        target: 11,
+        rules: { target: 11, bestOf: 1 },
         servingA: true,
         a: makeStakeSide(),
         b: makeStakeSide(),
@@ -231,7 +232,7 @@ describe('liveStakes', () => {
   it('treats unranked players as fresh 1500 ratings', () => {
     const stakes = liveStakes({
       match: makeStakeMatch({ score_a: 6, score_b: 2 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: null,
       b: null,
@@ -243,7 +244,7 @@ describe('liveStakes', () => {
   it('rounds the projected deltas to whole points', () => {
     const stakes = liveStakes({
       match: makeStakeMatch({ score_a: 9, score_b: 7 }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: makeStakeSide(),
       b: makeStakeSide(),
@@ -255,12 +256,31 @@ describe('liveStakes', () => {
   it('is null once the match is validated (real deltas take over)', () => {
     const stakes = liveStakes({
       match: makeStakeMatch({ score_a: 11, score_b: 7, done: true }),
-      target: 11,
+      rules: { target: 11, bestOf: 1 },
       servingA: true,
       a: makeStakeSide(),
       b: makeStakeSide(),
     })
     expect(stakes).toBeNull()
+  })
+
+  it.for<{ state: string; bestOf: number; sets: SetScore[]; score: [number, number]; aWins: boolean; weight: number }>([
+    { state: 'Bo3 at 0-0 in sets, A leads set 1', bestOf: 3, sets: [], score: [5, 2], aWins: true, weight: 1.75 },
+    { state: 'Bo3 with A up 1-0, B leads set 2', bestOf: 3, sets: [[11, 5]], score: [3, 7], aWins: false, weight: 1.375 },
+    { state: 'Bo3 at 1-1, A leads set 3', bestOf: 3, sets: [[11, 5], [8, 11]], score: [4, 2], aWins: true, weight: 1.375 },
+    { state: 'Bo5 with A up 2-1, B leads set 4', bestOf: 5, sets: [[11, 5], [8, 11], [11, 9]], score: [2, 6], aWins: false, weight: 1.25 },
+    { state: 'Bo5 with A up 2-1, A leads set 4', bestOf: 5, sets: [[11, 5], [8, 11], [11, 9]], score: [6, 2], aWins: true, weight: 1.5 },
+  ])('$state: the set leader is projected to take every set left', ({ bestOf, sets, score, aWins, weight }) => {
+    const side = makeStakeSide()
+    const projected = projectDeltas(side, side, aWins, weight)
+    const stakes = liveStakes({
+      match: makeStakeMatch({ sets, score_a: score[0], score_b: score[1] }),
+      rules: { target: 11, bestOf },
+      servingA: true,
+      a: side,
+      b: side,
+    })
+    expect(stakes).toEqual({ a: Math.round(projected.a), b: Math.round(projected.b) })
   })
 })
 
@@ -374,9 +394,9 @@ describe('matchStakes', () => {
         makeLadderRow({ key: 'p-thib', name: 'Thibault', rating: 1500 }),
       ],
       makeLiveMatch(),
-      11
+      { target: 11, bestOf: 1 }
     )
-    const upset = matchStakes(rows, makeLiveMatch(), 11)
+    const upset = matchStakes(rows, makeLiveMatch(), { target: 11, bestOf: 1 })
     expect(upset!.a).toBeGreaterThan(even!.a)
   })
 
@@ -384,8 +404,8 @@ describe('matchStakes', () => {
     // A settled ladder row (rd 80) moves far less than the fresh-newcomer
     // default (rd 350) — finding the row by name is what keeps it small.
     const rows = [makeLadderRow({ key: 'name:Léo', name: 'Léo', rating: 1350 })]
-    const withRow = matchStakes(rows, makeLiveMatch({ player_a_id: null }), 11)
-    const without = matchStakes([], makeLiveMatch({ player_a_id: null }), 11)
+    const withRow = matchStakes(rows, makeLiveMatch({ player_a_id: null }), { target: 11, bestOf: 1 })
+    const without = matchStakes([], makeLiveMatch({ player_a_id: null }), { target: 11, bestOf: 1 })
     expect(withRow!.a).toBeLessThan(without!.a)
   })
 
@@ -394,13 +414,13 @@ describe('matchStakes', () => {
     const stakes = matchStakes(
       [],
       makeLiveMatch({ score_a: 4, score_b: 4, serve_start: 'b' }),
-      11
+      { target: 11, bestOf: 1 }
     )
     expect(stakes!.b).toBeGreaterThan(0)
     expect(stakes!.a).toBeLessThan(0)
   })
 
   it('is null for a validated match', () => {
-    expect(matchStakes([], makeLiveMatch({ score_a: 11, done: true }), 11)).toBeNull()
+    expect(matchStakes([], makeLiveMatch({ score_a: 11, done: true }), { target: 11, bestOf: 1 })).toBeNull()
   })
 })
