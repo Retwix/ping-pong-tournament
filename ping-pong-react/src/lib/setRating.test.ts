@@ -50,3 +50,23 @@ describe('the Elo weight of a ranked match of sets', () => {
     expect(weightOf(getMockMatch({ score_a: 11, score_b: 5 }))[0]).toBeCloseTo(1 + 0.75 * (6 / 11))
   })
 })
+
+describe('the sets a rating event carries', () => {
+  const eventsOf = (match: Match) =>
+    replayRatings([match], []).events.map((e) => ({ name: e.name, sets: e.sets }))
+
+  it('lists every set of a match of sets from each player’s side, the deciding set last', () => {
+    const match = getMockMatch({ sets: [[11, 5], [8, 11]], score_a: 11, score_b: 9 })
+    expect(eventsOf(match)).toEqual([
+      { name: 'Léo', sets: [[11, 5], [8, 11], [11, 9]] },
+      { name: 'Thibault', sets: [[5, 11], [11, 8], [9, 11]] },
+    ])
+  })
+
+  it('gives a single game its one score, from each side', () => {
+    expect(eventsOf(getMockMatch({ score_a: 11, score_b: 5 }))).toEqual([
+      { name: 'Léo', sets: [[11, 5]] },
+      { name: 'Thibault', sets: [[5, 11]] },
+    ])
+  })
+})

@@ -14,7 +14,7 @@
 // the same order always yields the same ratings. That mirrors how every other
 // stat in the app is derived, and lets ratings be rebuilt from history at will.
 
-import type { Match, Player } from '../types'
+import type { Match, Player, SetScore } from '../types'
 import { finishedSets } from './sets'
 import { sideKey } from './stats'
 
@@ -71,6 +71,8 @@ export interface RatingEvent {
   opponentName: string
   scoreFor: number
   scoreAgainst: number
+  /** Every set from this player's side, the deciding set last; one for a single game. */
+  sets: SetScore[]
   ratingBefore: number
   ratingAfter: number
   rdBefore: number
@@ -353,6 +355,7 @@ export function replayRatings(
 
     const newA = fromGlicko2(updateOne(preA, preB, aWon ? 1 : 0, weight))
     const newB = fromGlicko2(updateOne(preB, preA, aWon ? 0 : 1, weight))
+    const setsA: SetScore[] = [...finishedSets(m), [m.score_a, m.score_b]]
 
     events.push({
       matchId: m.id,
@@ -363,6 +366,7 @@ export function replayRatings(
       opponentName: B.name,
       scoreFor: m.score_a,
       scoreAgainst: m.score_b,
+      sets: setsA,
       ratingBefore: A.rating,
       ratingAfter: newA.rating,
       rdBefore: rdA,
@@ -382,6 +386,7 @@ export function replayRatings(
       opponentName: A.name,
       scoreFor: m.score_b,
       scoreAgainst: m.score_a,
+      sets: setsA.map(([a, b]) => [b, a]),
       ratingBefore: B.rating,
       ratingAfter: newB.rating,
       rdBefore: rdB,

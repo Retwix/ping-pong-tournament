@@ -22,6 +22,7 @@ const getMockEvent = (overrides?: Partial<RatingEvent>): RatingEvent => ({
   opponentName: 'Thibault',
   scoreFor: 11,
   scoreAgainst: 9,
+  sets: [[11, 9]],
   ratingBefore: 1500,
   ratingAfter: 1512,
   rdBefore: 200,
