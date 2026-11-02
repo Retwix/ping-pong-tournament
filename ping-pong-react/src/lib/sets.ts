@@ -23,7 +23,12 @@ export interface SetRules {
 
 type LiveScore = Pick<Match, 'score_a' | 'score_b' | 'sets'>
 
-function setsWonBy(m: LiveScore, side: MatchSide): number {
+/** The majority of the sets: 2 in a Bo3, 3 in a Bo5, 1 for a single game. */
+export function setsToWin(rules: Pick<SetRules, 'bestOf'>): number {
+  return (rules.bestOf + 1) / 2
+}
+
+export function setsWonBy(m: LiveScore, side: MatchSide): number {
   return finishedSets(m).filter(([a, b]) => (side === 'a' ? a > b : b > a)).length
 }
 
@@ -46,8 +51,7 @@ export function pointAtStake(
 
 /** Would winning the set in play give `side` the majority of the sets? */
 function setDecidesMatch(m: LiveScore, side: MatchSide, rules: SetRules): boolean {
-  const setsToWin = (rules.bestOf + 1) / 2
-  return setsWonBy(m, side) + 1 === setsToWin
+  return setsWonBy(m, side) + 1 === setsToWin(rules)
 }
 
 /** Whether `side` is one point from winning the whole match — a set ball is not. */

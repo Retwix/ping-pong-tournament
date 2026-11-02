@@ -2,7 +2,7 @@ import { serverIsA } from './pingpong'
 import { RATING, gameWeight, projectDeltas, type RatingNumbers, type RatingRow } from './rating'
 import type { Prediction } from './predictions'
 import { sideKey } from './stats'
-import { finishedSets, type SetRules } from './sets'
+import { finishedSets, setsToWin, setsWonBy, type SetRules } from './sets'
 import type { Match, SetScore } from '../types'
 
 export interface CrowdSplit {
@@ -87,14 +87,14 @@ export function liveStakes({
   b,
 }: LiveStakesInput): { a: number; b: number } | null {
   if (match.done) return null
-  const { target, bestOf } = rules
+  const { target } = rules
   const aLeads = match.score_a === match.score_b ? servingA : match.score_a > match.score_b
   const loserScore = aLeads ? match.score_b : match.score_a
   const winnerScore = Math.max(target, loserScore + 2)
   const asSet = (winner: number, loser: number): SetScore =>
     aLeads ? [winner, loser] : [loser, winner]
   const played = finishedSets(match)
-  const setsLeft = (bestOf + 1) / 2 - played.filter(([sa, sb]) => sa > sb === aLeads).length - 1
+  const setsLeft = setsToWin(rules) - setsWonBy(match, aLeads ? 'a' : 'b') - 1
   const projected = [
     ...played,
     asSet(winnerScore, loserScore),
