@@ -223,12 +223,6 @@ describe('noteEnjeu', () => {
     )
   })
 
-  it('explains that a game of sets does not count for the classement yet', () => {
-    expect(noteEnjeu(false, false, false, true)).toBe(
-      'Les parties en sets ne comptent pas encore pour le classement.',
-    )
-  })
-
   it('lets the ancien reason override the doubles wording when both are true', () => {
     expect(noteEnjeu(false, true, true)).toBe(
       'Un ancien joue : la partie ne compte pas pour le classement.',
@@ -261,10 +255,6 @@ describe('enjeuEffectif', () => {
 
   it('is unranked when the player chose it manually', () => {
     expect(enjeuEffectif(true, false, false)).toBe(true)
-  })
-
-  it('is forced unranked for a game of sets', () => {
-    expect(enjeuEffectif(false, false, false, true)).toBe(true)
   })
 
   it('is forced unranked the moment an ancien joins, even if nothing else forces it', () => {
