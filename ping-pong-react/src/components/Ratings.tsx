@@ -11,7 +11,6 @@ import { useSession } from '../hooks/useSession'
 import { RATING, rankRatings, ratedMatches, replayRatings } from '../lib/rating'
 import { splitLadder } from '../lib/alumni'
 import { INACTIVITY, ladderSections } from '../lib/inactivity'
-import { formatSets } from '../lib/sets'
 import {
   filterRatingRows,
   lastFive,
@@ -73,7 +72,13 @@ function LogLine({ e, win }: { e: RatingEvent; win: boolean }) {
   return (
     <div className={`rt-log-line${win ? ' win' : ''}`}>
       <span className="rt-log-name">{e.name}</span>
-      <span className="rt-log-score">{formatSets(e.sets)}</span>
+      <span className="rt-log-score">
+        {e.sets.map(([mine, theirs], i) => (
+          <span key={i} className="rt-log-set">
+            {mine}–{theirs}
+          </span>
+        ))}
+      </span>
       <span className="rt-log-move">
         {Math.round(e.ratingBefore)} → <b>{Math.round(e.ratingAfter)}</b>
       </span>

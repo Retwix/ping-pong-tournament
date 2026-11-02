@@ -105,11 +105,6 @@ export function setsByWinner(m: LiveScore): { winner: number[]; loser: number[] 
   }
 }
 
-/** A result as its sets, « 11–5 8–11 11–9 »; a single game reads « 11–5 ». */
-export function formatSets(sets: SetScore[]): string {
-  return sets.map(([mine, theirs]) => `${mine}–${theirs}`).join(' ')
-}
-
 /**
  * Set parties stay off Slack until their messages can show the sets (S4):
  * a deciding-set score posted as the result would mislead, and stay posted.
