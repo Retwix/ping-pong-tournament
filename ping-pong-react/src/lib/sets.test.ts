@@ -2,6 +2,7 @@ import { describe, expect, it, test } from 'vitest'
 import {
   bestOf,
   finishedSets,
+  formatSets,
   isMatchBall,
   pointAtStake,
   postsToSlack,
@@ -116,5 +117,11 @@ describe('postsToSlack', () => {
     { bestOf: 3, posts: false },
   ])('a party of $bestOf set(s) is announced on Slack: $posts', ({ bestOf, posts }) => {
     expect(postsToSlack({ best_of: bestOf })).toBe(posts)
+  })
+})
+
+describe('formatSets', () => {
+  it('prints every set in order, from the side the sets are given', () => {
+    expect(formatSets([[11, 5], [8, 11], [11, 9]])).toBe('11–5 8–11 11–9')
   })
 })
