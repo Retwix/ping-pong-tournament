@@ -105,6 +105,12 @@ export function setsByWinner(m: LiveScore): { winner: number[]; loser: number[] 
   }
 }
 
+/** Every set of a finished match, the deciding set last, each read from the winner's side. */
+export function setsFromWinner(m: LiveScore): SetScore[] {
+  const aWon = m.score_a > m.score_b
+  return [...finishedSets(m), [m.score_a, m.score_b]].map(([a, b]) => (aWon ? [a, b] : [b, a]))
+}
+
 /**
  * Set parties stay off Slack until their messages can show the sets (S4):
  * a deciding-set score posted as the result would mislead, and stay posted.

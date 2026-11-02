@@ -272,14 +272,26 @@ describe('matchRows', () => {
         tournamentId: 't1',
         winner: 'Thibault',
         loser: 'Léo',
-        winnerScore: 11,
-        loserScore: 7,
+        sets: [[11, 7]],
         eloDelta: 12,
         competition: 'Tournoi de juillet',
         endedAt: '2026-07-30T10:00:00.000Z',
         unranked: false,
         doubles: false,
       },
+    ])
+  })
+
+  it('reads a match of sets as every set from the winner\'s side, the deciding set last', () => {
+    const rows = matchRows(
+      [getMockMatch({ score_a: 11, score_b: 9, sets: [[11, 5], [8, 11]] })],
+      [],
+      [getMockTournament({ kind: 'game', best_of: 3 })],
+    )
+    expect(rows[0].sets).toEqual([
+      [11, 5],
+      [8, 11],
+      [11, 9],
     ])
   })
 
@@ -400,8 +412,7 @@ const getMatchRow = (overrides?: Partial<MatchRow>): MatchRow => ({
   tournamentId: 't1',
   winner: 'Léo',
   loser: 'Thibault',
-  winnerScore: 11,
-  loserScore: 9,
+  sets: [[11, 9]],
   eloDelta: 12,
   competition: 'Tournoi de juillet',
   endedAt: '2026-07-30T10:00:00.000Z',
