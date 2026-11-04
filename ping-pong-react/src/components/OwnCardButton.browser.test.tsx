@@ -26,7 +26,7 @@ const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
 const renderInTopBar = (onSignOut = vi.fn()) =>
   render(
     <nav className="rv-nav">
-      <OwnCardButton row={getMockRatingRow()} history={null} onSignOut={onSignOut} />
+      <OwnCardButton row={getMockRatingRow()} bio="Roi du revers" history={null} onSignOut={onSignOut} />
     </nav>,
   )
 
@@ -37,6 +37,7 @@ describe('OwnCardButton', () => {
     await screen.getByRole('button', { name: 'Ma fiche (Léo)' }).click()
 
     await expect.element(page.getByRole('heading', { name: 'Léo' })).toBeVisible()
+    await expect.element(page.getByText('Roi du revers')).toBeVisible()
     const scrim = document.querySelector('.scrim')!.getBoundingClientRect()
     expect({ width: scrim.width, height: scrim.height }).toEqual({
       width: window.innerWidth,

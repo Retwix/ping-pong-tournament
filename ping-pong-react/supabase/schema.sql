@@ -139,6 +139,32 @@ create trigger guard_player_claim
   before update on public.players
   for each row execute function public.guard_player_claim();
 
+-- ---------- a player's bio ----------
+-- See supabase/bio-migration.sql; kept here for the same reason as the claim
+-- guard. Only the account linked to a row writes its bio, and a new row has none.
+alter table public.players add column if not exists bio text
+  check (char_length(bio) <= 20);
+
+create or replace function public.guard_player_bio() returns trigger as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.bio is not null then
+      raise exception 'a new player has no bio yet';
+    end if;
+    return new;
+  end if;
+  if new.bio is distinct from old.bio
+     and (auth.uid() is null or old.auth_user_id is distinct from auth.uid()) then
+    raise exception 'you can only change your own bio';
+  end if;
+  return new;
+end $$ language plpgsql set search_path = public, auth, pg_temp;
+
+drop trigger if exists guard_player_bio on public.players;
+create trigger guard_player_bio
+  before insert or update on public.players
+  for each row execute function public.guard_player_bio();
+
 -- ---------- player identity on matches ----------
 -- Matches reference players by id so stats survive renames / duplicate names.
 -- The player_a / player_b text columns are kept as a display snapshot (name at

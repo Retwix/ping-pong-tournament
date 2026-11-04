@@ -21,11 +21,13 @@ const topPct = (rank: number, total: number): string =>
  */
 export default function PlayerModal({
   row,
+  bio,
   history,
   onClose,
   onSignOut,
 }: {
   row: RatingRow
+  bio: string | null
   history: PlayerHistory | null
   onClose: () => void
   onSignOut?: () => void
@@ -56,6 +58,7 @@ export default function PlayerModal({
           <Avatar name={row.name} team={row.team} url={row.avatar_url} />
           <div>
             <h2 style={{ marginBottom: 2 }}>{row.name}</h2>
+            {bio && <div className="pm-bio">{bio}</div>}
             <div className="modal-hint" style={{ marginBottom: 0 }}>
               {row.team ? teamLabel(row.team) : '—'}
               {row.provisional && <span className="rt-prov">provisoire</span>}

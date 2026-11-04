@@ -1,11 +1,13 @@
 import type { Match, Player } from '../types'
 import { matchDuration } from './pingpong'
+import { playerBio } from './playerBio'
 
 export interface PlayerStat {
   key: string // stable identity: player id, or `name:<name>` fallback
   name: string // display name (current registry name, or recorded name)
   team: string | null
   avatar_url: string | null
+  bio: string | null
   played: number
   wins: number
   losses: number
@@ -115,6 +117,7 @@ export function computePlayerStats(matches: Match[], players: Player[]): PlayerS
         name,
         team,
         avatar_url,
+        bio: playerBio(players, id, recordedName),
         played: 0,
         wins: 0,
         losses: 0,

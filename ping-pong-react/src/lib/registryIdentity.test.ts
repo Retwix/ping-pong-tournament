@@ -11,6 +11,7 @@ function makePlayer(overrides: Partial<Player> & Pick<Player, 'id' | 'name'>): P
 		auth_user_id: null,
 		avatar_url: null,
 		status: 'active',
+		bio: null,
 		left_at: null,
 		...overrides,
 	}

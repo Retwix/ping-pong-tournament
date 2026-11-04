@@ -12,6 +12,7 @@ import { useTournament } from '../hooks/useTournament'
 import { createTournament } from '../lib/db'
 import { chaosSettingsFromTournament } from '../lib/chaos'
 import { libelleFormat } from '../lib/format'
+import { sideBios } from '../lib/playerBio'
 import { playerLookup } from '../lib/playerLookup'
 import { navigate } from '../lib/router'
 import { bestOf } from '../lib/sets'
@@ -164,6 +165,7 @@ export default function Board({
         tournamentName={tournament.name}
         subtitle={libelleFormat(tournament)}
         elos={elosFor(match)}
+        bios={sideBios(registry, match)}
         onPresent={() => navigate(`/t/${id}/live`)}
       />
     )
@@ -294,6 +296,7 @@ export default function Board({
           tournamentName={tournament.name}
           subtitle={libelleFormat(tournament)}
           elos={elosFor(openMatch)}
+          bios={sideBios(registry, openMatch)}
           onPresent={() => navigate(`/t/${id}/live`)}
         />
       )}

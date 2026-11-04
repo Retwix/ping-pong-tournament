@@ -27,6 +27,8 @@ export interface Player {
   auth_user_id: string | null
   /** Public URL of the uploaded profile photo (with cache-buster). null = initial-letter avatar. */
   avatar_url: string | null
+  /** One-line title under the name, written by the linked account. null = none. */
+  bio: string | null
   /** 'alumni' once they've left the company. Rows predating the migration read as 'active'. */
   status: PlayerStatus
   /** Departure date (YYYY-MM-DD), drives « parti·e en juin 2026 ». null on active players. */

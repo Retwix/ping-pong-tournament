@@ -2,6 +2,7 @@ import { IconBrandSlack, IconLogout } from '@tabler/icons-react'
 import type { User } from '@supabase/supabase-js'
 import { useRatings } from '../hooks/useRatings'
 import { useSession } from '../hooks/useSession'
+import { playerBio } from '../lib/playerBio'
 import { playerHistory } from '../lib/playerHistory'
 import { defaultLadderScope } from '../lib/seasons'
 import { ownRatingRow, slackIdentity } from '../lib/slackIdentity'
@@ -60,6 +61,7 @@ function SignedIn({ user, signOut }: { user: User; signOut: () => void }) {
       {own !== null ? (
         <OwnCardButton
           row={own}
+          bio={playerBio(players, own.playerId, own.name)}
           history={playerHistory(events, rows, own.key)}
           onSignOut={signOut}
         />

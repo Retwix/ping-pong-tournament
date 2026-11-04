@@ -398,6 +398,7 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 
 /* player detail modal (Ratings page) */
 .pd-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.pm-bio { font-size: 14px; font-weight: 600; font-style: italic; color: var(--fg-2); margin-bottom: 2px; }
 .pd-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
 .pd-kpi { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 6px; text-align: center; }
 .pd-kpi .n { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--fg-1); }
@@ -755,6 +756,7 @@ td.elo.neg { color: var(--coral); }
 
 .refzone-head { display: flex; align-items: center; gap: 10px; }
 .refzone-name { font-weight: 700; font-size: 22px; }
+.refzone-bio { font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: 12px; color: rgba(255, 255, 255, 0.82); margin-top: 2px; }
 .refzone-elo { font-family: var(--font-body); font-weight: 700; font-size: 11px; background: rgba(255, 255, 255, 0.18); border-radius: 999px; padding: 3px 9px; }
 /* Absolutely positioned at the top of the zone so showing/hiding it never
    shifts the name/score layout. */
@@ -818,6 +820,11 @@ td.elo.neg { color: var(--coral); }
   .ref-dock { padding: 10px 18px calc(env(safe-area-inset-bottom, 0px) + 10px); }
 }
 
+/* The shortest landscape phones trade a little score height for the bio line */
+@media (max-height: 339px) and (orientation: landscape) {
+  .ref-zones:has(.refzone-bio) .refzone-score { font-size: 25vh; }
+}
+
 /* ===== desktop reflow: left/right split, keyboard-driven ===== */
 @media (min-width: 900px) and (min-height: 501px) {
   .ref-topbar { display: flex; }
@@ -841,6 +848,7 @@ td.elo.neg { color: var(--coral); }
 
   .refzone-head { gap: 12px; margin-top: 14px; }
   .refzone-name { font-weight: 800; font-size: 28px; }
+  .refzone-bio { font-size: 15px; margin-top: 4px; }
   .refzone-elo { font-size: 13px; padding: 4px 12px; background: rgba(255, 255, 255, 0.2); }
   .refzone-serve { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); margin: 0; padding: 7px 16px; border-radius: 999px; background: #fff; color: #4a2aa4; font-weight: 800; font-size: 11px; box-shadow: 0 6px 16px rgba(32, 10, 66, 0.2); }
   .refzone--b .refzone-serve { color: #b8323f; }
@@ -1044,6 +1052,10 @@ td.elo.neg { color: var(--coral); }
   box-shadow: 0 14px 34px rgba(215, 66, 81, 0.4);
 }
 .tv-name { font-weight: 800; font-size: max(22px, calc(40 * var(--u))); color: var(--tv-ink); }
+.tv-bio {
+  font-family: var(--font-body); font-weight: 600; font-style: italic;
+  font-size: max(13px, calc(20 * var(--u))); color: var(--tv-muted);
+}
 .tv-meta {
   font-family: var(--font-body); font-weight: 700;
   font-size: max(11px, calc(15 * var(--u))); color: var(--tv-muted);
@@ -1284,6 +1296,13 @@ td.elo.neg { color: var(--coral); }
       'avatar meta score' auto / auto 1fr auto;
     text-align: left; border-radius: 24px; padding: 16px 18px;
   }
+  .tv-player:has(.tv-bio) {
+    grid-template:
+      'pill pill pill' auto
+      'avatar name score' auto
+      'avatar bio score' auto
+      'avatar meta score' auto / auto 1fr auto;
+  }
   .tv-player.is-serving {
     background: linear-gradient(180deg, rgba(74, 42, 164, 0.1), rgba(74, 42, 164, 0.03));
     box-shadow: inset 0 0 0 2px rgba(74, 42, 164, 0.16);
@@ -1305,6 +1324,7 @@ td.elo.neg { color: var(--coral); }
   }
   .tv-avatar { grid-area: avatar; width: 56px; height: 56px; font-size: 20px; }
   .tv-name { grid-area: name; font-size: 26px; align-self: end; }
+  .tv-bio { grid-area: bio; font-size: 13px; }
   .tv-meta { grid-area: meta; font-size: 12px; align-self: start; }
   .tv-score { grid-area: score; font-size: clamp(64px, 24vw, 110px); }
 
@@ -1814,6 +1834,11 @@ td.elo.neg { color: var(--coral); }
   font-family: var(--font-display); font-weight: 800; font-size: 22px; color: #fff;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.rv-hero-player-bio {
+  font-family: var(--font-body); font-size: 13px; font-weight: 600; font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .rv-hero-player-sub { font-family: var(--font-body); font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
 
 .rv-hero-av {
@@ -1876,6 +1901,7 @@ td.elo.neg { color: var(--coral); }
   .rv-hero-matchup { gap: 12px; }
   .rv-hero-av { width: 48px; height: 48px; font-size: 16px; }
   .rv-hero-player-name { font-size: 16px; }
+  .rv-hero-player-bio { font-size: 11.5px; }
   .rv-hero-player-sub { font-size: 11.5px; }
   .rv-hero-score { font-size: 42px; }
   .rv-hero-actions { flex-wrap: wrap; }
@@ -2980,6 +3006,10 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 .st-pm-id { flex: 1; min-width: 0; }
 .st-pm-name {
   font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--fg-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.st-pm-bio {
+  font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: 14px; color: var(--fg-2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .st-pm-meta {

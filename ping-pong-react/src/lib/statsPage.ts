@@ -594,6 +594,7 @@ export interface PlayerCardModel {
   name: string
   team: string | null
   avatarUrl: string | null
+  bio: string | null
   lastSeen: string | null
   kpis: PlayerCardKpi[]
   titles: PlayerTitle[]
@@ -701,6 +702,7 @@ export function playerCard(
     name: s.name,
     team: s.team,
     avatarUrl: s.avatar_url,
+    bio: s.bio,
     lastSeen: s.lastPlayedAt === null ? null : relativeTime(s.lastPlayedAt, now),
     kpis,
     titles: titles.get(s.name)?.titles ?? [],
