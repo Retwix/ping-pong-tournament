@@ -131,10 +131,85 @@ function Masthead({ now }: { now: Date }) {
 }
 
 const FORM_NAME_FITS = 18
+const STAIR_STEPS = 5
+const STEP_WIDTH = 212
+const STEP_RISE = 150
+const STAIR_LEFT = 860
+const BALL_SIZE = 44
+const STAGE_BALL_FLOOR = STAGE_HEIGHT - BALL_SIZE
+const LANDING_PERCENT = 12
+const LAST_BOUNCE_PERCENT = 80
+
+const stepLeft = (position: number) => STAIR_LEFT + STEP_WIDTH * position
+const stepHeight = (position: number) => STEP_RISE * (position + 1)
+const ballAt = (position: number) => ({
+  x: stepLeft(position) + (STEP_WIDTH - BALL_SIZE) / 2,
+  y: STAGE_BALL_FLOOR - stepHeight(position),
+})
+
+const frame = (percent: number, x: number, y: number, easing: string) =>
+  `${percent}% { transform: translate(${x}px, ${y}px); animation-timing-function: ${easing}; }`
+
+/** The ball's path over however many steps were won; the board only drew five. */
+function climbKeyframes(firstPosition: number): string {
+  const positions = Array.from(
+    { length: STAIR_STEPS - firstPosition },
+    (_, i) => firstPosition + i,
+  )
+  const start = ballAt(firstPosition)
+  const top = ballAt(STAIR_STEPS - 1)
+  const landings = positions.slice(1).flatMap((position, i) => {
+    const from = ballAt(position - 1)
+    const to = ballAt(position)
+    const landed = 8 + LANDING_PERCENT * (i + 1)
+    return [
+      frame(landed - 6, (from.x + to.x) / 2, from.y - 246, 'ease-in'),
+      frame(landed, to.x, to.y, 'ease-out'),
+    ]
+  })
+  const lastLanding = 8 + LANDING_PERCENT * (positions.length - 1)
+  const bounces = Array.from(
+    { length: Math.floor((LAST_BOUNCE_PERCENT - lastLanding) / LANDING_PERCENT) },
+    (_, i) => lastLanding + LANDING_PERCENT * (i + 1),
+  ).flatMap((landed) => [
+    frame(landed - 6, top.x, top.y - 70, 'ease-in'),
+    frame(landed, top.x, top.y, 'ease-out'),
+  ])
+  return `@keyframes tvs-climb {
+    ${frame(0, start.x, -80, 'ease-in')}
+    ${frame(8, start.x, start.y, 'ease-out')}
+    ${landings.join(' ')}
+    ${bounces.join(' ')}
+    ${frame(88, 1960, 200, 'ease-in')}
+    96%, 100% { transform: translate(2000px, 1150px); }
+  }`
+}
+
+function Stair({ beaten }: { beaten: string[] }) {
+  const firstPosition = STAIR_STEPS - beaten.length
+  return (
+    <>
+      <style>{climbKeyframes(firstPosition)}</style>
+      {beaten.map((name, i) => (
+        <div
+          key={i}
+          className={`tvs-step tvs-step-${firstPosition + i}`}
+          style={{ left: stepLeft(firstPosition + i), height: stepHeight(firstPosition + i) }}
+        >
+          <div className="tvs-step-lit" style={{ animationDelay: `${2.4 * i}s` }} aria-hidden="true" />
+          <div className="tvs-step-name">{name}</div>
+        </div>
+      ))}
+      <div className="tvs-climb" aria-hidden="true" />
+    </>
+  )
+}
+
 function Form({ scene, now }: { scene: FormScene; now: Date }) {
-  const { name, streak, risers, upset } = scene
+  const { name, streak, beaten, risers, upset } = scene
   return (
     <div className="tvs-form">
+      <Stair beaten={beaten} />
       <div className="tvs-in tvs-kicker tvs-form-kicker">En forme · cette semaine</div>
       <Masthead now={now} />
       <div className="tvs-form-story">
