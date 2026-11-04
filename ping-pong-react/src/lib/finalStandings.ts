@@ -155,10 +155,12 @@ const SCRATCH_LOSS = -5
 
 /**
  * The tone a tournament Elo move reads in: gains green, real losses red, and a
- * scratch loss (or no rating at all) left quiet.
+ * scratch loss (or no rating at all) left quiet. Judged on the whole number the
+ * tables show, so the colour can never disagree with the figure beside it.
  */
 export function deltaTone(delta: number | null): DeltaTone {
 	if (delta === null) return "flat"
-	if (delta > 0) return "up"
-	return delta < SCRATCH_LOSS ? "down" : "flat"
+	const shown = Math.round(delta)
+	if (shown > 0) return "up"
+	return shown < SCRATCH_LOSS ? "down" : "flat"
 }
