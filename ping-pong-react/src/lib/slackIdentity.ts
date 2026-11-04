@@ -48,6 +48,9 @@ function linkedPlayer(userId: string, players: Player[]): Player | null {
   return players.find((p) => p.auth_user_id === userId) ?? null
 }
 
+/** The card of a player with no rated match: no rating at all, never a stand-in 1500. */
+export type UnratedCard = Pick<RatingRow, 'name' | 'team' | 'avatar_url'> & { rating: null }
+
 /**
  * The signed-in account's own line on a ladder, or null when it is unlinked or
  * its player has no rated match on that ladder yet — in both cases there is no

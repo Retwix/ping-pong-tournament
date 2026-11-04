@@ -97,6 +97,25 @@ describe('PlayerModal', () => {
     await expect.element(screen.getByText('Roi du revers')).toBeVisible()
   })
 
+  it('shows no rating at all for a player with no rated match, never a stand-in', async () => {
+    const onClose = () => {}
+    const screen = await render(
+      <PlayerModal
+        row={{ name: 'Léo', team: 'tech', avatar_url: null, rating: null }}
+        bio={null}
+        history={null}
+        onClose={onClose}
+      />,
+    )
+
+    await expect.element(screen.getByRole('heading', { name: 'Léo' })).toBeVisible()
+    await expect.element(screen.getByText('±', { exact: false })).not.toBeInTheDocument()
+
+    screen.rerender(<PlayerModal row={getMockRatingRow()} bio={null} history={null} onClose={onClose} />)
+
+    await expect.element(screen.getByText('±', { exact: false })).toBeVisible()
+  })
+
   it('lets you sign out from your own card', async () => {
     const onSignOut = vi.fn()
     const screen = await render(
