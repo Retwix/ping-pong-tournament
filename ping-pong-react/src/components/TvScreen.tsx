@@ -23,9 +23,9 @@ function Clock({ now }: { now: Date }) {
     .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     .split(':')
   return (
-    <span className="tv-clock">
+    <span className="tvs-clock">
       {hours}
-      <span className="tv-tick">:</span>
+      <span className="tvs-tick">:</span>
       {minutes}
     </span>
   )
@@ -33,13 +33,13 @@ function Clock({ now }: { now: Date }) {
 
 function Table({ children }: { children: ReactNode }) {
   return (
-    <div className="tv-table-frame">
-      <div className="tv-table">
-        <div className="tv-table-line" aria-hidden="true" />
-        <div className="tv-table-net" aria-hidden="true" />
-        <div className="tv-rally" aria-hidden="true">
-          <div className="tv-ball-shadow" />
-          <div className="tv-ball tv-hop" />
+    <div className="tvs-table-frame">
+      <div className="tvs-table">
+        <div className="tvs-table-line" aria-hidden="true" />
+        <div className="tvs-table-net" aria-hidden="true" />
+        <div className="tvs-rally" aria-hidden="true">
+          <div className="tvs-ball-shadow" />
+          <div className="tvs-ball tvs-hop" />
         </div>
         {children}
       </div>
@@ -50,8 +50,8 @@ function Table({ children }: { children: ReactNode }) {
 function Ambient({ now }: { now: Date }) {
   return (
     <Table>
-      <div className="tv-ambient-logo">Ping-Pong Recovr</div>
-      <div className="tv-ambient-clock">
+      <div className="tvs-ambient-logo">Ping-Pong Recovr</div>
+      <div className="tvs-ambient-clock">
         <Clock now={now} />
       </div>
     </Table>
@@ -59,23 +59,23 @@ function Ambient({ now }: { now: Date }) {
 }
 
 function Progress() {
-  return <div className="tv-progress" aria-hidden="true" />
+  return <div className="tvs-progress" aria-hidden="true" />
 }
 
-const RACE_MARKS = ['tv-mark-leader', 'tv-mark-chaser']
+const RACE_MARKS = ['tvs-mark-leader', 'tvs-mark-chaser']
 const RACE_NAMES_FIT = 30
 
 function RaceRow({ line, index }: { line: RaceLine; index: number }) {
   const { rank, name, rating, trend } = line
-  const tone = trend < 0 ? 'tv-trend-down' : 'tv-trend-up'
+  const tone = trend < 0 ? 'tvs-trend-down' : 'tvs-trend-up'
   return (
-    <div className="tv-in tv-race-line" style={{ animationDelay: `${0.8 + 0.15 * index}s` }}>
-      <div className={`tv-race-mark ${RACE_MARKS[index] ?? ''}`} aria-hidden="true" />
-      <div className="tv-race-row">
-        <span className="tv-race-rank">{rank}</span>
-        <span className="tv-race-name">{name}</span>
-        <span className="tv-race-rating">{rating}</span>
-        <span className={`tv-race-trend ${tone}`}>
+    <div className="tvs-in tvs-race-line" style={{ animationDelay: `${0.8 + 0.15 * index}s` }}>
+      <div className={`tvs-race-mark ${RACE_MARKS[index] ?? ''}`} aria-hidden="true" />
+      <div className="tvs-race-row">
+        <span className="tvs-race-rank">{rank}</span>
+        <span className="tvs-race-name">{name}</span>
+        <span className="tvs-race-rating">{rating}</span>
+        <span className={`tvs-race-trend ${tone}`}>
           {trend !== 0 && `${trend < 0 ? '▼' : '▲'} ${Math.abs(trend)}`}
         </span>
       </div>
@@ -89,28 +89,28 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
   const longNames = chaser.length + leader.length > RACE_NAMES_FIT
   return (
     <Table>
-      <div className="tv-race-story">
-        <div className="tv-in tv-race-kicker">
+      <div className="tvs-race-story">
+        <div className="tvs-in tvs-race-kicker">
           {season} · J-{daysLeft}
         </div>
-        <div className="tv-race-headline">
-          <div className="tv-in tv-after-1">
-            <div className={`tv-pulse tv-race-gap${gap >= 100 ? ' tv-race-gap-wide' : ''}`}>
-              <span className="tv-race-gap-number">{gap}</span>
-              <span className="tv-race-gap-unit">{plural ? 'points' : 'point'}</span>
+        <div className="tvs-race-headline">
+          <div className="tvs-in tvs-after-1">
+            <div className={`tvs-pulse tvs-race-gap${gap >= 100 ? ' tvs-race-gap-wide' : ''}`}>
+              <span className="tvs-race-gap-number">{gap}</span>
+              <span className="tvs-race-gap-unit">{plural ? 'points' : 'point'}</span>
             </div>
           </div>
-          <div className={`tv-in tv-after-2 tv-race-names${longNames ? ' tv-race-names-long' : ''}`}>
+          <div className={`tvs-in tvs-after-2 tvs-race-names${longNames ? ' tvs-race-names-long' : ''}`}>
             {plural ? 'séparent' : 'sépare'} {chaser} de {leader}.
           </div>
         </div>
-        <div className="tv-race-logo">Ping-Pong Recovr</div>
+        <div className="tvs-race-logo">Ping-Pong Recovr</div>
       </div>
-      <div className="tv-race-side">
-        <div className="tv-race-clock">
+      <div className="tvs-race-side">
+        <div className="tvs-race-clock">
           <Clock now={now} />
         </div>
-        <div className="tv-race-ladder">
+        <div className="tvs-race-ladder">
           {ladder.map((line, index) => (
             <RaceRow key={line.rank} line={line} index={index} />
           ))}
@@ -135,8 +135,8 @@ interface Props {
 export default function TvScreen({ scene, now }: Props) {
   const scale = useStageScale()
   return (
-    <div className="tv-root">
-      <div className="tv-stage" style={{ transform: `scale(${scale})` }}>
+    <div className="tvs-root">
+      <div className="tvs-stage" style={{ transform: `scale(${scale})` }}>
         <Scene scene={scene} now={now} />
       </div>
     </div>

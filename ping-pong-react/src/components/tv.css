@@ -1,4 +1,4 @@
-.tv-root {
+.tvs-root {
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -6,7 +6,7 @@
   cursor: none;
 }
 
-.tv-stage {
+.tvs-stage {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -18,35 +18,35 @@
   font-family: var(--font-display);
 }
 
-@keyframes tv-scene {
+@keyframes tvs-scene {
   0% { opacity: 0; transform: translateY(28px); }
   6%, 92% { opacity: 1; transform: translateY(0); }
   98%, 100% { opacity: 0; transform: translateY(-16px); }
 }
 
-@keyframes tv-progress {
+@keyframes tvs-progress {
   0% { transform: scaleX(0); }
   100% { transform: scaleX(1); }
 }
 
-@keyframes tv-pulse {
+@keyframes tvs-pulse {
   0%, 38% { transform: scale(1); }
   42% { transform: scale(1.05); }
   48%, 100% { transform: scale(1); }
 }
 
-@keyframes tv-mark {
+@keyframes tvs-mark {
   0%, 18% { opacity: 0; }
   22%, 36% { opacity: 1; }
   40%, 100% { opacity: 0; }
 }
 
-@keyframes tv-tick {
+@keyframes tvs-tick {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0.25; }
 }
 
-@keyframes tv-rally {
+@keyframes tvs-rally {
   0% { transform: translate(-60px, 520px); }
   20% { transform: translate(1780px, 380px); }
   40% { transform: translate(640px, 880px); }
@@ -55,16 +55,16 @@
   100% { transform: translate(1900px, 620px); }
 }
 
-@keyframes tv-hop {
+@keyframes tvs-hop {
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(-10px, -30px) scale(1.5); }
 }
 
-.tv-in { animation: tv-scene 20s ease-out both; }
-.tv-after-1 { animation-delay: 0.2s; }
-.tv-after-2 { animation-delay: 0.5s; }
+.tvs-in { animation: tvs-scene 20s ease-out both; }
+.tvs-after-1 { animation-delay: 0.2s; }
+.tvs-after-2 { animation-delay: 0.5s; }
 
-.tv-progress {
+.tvs-progress {
   position: absolute;
   left: 0;
   right: 0;
@@ -72,13 +72,13 @@
   height: 6px;
   background: #f0913a;
   transform-origin: left center;
-  animation: tv-progress 20s linear both;
+  animation: tvs-progress 20s linear both;
 }
 
-.tv-clock { font-variant-numeric: tabular-nums; }
-.tv-tick { animation: tv-tick 2s steps(1) infinite; }
+.tvs-clock { font-variant-numeric: tabular-nums; }
+.tvs-tick { animation: tvs-tick 2s steps(1) infinite; }
 
-.tv-table-frame {
+.tvs-table-frame {
   position: absolute;
   inset: 0;
   box-sizing: border-box;
@@ -86,7 +86,7 @@
   background: #0c0f14;
 }
 
-.tv-table {
+.tvs-table {
   position: relative;
   width: 100%;
   height: 100%;
@@ -97,7 +97,7 @@
   border-radius: 10px;
 }
 
-.tv-table-line {
+.tvs-table-line {
   position: absolute;
   left: 0;
   right: 0;
@@ -106,7 +106,7 @@
   background: #2c2159;
 }
 
-.tv-table-net {
+.tvs-table-net {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -116,27 +116,27 @@
   background: repeating-linear-gradient(180deg, #e9e6f2 0 14px, #1a1140 14px 24px);
 }
 
-.tv-rally {
+.tvs-rally {
   position: absolute;
   left: 0;
   top: 0;
   width: 30px;
   height: 30px;
-  animation: tv-rally 20s linear infinite;
+  animation: tvs-rally 20s linear infinite;
 }
 
-.tv-ball-shadow,
-.tv-ball {
+.tvs-ball-shadow,
+.tvs-ball {
   position: absolute;
   inset: 0;
   border-radius: 50%;
 }
 
-.tv-ball-shadow { background: #0f0a28; }
-.tv-ball { background: #f0913a; }
-.tv-hop { animation: tv-hop 4s ease-in-out infinite; }
+.tvs-ball-shadow { background: #0f0a28; }
+.tvs-ball { background: #f0913a; }
+.tvs-hop { animation: tvs-hop 4s ease-in-out infinite; }
 
-.tv-ambient-logo {
+.tvs-ambient-logo {
   position: absolute;
   left: 72px;
   bottom: 64px;
@@ -145,7 +145,7 @@
   color: #c9c2e0;
 }
 
-.tv-ambient-clock {
+.tvs-ambient-clock {
   position: absolute;
   right: 72px;
   top: 64px;
@@ -153,8 +153,8 @@
   font-weight: 600;
 }
 
-.tv-race-story,
-.tv-race-side {
+.tvs-race-story,
+.tvs-race-side {
   position: absolute;
   top: 0;
   width: 50%;
@@ -163,16 +163,16 @@
   padding: 64px 72px;
 }
 
-.tv-race-story {
+.tvs-race-story {
   left: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
-.tv-race-side { left: 50%; }
+.tvs-race-side { left: 50%; }
 
-.tv-race-kicker {
+.tvs-race-kicker {
   font-size: 34px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -180,33 +180,33 @@
   color: #f35e68;
 }
 
-.tv-race-headline {
+.tvs-race-headline {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.tv-pulse {
-  animation: tv-pulse 20s ease-in-out both;
+.tvs-pulse {
+  animation: tvs-pulse 20s ease-in-out both;
   transform-origin: left bottom;
 }
 
-.tv-race-gap {
+.tvs-race-gap {
   display: flex;
   align-items: baseline;
   gap: 24px;
   color: #f35e68;
 }
 
-.tv-race-gap-number { font-size: 430px; line-height: 0.85; font-weight: 800; }
-.tv-race-gap-unit { font-size: 128px; line-height: 1; font-weight: 800; }
-.tv-race-gap-wide .tv-race-gap-number { font-size: 240px; }
-.tv-race-names { font-size: 88px; line-height: 1.08; font-weight: 700; }
-.tv-race-names-long { font-size: 60px; }
-.tv-race-logo { font-size: 36px; font-weight: 600; color: #c9c2e0; }
-.tv-race-clock { text-align: right; font-size: 44px; font-weight: 600; }
+.tvs-race-gap-number { font-size: 430px; line-height: 0.85; font-weight: 800; }
+.tvs-race-gap-unit { font-size: 128px; line-height: 1; font-weight: 800; }
+.tvs-race-gap-wide .tvs-race-gap-number { font-size: 240px; }
+.tvs-race-names { font-size: 88px; line-height: 1.08; font-weight: 700; }
+.tvs-race-names-long { font-size: 60px; }
+.tvs-race-logo { font-size: 36px; font-weight: 600; color: #c9c2e0; }
+.tvs-race-clock { text-align: right; font-size: 44px; font-weight: 600; }
 
-.tv-race-ladder {
+.tvs-race-ladder {
   position: absolute;
   left: 72px;
   right: 72px;
@@ -216,9 +216,9 @@
   gap: 22px;
 }
 
-.tv-race-line { position: relative; }
+.tvs-race-line { position: relative; }
 
-.tv-race-mark {
+.tvs-race-mark {
   position: absolute;
   inset: -6px -16px;
   border-radius: 10px;
@@ -226,10 +226,10 @@
   opacity: 0;
 }
 
-.tv-mark-chaser { animation: tv-mark 20s linear both; }
-.tv-mark-leader { animation: tv-mark 20s linear 8s both; }
+.tvs-mark-chaser { animation: tvs-mark 20s linear both; }
+.tvs-mark-leader { animation: tvs-mark 20s linear 8s both; }
 
-.tv-race-row {
+.tvs-race-row {
   position: relative;
   display: grid;
   grid-template-columns: 70px minmax(0, 1fr) 150px 130px;
@@ -239,14 +239,14 @@
   font-weight: 600;
 }
 
-.tv-race-rank { color: #a79fc4; }
-.tv-race-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.tv-race-rating { text-align: right; font-variant-numeric: tabular-nums; }
-.tv-race-trend { text-align: right; font-size: 40px; }
-.tv-trend-up { color: #4ade9b; }
-.tv-trend-down { color: #ff8a96; }
+.tvs-race-rank { color: #a79fc4; }
+.tvs-race-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tvs-race-rating { text-align: right; font-variant-numeric: tabular-nums; }
+.tvs-race-trend { text-align: right; font-size: 40px; }
+.tvs-trend-up { color: #4ade9b; }
+.tvs-trend-down { color: #ff8a96; }
 
 @media (prefers-reduced-motion: reduce) {
-  .tv-tick, .tv-hop, .tv-in, .tv-progress, .tv-pulse, .tv-mark-chaser, .tv-mark-leader { animation: none; }
-  .tv-rally { animation: none; transform: translate(1780px, 380px); }
+  .tvs-tick, .tvs-hop, .tvs-in, .tvs-progress, .tvs-pulse, .tvs-mark-chaser, .tvs-mark-leader { animation: none; }
+  .tvs-rally { animation: none; transform: translate(1780px, 380px); }
 }
