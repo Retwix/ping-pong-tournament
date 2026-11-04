@@ -7,14 +7,17 @@ type Save = (bio: string | null) => Promise<void>
 function BioForm({ bio, onSave, onClose }: { bio: string | null; onSave: Save; onClose: () => void }) {
   const [draft, setDraft] = useState(bio ?? '')
   const [refused, setRefused] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const save = async (e: FormEvent) => {
     e.preventDefault()
+    setSaving(true)
     try {
       await onSave(cleanBio(draft))
       onClose()
     } catch {
       setRefused(true)
+      setSaving(false)
     }
   }
 
@@ -33,10 +36,10 @@ function BioForm({ bio, onSave, onClose }: { bio: string | null; onSave: Save; o
           Bio non enregistrée. Réessaie dans un instant.
         </p>
       )}
-      <button className="rv-nav-link rv-nav-auth" type="button" onClick={onClose}>
+      <button className="rv-nav-link rv-nav-auth" type="button" onClick={onClose} disabled={saving}>
         Annuler
       </button>
-      <button className="btn-primary" type="submit">
+      <button className="btn-primary" type="submit" disabled={saving}>
         Enregistrer
       </button>
     </form>
