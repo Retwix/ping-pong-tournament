@@ -718,6 +718,7 @@ function PlayerCardModal({
           <Avatar name={card.name} team={card.team} url={card.avatarUrl} className="st-pm-av" />
           <div className="st-pm-id">
             <div className="st-pm-name">{card.name}</div>
+            {card.bio && <div className="st-pm-bio">{card.bio}</div>}
             <div className="st-pm-meta">
               {card.team !== null && (
                 <span className="st-team-dot" style={{ background: teamColor(card.team) }} />

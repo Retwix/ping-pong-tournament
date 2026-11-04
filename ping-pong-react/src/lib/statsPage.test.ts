@@ -94,6 +94,20 @@ const getFilters = (overrides?: Partial<StatsFilters>): StatsFilters => ({
 // Wednesday 15 July 2026, mid-day UTC (timezone-safe for ±2h offsets).
 const NOW = new Date('2026-07-15T12:00:00.000Z')
 
+const getMockPlayer = (overrides?: Partial<Player>): Player => ({
+  id: 'p1',
+  created_at: '2026-01-01T09:00:00.000Z',
+  name: 'Léo',
+  team: 'tech',
+  slack_user_id: null,
+  auth_user_id: null,
+  avatar_url: null,
+  status: 'active',
+  bio: null,
+  left_at: null,
+  ...overrides,
+})
+
 describe('stats filters in the URL', () => {
   it('reads period and type from the query string', () => {
     expect(parseStatsFilters('?p=mois&t=tournois')).toEqual({ period: 'mois', type: 'tournois' })
@@ -545,6 +559,7 @@ const row = (overrides: Partial<LeaderboardRow>): LeaderboardRow => ({
   name: 'X',
   team: null,
   avatar_url: null,
+  bio: null,
   played: 10,
   wins: 5,
   losses: 5,
@@ -676,6 +691,12 @@ describe('player card (fiche joueur)', () => {
     return playerCard('pa', stats, titles, matches, NOW)
   }
 
+  it("carries the player's bio from the registry", () => {
+    const players = [getMockPlayer({ id: 'pa', bio: 'Roi du revers' })]
+    const c = playerCard('pa', computePlayerStats(matches, players), new Map(), matches, NOW)
+    expect(c?.bio).toBe('Roi du revers')
+  })
+
   it('is null for an unknown player', () => {
     expect(playerCard('nope', computePlayerStats(matches, []), new Map(), matches, NOW)).toBeNull()
   })
@@ -753,20 +774,6 @@ describe('player card (fiche joueur)', () => {
 })
 
 describe('team standings point diff', () => {
-  const getMockPlayer = (overrides?: Partial<Player>): Player => ({
-    id: 'p1',
-    created_at: '2026-01-01T09:00:00.000Z',
-    name: 'Léo',
-    team: 'tech',
-    slack_user_id: null,
-    auth_user_id: null,
-    avatar_url: null,
-    status: 'active',
-    bio: null,
-    left_at: null,
-    ...overrides,
-  })
-
   it('accumulates the point diff of inter-team matches only, ranked by win rate', () => {
     const players = [
       getMockPlayer({ id: 'pa', name: 'Léo', team: 'tech' }),
