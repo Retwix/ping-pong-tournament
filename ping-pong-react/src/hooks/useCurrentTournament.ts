@@ -11,8 +11,11 @@ import { uniqueChannelName } from '../lib/realtimeChannel'
  *
  * Returns `id: null` when nothing is active (cold start or the active tournament
  * was deleted), which the views render as a "no live game" placeholder.
+ *
+ * Realtime replays nothing it missed, so a screen nobody can refresh passes
+ * `pollMs` to catch up. A failed poll keeps the current id and waits for the next.
  */
-export function useCurrentTournament() {
+export function useCurrentTournament(pollMs?: number) {
   const [id, setId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -32,6 +35,16 @@ export function useCurrentTournament() {
 
     resolve()
 
+    const poll = pollMs
+      ? setInterval(() => {
+          getActiveTournament()
+            .then((t) => {
+              if (!cancelled) setId(t?.id ?? null)
+            })
+            .catch(() => {})
+        }, pollMs)
+      : undefined
+
     const channel = supabase
       .channel(uniqueChannelName('current-tournament'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () =>
@@ -41,9 +54,10 @@ export function useCurrentTournament() {
 
     return () => {
       cancelled = true
+      clearInterval(poll)
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [pollMs])
 
   return { id, loading }
 }

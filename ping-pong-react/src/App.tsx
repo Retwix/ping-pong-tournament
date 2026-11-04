@@ -3,6 +3,7 @@ import Board from './components/Board'
 import CurrentView from './components/CurrentView'
 import Home from './components/Home'
 import LiveView from './components/LiveView'
+import TvView from './components/TvView'
 import Parties from './components/Parties'
 import Players from './components/Players'
 import Ratings from './components/Ratings'
@@ -26,6 +27,7 @@ type Route =
   | { name: 'live'; id: string }
   | { name: 'live-current' }
   | { name: 'ref-current' }
+  | { name: 'tv' }
 
 function parseRoute(): Route {
   const p = currentPath()
@@ -39,6 +41,7 @@ function parseRoute(): Route {
   // Stable, shareable views that follow the current tournament (no id needed).
   if (p === '/live') return { name: 'live-current' }
   if (p === '/ref') return { name: 'ref-current' }
+  if (p === '/tv') return { name: 'tv' }
   const live = p.match(/^\/t\/(.+)\/live$/)
   if (live) return { name: 'live', id: decodeURIComponent(live[1]) }
   const m = p.match(/^\/t\/(.+)$/)
@@ -149,6 +152,8 @@ function renderRoute(route: Route) {
       return <LiveView id={route.id} onBack={() => navigate(`/t/${route.id}`)} />
     case 'live-current':
       return <CurrentView readOnly onHome={() => navigate('/')} onRef={() => navigate('/ref')} />
+    case 'tv':
+      return <TvView />
     case 'ref-current':
       return <CurrentView readOnly={false} onHome={() => navigate('/')} />
     default:

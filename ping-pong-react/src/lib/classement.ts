@@ -38,7 +38,7 @@ export function winStreak(events: RatingEvent[], key: string): number {
 /** The « N victoires » badge appears from this many consecutive wins. */
 export const STREAK_BADGE_MIN = 3
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+export const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
 /** Signed rating change over the trailing seven days (the « 7 J » column). */
 export function weeklyDelta(events: RatingEvent[], key: string, now: Date): number {
