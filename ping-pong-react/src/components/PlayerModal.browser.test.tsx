@@ -52,6 +52,18 @@ describe('PlayerModal', () => {
     expect(onSaveBio).toHaveBeenCalledWith(null)
   })
 
+  it('keeps your bio as it was when you cancel', async () => {
+    const onSaveBio = vi.fn(async () => {})
+    const screen = await renderOwnCard(onSaveBio, 'Roi du revers')
+
+    await screen.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await screen.getByRole('textbox', { name: 'Ma bio' }).fill('Autre chose')
+    await screen.getByRole('button', { name: 'Annuler' }).click()
+
+    await expect.element(screen.getByText('Roi du revers')).toBeVisible()
+    expect(onSaveBio).not.toHaveBeenCalled()
+  })
+
   it("shows the player's bio under the name", async () => {
     const screen = await render(
       <PlayerModal row={getMockRatingRow()} bio="Roi du revers" history={null} onClose={() => {}} />,

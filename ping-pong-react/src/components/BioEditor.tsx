@@ -22,6 +22,9 @@ function BioForm({ bio, onSave, onClose }: { bio: string | null; onSave: Save; o
         onChange={(e) => setDraft(e.target.value)}
         autoFocus
       />
+      <button className="rv-nav-link rv-nav-auth" type="button" onClick={onClose}>
+        Annuler
+      </button>
       <button className="btn-primary" type="submit">
         Enregistrer
       </button>
