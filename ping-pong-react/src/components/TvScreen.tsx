@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { FormScene, RaceLine, RaceScene, ResultsScene, TvScene } from '../lib/tvScenes'
+import type { FormScene, RaceLine, RaceScene, ResultLine, ResultsScene, TvScene } from '../lib/tvScenes'
 import './tv.css'
 
 const STAGE_WIDTH = 1920
@@ -246,8 +246,25 @@ function Form({ scene, now }: { scene: FormScene; now: Date }) {
   )
 }
 
+function Feed({ lines }: { lines: ResultLine[] }) {
+  return (
+    <div className="tvs-feed-window">
+      <div className="tvs-feed">
+        {lines.map(({ winner, loser, score, when, capot }, i) => (
+          <div key={i} className="tvs-feed-row">
+            <span className="tvs-feed-name">{winner}</span>
+            <span className={`tvs-feed-score${capot ? ' tvs-feed-capot' : ''}`}>{score}</span>
+            <span className="tvs-feed-name tvs-feed-loser">{loser}</span>
+            <span className="tvs-feed-when">{when}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Results({ scene, now }: { scene: ResultsScene; now: Date }) {
-  const { headline, stamped } = scene
+  const { headline, stamped, feed } = scene
   const { winner, loser, score } = headline
   return (
     <div className="tvs-results">
@@ -265,6 +282,7 @@ function Results({ scene, now }: { scene: ResultsScene; now: Date }) {
           </div>
         )}
       </div>
+      <Feed lines={feed} />
       <Progress />
     </div>
   )
