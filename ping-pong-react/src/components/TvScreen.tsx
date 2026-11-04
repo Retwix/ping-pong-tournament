@@ -215,11 +215,11 @@ function Stair({ beaten }: { beaten: string[] }) {
 }
 
 function Form({ scene, now }: { scene: FormScene; now: Date }) {
-  const { name, streak, beaten, risers, upset } = scene
+  const { name, streak, period, beaten, risers, upset } = scene
   return (
     <div className="tvs-form">
       <Stair beaten={beaten} />
-      <div className="tvs-in tvs-kicker tvs-form-kicker">En forme · cette semaine</div>
+      <div className="tvs-in tvs-kicker tvs-form-kicker">En forme{period && ` · ${period}`}</div>
       <Masthead now={now} />
       <div className="tvs-form-story">
         <div className="tvs-in tvs-after-1 tvs-form-streak">

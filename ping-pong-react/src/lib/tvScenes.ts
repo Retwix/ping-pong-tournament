@@ -70,6 +70,7 @@ export interface FormScene {
   kind: 'form'
   name: string
   streak: number
+  period: string | null
   beaten: string[]
   risers: FormRiser[]
   upset: DashboardRecords['biggestUpset']
@@ -81,8 +82,15 @@ export interface FormInput {
   now: Date
 }
 
-const inLastWeek = (at: string | null, now: Date) =>
-  at !== null && new Date(at).getTime() >= now.getTime() - WEEK_MS
+const within = (span: number, at: string | null, now: Date) =>
+  at !== null && new Date(at).getTime() >= now.getTime() - span
+
+const inLastWeek = (at: string | null, now: Date) => within(WEEK_MS, at, now)
+
+const streakPeriod = (lastWin: string | null, now: Date) => {
+  if (inLastWeek(lastWin, now)) return 'cette semaine'
+  return within(2 * WEEK_MS, lastWin, now) ? 'la semaine dernière' : null
+}
 
 /** The hottest run on the ladder; null until someone has won twice in a row. */
 export function formScene({ rows, events, now }: FormInput): FormScene | null {
@@ -91,14 +99,13 @@ export function formScene({ rows, events, now }: FormInput): FormScene | null {
     .filter(({ streak }) => streak >= FORM_MIN_STREAK)
     .sort((a, b) => b.streak - a.streak)
   if (!best) return null
+  const wins = events.filter((e) => e.key === best.row.key)
   return {
     kind: 'form',
     name: best.row.name,
     streak: best.streak,
-    beaten: events
-      .filter((e) => e.key === best.row.key)
-      .slice(-Math.min(best.streak, FORM_STEPS))
-      .map((e) => e.opponentName),
+    period: streakPeriod(wins[wins.length - 1]?.at ?? null, now),
+    beaten: wins.slice(-Math.min(best.streak, FORM_STEPS)).map((e) => e.opponentName),
     risers: topProgressions(events, rows, now).map(({ row, delta7 }) => ({
       name: row.name,
       delta: Math.round(delta7),
