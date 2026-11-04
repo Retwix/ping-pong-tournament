@@ -6,11 +6,16 @@ type Save = (bio: string | null) => Promise<void>
 
 function BioForm({ bio, onSave, onClose }: { bio: string | null; onSave: Save; onClose: () => void }) {
   const [draft, setDraft] = useState(bio ?? '')
+  const [refused, setRefused] = useState(false)
 
   const save = async (e: FormEvent) => {
     e.preventDefault()
-    await onSave(cleanBio(draft))
-    onClose()
+    try {
+      await onSave(cleanBio(draft))
+      onClose()
+    } catch {
+      setRefused(true)
+    }
   }
 
   return (
@@ -22,6 +27,11 @@ function BioForm({ bio, onSave, onClose }: { bio: string | null; onSave: Save; o
         onChange={(e) => setDraft(e.target.value)}
         autoFocus
       />
+      {refused && (
+        <p className="rv-claim-error" role="alert">
+          Bio non enregistrée. Réessaie dans un instant.
+        </p>
+      )}
       <button className="rv-nav-link rv-nav-auth" type="button" onClick={onClose}>
         Annuler
       </button>
