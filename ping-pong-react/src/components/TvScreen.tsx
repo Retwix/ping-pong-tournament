@@ -313,7 +313,7 @@ function Rival({ side, className }: { side: RivalSide; className: string }) {
 }
 
 function Rivalry({ scene, now }: { scene: RivalryScene; now: Date }) {
-  const { total, left, right, share } = scene
+  const { total, left, right, share, records } = scene
   return (
     <div className="tvs-rivalry">
       <div className="tvs-tug" style={{ transform: `translateX(${STAGE_WIDTH * (share - 1)}px)` }} aria-hidden="true">
@@ -323,6 +323,15 @@ function Rivalry({ scene, now }: { scene: RivalryScene; now: Date }) {
       <Masthead now={now} />
       <Rival side={left} className="tvs-after-1 tvs-rival-left" />
       <Rival side={right} className="tvs-after-2 tvs-rival-right" />
+      <div className="tvs-records">
+        <div className="tvs-ticker">
+          {[...records, ...records].map((record, i) => (
+            <span key={i} className="tvs-record">
+              <span className="tvs-record-label">Record</span> {record}
+            </span>
+          ))}
+        </div>
+      </div>
       <Progress />
     </div>
   )

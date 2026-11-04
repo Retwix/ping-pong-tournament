@@ -75,6 +75,11 @@
   80% { transform: translateX(-940px); }
 }
 
+@keyframes tvs-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 @keyframes tvs-tick {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0.25; }
@@ -473,9 +478,33 @@
 .tvs-rival-name-long { font-size: 64px; line-height: 1.05; }
 .tvs-rival-wins { font-size: 400px; line-height: 0.95; font-weight: 800; font-variant-numeric: tabular-nums; }
 
+.tvs-records {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #0c0f14;
+}
+
+.tvs-ticker {
+  display: flex;
+  flex: none;
+  white-space: nowrap;
+  font-size: 44px;
+  font-weight: 600;
+  animation: tvs-ticker 20s linear both;
+}
+
+.tvs-record { padding-right: 120px; }
+.tvs-record-label { color: #f0913a; }
+
 @media (prefers-reduced-motion: reduce) {
   .tvs-tick, .tvs-hop, .tvs-in, .tvs-progress, .tvs-pulse, .tvs-mark-chaser, .tvs-mark-leader,
-  .tvs-step-lit, .tvs-shake, .tvs-stamp, .tvs-feed, .tvs-tug { animation: none; }
+  .tvs-step-lit, .tvs-shake, .tvs-stamp, .tvs-feed, .tvs-tug, .tvs-ticker { animation: none; }
   .tvs-climb { animation: none; transform: translate(1792px, 286px); }
   .tvs-rally { animation: none; transform: translate(1780px, 380px); }
 }
