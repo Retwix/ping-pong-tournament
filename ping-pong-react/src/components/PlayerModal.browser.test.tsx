@@ -77,6 +77,28 @@ describe('PlayerModal', () => {
     await expect.element(screen.getByRole('textbox', { name: 'Ma bio' })).toHaveValue('Roi du revers')
   })
 
+  it('holds Annuler and Enregistrer while a save is on its way, so a cancel cannot lose to it', async () => {
+    const screen = await renderOwnCard(() => new Promise(() => {}))
+
+    await screen.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await screen.getByRole('textbox', { name: 'Ma bio' }).fill('Roi du revers')
+    await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+    await expect.element(screen.getByRole('button', { name: 'Annuler' })).toBeDisabled()
+    await expect.element(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled()
+  })
+
+  it('lets you try again after a refused save', async () => {
+    const screen = await renderOwnCard(() => Promise.reject(new Error('refused')))
+
+    await screen.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+    await expect.element(screen.getByRole('alert')).toBeVisible()
+    await expect.element(screen.getByRole('button', { name: 'Annuler' })).toBeEnabled()
+    await expect.element(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled()
+  })
+
   it('stops your bio at 20 characters, the most the database takes', async () => {
     const onSaveBio = vi.fn(async () => {})
     const screen = await renderOwnCard(onSaveBio)
