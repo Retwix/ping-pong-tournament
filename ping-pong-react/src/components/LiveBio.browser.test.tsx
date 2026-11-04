@@ -102,6 +102,29 @@ describe('SpectatorView live board', () => {
   })
 })
 
+describe('SpectatorView final table', () => {
+  it('shows each tournament Elo move as a whole number', async () => {
+    const screen = await render(
+      <SpectatorView
+        tournament={getMockTournament({ status: 'done' })}
+        matches={[]}
+        match={null}
+        rows={[]}
+        players={[]}
+        ratingsFor={() => ({ a: null, b: null })}
+        tournamentRatings={[
+          { name: 'Léo', endRating: 1935, netDelta: 49.198553432522885, provisional: false },
+          { name: 'Inès', endRating: 1184, netDelta: -73.83201768723734, provisional: false },
+        ]}
+        onBack={() => {}}
+      />,
+    )
+
+    await expect.element(screen.getByText('+49', { exact: true })).toBeVisible()
+    await expect.element(screen.getByText('−74', { exact: true })).toBeVisible()
+  })
+})
+
 describe('LiveHeroCard', () => {
   it("shows each player's bio on their own side, without needing a rated match", async () => {
     const screen = await render(
