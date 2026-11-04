@@ -1,9 +1,10 @@
 // Pure selectors for the « Tournois & parties » page (/parties).
 
-import type { Match, Tournament } from '../types'
+import type { Match, SetScore, Tournament } from '../types'
 import { finalStandings } from './finalStandings'
 import { fold } from './fold'
 import type { RatingEvent } from './rating'
+import { setsFromWinner } from './sets'
 import { winnerLoser } from './stats'
 
 export type PartiesFilter = 'all' | 'match' | 'tour'
@@ -86,8 +87,8 @@ export interface MatchRow {
   tournamentId: string
   winner: string
   loser: string
-  winnerScore: number
-  loserScore: number
+  /** Every set, the deciding one last, from the winner's side; a single game is its one score. */
+  sets: SetScore[]
   /** The winner's rating gain — null when the match never got rated (e.g. missing replay data). */
   eloDelta: number | null
   competition: string
@@ -116,15 +117,14 @@ export function matchRows(
     .filter((m) => m.done && !m.bye)
     .sort((a, b) => timeKey(b).localeCompare(timeKey(a)))
     .map((m) => {
-      const { winner, loser, ws, ls } = winnerLoser(m)
+      const { winner, loser } = winnerLoser(m)
       const tournament = tournamentById.get(m.tournament_id)
       return {
         id: m.id,
         tournamentId: m.tournament_id,
         winner,
         loser,
-        winnerScore: ws,
-        loserScore: ls,
+        sets: setsFromWinner(m),
         eloDelta: winnerDeltaByMatch.get(m.id) ?? null,
         competition:
           tournament === undefined

@@ -252,7 +252,11 @@ function MatchesTable({
                 {row.loser}
               </div>
               <div className="pt-score">
-                {row.winnerScore}–{row.loserScore}
+                {row.sets.map(([w, l], i) => (
+                  <span key={i} className="pt-set">
+                    {w}–{l}
+                  </span>
+                ))}
               </div>
               <div className="pt-delta">
                 {row.unranked ? (

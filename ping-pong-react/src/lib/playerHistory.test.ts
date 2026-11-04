@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { perDayPoints, playerHistory } from './playerHistory'
+import { perDayPoints, playerHistory, type PlayerHistoryPoint } from './playerHistory'
 import type { RatingEvent, RatingRow } from './rating'
 
 const event = (over: Partial<RatingEvent> = {}): RatingEvent => ({
@@ -66,14 +66,17 @@ describe('playerHistory', () => {
     ])
   })
 
-  it('carries the opponent and score of each match on its point', () => {
+  it('carries the opponent and the sets of each match, from the player\'s side, on its point', () => {
     const events = [
-      event({ matchId: 'm1', opponentName: 'Bob', scoreFor: 11, scoreAgainst: 5, won: true }),
+      event({ matchId: 'm1', opponentName: 'Bob', sets: [[11, 5]], won: true }),
       event({
         matchId: 'm2',
         opponentName: 'Carol',
-        scoreFor: 9,
-        scoreAgainst: 11,
+        sets: [
+          [5, 11],
+          [11, 8],
+          [9, 11],
+        ],
         won: false,
         at: '2026-07-02T10:00:00Z',
       }),
@@ -81,8 +84,16 @@ describe('playerHistory', () => {
     const h = playerHistory(events, [row()], 'alice')
     expect(h?.points.map((p) => p.match)).toEqual([
       undefined,
-      { opponent: 'Bob', scoreFor: 11, scoreAgainst: 5, won: true },
-      { opponent: 'Carol', scoreFor: 9, scoreAgainst: 11, won: false },
+      { opponent: 'Bob', sets: [[11, 5]], won: true },
+      {
+        opponent: 'Carol',
+        sets: [
+          [5, 11],
+          [11, 8],
+          [9, 11],
+        ],
+        won: false,
+      },
     ])
   })
 
@@ -195,17 +206,17 @@ describe('perDayPoints', () => {
   })
 
   it('drops the match behind a day point — it stands for the whole day', () => {
-    const points = [
+    const points: PlayerHistoryPoint[] = [
       { at: null, rating: 1500 },
       {
         at: '2026-07-01T09:00:00Z',
         rating: 1512,
-        match: { opponent: 'Bob', scoreFor: 11, scoreAgainst: 5, won: true },
+        match: { opponent: 'Bob', sets: [[11, 5]], won: true },
       },
       {
         at: '2026-07-01T20:00:00Z',
         rating: 1523,
-        match: { opponent: 'Carol', scoreFor: 11, scoreAgainst: 8, won: true },
+        match: { opponent: 'Carol', sets: [[11, 8]], won: true },
       },
     ]
     expect(perDayPoints(points)).toEqual([

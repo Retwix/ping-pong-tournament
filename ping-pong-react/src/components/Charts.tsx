@@ -146,7 +146,11 @@ export function RatingLine({ points, color }: { points: RatingPoint[]; color: st
                       {match.won ? 'V' : 'D'}
                     </span>
                     <span className="rl-tip-score">
-                      {match.scoreFor}-{match.scoreAgainst}
+                      {match.sets.map(([mine, theirs], i) => (
+                        <span key={i} className="rl-tip-set">
+                          {mine}-{theirs}
+                        </span>
+                      ))}
                     </span>
                     <span className="rl-tip-opp">vs {match.opponent}</span>
                   </div>

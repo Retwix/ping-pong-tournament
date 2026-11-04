@@ -54,8 +54,7 @@ describe('recentResults', () => {
       tournamentId: 't1',
       winner: 'Alice',
       loser: 'Bob',
-      winnerScore: 11,
-      loserScore: 7,
+      sets: [[11, 7]],
     })
   })
 
@@ -64,9 +63,21 @@ describe('recentResults', () => {
     expect(r).toMatchObject({
       winner: 'Bob',
       loser: 'Alice',
-      winnerScore: 11,
-      loserScore: 5,
+      sets: [[11, 5]],
     })
+  })
+
+  it('reads a match of sets as every set from the winner\'s side', () => {
+    const [r] = recentResults(
+      [makeMatch({ score_a: 9, score_b: 11, sets: [[5, 11], [11, 8]] })],
+      [],
+      [],
+    )
+    expect(r.sets).toEqual([
+      [11, 5],
+      [8, 11],
+      [11, 9],
+    ])
   })
 
   it('excludes unfinished and bye matches', () => {

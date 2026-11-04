@@ -737,10 +737,10 @@ describe('player card (fiche joueur)', () => {
 
   it('lists the recent matches newest first with relative dates', () => {
     const last = card()?.last8 ?? []
-    expect(last.map((m) => [m.win, m.opponent, m.score, m.date])).toEqual([
-      [true, 'Candice', '11-7', 'il y a 1 j'],
-      [false, 'Thibault', '5-11', 'il y a 3 j'],
-      [true, 'Thibault', '11-3', 'il y a 5 j'],
+    expect(last.map((m) => [m.win, m.opponent, m.sets, m.date])).toEqual([
+      [true, 'Candice', [[11, 7]], 'il y a 1 j'],
+      [false, 'Thibault', [[5, 11]], 'il y a 3 j'],
+      [true, 'Thibault', [[11, 3]], 'il y a 5 j'],
     ])
   })
 
@@ -1223,7 +1223,7 @@ describe('mutation hardening', () => {
     expect(card?.last8[0]).toEqual({
       win: false,
       opponent: 'Léo',
-      score: '6-11',
+      sets: [[6, 11]],
       date: 'il y a 1 j',
     })
   })
@@ -1252,7 +1252,20 @@ describe('mutation hardening', () => {
       ended_at: '2026-07-14T10:00:00.000Z',
     })
     const card = playerCard('pa', computePlayerStats([asB], []), new Map(), [asB], NOW)
-    expect(card?.last8[0]).toMatchObject({ win: true, opponent: 'Maxime', score: '11-7' })
+    expect(card?.last8[0]).toMatchObject({ win: true, opponent: 'Maxime', sets: [[11, 7]] })
+  })
+
+  it('reads a match of sets from each player\'s side, the deciding set last', () => {
+    const bo3 = getMockMatch({ score_a: 11, score_b: 9, sets: [[11, 5], [8, 11]] })
+    const stats = computePlayerStats([bo3], [])
+    expect(playerCard('pa', stats, new Map(), [bo3], NOW)?.last8[0]).toMatchObject({
+      win: true,
+      sets: [[11, 5], [8, 11], [11, 9]],
+    })
+    expect(playerCard('pb', stats, new Map(), [bo3], NOW)?.last8[0]).toMatchObject({
+      win: false,
+      sets: [[5, 11], [11, 8], [9, 11]],
+    })
   })
 
   it('counts Sunday play in the weekday profile', () => {

@@ -8,7 +8,7 @@ import { computeStandings } from '../lib/pingpong'
 import { navigate } from '../lib/router'
 import { isPlayable } from '../lib/doubleElim'
 import { isLive } from '../lib/liveHero'
-import { bestOf } from '../lib/sets'
+import { bestOf, setsFromWinner } from '../lib/sets'
 import type { Match } from '../types'
 import LiveScorer from './LiveScorer'
 import { RatingMoveRow } from './RatingDelta'
@@ -208,8 +208,13 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
           {winner && finished && (
             <p className="up-next-result">
               ✅ <span className="em">{winner}</span> l'emporte{' '}
-              {Math.max(finished.score_a, finished.score_b)}–
-              {Math.min(finished.score_a, finished.score_b)}
+              <span className="up-next-sets">
+                {setsFromWinner(finished).map(([w, l], i) => (
+                  <span key={i} className="up-next-set">
+                    {w}–{l}
+                  </span>
+                ))}
+              </span>
             </p>
           )}
           {(rdWinner || rdLoser) && (

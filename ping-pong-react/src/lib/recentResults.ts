@@ -1,4 +1,5 @@
-import type { Match, Player } from '../types'
+import type { Match, Player, SetScore } from '../types'
+import { setsFromWinner } from './sets'
 import { sideKey, winnerLoser } from './stats'
 
 /** One finished game/match, flattened for the dashboard "Résultats récents" list. */
@@ -7,8 +8,8 @@ export interface RecentResult {
   tournamentId: string
   winner: string
   loser: string
-  winnerScore: number
-  loserScore: number
+  /** Every set, the deciding one last, from the winner's side; a single game is its one score. */
+  sets: SetScore[]
   endedAt: string | null
   winnerAvatar: string | null
   /** 2v2 : winner/loser are pair display names — the row pluralises its verb. */
@@ -44,7 +45,7 @@ export function recentResults(
     .map((m) => {
       const aWon = m.score_a > m.score_b
       const winnerId = aWon ? m.player_a_id : m.player_b_id
-      const { winner, loser, ws, ls } = winnerLoser(m)
+      const { winner, loser } = winnerLoser(m)
       const winnerAvatar =
         avatarByKey.get(sideKey(winnerId, winner)) ?? avatarByKey.get(`name:${winner}`) ?? null
       return {
@@ -52,8 +53,7 @@ export function recentResults(
         tournamentId: m.tournament_id,
         winner,
         loser,
-        winnerScore: ws,
-        loserScore: ls,
+        sets: setsFromWinner(m),
         endedAt: m.ended_at,
         winnerAvatar,
         doubles: doublesIds.has(m.tournament_id),
