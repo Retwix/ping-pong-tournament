@@ -1,5 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { FormScene, RaceLine, RaceScene, ResultLine, ResultsScene, TvScene } from '../lib/tvScenes'
+import type {
+  FormScene,
+  RaceLine,
+  RaceScene,
+  ResultLine,
+  ResultsScene,
+  RivalryScene,
+  RivalSide,
+  TvScene,
+} from '../lib/tvScenes'
 import './tv.css'
 
 const STAGE_WIDTH = 1920
@@ -291,10 +300,36 @@ function Results({ scene, now }: { scene: ResultsScene; now: Date }) {
   )
 }
 
+const RIVAL_NAME_FITS = 10
+
+function Rival({ side, className }: { side: RivalSide; className: string }) {
+  const { name, wins } = side
+  return (
+    <div className={`tvs-in ${className}`}>
+      <div className={`tvs-rival-name${name.length > RIVAL_NAME_FITS ? ' tvs-rival-name-long' : ''}`}>{name}</div>
+      <div className="tvs-rival-wins">{wins}</div>
+    </div>
+  )
+}
+
+function Rivalry({ scene, now }: { scene: RivalryScene; now: Date }) {
+  const { total, left, right } = scene
+  return (
+    <div className="tvs-rivalry">
+      <div className="tvs-in tvs-kicker">La rivalité · {total} matchs</div>
+      <Masthead now={now} />
+      <Rival side={left} className="tvs-after-1 tvs-rival-left" />
+      <Rival side={right} className="tvs-after-2 tvs-rival-right" />
+      <Progress />
+    </div>
+  )
+}
+
 function Scene({ scene, now }: Props) {
   if (scene?.kind === 'race') return <Race scene={scene} now={now} />
   if (scene?.kind === 'form') return <Form scene={scene} now={now} />
   if (scene?.kind === 'results') return <Results scene={scene} now={now} />
+  if (scene?.kind === 'rivalry') return <Rivalry scene={scene} now={now} />
   return <Ambient now={now} />
 }
 

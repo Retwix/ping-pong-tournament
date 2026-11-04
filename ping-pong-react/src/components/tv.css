@@ -422,6 +422,33 @@
 .tvs-feed-capot { color: #f35e68; }
 .tvs-feed-when { text-align: right; font-size: 34px; color: #c3c8d2; }
 
+.tvs-rivalry { position: absolute; inset: 0; background: #2a1c63; }
+
+.tvs-rival-left,
+.tvs-rival-right {
+  position: absolute;
+  top: 200px;
+  width: 960px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.tvs-rival-left { left: 0; padding: 0 60px; }
+.tvs-rival-right { left: 960px; padding: 0 60px 0 200px; }
+
+.tvs-rival-name {
+  height: 140px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 130px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.tvs-rival-name-long { font-size: 64px; line-height: 1.05; }
+.tvs-rival-wins { font-size: 400px; line-height: 0.95; font-weight: 800; font-variant-numeric: tabular-nums; }
+
 @media (prefers-reduced-motion: reduce) {
   .tvs-tick, .tvs-hop, .tvs-in, .tvs-progress, .tvs-pulse, .tvs-mark-chaser, .tvs-mark-leader,
   .tvs-step-lit, .tvs-shake, .tvs-stamp, .tvs-feed { animation: none; }
