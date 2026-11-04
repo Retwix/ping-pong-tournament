@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { RaceScene, TvScene } from '../lib/tvScenes'
+import type { RaceLine, RaceScene, TvScene } from '../lib/tvScenes'
 import './tv.css'
 
 const STAGE_WIDTH = 1920
@@ -62,8 +62,28 @@ function Progress() {
   return <div className="tv-progress" aria-hidden="true" />
 }
 
+const RACE_MARKS = ['tv-mark-leader', 'tv-mark-chaser']
+
+function RaceRow({ line, index }: { line: RaceLine; index: number }) {
+  const { rank, name, rating, trend } = line
+  const tone = trend < 0 ? 'tv-trend-down' : 'tv-trend-up'
+  return (
+    <div className="tv-in tv-race-line" style={{ animationDelay: `${0.8 + 0.15 * index}s` }}>
+      <div className={`tv-race-mark ${RACE_MARKS[index] ?? ''}`} aria-hidden="true" />
+      <div className="tv-race-row">
+        <span className="tv-race-rank">{rank}</span>
+        <span className="tv-race-name">{name}</span>
+        <span className="tv-race-rating">{rating}</span>
+        <span className={`tv-race-trend ${tone}`}>
+          {trend !== 0 && `${trend < 0 ? '▼' : '▲'} ${Math.abs(trend)}`}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function Race({ scene, now }: { scene: RaceScene; now: Date }) {
-  const { season, daysLeft, leader, chaser, gap } = scene
+  const { season, daysLeft, leader, chaser, gap, ladder } = scene
   const plural = gap >= 2
   return (
     <Table>
@@ -87,6 +107,11 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
       <div className="tv-race-side">
         <div className="tv-race-clock">
           <Clock now={now} />
+        </div>
+        <div className="tv-race-ladder">
+          {ladder.map((line, index) => (
+            <RaceRow key={line.rank} line={line} index={index} />
+          ))}
         </div>
       </div>
       <Progress />
