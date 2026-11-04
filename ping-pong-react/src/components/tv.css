@@ -342,6 +342,20 @@
 .tvs-form-line { font-size: 50px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; }
 .tvs-form-gain { color: #f0913a; }
 
+.tvs-results {
+  position: absolute;
+  inset: 0;
+  background-color: #08090d;
+  background-image: radial-gradient(#1b1f29 2.5px, transparent 2.5px);
+  background-size: 28px 28px;
+}
+
+.tvs-results-kicker { color: #f0913a; }
+.tvs-results-story { position: absolute; left: 96px; top: 230px; width: 840px; }
+.tvs-results-score { font-size: 280px; line-height: 0.95; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tvs-results-title { margin-top: 56px; font-size: 88px; line-height: 1.08; font-weight: 700; }
+.tvs-results-names { margin-top: 12px; font-size: 60px; line-height: 1.1; font-weight: 600; color: #c3c8d2; }
+
 @media (prefers-reduced-motion: reduce) {
   .tvs-tick, .tvs-hop, .tvs-in, .tvs-progress, .tvs-pulse, .tvs-mark-chaser, .tvs-mark-leader,
   .tvs-step-lit { animation: none; }
