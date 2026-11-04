@@ -762,6 +762,7 @@ describe('team standings point diff', () => {
     auth_user_id: null,
     avatar_url: null,
     status: 'active',
+    bio: null,
     left_at: null,
     ...overrides,
   })

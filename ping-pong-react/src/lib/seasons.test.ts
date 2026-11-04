@@ -370,6 +370,7 @@ const getMockPlayer = (overrides?: Partial<Player>): Player => ({
   auth_user_id: null,
   avatar_url: null,
   status: 'active',
+  bio: null,
   left_at: null,
   ...overrides,
 })

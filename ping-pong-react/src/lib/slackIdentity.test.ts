@@ -19,6 +19,7 @@ function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
     auth_user_id: null,
     avatar_url: null,
     status: 'active',
+    bio: null,
     left_at: null,
     ...over,
   }
