@@ -11,6 +11,7 @@ import LiveView from './LiveView'
 import TvScreen from './TvScreen'
 
 const CLOCK_MS = 1000
+const ACTIVE_GAME_POLL_MS = 30_000
 
 /** Backs /tv: the scenes between games, the live view while one is on. */
 export default function TvView() {
@@ -21,7 +22,7 @@ export default function TvView() {
     return () => clearInterval(clock)
   }, [])
 
-  const { id } = useCurrentTournament()
+  const { id } = useCurrentTournament(ACTIVE_GAME_POLL_MS)
   const { tournament, matches } = useTournament(id)
   const { matches: allMatches, players, tournaments } = useRatings()
 
