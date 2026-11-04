@@ -35,3 +35,12 @@ test.for([
   expect(tvMode(moment({ matches, scoresChangedAt, now: minutesLater(17) }))).toBe('live')
   expect(tvMode(moment({ matches, scoresChangedAt, now: minutesLater(18) }))).toBe('screensaver')
 })
+
+test.for([
+  { at: 'just before 2 minutes', now: minutesLater(5, 119), mode: 'live' },
+  { at: 'on 2 minutes', now: minutesLater(7), mode: 'screensaver' },
+])('the final result holds the screen for 2 minutes: $at', ({ now, mode }) => {
+  const game = { created_at: CREATED_AT, status: 'done' as const }
+  const matches = [{ started_at: at(1), ended_at: at(5) }]
+  expect(tvMode(moment({ game, matches, now }))).toBe(mode)
+})

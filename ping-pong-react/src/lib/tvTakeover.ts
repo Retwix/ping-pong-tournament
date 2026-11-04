@@ -1,6 +1,7 @@
 import type { Match, Tournament } from '../types'
 
 const IDLE_MS = 10 * 60_000
+const FINAL_RESULT_MS = 2 * 60_000
 
 export type TvMode = 'screensaver' | 'live'
 
@@ -21,5 +22,6 @@ export function tvMode({ game, matches, scoresChangedAt, now }: TvMoment): TvMod
     ...stamps.map(Date.parse),
     scoresChangedAt ?? 0,
   )
-  return now - lastActivity < IDLE_MS ? 'live' : 'screensaver'
+  const hold = game.status === 'done' ? FINAL_RESULT_MS : IDLE_MS
+  return now - lastActivity < hold ? 'live' : 'screensaver'
 }
