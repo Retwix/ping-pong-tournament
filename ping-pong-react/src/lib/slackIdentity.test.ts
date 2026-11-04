@@ -8,6 +8,7 @@ import {
   claimPrompt,
   deleteAttempt,
   matchPlayer,
+  ownCard,
   ownRatingRow,
 } from './slackIdentity'
 
@@ -42,23 +43,33 @@ function ratingRow(over: Partial<RatingRow> & Pick<RatingRow, 'key' | 'playerId'
   }
 }
 
-describe('ownRatingRow', () => {
-  const roster = [
-    player({ id: 'p1', name: 'Thomas', auth_user_id: 'someone-else' }),
-    player({ id: 'p2', name: 'Léo', auth_user_id: 'me' }),
-  ]
+describe('ownCard', () => {
+  const me = player({ id: 'p2', name: 'Léo', auth_user_id: 'me', team: 'design', avatar_url: 'leo.png' })
+  const roster = [player({ id: 'p1', name: 'Thomas', auth_user_id: 'someone-else' }), me]
   const thomas = ratingRow({ key: 'p1', playerId: 'p1', name: 'Thomas' })
   const leo = ratingRow({ key: 'p2', playerId: 'p2', name: 'Léo', rank: 2 })
 
-  it("finds the ladder row of the player the signed-in account is linked to", () => {
-    expect(ownRatingRow('me', roster, [thomas, leo])).toBe(leo)
+  it('gives the linked player their ladder row', () => {
+    expect(ownCard('me', roster, [thomas, leo])).toEqual({ player: me, row: leo })
   })
 
   it('finds nothing for an account not linked to any player', () => {
-    expect(ownRatingRow('stranger', roster, [thomas, leo])).toBeNull()
+    expect(ownCard('stranger', roster, [thomas, leo])).toBeNull()
   })
 
-  it('finds nothing for a linked player who has no rated match on this ladder yet', () => {
+  it('gives a linked player with no rated match on this ladder a card without a rating', () => {
+    expect(ownCard('me', roster, [thomas])).toEqual({
+      player: me,
+      row: { name: 'Léo', team: 'design', avatar_url: 'leo.png', rating: null },
+    })
+  })
+})
+
+describe('ownRatingRow', () => {
+  it('finds no line for a linked player with no rated match on this ladder', () => {
+    const roster = [player({ id: 'p2', name: 'Léo', auth_user_id: 'me' })]
+    const thomas = ratingRow({ key: 'p1', playerId: 'p1', name: 'Thomas' })
+
     expect(ownRatingRow('me', roster, [thomas])).toBeNull()
   })
 })
