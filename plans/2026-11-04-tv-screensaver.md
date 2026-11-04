@@ -1,7 +1,7 @@
 # Plan: TV screensaver
 
 **Branch**: screen-saver
-**Status**: Active. Steps 1 to 6 done: all four scenes and the ambient table are checked on screen in the harness, and self-reload is checked on a local build. Step 7 next: `/tv` on real data, then ship.
+**Status**: Implemented. Steps 1 to 7 done, `/tv` checked on real data; open questions for the human are under "Step 7 results".
 **Testing**: the human decided on 2026-11-04 that the screensaver needs no more tests. Write no new tests and run no mutation testing for it; check each scene on screen. The committed `tvRotation` and `tvTakeover` tests stay.
 **Design**: [Écran TV Ping-Pong](https://claude.ai/artifact/VtXSk5gsHD4531R5pPsXid), second row. Read the boards with the Artifact tool: `project/Mix.dc.html`, `project/Forme.dc.html`, `project/Resultats.dc.html`, `project/Rivalites.dc.html`. The top row is superseded exploration. The mocks were never seen rendered, so check them on screen.
 
@@ -39,13 +39,13 @@
 
 ## Acceptance Criteria
 
-- [ ] `/tv` shows the scenes that have data, each for 20 seconds, in the fixed order
-- [ ] A scene with nothing to say is skipped; with nothing at all, the ambient table shows
-- [ ] Creating a game switches `/tv` to the live view; it returns 2 minutes after the final result, or after 10 minutes with no activity
-- [ ] `/live` behaves exactly as before
-- [ ] The page reloads itself when a new build is deployed
-- [ ] Each scene matches its design board on screen at 1920×1080, and respects reduced motion
-- [ ] Long names don't break a scene
+- [x] `/tv` shows the scenes that have data, each for 20 seconds, in the fixed order
+- [x] A scene with nothing to say is skipped; with nothing at all, the ambient table shows
+- [x] Creating a game switches `/tv` to the live view; it returns 2 minutes after the final result, or after 10 minutes with no activity
+- [x] `/live` behaves exactly as before
+- [x] The page reloads itself when a new build is deployed
+- [x] Each scene matches its design board on screen at 1920×1080, and respects reduced motion
+- [x] Long names don't break a scene
 
 ## Steps
 
@@ -86,6 +86,21 @@ New `src/lib/tvScenes.ts`, one exported function per scene plus `tvScenes(data, 
 - `/tv` has only run against a dead backend, so the scene data functions have still never executed on data.
 - Writes must not reach production. Run the app with the main checkout's `.env` passed through the shell (never copied into the worktree) and abort every non-GET Supabase request with Playwright `page.route` before opening `/tv`; log what gets aborted.
 - Takeover without creating a game: `useTournament` polls every 15s, so rewrite only the browser's GET response for the active game, setting `created_at` to now and keeping its real status. Nothing changes in the database. If the status is not `done`, the auto-crown can fire, which is why the write block comes first.
+
+## Step 7 results (2026-11-04, production reads, every non-GET aborted in the browser)
+
+- Rotation: scenes changed at 20.3, 40.3, 60.3 and 80.3 seconds, in order. No page errors. The only aborted write was the deliberate proof of the block.
+- Numbers: rivalry, streak, games played, beaten opponents and latest results match a tally from the raw rows. Race points and weekly moves match `/classement`, which uses the same engine.
+- Takeover, simulated by rewriting the browser's GET responses, no game created: switched on the next poll, showed the next-up card then the scoreboard, returned 120.4 seconds after a final and 10.006 minutes idle. A real new game arriving through realtime was not exercised.
+- Self-reload: real 5-minute timer, entry script renamed in the local build, one reload, screensaver resumed.
+- Reduced motion: Results and Rivalry render settled, no animation running.
+- Not exercised on real data: skipped scenes and the ambient table, because every scene has data today. Long names were only checked in the harness.
+
+Open for the human:
+
+- The rivalry settles at the literal share, so 57–5 leaves Candice's name and score on coral.
+- `SpectatorView.tsx:48` has a local `signed` that doesn't round, so the final standings show `+49.198553432522885` and overflow the card. On `main` and on `/live` too; left alone because `/live` must not change here.
+- `useCurrentTournament` re-resolves only on a realtime event, with no poll. Read from the code, not tested: a new game created while the socket is down would not take over the TV.
 
 ## Pre-PR Quality Gate
 
