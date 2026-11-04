@@ -1044,6 +1044,10 @@ td.elo.neg { color: var(--coral); }
   box-shadow: 0 14px 34px rgba(215, 66, 81, 0.4);
 }
 .tv-name { font-weight: 800; font-size: max(22px, calc(40 * var(--u))); color: var(--tv-ink); }
+.tv-bio {
+  font-family: var(--font-body); font-weight: 600; font-style: italic;
+  font-size: max(13px, calc(20 * var(--u))); color: var(--tv-muted);
+}
 .tv-meta {
   font-family: var(--font-body); font-weight: 700;
   font-size: max(11px, calc(15 * var(--u))); color: var(--tv-muted);
@@ -1280,8 +1284,9 @@ td.elo.neg { color: var(--coral); }
     flex: 0 0 auto; display: grid; align-items: center; column-gap: 14px;
     grid-template:
       'pill pill pill' auto
-      'avatar name score' auto
-      'avatar meta score' auto / auto 1fr auto;
+      'avatar name score' 1fr
+      'avatar bio score' auto
+      'avatar meta score' 1fr / auto 1fr auto;
     text-align: left; border-radius: 24px; padding: 16px 18px;
   }
   .tv-player.is-serving {
@@ -1305,6 +1310,7 @@ td.elo.neg { color: var(--coral); }
   }
   .tv-avatar { grid-area: avatar; width: 56px; height: 56px; font-size: 20px; }
   .tv-name { grid-area: name; font-size: 26px; align-self: end; }
+  .tv-bio { grid-area: bio; font-size: 13px; }
   .tv-meta { grid-area: meta; font-size: 12px; align-self: start; }
   .tv-score { grid-area: score; font-size: clamp(64px, 24vw, 110px); }
 

@@ -50,6 +50,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
     forTournament: ratingsForTournament,
     elosFor,
     rows,
+    players,
   } = useRatingDeltas()
   const [shownId, setShownId] = useState<string | null>(null)
   // Referee-only: after a match is validated we stop on an explicit "up next"
@@ -148,6 +149,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
         matches={matches}
         match={matches.find((m) => m.id === shownId) ?? null}
         rows={rows}
+        players={players}
         ratingsFor={ratingsFor}
         tournamentRatings={ratingsForTournament(matches)}
         onBack={onBack}

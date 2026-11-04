@@ -18,11 +18,12 @@ import {
   serverIsA,
 } from '../lib/pingpong'
 import type { RatingRow } from '../lib/rating'
+import { sideBios } from '../lib/playerBio'
 import { sideElos } from '../lib/scorerElo'
 import { bestOf } from '../lib/sets'
 import { playerInitials } from '../lib/avatar'
 import { ladderAvatar, matchStakes, showsLiveBoard } from '../lib/spectator'
-import type { Match, MatchSide, Tournament } from '../types'
+import type { Match, MatchSide, Player, Tournament } from '../types'
 import ThemeToggle from './ThemeToggle'
 
 interface Props {
@@ -32,6 +33,8 @@ interface Props {
   match: Match | null
   /** Global ladder rows, for Elo pills, stakes projections and the podium. */
   rows: RatingRow[]
+  /** The registry, for bios: the ladder leaves out anyone without a rated match. */
+  players: Player[]
   /** Real rating moves for a finished match (replaces the live projection). */
   ratingsFor: (m: Match | null | undefined) => MatchRatings
   /** Net rating change per player over this tournament, for the classement. */
@@ -147,6 +150,7 @@ export default function SpectatorView({
   matches,
   match,
   rows,
+  players,
   ratingsFor,
   tournamentRatings,
   onBack,
@@ -340,6 +344,7 @@ export default function SpectatorView({
   const won = isWon(m.score_a, m.score_b, target)
   const aServe = !won && !m.done && serverIsA(m, target)
   const elos = sideElos(rows, m)
+  const bios = sideBios(players, m)
   const stakes = matchStakes(rows, m, rules)
   const real = m.done ? ratingsFor(m) : { a: null, b: null }
   const clock = formatDuration(matchDuration(m))
@@ -374,6 +379,8 @@ export default function SpectatorView({
     const mp = matchPointKind(d.score, opp.score, target)
     return (
       <div
+        role="group"
+        aria-label={d.name}
         className={`tv-player tv-player--${side}${d.serving ? ' is-serving' : ''}${
           d.winner ? ' is-winner' : ''
         }`}
@@ -399,6 +406,7 @@ export default function SpectatorView({
           url={ladderAvatar(rows, side === 'a' ? m.player_a_id : m.player_b_id, d.name)}
         />
         <div className="tv-name">{d.name}</div>
+        {bios[side] && <div className="tv-bio">{bios[side]}</div>}
         <div className="tv-meta">
           {elo !== null && <span>{elo} Elo</span>}
           {elo !== null && delta !== null && <span> · </span>}
