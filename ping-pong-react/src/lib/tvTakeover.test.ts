@@ -7,6 +7,8 @@ const minutesLater = (minutes: number, seconds = 0) =>
 
 const moment = (overrides: Partial<TvMoment> = {}): TvMoment => ({
   game: { created_at: CREATED_AT, status: 'active' },
+  matches: [],
+  scoresChangedAt: null,
   now: minutesLater(1),
   ...overrides,
 })
@@ -20,4 +22,16 @@ test.for([
   { at: 'on 10 idle minutes', now: minutesLater(10), mode: 'screensaver' },
 ])('a new game holds the screen until 10 idle minutes: $at', ({ now, mode }) => {
   expect(tvMode(moment({ now }))).toBe(mode)
+})
+
+const at = (minutes: number) => new Date(minutesLater(minutes)).toISOString()
+
+test.for([
+  { what: 'a match starting', matches: [{ started_at: at(8), ended_at: null }], scoresChangedAt: null },
+  { what: 'a match ending', matches: [{ started_at: null, ended_at: at(8) }], scoresChangedAt: null },
+  { what: 'the later of two matches', matches: [{ started_at: at(8), ended_at: null }, { started_at: at(1), ended_at: at(2) }], scoresChangedAt: null },
+  { what: 'a score changing', matches: [], scoresChangedAt: minutesLater(8) },
+])('$what restarts the 10 idle minutes', ({ matches, scoresChangedAt }) => {
+  expect(tvMode(moment({ matches, scoresChangedAt, now: minutesLater(17) }))).toBe('live')
+  expect(tvMode(moment({ matches, scoresChangedAt, now: minutesLater(18) }))).toBe('screensaver')
 })
