@@ -1,7 +1,7 @@
 # Plan: TV screensaver
 
 **Branch**: screen-saver
-**Status**: Active. Steps 1 and 2 done (`src/lib/tvRotation.ts`, `src/lib/tvTakeover.ts`, mutants all killed). Step 3 in progress: Race done in `src/lib/tvScenes.ts`, Form next.
+**Status**: Active. Steps 1 to 4 done (`tvRotation`, `tvTakeover`, `tvScenes`, `TvView`). Step 5 in progress: ambient table done in `TvScreen.tsx` and `tv.css`, checked on screen; the four scenes next. `/tv` not yet run on real data.
 **Testing**: the human decided on 2026-11-04 that the screensaver needs no more tests. Write no new tests and run no mutation testing for it; check each scene on screen. The committed `tvRotation` and `tvTakeover` tests stay.
 **Design**: [Écran TV Ping-Pong](https://claude.ai/artifact/VtXSk5gsHD4531R5pPsXid), second row. Read the boards with the Artifact tool: `project/Mix.dc.html`, `project/Forme.dc.html`, `project/Resultats.dc.html`, `project/Rivalites.dc.html`. The top row is superseded exploration. The mocks were never seen rendered, so check them on screen.
 
@@ -69,6 +69,12 @@ New `src/lib/tvScenes.ts`, one exported function per scene plus `tvScenes(data, 
 - **Capot trap:** `isCapot` reads only the deciding set, and capots are single games only for now, so require `finishedSets(m).length === 0`. `capotList` does not check this.
 - **Rivalry:** `computeRivalries(individualMatches(...), players, 5)`, so doubles stay out. Most games, then `rivalryBalance`. No rivalry skips the scene. Records: `longestStreak`, biggest delta from `scopedEvents`, most `played`.
 - **Tug split:** settled translateX is `1920 * (share - 1)`, passed as a CSS variable.
+
+## Step 5-6 notes
+
+- `ResultsScene.stamped` drives the stamp; `ResultLine.capot` only colours a feed score, since an old capot can be the latest game.
+- Headline gap: « point sépare » when the gap is below 2. A 3-digit gap and long names must fit; the harness `?long` case covers them.
+- Self-reload idea: fetch `/tv` with `cache: 'no-store'`, compare the entry script path with the running document, reload only in screensaver mode. Needs no build change.
 
 ## Pre-PR Quality Gate
 
