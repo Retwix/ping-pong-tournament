@@ -246,11 +246,14 @@ function Form({ scene, now }: { scene: FormScene; now: Date }) {
   )
 }
 
+const FEED_ROWS = 5
+
 function Feed({ lines }: { lines: ResultLine[] }) {
+  const rows = Array.from({ length: 2 * FEED_ROWS }, (_, i) => lines[i % lines.length])
   return (
     <div className="tvs-feed-window">
       <div className="tvs-feed">
-        {lines.map(({ winner, loser, score, when, capot }, i) => (
+        {rows.map(({ winner, loser, score, when, capot }, i) => (
           <div key={i} className="tvs-feed-row">
             <span className="tvs-feed-name">{winner}</span>
             <span className={`tvs-feed-score${capot ? ' tvs-feed-capot' : ''}`}>{score}</span>
