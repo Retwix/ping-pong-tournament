@@ -24,6 +24,7 @@ import {
   winStreak,
 } from '../lib/classement'
 import { departureLabel, relativeTime } from '../lib/format'
+import { playerBio } from '../lib/playerBio'
 import { ownRatingRow } from '../lib/slackIdentity'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
@@ -560,6 +561,7 @@ export default function Ratings({
         return (
           <PlayerModal
             row={selected}
+            bio={playerBio(players, selected.playerId, selected.name)}
             history={playerHistory(events, rows, selected.key)}
             onClose={() => setSelectedKey(null)}
           />

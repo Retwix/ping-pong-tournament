@@ -14,10 +14,12 @@ import PlayerModal from './PlayerModal'
  */
 export default function OwnCardButton({
   row,
+  bio,
   history,
   onSignOut,
 }: {
   row: RatingRow
+  bio: string | null
   history: PlayerHistory | null
   onSignOut: () => void
 }) {
@@ -36,7 +38,13 @@ export default function OwnCardButton({
       </button>
       {open &&
         createPortal(
-          <PlayerModal row={row} history={history} onClose={() => setOpen(false)} onSignOut={onSignOut} />,
+          <PlayerModal
+            row={row}
+            bio={bio}
+            history={history}
+            onClose={() => setOpen(false)}
+            onSignOut={onSignOut}
+          />,
           document.body,
         )}
     </>

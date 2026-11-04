@@ -23,10 +23,18 @@ const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
 })
 
 describe('PlayerModal', () => {
+  it("shows the player's bio under the name", async () => {
+    const screen = await render(
+      <PlayerModal row={getMockRatingRow()} bio="Roi du revers" history={null} onClose={() => {}} />,
+    )
+
+    await expect.element(screen.getByText('Roi du revers')).toBeVisible()
+  })
+
   it('lets you sign out from your own card', async () => {
     const onSignOut = vi.fn()
     const screen = await render(
-      <PlayerModal row={getMockRatingRow()} history={null} onClose={() => {}} onSignOut={onSignOut} />,
+      <PlayerModal row={getMockRatingRow()} bio={null} history={null} onClose={() => {}} onSignOut={onSignOut} />,
     )
 
     await screen.getByRole('button', { name: 'Se déconnecter' }).click()
@@ -35,7 +43,9 @@ describe('PlayerModal', () => {
   })
 
   it("offers no sign-out on someone else's card", async () => {
-    const screen = await render(<PlayerModal row={getMockRatingRow()} history={null} onClose={() => {}} />)
+    const screen = await render(
+      <PlayerModal row={getMockRatingRow()} bio={null} history={null} onClose={() => {}} />,
+    )
 
     await expect.element(screen.getByRole('heading', { name: 'Léo' })).toBeVisible()
     await expect.element(screen.getByRole('button', { name: 'Se déconnecter' })).not.toBeInTheDocument()
