@@ -407,6 +407,10 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 .pm-bio-edit:hover { color: var(--fg-1); }
 .pm-bio-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
 .pm-bio-form .pl-finput { flex: 1 1 160px; min-width: 0; }
+@media (max-width: 560px) {
+  .pd-head:has(.pm-bio-form) { flex-wrap: wrap; }
+  .pd-head > div:has(.pm-bio-form) { flex: 1 1 70%; }
+}
 .pd-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
 .pd-kpi { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 6px; text-align: center; }
 .pd-kpi .n { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--fg-1); }
