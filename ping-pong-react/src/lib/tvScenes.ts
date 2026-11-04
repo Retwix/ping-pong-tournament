@@ -1,15 +1,18 @@
 import { topProgressions, WEEK_MS, weeklyDelta, winStreak } from './classement'
 import { biggestUpsetOf, type DashboardRecords } from './dashboardRecords'
+import { individualMatches } from './doubles'
 import { relativeTime } from './format'
 import type { RatingEvent, RatingRow } from './rating'
 import { recentResults, type RecentResult } from './recentResults'
 import { daysLeft, type Season } from './seasons'
+import { computeRivalries, rivalryBalance } from './stats'
 import type { Match, Player, Tournament } from '../types'
 
 const RACE_LINES = 5
 const FORM_MIN_STREAK = 2
 const FORM_STEPS = 5
 const RESULT_LINES = 5
+const RIVALRY_MIN_GAMES = 5
 
 export interface RaceLine {
   rank: number
@@ -151,5 +154,44 @@ export function resultsScene({ matches, players, tournaments, now }: ResultsInpu
     headline: resultLine(headline, now),
     stamped: weekCapot !== undefined,
     feed: results.slice(0, RESULT_LINES).map((r) => resultLine(r, now)),
+  }
+}
+
+export interface RivalSide {
+  name: string
+  wins: number
+}
+
+export interface RivalryScene {
+  kind: 'rivalry'
+  total: number
+  left: RivalSide
+  right: RivalSide
+  /** The left player's part of the head-to-head, from 0 to 1. */
+  share: number
+}
+
+export interface RivalryInput {
+  matches: Match[]
+  players: Player[]
+  tournaments: Tournament[]
+}
+
+/** The most played head-to-head; null below 5 games between two players. */
+export function rivalryScene({ matches, players, tournaments }: RivalryInput): RivalryScene | null {
+  const individuals = individualMatches(matches, tournaments)
+  const [rivalry] = computeRivalries(individuals, players, RIVALRY_MIN_GAMES).sort(
+    (a, b) => b.total - a.total || rivalryBalance(b) - rivalryBalance(a),
+  )
+  if (!rivalry) return null
+  const a = { name: rivalry.aName, wins: rivalry.aWins }
+  const b = { name: rivalry.bName, wins: rivalry.bWins }
+  const [left, right] = a.wins >= b.wins ? [a, b] : [b, a]
+  return {
+    kind: 'rivalry',
+    total: rivalry.total,
+    left,
+    right,
+    share: left.wins / rivalry.total,
   }
 }
