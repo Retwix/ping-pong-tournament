@@ -1,11 +1,11 @@
 import { topProgressions, WEEK_MS, weeklyDelta, winStreak } from './classement'
 import { biggestUpsetOf, type DashboardRecords } from './dashboardRecords'
 import { individualMatches } from './doubles'
-import { relativeTime } from './format'
+import { relativeTime, signed } from './format'
 import type { RatingEvent, RatingRow } from './rating'
 import { recentResults, type RecentResult } from './recentResults'
 import { daysLeft, type Season } from './seasons'
-import { computeRivalries, rivalryBalance } from './stats'
+import { computePlayerStats, computeRivalries, rivalryBalance } from './stats'
 import type { Match, Player, Tournament } from '../types'
 
 const RACE_LINES = 5
@@ -169,16 +169,22 @@ export interface RivalryScene {
   right: RivalSide
   /** The left player's part of the head-to-head, from 0 to 1. */
   share: number
+  records: string[]
 }
 
 export interface RivalryInput {
   matches: Match[]
   players: Player[]
   tournaments: Tournament[]
+  /** Every event off the ladder it moved, so a record is a number that really happened. */
+  events: RatingEvent[]
 }
 
-/** The most played head-to-head; null below 5 games between two players. */
-export function rivalryScene({ matches, players, tournaments }: RivalryInput): RivalryScene | null {
+const highest = <T>(items: T[], value: (item: T) => number): T | undefined =>
+  [...items].sort((a, b) => value(b) - value(a))[0]
+
+/** The most played head-to-head and the all-time records; null below 5 games between two players. */
+export function rivalryScene({ matches, players, tournaments, events }: RivalryInput): RivalryScene | null {
   const individuals = individualMatches(matches, tournaments)
   const [rivalry] = computeRivalries(individuals, players, RIVALRY_MIN_GAMES).sort(
     (a, b) => b.total - a.total || rivalryBalance(b) - rivalryBalance(a),
@@ -187,11 +193,20 @@ export function rivalryScene({ matches, players, tournaments }: RivalryInput): R
   const a = { name: rivalry.aName, wins: rivalry.aWins }
   const b = { name: rivalry.bName, wins: rivalry.bWins }
   const [left, right] = a.wins >= b.wins ? [a, b] : [b, a]
+  const stats = computePlayerStats(individuals, players)
+  const streak = highest(stats, (s) => s.longestStreak)
+  const jump = highest(events, (e) => e.delta)
+  const played = highest(stats, (s) => s.played)
   return {
     kind: 'rivalry',
     total: rivalry.total,
     left,
     right,
     share: left.wins / rivalry.total,
+    records: [
+      ...(streak ? [`${streak.longestStreak} victoires de suite, ${streak.name}`] : []),
+      ...(jump ? [`${signed(jump.delta)} en un match, ${jump.name}`] : []),
+      ...(played ? [`${played.played} matchs joués, ${played.name}`] : []),
+    ],
   }
 }
