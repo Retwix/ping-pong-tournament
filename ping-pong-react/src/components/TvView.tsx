@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useCurrentTournament } from '../hooks/useCurrentTournament'
 import { useRatings } from '../hooks/useRatings'
+import { useReloadOnNewBuild } from '../hooks/useReloadOnNewBuild'
 import { useTournament } from '../hooks/useTournament'
 import { navigate } from '../lib/router'
 import { pickScene, SCENE_MS } from '../lib/tvRotation'
@@ -35,6 +36,7 @@ export default function TvView() {
   )
 
   const mode = tvMode({ game: tournament, matches, scoresChangedAt: watch.changedAt, now })
+  useReloadOnNewBuild(mode === 'screensaver')
   if (mode === 'live' && id) return <LiveView id={id} onBack={() => navigate('/')} />
   return <TvScreen key={turn} scene={pickScene(scenes, elapsed)} now={new Date(now)} />
 }
