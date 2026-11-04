@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { userEvent } from '@vitest/browser/context'
 import { render } from 'vitest-browser-react'
 import PlayerModal from './PlayerModal'
 import type { RatingRow } from '../lib/rating'
@@ -73,6 +74,18 @@ describe('PlayerModal', () => {
 
     await expect.element(screen.getByRole('alert')).toBeVisible()
     await expect.element(screen.getByRole('textbox', { name: 'Ma bio' })).toHaveValue('Roi du revers')
+  })
+
+  it('stops your bio at 20 characters, the most the database takes', async () => {
+    const onSaveBio = vi.fn(async () => {})
+    const screen = await renderOwnCard(onSaveBio)
+
+    await screen.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await userEvent.type(screen.getByRole('textbox', { name: 'Ma bio' }), 'abcdefghijklmnopqrstuvwxyz')
+    await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+    await expect.element(screen.getByRole('textbox', { name: 'Ma bio' })).not.toBeInTheDocument()
+    expect(onSaveBio).toHaveBeenCalledWith('abcdefghijklmnopqrst')
   })
 
   it("shows the player's bio under the name", async () => {
