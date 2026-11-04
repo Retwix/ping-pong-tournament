@@ -30,7 +30,7 @@ export async function createPlayer(
   return data as Player
 }
 
-/** Update a player's name, team, avatar and/or archive status. */
+/** Update a player's name, team, avatar, bio and/or archive status. */
 export async function updatePlayer(
   id: string,
   patch: {
@@ -38,6 +38,7 @@ export async function updatePlayer(
     team?: string
     slack_user_id?: string | null
     avatar_url?: string | null
+    bio?: string | null
     status?: PlayerStatus
     left_at?: string | null
   },

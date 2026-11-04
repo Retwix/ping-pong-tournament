@@ -2,8 +2,10 @@ import { IconLogout, IconX } from '@tabler/icons-react'
 import { useEffect } from 'react'
 import type { RatingRow } from '../hooks/useRatings'
 import type { PlayerHistory } from '../lib/playerHistory'
+import type { UnratedCard } from '../lib/slackIdentity'
 import { teamColor, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
+import BioEditor from './BioEditor'
 import { RatingLine } from './Charts'
 
 const pct = (v: number): string => `${Math.round(v * 100)} %`
@@ -17,7 +19,8 @@ const topPct = (rank: number, total: number): string =>
  * Data comes from the live replay (playerHistory), so it updates in place
  * if a match finishes while the modal is open.
  *
- * Passing `onSignOut` marks the card as the viewer's own and offers sign-out.
+ * `onSignOut` and `onSaveBio` mark the card as the viewer's own: each offers
+ * what only its owner may do.
  */
 export default function PlayerModal({
   row,
@@ -25,12 +28,14 @@ export default function PlayerModal({
   history,
   onClose,
   onSignOut,
+  onSaveBio,
 }: {
-  row: RatingRow
+  row: RatingRow | UnratedCard
   bio: string | null
   history: PlayerHistory | null
   onClose: () => void
   onSignOut?: () => void
+  onSaveBio?: (bio: string | null) => Promise<void>
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -58,23 +63,29 @@ export default function PlayerModal({
           <Avatar name={row.name} team={row.team} url={row.avatar_url} />
           <div>
             <h2 style={{ marginBottom: 2 }}>{row.name}</h2>
-            {bio && <div className="pm-bio">{bio}</div>}
+            {onSaveBio ? (
+              <BioEditor bio={bio} onSave={onSaveBio} />
+            ) : (
+              bio && <div className="pm-bio">{bio}</div>
+            )}
             <div className="modal-hint" style={{ marginBottom: 0 }}>
               {row.team ? teamLabel(row.team) : '—'}
-              {row.provisional && <span className="rt-prov">provisoire</span>}
+              {row.rating !== null && row.provisional && <span className="rt-prov">provisoire</span>}
             </div>
           </div>
-          <div className="pm-now">
-            <div className="pm-rating-row">
-              <div className="pm-rating">{Math.round(row.rating)}</div>
-              {Math.round(row.trend) !== 0 && (
-                <span className={`rt-trend ${row.trend > 0 ? 'up' : 'down'}`}>
-                  {row.trend > 0 ? '▲' : '▼'} {Math.abs(Math.round(row.trend))}
-                </span>
-              )}
+          {row.rating !== null && (
+            <div className="pm-now">
+              <div className="pm-rating-row">
+                <div className="pm-rating">{Math.round(row.rating)}</div>
+                {Math.round(row.trend) !== 0 && (
+                  <span className={`rt-trend ${row.trend > 0 ? 'up' : 'down'}`}>
+                    {row.trend > 0 ? '▲' : '▼'} {Math.abs(Math.round(row.trend))}
+                  </span>
+                )}
+              </div>
+              <div className="pm-rd">± {Math.round(row.rd)}</div>
             </div>
-            <div className="pm-rd">± {Math.round(row.rd)}</div>
-          </div>
+          )}
         </div>
 
         {history ? (

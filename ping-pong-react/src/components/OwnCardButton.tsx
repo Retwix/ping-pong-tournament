@@ -2,7 +2,7 @@ import { IconUserCircle } from '@tabler/icons-react'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { PlayerHistory } from '../lib/playerHistory'
-import type { RatingRow } from '../lib/rating'
+import type { OwnCard } from '../lib/slackIdentity'
 import PlayerModal from './PlayerModal'
 
 /**
@@ -17,11 +17,13 @@ export default function OwnCardButton({
   bio,
   history,
   onSignOut,
+  onSaveBio,
 }: {
-  row: RatingRow
+  row: OwnCard['row']
   bio: string | null
   history: PlayerHistory | null
   onSignOut: () => void
+  onSaveBio: (bio: string | null) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
 
@@ -44,6 +46,7 @@ export default function OwnCardButton({
             history={history}
             onClose={() => setOpen(false)}
             onSignOut={onSignOut}
+            onSaveBio={onSaveBio}
           />,
           document.body,
         )}

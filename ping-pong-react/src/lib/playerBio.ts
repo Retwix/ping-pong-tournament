@@ -1,5 +1,7 @@
 import type { Match, Player } from '../types'
 
+export const BIO_MAX_LENGTH = 20
+
 export interface SideBios {
   a: string | null
   b: string | null

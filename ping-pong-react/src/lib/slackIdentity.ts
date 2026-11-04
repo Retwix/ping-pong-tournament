@@ -48,15 +48,35 @@ function linkedPlayer(userId: string, players: Player[]): Player | null {
   return players.find((p) => p.auth_user_id === userId) ?? null
 }
 
+/** The card of a player with no rated match: no rating at all, never a stand-in 1500. */
+export type UnratedCard = Pick<RatingRow, 'name' | 'team' | 'avatar_url'> & { rating: null }
+
+/** What a linked account sees as its own: the roster row, and its line on a ladder. */
+export interface OwnCard {
+  player: Player
+  row: RatingRow | UnratedCard
+}
+
 /**
  * The signed-in account's own line on a ladder, or null when it is unlinked or
- * its player has no rated match on that ladder yet — in both cases there is no
- * card to show.
+ * its player has no rated match on that ladder yet.
  */
 export function ownRatingRow(userId: string, players: Player[], rows: RatingRow[]): RatingRow | null {
   const me = linkedPlayer(userId, players)
   if (me === null) return null
   return rows.find((r) => r.playerId === me.id) ?? null
+}
+
+/**
+ * The signed-in account's own card, or null when it is unlinked. Being linked
+ * is enough: a player with no rated match on this ladder still has a card, and
+ * it is the only place they can write their bio.
+ */
+export function ownCard(userId: string, players: Player[], rows: RatingRow[]): OwnCard | null {
+  const me = linkedPlayer(userId, players)
+  if (me === null) return null
+  const { name, team, avatar_url } = me
+  return { player: me, row: ownRatingRow(userId, players, rows) ?? { name, team, avatar_url, rating: null } }
 }
 
 /**
