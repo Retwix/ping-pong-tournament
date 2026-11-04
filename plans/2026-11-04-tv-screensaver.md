@@ -1,7 +1,7 @@
 # Plan: TV screensaver
 
 **Branch**: screen-saver
-**Status**: Active. Steps 1 to 4 done (`tvRotation`, `tvTakeover`, `tvScenes`, `TvView`). Step 5 in progress: ambient table done in `TvScreen.tsx` and `tv.css`, checked on screen; the four scenes next. `/tv` not yet run on real data.
+**Status**: Active. Steps 1 to 4 done (`tvRotation`, `tvTakeover`, `tvScenes`, `TvView`). Step 5 in progress: ambient table, Race and Form done in `TvScreen.tsx` and `tv.css`, checked on screen; Results and Rivalry next. `/tv` not yet run on real data.
 **Testing**: the human decided on 2026-11-04 that the screensaver needs no more tests. Write no new tests and run no mutation testing for it; check each scene on screen. The committed `tvRotation` and `tvTakeover` tests stay.
 **Design**: [Écran TV Ping-Pong](https://claude.ai/artifact/VtXSk5gsHD4531R5pPsXid), second row. Read the boards with the Artifact tool: `project/Mix.dc.html`, `project/Forme.dc.html`, `project/Resultats.dc.html`, `project/Rivalites.dc.html`. The top row is superseded exploration. The mocks were never seen rendered, so check them on screen.
 
@@ -72,6 +72,10 @@ New `src/lib/tvScenes.ts`, one exported function per scene plus `tvScenes(data, 
 
 ## Step 5-6 notes
 
+- CSS prefix is `tvs-`, never `tv-`: `tv.css` loads with the whole app and `index.css` owns `tv-` for the spectator view, so a shared name changes `/live`.
+- The stair is right-aligned and `climbKeyframes` builds the ball's path for 2 to 5 steps.
+- Results: `when` reads « il y a 1 j · Bo3 », longer than the board's 170px column; widen it or the feed. With no stamp, drop « Balla di capot » and promote the names line.
+- Rivalry: the coral block covers the left side up to `1920 * share`. Long names need clipping or a smaller size.
 - `ResultsScene.stamped` drives the stamp; `ResultLine.capot` only colours a feed score, since an old capot can be the latest game.
 - Headline gap: « point sépare » when the gap is below 2. A 3-digit gap and long names must fit; the harness `?long` case covers them.
 - Self-reload idea: fetch `/tv` with `cache: 'no-store'`, compare the entry script path with the running document, reload only in screensaver mode. Needs no build change.
