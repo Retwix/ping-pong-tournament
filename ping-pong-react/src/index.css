@@ -1827,6 +1827,11 @@ td.elo.neg { color: var(--coral); }
   font-family: var(--font-display); font-weight: 800; font-size: 22px; color: #fff;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.rv-hero-player-bio {
+  font-family: var(--font-body); font-size: 13px; font-weight: 600; font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .rv-hero-player-sub { font-family: var(--font-body); font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
 
 .rv-hero-av {
@@ -1889,6 +1894,7 @@ td.elo.neg { color: var(--coral); }
   .rv-hero-matchup { gap: 12px; }
   .rv-hero-av { width: 48px; height: 48px; font-size: 16px; }
   .rv-hero-player-name { font-size: 16px; }
+  .rv-hero-player-bio { font-size: 11.5px; }
   .rv-hero-player-sub { font-size: 11.5px; }
   .rv-hero-score { font-size: 42px; }
   .rv-hero-actions { flex-wrap: wrap; }

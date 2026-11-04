@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
+import LiveHeroCard from './LiveHeroCard'
 import SpectatorView from './SpectatorView'
 import type { Match, Player, Tournament } from '../types'
 import '../index.css'
@@ -91,6 +92,31 @@ describe('SpectatorView live board', () => {
       getMockPlayer({ id: 'p1', name: 'Léo', bio: 'Roi du revers' }),
       getMockPlayer({ id: 'p2', name: 'Inès', bio: 'Service canon' }),
     ])
+
+    await expect
+      .element(screen.getByRole('group', { name: 'Léo' }).getByText('Roi du revers'))
+      .toBeVisible()
+    await expect
+      .element(screen.getByRole('group', { name: 'Inès' }).getByText('Service canon'))
+      .toBeVisible()
+  })
+})
+
+describe('LiveHeroCard', () => {
+  it("shows each player's bio on their own side, without needing a rated match", async () => {
+    const screen = await render(
+      <LiveHeroCard
+        tournament={getMockTournament()}
+        live={getMockMatch()}
+        rows={[]}
+        players={[
+          getMockPlayer({ id: 'p1', name: 'Léo', bio: 'Roi du revers' }),
+          getMockPlayer({ id: 'p2', name: 'Inès', bio: 'Service canon' }),
+        ]}
+        onWatch={() => {}}
+        onRef={() => {}}
+      />,
+    )
 
     await expect
       .element(screen.getByRole('group', { name: 'Léo' }).getByText('Roi du revers'))

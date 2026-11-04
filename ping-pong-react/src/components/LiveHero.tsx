@@ -22,7 +22,7 @@ interface Props {
 export default function LiveHero({ onWatch, onRef, onNew }: Props) {
   const { id, loading } = useCurrentTournament()
   const { tournament, matches } = useTournament(id)
-  const { rows } = useRatings(defaultLadderScope(new Date()))
+  const { rows, players } = useRatings(defaultLadderScope(new Date()))
   const live = pickLiveMatch(matches)
 
   if (loading || !tournament || !live) {
@@ -51,5 +51,14 @@ export default function LiveHero({ onWatch, onRef, onNew }: Props) {
     )
   }
 
-  return <LiveHeroCard tournament={tournament} live={live} rows={rows} onWatch={onWatch} onRef={onRef} />
+  return (
+    <LiveHeroCard
+      tournament={tournament}
+      live={live}
+      rows={rows}
+      players={players}
+      onWatch={onWatch}
+      onRef={onRef}
+    />
+  )
 }
