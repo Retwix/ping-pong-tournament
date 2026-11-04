@@ -755,6 +755,7 @@ td.elo.neg { color: var(--coral); }
 
 .refzone-head { display: flex; align-items: center; gap: 10px; }
 .refzone-name { font-weight: 700; font-size: 22px; }
+.refzone-bio { font-family: var(--font-body); font-weight: 600; font-style: italic; font-size: 12px; color: rgba(255, 255, 255, 0.82); margin-top: 2px; }
 .refzone-elo { font-family: var(--font-body); font-weight: 700; font-size: 11px; background: rgba(255, 255, 255, 0.18); border-radius: 999px; padding: 3px 9px; }
 /* Absolutely positioned at the top of the zone so showing/hiding it never
    shifts the name/score layout. */
@@ -818,6 +819,11 @@ td.elo.neg { color: var(--coral); }
   .ref-dock { padding: 10px 18px calc(env(safe-area-inset-bottom, 0px) + 10px); }
 }
 
+/* The shortest landscape phones trade a little score height for the bio line */
+@media (max-height: 339px) and (orientation: landscape) {
+  .refzone-score { font-size: 25vh; }
+}
+
 /* ===== desktop reflow: left/right split, keyboard-driven ===== */
 @media (min-width: 900px) and (min-height: 501px) {
   .ref-topbar { display: flex; }
@@ -841,6 +847,7 @@ td.elo.neg { color: var(--coral); }
 
   .refzone-head { gap: 12px; margin-top: 14px; }
   .refzone-name { font-weight: 800; font-size: 28px; }
+  .refzone-bio { font-size: 15px; margin-top: 4px; }
   .refzone-elo { font-size: 13px; padding: 4px 12px; background: rgba(255, 255, 255, 0.2); }
   .refzone-serve { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); margin: 0; padding: 7px 16px; border-radius: 999px; background: #fff; color: #4a2aa4; font-weight: 800; font-size: 11px; box-shadow: 0 6px 16px rgba(32, 10, 66, 0.2); }
   .refzone--b .refzone-serve { color: #b8323f; }

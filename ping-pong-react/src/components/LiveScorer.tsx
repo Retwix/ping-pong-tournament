@@ -30,6 +30,7 @@ import {
 	type ChaosSettings,
 } from "../lib/chaos";
 import type { Match, MatchSide } from "../types";
+import type { SideBios } from "../lib/playerBio";
 import type { SideElos } from "../lib/scorerElo";
 
 interface Props {
@@ -50,6 +51,8 @@ interface Props {
 	subtitle?: string;
 	/** Current ladder Elo per side, for the pills next to the player names. */
 	elos?: SideElos;
+	/** Each side's bio, shown under the name. */
+	bios: SideBios;
 	/** Referee desktop: switch to the spectator/presentation view. */
 	onPresent?: () => void;
 }
@@ -68,6 +71,7 @@ export default function LiveScorer({
 	tournamentName,
 	subtitle,
 	elos,
+	bios,
 	onPresent,
 }: Props) {
 	// Per-session undo stack of [score_a, score_b, mb_saved_a, mb_saved_b] snapshots.
@@ -399,6 +403,7 @@ export default function LiveScorer({
 						</span>
 					)}
 				</div>
+				{bios[side] && <div className="refzone-bio">{bios[side]}</div>}
 				{d.serving && (
 					<button
 						className="refzone-serve"

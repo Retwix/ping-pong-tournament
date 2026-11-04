@@ -8,6 +8,7 @@ import { computeStandings } from '../lib/pingpong'
 import { navigate } from '../lib/router'
 import { isPlayable } from '../lib/doubleElim'
 import { isLive } from '../lib/liveHero'
+import { sideBios } from '../lib/playerBio'
 import { bestOf, setsFromWinner } from '../lib/sets'
 import type { Match } from '../types'
 import LiveScorer from './LiveScorer'
@@ -282,6 +283,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
       tournamentName={tournament.name}
       subtitle={formatLabel}
       elos={elosFor(shownMatch)}
+      bios={sideBios(players, shownMatch)}
       onPresent={() => navigate('/live')}
     />
   )

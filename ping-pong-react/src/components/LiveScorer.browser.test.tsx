@@ -41,6 +41,7 @@ const RefereeScreen = ({ initial }: { initial: Match }) => {
       target={11}
       tournamentName="Tournoi du jeudi"
       elos={{ a: 1512, b: 1488 }}
+      bios={{ a: 'Roi du revers lifté!', b: 'Service canon en bas' }}
       onPatch={(patch) => setMatch((m) => ({ ...m, ...patch }))}
       onClose={() => {}}
     />
@@ -224,6 +225,18 @@ const layoutProblems = (zones: Element[], extras: Box[]) => {
   return [...outside, ...collisions, ...offScreen]
 }
 
+describe('referee seeing who plays', () => {
+  it("shows each player's bio in their own zone", async () => {
+    const screen = await renderReferee({ viewport: { width: 390, height: 844 } })
+
+    const zoneText = (name: string) =>
+      zoneOf(screen.getByRole('button', { name: `Retirer un point à ${name}` }).element()).textContent
+
+    expect(zoneText('Thibault')).toContain('Roi du revers lifté!')
+    expect(zoneText('Alexandre')).toContain('Service canon en bas')
+  })
+})
+
 describe('referee screen in landscape', () => {
   it.each(LANDSCAPE_PHONES)(
     'on a $name, everything in a player zone fits inside it without overlapping',
@@ -281,6 +294,7 @@ const SetsScreen = ({
       match={match}
       target={11}
       bestOf={3}
+      bios={{ a: null, b: null }}
       onPatch={(patch) =>
         setMatch((m) => {
           const next = { ...m, ...patch }
