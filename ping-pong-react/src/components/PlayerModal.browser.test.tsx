@@ -40,6 +40,18 @@ describe('PlayerModal', () => {
     expect(onSaveBio).toHaveBeenCalledWith('Roi du revers')
   })
 
+  it('clears your bio when you save it blank', async () => {
+    const onSaveBio = vi.fn(async () => {})
+    const screen = await renderOwnCard(onSaveBio, 'Roi du revers')
+
+    await screen.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await screen.getByRole('textbox', { name: 'Ma bio' }).fill('   ')
+    await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+    await expect.element(screen.getByRole('textbox', { name: 'Ma bio' })).not.toBeInTheDocument()
+    expect(onSaveBio).toHaveBeenCalledWith(null)
+  })
+
   it("shows the player's bio under the name", async () => {
     const screen = await render(
       <PlayerModal row={getMockRatingRow()} bio="Roi du revers" history={null} onClose={() => {}} />,

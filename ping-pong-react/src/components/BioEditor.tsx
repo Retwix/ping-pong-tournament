@@ -1,31 +1,16 @@
 import { IconPencil } from '@tabler/icons-react'
 import { useState, type FormEvent } from 'react'
+import { cleanBio } from '../lib/playerBio'
 
-/** Your bio on your own card, with the means to change it. */
-export default function BioEditor({
-  bio,
-  onSave,
-}: {
-  bio: string | null
-  onSave: (bio: string | null) => Promise<void>
-}) {
-  const [draft, setDraft] = useState<string | null>(null)
+type Save = (bio: string | null) => Promise<void>
+
+function BioForm({ bio, onSave, onClose }: { bio: string | null; onSave: Save; onClose: () => void }) {
+  const [draft, setDraft] = useState(bio ?? '')
 
   const save = async (e: FormEvent) => {
     e.preventDefault()
-    await onSave(draft)
-    setDraft(null)
-  }
-
-  if (draft === null) {
-    return (
-      <div className="pm-bio-line">
-        {bio && <span className="pm-bio">{bio}</span>}
-        <button className="pm-bio-edit" onClick={() => setDraft(bio ?? '')} aria-label="Modifier ma bio">
-          <IconPencil size={14} stroke={1.8} />
-        </button>
-      </div>
-    )
+    await onSave(cleanBio(draft))
+    onClose()
   }
 
   return (
@@ -41,5 +26,21 @@ export default function BioEditor({
         Enregistrer
       </button>
     </form>
+  )
+}
+
+/** Your bio on your own card, with the means to change it. */
+export default function BioEditor({ bio, onSave }: { bio: string | null; onSave: Save }) {
+  const [editing, setEditing] = useState(false)
+
+  if (editing) return <BioForm bio={bio} onSave={onSave} onClose={() => setEditing(false)} />
+
+  return (
+    <div className="pm-bio-line">
+      {bio && <span className="pm-bio">{bio}</span>}
+      <button className="pm-bio-edit" onClick={() => setEditing(true)} aria-label="Modifier ma bio">
+        <IconPencil size={14} stroke={1.8} />
+      </button>
+    </div>
   )
 }
