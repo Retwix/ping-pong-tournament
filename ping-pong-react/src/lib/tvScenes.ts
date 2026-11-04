@@ -2,9 +2,11 @@ import { topProgressions, WEEK_MS, weeklyDelta, winStreak } from './classement'
 import { biggestUpsetOf, type DashboardRecords } from './dashboardRecords'
 import { individualMatches } from './doubles'
 import { relativeTime, signed } from './format'
+import { ladderSections } from './inactivity'
+import { ladderReplay, scopedEvents, type LadderData } from './ladder'
 import type { RatingEvent, RatingRow } from './rating'
 import { recentResults, type RecentResult } from './recentResults'
-import { daysLeft, type Season } from './seasons'
+import { currentSeason, daysLeft, defaultLadderScope, type Season } from './seasons'
 import { computePlayerStats, computeRivalries, rivalryBalance } from './stats'
 import type { Match, Player, Tournament } from '../types'
 
@@ -209,4 +211,19 @@ export function rivalryScene({ matches, players, tournaments, events }: RivalryI
       ...(played ? [`${played.played} matchs joués, ${played.name}`] : []),
     ],
   }
+}
+
+export type TvScene = RaceScene | FormScene | ResultsScene | RivalryScene
+
+/** The four scenes in their fixed order; a null one has nothing to say. */
+export function tvScenes(data: LadderData, now: Date): (TvScene | null)[] {
+  const season = currentSeason(now)
+  const { rows, events } = ladderReplay(defaultLadderScope(now), data)
+  const { ranked } = ladderSections({ rows, players: data.players, season, now, archived: false })
+  return [
+    season && raceScene({ rows: ranked, events, season, now }),
+    formScene({ rows: ranked, events, now }),
+    resultsScene({ ...data, now }),
+    rivalryScene({ ...data, events: scopedEvents(data) }),
+  ]
 }
