@@ -22,7 +22,24 @@ const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
   ...overrides,
 })
 
+const renderOwnCard = (onSaveBio: (bio: string | null) => Promise<void>, bio: string | null = null) =>
+  render(
+    <PlayerModal row={getMockRatingRow()} bio={bio} history={null} onClose={() => {}} onSaveBio={onSaveBio} />,
+  )
+
 describe('PlayerModal', () => {
+  it('saves the bio you type on your own card, then closes the editor', async () => {
+    const onSaveBio = vi.fn(async () => {})
+    const screen = await renderOwnCard(onSaveBio)
+
+    await screen.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await screen.getByRole('textbox', { name: 'Ma bio' }).fill('Roi du revers')
+    await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+    await expect.element(screen.getByRole('textbox', { name: 'Ma bio' })).not.toBeInTheDocument()
+    expect(onSaveBio).toHaveBeenCalledWith('Roi du revers')
+  })
+
   it("shows the player's bio under the name", async () => {
     const screen = await render(
       <PlayerModal row={getMockRatingRow()} bio="Roi du revers" history={null} onClose={() => {}} />,
@@ -42,12 +59,13 @@ describe('PlayerModal', () => {
     expect(onSignOut).toHaveBeenCalledOnce()
   })
 
-  it("offers no sign-out on someone else's card", async () => {
+  it("offers no sign-out or bio editing on someone else's card", async () => {
     const screen = await render(
       <PlayerModal row={getMockRatingRow()} bio={null} history={null} onClose={() => {}} />,
     )
 
     await expect.element(screen.getByRole('heading', { name: 'Léo' })).toBeVisible()
     await expect.element(screen.getByRole('button', { name: 'Se déconnecter' })).not.toBeInTheDocument()
+    await expect.element(screen.getByRole('button', { name: 'Modifier ma bio' })).not.toBeInTheDocument()
   })
 })
