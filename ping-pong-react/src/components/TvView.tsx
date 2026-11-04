@@ -12,11 +12,16 @@ import TvScreen from './TvScreen'
 
 const CLOCK_MS = 1000
 const ACTIVE_GAME_POLL_MS = 30_000
+const SCENE_DATA_REFRESH_MS = 5 * 60_000
 
 /** The scene rotation, from its first scene, on data loaded only while it shows. */
 function Screensaver({ now }: { now: number }) {
   const [startedAt] = useState(now)
-  const { matches, players, tournaments } = useRatings()
+  const { matches, players, tournaments, reload } = useRatings()
+  useEffect(() => {
+    const refresh = setInterval(reload, SCENE_DATA_REFRESH_MS)
+    return () => clearInterval(refresh)
+  }, [reload])
 
   const elapsed = now - startedAt
   const turn = Math.floor(elapsed / SCENE_MS)
