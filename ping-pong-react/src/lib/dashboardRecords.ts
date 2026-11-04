@@ -24,7 +24,7 @@ function mostActiveOf(stats: PlayerStat[]): DashboardRecords['mostActive'] {
   return best ? { name: best.name, played: best.played } : null
 }
 
-function biggestUpsetOf(events: RatingEvent[]): DashboardRecords['biggestUpset'] {
+export function biggestUpsetOf(events: RatingEvent[]): DashboardRecords['biggestUpset'] {
   const byMatch = new Map<string, RatingEvent[]>()
   for (const e of events) {
     const arr = byMatch.get(e.matchId)
