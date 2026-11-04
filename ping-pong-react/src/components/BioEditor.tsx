@@ -1,6 +1,6 @@
 import { IconPencil } from '@tabler/icons-react'
 import { useState, type FormEvent } from 'react'
-import { cleanBio } from '../lib/playerBio'
+import { BIO_MAX_LENGTH, cleanBio } from '../lib/playerBio'
 
 type Save = (bio: string | null) => Promise<void>
 
@@ -23,6 +23,7 @@ function BioForm({ bio, onSave, onClose }: { bio: string | null; onSave: Save; o
       <input
         className="pl-finput"
         aria-label="Ma bio"
+        maxLength={BIO_MAX_LENGTH}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         autoFocus
