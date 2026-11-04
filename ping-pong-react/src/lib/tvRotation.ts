@@ -1,4 +1,4 @@
-const SCENE_MS = 20_000
+export const SCENE_MS = 20_000
 
 /** The scene on screen `elapsedMs` into the rotation; a null scene has nothing to say. */
 export function pickScene<Scene>(
