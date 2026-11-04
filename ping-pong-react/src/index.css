@@ -1292,10 +1292,16 @@ td.elo.neg { color: var(--coral); }
     flex: 0 0 auto; display: grid; align-items: center; column-gap: 14px;
     grid-template:
       'pill pill pill' auto
-      'avatar name score' 1fr
-      'avatar bio score' auto
-      'avatar meta score' 1fr / auto 1fr auto;
+      'avatar name score' auto
+      'avatar meta score' auto / auto 1fr auto;
     text-align: left; border-radius: 24px; padding: 16px 18px;
+  }
+  .tv-player:has(.tv-bio) {
+    grid-template:
+      'pill pill pill' auto
+      'avatar name score' auto
+      'avatar bio score' auto
+      'avatar meta score' auto / auto 1fr auto;
   }
   .tv-player.is-serving {
     background: linear-gradient(180deg, rgba(74, 42, 164, 0.1), rgba(74, 42, 164, 0.03));
