@@ -53,11 +53,12 @@ describe('PlayerModal', () => {
     expect(onSaveBio).toHaveBeenCalledWith(null)
   })
 
-  it('keeps your bio as it was when you cancel', async () => {
+  it('opens on your current bio and leaves it as it was when you cancel', async () => {
     const onSaveBio = vi.fn(async () => {})
     const screen = await renderOwnCard(onSaveBio, 'Roi du revers')
 
     await screen.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await expect.element(screen.getByRole('textbox', { name: 'Ma bio' })).toHaveValue('Roi du revers')
     await screen.getByRole('textbox', { name: 'Ma bio' }).fill('Autre chose')
     await screen.getByRole('button', { name: 'Annuler' }).click()
 
