@@ -63,6 +63,7 @@ function Progress() {
 }
 
 const RACE_MARKS = ['tv-mark-leader', 'tv-mark-chaser']
+const RACE_NAMES_FIT = 30
 
 function RaceRow({ line, index }: { line: RaceLine; index: number }) {
   const { rank, name, rating, trend } = line
@@ -85,6 +86,7 @@ function RaceRow({ line, index }: { line: RaceLine; index: number }) {
 function Race({ scene, now }: { scene: RaceScene; now: Date }) {
   const { season, daysLeft, leader, chaser, gap, ladder } = scene
   const plural = gap >= 2
+  const longNames = chaser.length + leader.length > RACE_NAMES_FIT
   return (
     <Table>
       <div className="tv-race-story">
@@ -98,7 +100,7 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
               <span className="tv-race-gap-unit">{plural ? 'points' : 'point'}</span>
             </div>
           </div>
-          <div className="tv-in tv-after-2 tv-race-names">
+          <div className={`tv-in tv-after-2 tv-race-names${longNames ? ' tv-race-names-long' : ''}`}>
             {plural ? 'séparent' : 'sépare'} {chaser} de {leader}.
           </div>
         </div>

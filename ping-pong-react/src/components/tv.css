@@ -200,8 +200,9 @@
 
 .tv-race-gap-number { font-size: 430px; line-height: 0.85; font-weight: 800; }
 .tv-race-gap-unit { font-size: 128px; line-height: 1; font-weight: 800; }
-.tv-race-gap-wide .tv-race-gap-number { font-size: 280px; }
+.tv-race-gap-wide .tv-race-gap-number { font-size: 240px; }
 .tv-race-names { font-size: 88px; line-height: 1.08; font-weight: 700; }
+.tv-race-names-long { font-size: 60px; }
 .tv-race-logo { font-size: 36px; font-weight: 600; color: #c9c2e0; }
 .tv-race-clock { text-align: right; font-size: 44px; font-weight: 600; }
 
