@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { RaceLine, RaceScene, TvScene } from '../lib/tvScenes'
+import type { FormScene, RaceLine, RaceScene, TvScene } from '../lib/tvScenes'
 import './tv.css'
 
 const STAGE_WIDTH = 1920
@@ -121,8 +121,59 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
   )
 }
 
+function Masthead({ now }: { now: Date }) {
+  return (
+    <div className="tvs-masthead">
+      <span className="tvs-masthead-logo">Ping-Pong Recovr</span>
+      <Clock now={now} />
+    </div>
+  )
+}
+
+const FORM_NAME_FITS = 18
+function Form({ scene, now }: { scene: FormScene; now: Date }) {
+  const { name, streak, risers, upset } = scene
+  return (
+    <div className="tvs-form">
+      <div className="tvs-in tvs-kicker tvs-form-kicker">En forme · cette semaine</div>
+      <Masthead now={now} />
+      <div className="tvs-form-story">
+        <div className="tvs-in tvs-after-1 tvs-form-streak">
+          <span className="tvs-form-count">{streak}</span>
+          <span className="tvs-form-unit">
+            victoires
+            <br />
+            de suite
+          </span>
+        </div>
+        <div className={`tvs-in tvs-after-2 tvs-form-name${name.length > FORM_NAME_FITS ? ' tvs-form-name-long' : ''}`}>
+          pour {name}.
+        </div>
+        {risers.length > 0 && (
+          <div className="tvs-in tvs-after-3 tvs-form-fact">
+            <div className="tvs-form-label">Plus fortes hausses</div>
+            <div className="tvs-form-line">
+              {risers.map(({ name, delta }) => `${name} ▲ ${delta}`).join(' · ')}
+            </div>
+          </div>
+        )}
+        {upset && (
+          <div className="tvs-in tvs-after-4 tvs-form-fact">
+            <div className="tvs-form-label">Exploit de la semaine</div>
+            <div className="tvs-form-line">
+              {upset.winner} bat {upset.loser} <span className="tvs-form-gain">+{upset.gain}</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <Progress />
+    </div>
+  )
+}
+
 function Scene({ scene, now }: Props) {
   if (scene?.kind === 'race') return <Race scene={scene} now={now} />
+  if (scene?.kind === 'form') return <Form scene={scene} now={now} />
   return <Ambient now={now} />
 }
 
