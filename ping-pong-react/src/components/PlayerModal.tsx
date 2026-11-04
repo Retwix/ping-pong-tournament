@@ -2,6 +2,7 @@ import { IconLogout, IconX } from '@tabler/icons-react'
 import { useEffect } from 'react'
 import type { RatingRow } from '../hooks/useRatings'
 import type { PlayerHistory } from '../lib/playerHistory'
+import type { UnratedCard } from '../lib/slackIdentity'
 import { teamColor, teamLabel } from '../lib/teams'
 import Avatar from './Avatar'
 import BioEditor from './BioEditor'
@@ -29,7 +30,7 @@ export default function PlayerModal({
   onSignOut,
   onSaveBio,
 }: {
-  row: RatingRow
+  row: RatingRow | UnratedCard
   bio: string | null
   history: PlayerHistory | null
   onClose: () => void
@@ -69,20 +70,22 @@ export default function PlayerModal({
             )}
             <div className="modal-hint" style={{ marginBottom: 0 }}>
               {row.team ? teamLabel(row.team) : '—'}
-              {row.provisional && <span className="rt-prov">provisoire</span>}
+              {row.rating !== null && row.provisional && <span className="rt-prov">provisoire</span>}
             </div>
           </div>
-          <div className="pm-now">
-            <div className="pm-rating-row">
-              <div className="pm-rating">{Math.round(row.rating)}</div>
-              {Math.round(row.trend) !== 0 && (
-                <span className={`rt-trend ${row.trend > 0 ? 'up' : 'down'}`}>
-                  {row.trend > 0 ? '▲' : '▼'} {Math.abs(Math.round(row.trend))}
-                </span>
-              )}
+          {row.rating !== null && (
+            <div className="pm-now">
+              <div className="pm-rating-row">
+                <div className="pm-rating">{Math.round(row.rating)}</div>
+                {Math.round(row.trend) !== 0 && (
+                  <span className={`rt-trend ${row.trend > 0 ? 'up' : 'down'}`}>
+                    {row.trend > 0 ? '▲' : '▼'} {Math.abs(Math.round(row.trend))}
+                  </span>
+                )}
+              </div>
+              <div className="pm-rd">± {Math.round(row.rd)}</div>
             </div>
-            <div className="pm-rd">± {Math.round(row.rd)}</div>
-          </div>
+          )}
         </div>
 
         {history ? (
