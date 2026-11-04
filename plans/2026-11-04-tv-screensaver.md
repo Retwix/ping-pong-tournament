@@ -94,13 +94,13 @@ New `src/lib/tvScenes.ts`, one exported function per scene plus `tvScenes(data, 
 - Takeover, simulated by rewriting the browser's GET responses, no game created: switched on the next poll, showed the next-up card then the scoreboard, returned 120.4 seconds after a final and 10.006 minutes idle. A real new game arriving through realtime was not exercised.
 - Self-reload: real 5-minute timer, entry script renamed in the local build, one reload, screensaver resumed.
 - Reduced motion: Results and Rivalry render settled, no animation running.
+- Review fixes, rechecked with every realtime socket closed: a hidden active game took over 14.7 seconds after it appeared, from the 30-second poll alone. A failed scene load (a 500, so the client doesn't retry) stayed on the ambient table and recovered about 301 seconds after page load, from the 5-minute refresh. After a takeover the rotation restarts at the race scene.
 - Not exercised on real data: skipped scenes and the ambient table, because every scene has data today. Long names were only checked in the harness.
 
 Open for the human:
 
 - The rivalry settles at the literal share, so 57–5 leaves Candice's name and score on coral.
 - `SpectatorView.tsx:48` has a local `signed` that doesn't round, so the final standings show `+49.198553432522885` and overflow the card. On `main` and on `/live` too; left alone because `/live` must not change here.
-- `useCurrentTournament` re-resolves only on a realtime event, with no poll. Read from the code, not tested: a new game created while the socket is down would not take over the TV.
 
 ## Pre-PR Quality Gate
 
