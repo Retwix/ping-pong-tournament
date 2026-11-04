@@ -25,3 +25,20 @@ export function tvMode({ game, matches, scoresChangedAt, now }: TvMoment): TvMod
   const hold = game.status === 'done' ? FINAL_RESULT_MS : IDLE_MS
   return now - lastActivity < hold ? 'live' : 'screensaver'
 }
+
+export interface ScoreWatch {
+  scores: string | null
+  changedAt: number | null
+}
+
+/** Advances the watch over the rows on screen: only a real score change moves `changedAt`. */
+export function watchScores(
+  watch: ScoreWatch,
+  matches: readonly Pick<Match, 'id' | 'score_a' | 'score_b' | 'done'>[],
+  now: number,
+): ScoreWatch {
+  if (matches.length === 0) return watch
+  const scores = matches.map((m) => `${m.id}:${m.score_a}-${m.score_b}:${m.done}`).join()
+  if (watch.scores === null) return { scores, changedAt: null }
+  return scores === watch.scores ? watch : { scores, changedAt: now }
+}
