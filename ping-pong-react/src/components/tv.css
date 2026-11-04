@@ -67,6 +67,14 @@
   100% { transform: translateY(-50%); }
 }
 
+@keyframes tvs-tug {
+  0% { transform: translateX(-960px); }
+  20% { transform: translateX(-790px); }
+  40% { transform: translateX(-1010px); }
+  60% { transform: translateX(-820px); }
+  80% { transform: translateX(-940px); }
+}
+
 @keyframes tvs-tick {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0.25; }
@@ -424,6 +432,22 @@
 
 .tvs-rivalry { position: absolute; inset: 0; background: #2a1c63; }
 
+.tvs-tug {
+  position: absolute;
+  inset: 0;
+  animation: tvs-tug 15s ease-in-out;
+}
+
+.tvs-tug-block {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 2600px;
+  height: 100%;
+  background: #b7333f;
+  transform: skewX(-6deg);
+}
+
 .tvs-rival-left,
 .tvs-rival-right {
   position: absolute;
@@ -451,7 +475,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tvs-tick, .tvs-hop, .tvs-in, .tvs-progress, .tvs-pulse, .tvs-mark-chaser, .tvs-mark-leader,
-  .tvs-step-lit, .tvs-shake, .tvs-stamp, .tvs-feed { animation: none; }
+  .tvs-step-lit, .tvs-shake, .tvs-stamp, .tvs-feed, .tvs-tug { animation: none; }
   .tvs-climb { animation: none; transform: translate(1792px, 286px); }
   .tvs-rally { animation: none; transform: translate(1780px, 380px); }
 }

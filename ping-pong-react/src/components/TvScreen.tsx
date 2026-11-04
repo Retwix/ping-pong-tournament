@@ -313,9 +313,12 @@ function Rival({ side, className }: { side: RivalSide; className: string }) {
 }
 
 function Rivalry({ scene, now }: { scene: RivalryScene; now: Date }) {
-  const { total, left, right } = scene
+  const { total, left, right, share } = scene
   return (
     <div className="tvs-rivalry">
+      <div className="tvs-tug" style={{ transform: `translateX(${STAGE_WIDTH * (share - 1)}px)` }} aria-hidden="true">
+        <div className="tvs-tug-block" />
+      </div>
       <div className="tvs-in tvs-kicker">La rivalité · {total} matchs</div>
       <Masthead now={now} />
       <Rival side={left} className="tvs-after-1 tvs-rival-left" />
