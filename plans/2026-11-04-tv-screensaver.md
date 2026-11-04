@@ -1,7 +1,8 @@
 # Plan: TV screensaver
 
 **Branch**: screen-saver
-**Status**: Active. Steps 1 and 2 done (`src/lib/tvRotation.ts`, `src/lib/tvTakeover.ts`, mutants all killed). Step 3 next.
+**Status**: Active. Steps 1 and 2 done (`src/lib/tvRotation.ts`, `src/lib/tvTakeover.ts`, mutants all killed). Step 3 in progress: Race done in `src/lib/tvScenes.ts`, Form next.
+**Testing**: the human decided on 2026-11-04 that the screensaver needs no more tests. Write no new tests and run no mutation testing for it; check each scene on screen. The committed `tvRotation` and `tvTakeover` tests stay.
 **Design**: [Écran TV Ping-Pong](https://claude.ai/artifact/VtXSk5gsHD4531R5pPsXid), second row. Read the boards with the Artifact tool: `project/Mix.dc.html`, `project/Forme.dc.html`, `project/Resultats.dc.html`, `project/Rivalites.dc.html`. The top row is superseded exploration. The mocks were never seen rendered, so check them on screen.
 
 ## Goal
@@ -48,7 +49,7 @@
 
 ## Steps
 
-Every step is RED, GREEN, MUTATE, KILL MUTANTS, REFACTOR, CLEANUP. Pure rules go in `src/lib` with node unit tests; components use browser tests only where needed (`vi.mock` is broken there, so keep components props-driven).
+No new tests (see **Testing** above). Pure rules go in `src/lib`; keep components props-driven so they can be screenshot from a harness.
 
 1. **Rotation rules:** given what each scene has to say, pick the current scene from elapsed time, skipping empty ones.
 2. **Takeover rules:** given the active game, its matches and the last activity time, decide screensaver or live view.
@@ -62,7 +63,7 @@ Every step is RED, GREEN, MUTATE, KILL MUTANTS, REFACTOR, CLEANUP. Pure rules go
 
 New `src/lib/tvScenes.ts`, one exported function per scene plus `tvScenes(data, now)` giving the fixed order with nulls for `pickScene`. Scene functions take rows and events so tests can use factories with literal numbers.
 
-- **Race:** current-season ladder (`ladderReplay`, `currentSeason`, `daysLeft`). Non-provisional rows with rank held (`splitLadder` with the season drops alumni), top 5, `weeklyDelta` as the trend. Story is rank 1 against rank 2, gap from rounded ratings. Fewer than 2 ranked skips the scene.
+- **Race (done):** current-season ladder (`ladderReplay`, `currentSeason`, `daysLeft`). `tvScenes` must feed it `ladderSections(...).ranked`, not `splitLadder`: that also drops players idle 30 days, as Le Classement does. Non-provisional rows, numbered by position like the podium, top 5, `weeklyDelta` as the trend. Story is rank 1 against rank 2, gap from rounded ratings. Fewer than 2 ranked skips the scene.
 - **Form:** season events. Best `winStreak` of 2 or more, `beaten` is the last 5 opponents at most, oldest first. Risers from `topProgressions`. Upset is `biggestUpsetOf` (needs exporting) over the last 7 days.
 - **Results:** use `individualMatches` where capots count. `recentResults` feeds the list. Headline is the latest capot in 7 days, else the latest game with no stamp. Set matches read as sets won (« 2–1 », « Bo3 », from `2 * wins - 1`).
 - **Capot trap:** `isCapot` reads only the deciding set, and capots are single games only for now, so require `finishedSets(m).length === 0`. `capotList` does not check this.
@@ -71,9 +72,8 @@ New `src/lib/tvScenes.ts`, one exported function per scene plus `tvScenes(data, 
 
 ## Pre-PR Quality Gate
 
-1. Mutation testing over the new `src/lib` files (one `--mutate` flag: Stryker keeps only the last)
-2. Refactoring assessment
-3. `npm run build` and `npm test` on a build that includes current `origin/main`
+1. Refactoring assessment
+2. `npm run build` and `npm test` on a build that includes current `origin/main`
 
 ---
 *Delete this file when the plan is complete.*
