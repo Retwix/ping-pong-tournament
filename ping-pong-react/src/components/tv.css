@@ -18,6 +18,23 @@
   font-family: var(--font-display);
 }
 
+@keyframes tv-scene {
+  0% { opacity: 0; transform: translateY(28px); }
+  6%, 92% { opacity: 1; transform: translateY(0); }
+  98%, 100% { opacity: 0; transform: translateY(-16px); }
+}
+
+@keyframes tv-progress {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+@keyframes tv-pulse {
+  0%, 38% { transform: scale(1); }
+  42% { transform: scale(1.05); }
+  48%, 100% { transform: scale(1); }
+}
+
 @keyframes tv-tick {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0.25; }
@@ -35,6 +52,21 @@
 @keyframes tv-hop {
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(-10px, -30px) scale(1.5); }
+}
+
+.tv-in { animation: tv-scene 20s ease-out both; }
+.tv-after-1 { animation-delay: 0.2s; }
+.tv-after-2 { animation-delay: 0.5s; }
+
+.tv-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: #f0913a;
+  transform-origin: left center;
+  animation: tv-progress 20s linear both;
 }
 
 .tv-clock { font-variant-numeric: tabular-nums; }
@@ -115,7 +147,59 @@
   font-weight: 600;
 }
 
+.tv-race-story,
+.tv-race-side {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 64px 72px;
+}
+
+.tv-race-story {
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.tv-race-side { left: 50%; }
+
+.tv-race-kicker {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f35e68;
+}
+
+.tv-race-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tv-pulse {
+  animation: tv-pulse 20s ease-in-out both;
+  transform-origin: left bottom;
+}
+
+.tv-race-gap {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  color: #f35e68;
+}
+
+.tv-race-gap-number { font-size: 430px; line-height: 0.85; font-weight: 800; }
+.tv-race-gap-unit { font-size: 128px; line-height: 1; font-weight: 800; }
+.tv-race-gap-wide .tv-race-gap-number { font-size: 280px; }
+.tv-race-names { font-size: 88px; line-height: 1.08; font-weight: 700; }
+.tv-race-logo { font-size: 36px; font-weight: 600; color: #c9c2e0; }
+.tv-race-clock { text-align: right; font-size: 44px; font-weight: 600; }
+
 @media (prefers-reduced-motion: reduce) {
-  .tv-tick, .tv-hop { animation: none; }
+  .tv-tick, .tv-hop, .tv-in, .tv-progress, .tv-pulse { animation: none; }
   .tv-rally { animation: none; transform: translate(1780px, 380px); }
 }

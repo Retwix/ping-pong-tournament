@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { TvScene } from '../lib/tvScenes'
+import { useEffect, useState, type ReactNode } from 'react'
+import type { RaceScene, TvScene } from '../lib/tvScenes'
 import './tv.css'
 
 const STAGE_WIDTH = 1920
@@ -31,7 +31,7 @@ function Clock({ now }: { now: Date }) {
   )
 }
 
-function Ambient({ now }: { now: Date }) {
+function Table({ children }: { children: ReactNode }) {
   return (
     <div className="tv-table-frame">
       <div className="tv-table">
@@ -41,13 +41,62 @@ function Ambient({ now }: { now: Date }) {
           <div className="tv-ball-shadow" />
           <div className="tv-ball tv-hop" />
         </div>
-        <div className="tv-ambient-logo">Ping-Pong Recovr</div>
-        <div className="tv-ambient-clock">
-          <Clock now={now} />
-        </div>
+        {children}
       </div>
     </div>
   )
+}
+
+function Ambient({ now }: { now: Date }) {
+  return (
+    <Table>
+      <div className="tv-ambient-logo">Ping-Pong Recovr</div>
+      <div className="tv-ambient-clock">
+        <Clock now={now} />
+      </div>
+    </Table>
+  )
+}
+
+function Progress() {
+  return <div className="tv-progress" aria-hidden="true" />
+}
+
+function Race({ scene, now }: { scene: RaceScene; now: Date }) {
+  const { season, daysLeft, leader, chaser, gap } = scene
+  const plural = gap >= 2
+  return (
+    <Table>
+      <div className="tv-race-story">
+        <div className="tv-in tv-race-kicker">
+          {season} · J-{daysLeft}
+        </div>
+        <div className="tv-race-headline">
+          <div className="tv-in tv-after-1">
+            <div className={`tv-pulse tv-race-gap${gap >= 100 ? ' tv-race-gap-wide' : ''}`}>
+              <span className="tv-race-gap-number">{gap}</span>
+              <span className="tv-race-gap-unit">{plural ? 'points' : 'point'}</span>
+            </div>
+          </div>
+          <div className="tv-in tv-after-2 tv-race-names">
+            {plural ? 'séparent' : 'sépare'} {chaser} de {leader}.
+          </div>
+        </div>
+        <div className="tv-race-logo">Ping-Pong Recovr</div>
+      </div>
+      <div className="tv-race-side">
+        <div className="tv-race-clock">
+          <Clock now={now} />
+        </div>
+      </div>
+      <Progress />
+    </Table>
+  )
+}
+
+function Scene({ scene, now }: Props) {
+  if (scene?.kind === 'race') return <Race scene={scene} now={now} />
+  return <Ambient now={now} />
 }
 
 interface Props {
@@ -56,12 +105,12 @@ interface Props {
 }
 
 /** The 1920×1080 stage, scaled to whatever screen it lands on. */
-export default function TvScreen({ now }: Props) {
+export default function TvScreen({ scene, now }: Props) {
   const scale = useStageScale()
   return (
     <div className="tv-root">
       <div className="tv-stage" style={{ transform: `scale(${scale})` }}>
-        <Ambient now={now} />
+        <Scene scene={scene} now={now} />
       </div>
     </div>
   )
