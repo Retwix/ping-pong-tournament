@@ -1,7 +1,7 @@
 # Plan: TV screensaver
 
 **Branch**: screen-saver
-**Status**: Active. Decisions confirmed on 2026-11-04, design approved, no app code yet.
+**Status**: Active. Steps 1 and 2 done (`src/lib/tvRotation.ts`, `src/lib/tvTakeover.ts`, mutants all killed). Step 3 next.
 **Design**: [Écran TV Ping-Pong](https://claude.ai/artifact/VtXSk5gsHD4531R5pPsXid), second row. Read the boards with the Artifact tool: `project/Mix.dc.html`, `project/Forme.dc.html`, `project/Resultats.dc.html`, `project/Rivalites.dc.html`. The top row is superseded exploration. The mocks were never seen rendered, so check them on screen.
 
 ## Goal
@@ -57,6 +57,17 @@ Every step is RED, GREEN, MUTATE, KILL MUTANTS, REFACTOR, CLEANUP. Pure rules go
 5. **Scene components:** the ambient table first, then one scene at a time from its board. Styling is verified on screen, not by tests.
 6. **Self-reload:** detect a new deployed build and reload. No service worker exists, so the running build needs something to compare against.
 7. **Live check** at 1920×1080, then ship.
+
+## Step 3 notes (read from the code and boards, nothing built)
+
+New `src/lib/tvScenes.ts`, one exported function per scene plus `tvScenes(data, now)` giving the fixed order with nulls for `pickScene`. Scene functions take rows and events so tests can use factories with literal numbers.
+
+- **Race:** current-season ladder (`ladderReplay`, `currentSeason`, `daysLeft`). Non-provisional rows with rank held (`splitLadder` with the season drops alumni), top 5, `weeklyDelta` as the trend. Story is rank 1 against rank 2, gap from rounded ratings. Fewer than 2 ranked skips the scene.
+- **Form:** season events. Best `winStreak` of 2 or more, `beaten` is the last 5 opponents at most, oldest first. Risers from `topProgressions`. Upset is `biggestUpsetOf` (needs exporting) over the last 7 days.
+- **Results:** use `individualMatches` where capots count. `recentResults` feeds the list. Headline is the latest capot in 7 days, else the latest game with no stamp. Set matches read as sets won (« 2–1 », « Bo3 », from `2 * wins - 1`).
+- **Capot trap:** `isCapot` reads only the deciding set, and capots are single games only for now, so require `finishedSets(m).length === 0`. `capotList` does not check this.
+- **Rivalry:** `computeRivalries(individualMatches(...), players, 5)`, so doubles stay out. Most games, then `rivalryBalance`. No rivalry skips the scene. Records: `longestStreak`, biggest delta from `scopedEvents`, most `played`.
+- **Tug split:** settled translateX is `1920 * (share - 1)`, passed as a CSS variable.
 
 ## Pre-PR Quality Gate
 
