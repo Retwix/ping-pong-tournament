@@ -64,6 +64,17 @@ describe('PlayerModal', () => {
     expect(onSaveBio).not.toHaveBeenCalled()
   })
 
+  it('keeps the editor open and says so when the save is refused', async () => {
+    const screen = await renderOwnCard(() => Promise.reject(new Error('you can only change your own bio')))
+
+    await screen.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await screen.getByRole('textbox', { name: 'Ma bio' }).fill('Roi du revers')
+    await screen.getByRole('button', { name: 'Enregistrer' }).click()
+
+    await expect.element(screen.getByRole('alert')).toBeVisible()
+    await expect.element(screen.getByRole('textbox', { name: 'Ma bio' })).toHaveValue('Roi du revers')
+  })
+
   it("shows the player's bio under the name", async () => {
     const screen = await render(
       <PlayerModal row={getMockRatingRow()} bio="Roi du revers" history={null} onClose={() => {}} />,
