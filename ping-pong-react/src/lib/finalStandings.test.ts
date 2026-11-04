@@ -508,4 +508,11 @@ describe('deltaTone', () => {
 		expect(deltaTone(0)).toBe('flat')
 		expect(deltaTone(null)).toBe('flat')
 	})
+
+	it('judges the whole number on screen, not the decimals behind it', () => {
+		expect(deltaTone(0.3)).toBe('flat')
+		expect(deltaTone(0.6)).toBe('up')
+		expect(deltaTone(-5.2)).toBe('flat')
+		expect(deltaTone(-5.6)).toBe('down')
+	})
 })
