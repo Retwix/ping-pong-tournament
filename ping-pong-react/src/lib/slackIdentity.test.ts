@@ -9,6 +9,7 @@ import {
   deleteAttempt,
   matchPlayer,
   ownCard,
+  ownRatingRow,
 } from './slackIdentity'
 
 function player(over: Partial<Player> & Pick<Player, 'id' | 'name'>): Player {
@@ -61,6 +62,15 @@ describe('ownCard', () => {
       player: me,
       row: { name: 'Léo', team: 'design', avatar_url: 'leo.png', rating: null },
     })
+  })
+})
+
+describe('ownRatingRow', () => {
+  it('finds no line for a linked player with no rated match on this ladder', () => {
+    const roster = [player({ id: 'p2', name: 'Léo', auth_user_id: 'me' })]
+    const thomas = ratingRow({ key: 'p1', playerId: 'p1', name: 'Thomas' })
+
+    expect(ownRatingRow('me', roster, [thomas])).toBeNull()
   })
 })
 

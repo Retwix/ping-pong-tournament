@@ -58,6 +58,16 @@ export interface OwnCard {
 }
 
 /**
+ * The signed-in account's own line on a ladder, or null when it is unlinked or
+ * its player has no rated match on that ladder yet.
+ */
+export function ownRatingRow(userId: string, players: Player[], rows: RatingRow[]): RatingRow | null {
+  const me = linkedPlayer(userId, players)
+  if (me === null) return null
+  return rows.find((r) => r.playerId === me.id) ?? null
+}
+
+/**
  * The signed-in account's own card, or null when it is unlinked. Being linked
  * is enough: a player with no rated match on this ladder still has a card, and
  * it is the only place they can write their bio.
@@ -66,7 +76,7 @@ export function ownCard(userId: string, players: Player[], rows: RatingRow[]): O
   const me = linkedPlayer(userId, players)
   if (me === null) return null
   const { name, team, avatar_url } = me
-  return { player: me, row: rows.find((r) => r.playerId === me.id) ?? { name, team, avatar_url, rating: null } }
+  return { player: me, row: ownRatingRow(userId, players, rows) ?? { name, team, avatar_url, rating: null } }
 }
 
 /**
