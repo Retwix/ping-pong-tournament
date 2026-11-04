@@ -399,6 +399,14 @@ tr.r3 .rank { background: #d08a4a; color: #1a1002; }
 /* player detail modal (Ratings page) */
 .pd-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .pm-bio { font-size: 14px; font-weight: 600; font-style: italic; color: var(--fg-2); margin-bottom: 2px; }
+.pm-bio-line { display: flex; align-items: center; gap: 6px; min-height: 24px; }
+.pm-bio-edit {
+  display: inline-flex; padding: 4px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--fg-3); cursor: pointer;
+}
+.pm-bio-edit:hover { color: var(--fg-1); }
+.pm-bio-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.pm-bio-form .pl-finput { flex: 1 1 160px; min-width: 0; }
 .pd-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
 .pd-kpi { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 6px; text-align: center; }
 .pd-kpi .n { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--fg-1); }
