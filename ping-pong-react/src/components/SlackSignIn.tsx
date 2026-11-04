@@ -2,10 +2,9 @@ import { IconBrandSlack, IconLogout } from '@tabler/icons-react'
 import type { User } from '@supabase/supabase-js'
 import { useRatings } from '../hooks/useRatings'
 import { useSession } from '../hooks/useSession'
-import { playerBio } from '../lib/playerBio'
 import { playerHistory } from '../lib/playerHistory'
 import { defaultLadderScope } from '../lib/seasons'
-import { ownRatingRow, slackIdentity } from '../lib/slackIdentity'
+import { ownCard, slackIdentity } from '../lib/slackIdentity'
 import ClaimGate from './ClaimGate'
 import OwnCardButton from './OwnCardButton'
 
@@ -44,12 +43,12 @@ export default function SlackSignIn() {
  * Split out so only signed-in visitors pay for the ladder load: the hook
  * fetches every finished match and opens a realtime channel.
  *
- * With a card to show — linked, and rated this season — your name opens it
- * and sign-out lives on the card. Otherwise the name signs you out, as before.
+ * Once linked, your name opens your card and sign-out lives on it. Unlinked,
+ * there is no card, so the name signs you out.
  */
 function SignedIn({ user, signOut }: { user: User; signOut: () => void }) {
   const { rows, events, players } = useRatings(defaultLadderScope(new Date()))
-  const own = ownRatingRow(user.id, players, rows)
+  const own = ownCard(user.id, players, rows)
 
   // Slack withholds the name unless `profile` scope was granted, so the button
   // has to work as an icon alone. The label rides the same class as the
@@ -60,9 +59,9 @@ function SignedIn({ user, signOut }: { user: User; signOut: () => void }) {
     <>
       {own !== null ? (
         <OwnCardButton
-          row={own}
-          bio={playerBio(players, own.playerId, own.name)}
-          history={playerHistory(events, rows, own.key)}
+          row={own.row}
+          bio={own.player.bio}
+          history={playerHistory(events, rows, own.player.id)}
           onSignOut={signOut}
         />
       ) : (

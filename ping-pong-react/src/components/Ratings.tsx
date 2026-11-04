@@ -25,7 +25,7 @@ import {
 } from '../lib/classement'
 import { departureLabel, relativeTime } from '../lib/format'
 import { playerBio } from '../lib/playerBio'
-import { ownRatingRow } from '../lib/slackIdentity'
+import { ownCard } from '../lib/slackIdentity'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import EloModal from './EloModal'
@@ -111,7 +111,7 @@ export default function Ratings({
   const { rows, events, matches, players, tournaments, matchCount, loading, error, recompute } =
     useRatings(scope)
   const { userId } = useSession()
-  const ownKey = userId === null ? undefined : ownRatingRow(userId, players, rows)?.key
+  const ownKey = userId === null ? undefined : ownCard(userId, players, rows)?.player.id
   const [mode, setMode] = useState<'board' | 'log'>('board')
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [query, setQuery] = useState('')
