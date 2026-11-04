@@ -1,11 +1,15 @@
 import { topProgressions, WEEK_MS, weeklyDelta, winStreak } from './classement'
 import { biggestUpsetOf, type DashboardRecords } from './dashboardRecords'
+import { relativeTime } from './format'
 import type { RatingEvent, RatingRow } from './rating'
+import { recentResults, type RecentResult } from './recentResults'
 import { daysLeft, type Season } from './seasons'
+import type { Match, Player, Tournament } from '../types'
 
 const RACE_LINES = 5
 const FORM_MIN_STREAK = 2
 const FORM_STEPS = 5
+const RESULT_LINES = 5
 
 export interface RaceLine {
   rank: number
@@ -95,5 +99,57 @@ export function formScene({ rows, events, now }: FormInput): FormScene | null {
       delta: Math.round(delta7),
     })),
     upset: biggestUpsetOf(events.filter((e) => inLastWeek(e.at, now))),
+  }
+}
+
+export interface ResultLine {
+  winner: string
+  loser: string
+  score: string
+  when: string
+  capot: boolean
+}
+
+export interface ResultsScene {
+  kind: 'results'
+  headline: ResultLine
+  stamped: boolean
+  feed: ResultLine[]
+}
+
+export interface ResultsInput {
+  matches: Match[]
+  players: Player[]
+  tournaments: Tournament[]
+  now: Date
+}
+
+const isCapotResult = ({ sets, doubles }: RecentResult) =>
+  !doubles && sets.length === 1 && sets[0][0] > 0 && sets[0][1] === 0
+
+function resultLine(result: RecentResult, now: Date): ResultLine {
+  const { winner, loser, sets, endedAt } = result
+  const setsWon = sets.filter(([mine, theirs]) => mine > theirs).length
+  const ago = relativeTime(endedAt, now)
+  return {
+    winner,
+    loser,
+    score: sets.length === 1 ? sets[0].join('–') : `${setsWon}–${sets.length - setsWon}`,
+    when: sets.length === 1 ? ago : `${ago} · Bo${2 * setsWon - 1}`,
+    capot: isCapotResult(result),
+  }
+}
+
+/** The latest games, led by this week's latest capot; null before the first game. */
+export function resultsScene({ matches, players, tournaments, now }: ResultsInput): ResultsScene | null {
+  const results = recentResults(matches, players, tournaments, matches.length)
+  const weekCapot = results.find((r) => isCapotResult(r) && inLastWeek(r.endedAt, now))
+  const headline = weekCapot ?? results[0]
+  if (!headline) return null
+  return {
+    kind: 'results',
+    headline: resultLine(headline, now),
+    stamped: weekCapot !== undefined,
+    feed: results.slice(0, RESULT_LINES).map((r) => resultLine(r, now)),
   }
 }
