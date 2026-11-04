@@ -253,12 +253,17 @@ function Results({ scene, now }: { scene: ResultsScene; now: Date }) {
     <div className="tvs-results">
       <div className="tvs-in tvs-kicker tvs-results-kicker">Derniers résultats</div>
       <Masthead now={now} />
-      <div className="tvs-results-story">
+      <div className={`tvs-results-story${stamped ? ' tvs-shake' : ''}`}>
         <div className="tvs-in tvs-after-1 tvs-results-score">{score}</div>
         {stamped && <div className="tvs-in tvs-after-2 tvs-results-title">Balla di capot</div>}
         <div className={`tvs-in tvs-after-3 ${stamped ? 'tvs-results-names' : 'tvs-results-title'}`}>
           {winner} sur {loser}.
         </div>
+        {stamped && (
+          <div className="tvs-stamp-tilt">
+            <div className="tvs-stamp">CAPOT</div>
+          </div>
+        )}
       </div>
       <Progress />
     </div>
