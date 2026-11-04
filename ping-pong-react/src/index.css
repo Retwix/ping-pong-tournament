@@ -822,7 +822,7 @@ td.elo.neg { color: var(--coral); }
 
 /* The shortest landscape phones trade a little score height for the bio line */
 @media (max-height: 339px) and (orientation: landscape) {
-  .refzone-score { font-size: 25vh; }
+  .ref-zones:has(.refzone-bio) .refzone-score { font-size: 25vh; }
 }
 
 /* ===== desktop reflow: left/right split, keyboard-driven ===== */
