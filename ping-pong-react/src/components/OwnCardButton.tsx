@@ -17,11 +17,13 @@ export default function OwnCardButton({
   bio,
   history,
   onSignOut,
+  onSaveBio,
 }: {
   row: OwnCard['row']
   bio: string | null
   history: PlayerHistory | null
   onSignOut: () => void
+  onSaveBio: (bio: string | null) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
 
@@ -44,6 +46,7 @@ export default function OwnCardButton({
             history={history}
             onClose={() => setOpen(false)}
             onSignOut={onSignOut}
+            onSaveBio={onSaveBio}
           />,
           document.body,
         )}

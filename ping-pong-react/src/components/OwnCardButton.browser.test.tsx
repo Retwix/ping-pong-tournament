@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { page } from '@vitest/browser/context'
 import { render } from 'vitest-browser-react'
@@ -23,10 +24,17 @@ const getMockRatingRow = (overrides?: Partial<RatingRow>): RatingRow => ({
   ...overrides,
 })
 
-const renderInTopBar = (onSignOut = vi.fn()) =>
+const renderInTopBar = (props: Partial<ComponentProps<typeof OwnCardButton>> = {}) =>
   render(
     <nav className="rv-nav">
-      <OwnCardButton row={getMockRatingRow()} bio="Roi du revers" history={null} onSignOut={onSignOut} />
+      <OwnCardButton
+        row={getMockRatingRow()}
+        bio="Roi du revers"
+        history={null}
+        onSignOut={vi.fn()}
+        onSaveBio={vi.fn(async () => {})}
+        {...props}
+      />
     </nav>,
   )
 
@@ -47,12 +55,28 @@ describe('OwnCardButton', () => {
 
   it('signs you out from the card it opens', async () => {
     const onSignOut = vi.fn()
-    const screen = await renderInTopBar(onSignOut)
+    const screen = await renderInTopBar({ onSignOut })
 
     await screen.getByRole('button', { name: 'Ma fiche (Léo)' }).click()
     await page.getByRole('button', { name: 'Se déconnecter' }).click()
 
     expect(onSignOut).toHaveBeenCalledOnce()
+  })
+
+  it('saves your bio from the card it opens, even with no rated match yet', async () => {
+    const onSaveBio = vi.fn(async () => {})
+    const screen = await renderInTopBar({
+      row: { name: 'Léo', team: 'tech', avatar_url: null, rating: null },
+      onSaveBio,
+    })
+
+    await screen.getByRole('button', { name: 'Ma fiche (Léo)' }).click()
+    await page.getByRole('button', { name: 'Modifier ma bio' }).click()
+    await page.getByRole('textbox', { name: 'Ma bio' }).fill('Mur de Berlin')
+    await page.getByRole('button', { name: 'Enregistrer' }).click()
+
+    await expect.element(page.getByRole('textbox', { name: 'Ma bio' })).not.toBeInTheDocument()
+    expect(onSaveBio).toHaveBeenCalledWith('Mur de Berlin')
   })
 
   it('closes your card again', async () => {

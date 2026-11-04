@@ -2,6 +2,7 @@ import { IconBrandSlack, IconLogout } from '@tabler/icons-react'
 import type { User } from '@supabase/supabase-js'
 import { useRatings } from '../hooks/useRatings'
 import { useSession } from '../hooks/useSession'
+import { updatePlayer } from '../lib/db'
 import { playerHistory } from '../lib/playerHistory'
 import { defaultLadderScope } from '../lib/seasons'
 import { ownCard, slackIdentity } from '../lib/slackIdentity'
@@ -47,7 +48,7 @@ export default function SlackSignIn() {
  * there is no card, so the name signs you out.
  */
 function SignedIn({ user, signOut }: { user: User; signOut: () => void }) {
-  const { rows, events, players } = useRatings(defaultLadderScope(new Date()))
+  const { rows, events, players, reload } = useRatings(defaultLadderScope(new Date()))
   const own = ownCard(user.id, players, rows)
 
   // Slack withholds the name unless `profile` scope was granted, so the button
@@ -63,6 +64,10 @@ function SignedIn({ user, signOut }: { user: User; signOut: () => void }) {
           bio={own.player.bio}
           history={playerHistory(events, rows, own.player.id)}
           onSignOut={signOut}
+          onSaveBio={async (bio) => {
+            await updatePlayer(own.player.id, { bio })
+            await reload()
+          }}
         />
       ) : (
         <button
