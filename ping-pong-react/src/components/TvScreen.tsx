@@ -88,6 +88,9 @@ const duelRallyKeyframes = (aheadRank: number) => {
     60% { transform: translate(1780px, ${aheadY}px); }
     80% { transform: translate(520px, 40px); }
     100% { transform: translate(1900px, 620px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tvs-rally { transform: translate(1780px, ${aheadY + RALLY_ROW_PITCH}px); }
   }`
 }
 
