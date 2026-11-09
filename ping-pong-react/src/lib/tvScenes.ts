@@ -27,9 +27,13 @@ export interface RaceScene {
   kind: 'race'
   season: string
   daysLeft: number
-  leader: string
-  chaser: string
+  /** The rank of the player ahead in this duel; the one behind sits just below. */
+  aheadRank: number
+  ahead: string
+  behind: string
   gap: number
+  /** What the duel is for, below the title race. */
+  stake: string | null
   ladder: RaceLine[]
 }
 
@@ -41,24 +45,41 @@ export interface RaceInput {
   now: Date
 }
 
-/** The title race; null until two players are out of their provisional games. */
-export function raceScene({ rows, events, season, now }: RaceInput): RaceScene | null {
-  const [leader, chaser, ...others] = rows.filter((row) => !row.provisional)
-  if (!chaser) return null
-  return {
-    kind: 'race',
-    season: season.label,
-    daysLeft: daysLeft(season, now),
-    leader: leader.name,
-    chaser: chaser.name,
-    gap: Math.round(leader.rating) - Math.round(chaser.rating),
-    ladder: [leader, chaser, ...others].slice(0, RACE_LINES).map((row, i) => ({
-      rank: i + 1,
-      name: row.name,
-      rating: Math.round(row.rating),
-      trend: Math.round(weeklyDelta(events, row.key, now)),
-    })),
+const CLOSE_DUEL = 30
+
+const stakeOf = (aheadRank: number) =>
+  aheadRank === 3 ? 'pour le podium' : `pour la ${aheadRank}e place`
+
+/** The title race, then every close duel lower in the top five; empty until two players are out of their provisional games. */
+export function raceScenes({ rows, events, season, now }: RaceInput): RaceScene[] {
+  const top = rows.filter((row) => !row.provisional).slice(0, RACE_LINES)
+  if (top.length < 2) return []
+  const ladder = top.map((row, i) => ({
+    rank: i + 1,
+    name: row.name,
+    rating: Math.round(row.rating),
+    trend: Math.round(weeklyDelta(events, row.key, now)),
+  }))
+  const duel = (aheadRank: number): RaceScene => {
+    const [ahead, behind] = ladder.slice(aheadRank - 1, aheadRank + 1)
+    return {
+      kind: 'race',
+      season: season.label,
+      daysLeft: daysLeft(season, now),
+      aheadRank,
+      ahead: ahead.name,
+      behind: behind.name,
+      gap: ahead.rating - behind.rating,
+      stake: aheadRank === 1 ? null : stakeOf(aheadRank),
+      ladder,
+    }
   }
+  const closeDuels = ladder
+    .slice(1, -1)
+    .map(({ rank }) => duel(rank))
+    .filter(({ gap }) => gap <= CLOSE_DUEL)
+    .sort((a, b) => a.gap - b.gap)
+  return [duel(1), ...closeDuels]
 }
 
 export interface FormRiser {
@@ -152,18 +173,18 @@ function resultLine(result: RecentResult, now: Date): ResultLine {
   }
 }
 
-/** The latest games, led by this week's latest capot; null before the first game. */
-export function resultsScene({ matches, players, tournaments, now }: ResultsInput): ResultsScene | null {
+const HEADLINE_VARIANTS = 12
+
+/** One variant per recent game, from the last tournament and the last 7 days; a capot gets its stamp. Empty before the first game. */
+export function resultsScenes({ matches, players, tournaments, now }: ResultsInput): ResultsScene[] {
   const results = recentResults(matches, players, tournaments, matches.length)
-  const weekCapot = results.find((r) => isCapotResult(r) && inLastWeek(r.endedAt, now))
-  const headline = weekCapot ?? results[0]
-  if (!headline) return null
-  return {
-    kind: 'results',
-    headline: resultLine(headline, now),
-    stamped: weekCapot !== undefined,
-    feed: results.slice(0, RESULT_LINES).map((r) => resultLine(r, now)),
-  }
+  const [latest] = results
+  if (!latest) return []
+  const feed = results.slice(0, RESULT_LINES).map((r) => resultLine(r, now))
+  return results
+    .filter((r) => r === latest || r.tournamentId === latest.tournamentId || inLastWeek(r.endedAt, now))
+    .slice(0, HEADLINE_VARIANTS)
+    .map((r) => ({ kind: 'results', headline: resultLine(r, now), stamped: isCapotResult(r), feed }))
 }
 
 export interface RivalSide {
@@ -192,45 +213,67 @@ export interface RivalryInput {
 const highest = <T>(items: T[], value: (item: T) => number): T | undefined =>
   [...items].sort((a, b) => value(b) - value(a))[0]
 
-/** The most played head-to-head and the all-time records; null below 5 games between two players. */
-export function rivalryScene({ matches, players, tournaments, events }: RivalryInput): RivalryScene | null {
-  const individuals = individualMatches(matches, tournaments)
-  const [rivalry] = computeRivalries(individuals, players, RIVALRY_MIN_GAMES).sort(
-    (a, b) => b.total - a.total || rivalryBalance(b) - rivalryBalance(a),
-  )
-  if (!rivalry) return null
-  const a = { name: rivalry.aName, wins: rivalry.aWins }
-  const b = { name: rivalry.bName, wins: rivalry.bWins }
-  const [left, right] = a.wins >= b.wins ? [a, b] : [b, a]
+const RIVALRY_VARIANTS = 6
+const RECORDS_SHOWN = 3
+
+const rotated = <T>(items: T[], by: number) => [...items.slice(by), ...items.slice(0, by)]
+
+function recordPool(individuals: Match[], players: Player[], events: RatingEvent[]): string[] {
   const stats = computePlayerStats(individuals, players)
   const streak = highest(stats, (s) => s.longestStreak)
   const jump = highest(events, (e) => e.delta)
   const played = highest(stats, (s) => s.played)
-  return {
-    kind: 'rivalry',
-    total: rivalry.total,
-    left,
-    right,
-    share: left.wins / rivalry.total,
-    records: [
-      ...(streak ? [`${streak.longestStreak} victoires de suite, ${streak.name}`] : []),
-      ...(jump ? [`${signed(jump.delta)} en un match, ${jump.name}`] : []),
-      ...(played ? [`${played.played} matchs joués, ${played.name}`] : []),
-    ],
-  }
+  const capots = highest(stats, (s) => s.capotsDealt)
+  const saved = highest(stats, (s) => s.matchBallsSaved)
+  return [
+    ...(streak ? [`${streak.longestStreak} victoires de suite, ${streak.name}`] : []),
+    ...(jump ? [`${signed(jump.delta)} en un match, ${jump.name}`] : []),
+    ...(played ? [`${played.played} matchs joués, ${played.name}`] : []),
+    ...(capots && capots.capotsDealt > 0 ? [`${capots.capotsDealt} capots infligés, ${capots.name}`] : []),
+    ...(saved && saved.matchBallsSaved > 0 ? [`${saved.matchBallsSaved} balles de match sauvées, ${saved.name}`] : []),
+  ]
+}
+
+/** The most played head-to-head, then the closest ones, each with its share of the records; empty below 5 games between two players. */
+export function rivalryScenes({ matches, players, tournaments, events }: RivalryInput): RivalryScene[] {
+  const individuals = individualMatches(matches, tournaments)
+  const rivalries = computeRivalries(individuals, players, RIVALRY_MIN_GAMES)
+  const [mostPlayed] = [...rivalries].sort(
+    (a, b) => b.total - a.total || rivalryBalance(b) - rivalryBalance(a),
+  )
+  if (!mostPlayed) return []
+  const closest = [...rivalries]
+    .filter((r) => r !== mostPlayed)
+    .sort((a, b) => rivalryBalance(b) - rivalryBalance(a) || b.total - a.total)
+  const pool = recordPool(individuals, players, events)
+  return [mostPlayed, ...closest].slice(0, RIVALRY_VARIANTS).map((rivalry, i) => {
+    const a = { name: rivalry.aName, wins: rivalry.aWins }
+    const b = { name: rivalry.bName, wins: rivalry.bWins }
+    const [left, right] = a.wins >= b.wins ? [a, b] : [b, a]
+    return {
+      kind: 'rivalry',
+      total: rivalry.total,
+      left,
+      right,
+      share: left.wins / rivalry.total,
+      records: rotated(pool, (i * RECORDS_SHOWN) % Math.max(pool.length, 1)).slice(0, RECORDS_SHOWN),
+    }
+  })
 }
 
 export type TvScene = RaceScene | FormScene | ResultsScene | RivalryScene
 
-/** The four scenes in their fixed order; a null one has nothing to say. */
-export function tvScenes(data: LadderData, now: Date): (TvScene | null)[] {
+const variants = <Scene>(scene: Scene | null): Scene[] => (scene ? [scene] : [])
+
+/** The four scenes in their fixed order, each as the variants it can show; an empty one has nothing to say. */
+export function tvScenes(data: LadderData, now: Date): TvScene[][] {
   const season = currentSeason(now)
   const { rows, events } = ladderReplay(defaultLadderScope(now), data)
   const { ranked } = ladderSections({ rows, players: data.players, season, now, archived: false })
   return [
-    season && raceScene({ rows: ranked, events, season, now }),
-    formScene({ rows: ranked, events, now }),
-    resultsScene({ ...data, now }),
-    rivalryScene({ ...data, events: scopedEvents(data) }),
+    season ? raceScenes({ rows: ranked, events, season, now }) : [],
+    variants(formScene({ rows: ranked, events, now })),
+    resultsScenes({ ...data, now }),
+    rivalryScenes({ ...data, events: scopedEvents(data) }),
   ]
 }

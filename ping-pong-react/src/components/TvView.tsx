@@ -30,7 +30,7 @@ function Screensaver({ now }: { now: number }) {
     [matches, players, tournaments, turn],
   )
 
-  return <TvScreen key={turn} scene={pickScene(scenes, elapsed)} now={new Date(now)} />
+  return <TvScreen key={turn} scene={pickScene(scenes, elapsed, startedAt)} now={new Date(now)} />
 }
 
 /** Backs /tv: the scenes between games, the live view while one is on. */

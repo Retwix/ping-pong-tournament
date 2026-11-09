@@ -257,6 +257,7 @@
 
 .tvs-race-gap {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 24px;
   color: #f35e68;
@@ -264,7 +265,10 @@
 
 .tvs-race-gap-number { font-size: 430px; line-height: 0.85; font-weight: 800; }
 .tvs-race-gap-unit { font-size: 128px; line-height: 1; font-weight: 800; }
+.tvs-race-gap-tens .tvs-race-gap-number { font-size: 360px; }
 .tvs-race-gap-wide .tvs-race-gap-number { font-size: 240px; }
+.tvs-race-gap-tens .tvs-race-gap-unit,
+.tvs-race-gap-wide .tvs-race-gap-unit { font-size: 96px; }
 .tvs-race-names { font-size: 88px; line-height: 1.08; font-weight: 700; }
 .tvs-race-names-long { font-size: 60px; }
 .tvs-race-logo { font-size: 36px; font-weight: 600; color: #c9c2e0; }
