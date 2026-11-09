@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import GameResult from './GameResult'
 import type { Match } from '../types'
+import type { SideRating } from '../hooks/useRatingDeltas'
 import '../index.css'
 
 const getMockMatch = (overrides?: Partial<Match>): Match => ({
@@ -32,16 +33,38 @@ const getMockMatch = (overrides?: Partial<Match>): Match => ({
   ...overrides,
 })
 
-const renderResult = (match: Partial<Match>, bestOf: number) =>
+const getMockSide = (overrides?: Partial<SideRating>): SideRating => ({
+  key: 'Léo',
+  name: 'Léo',
+  delta: 8,
+  ratingBefore: 1500,
+  ratingAfter: 1508,
+  won: true,
+  stakes: 'normal',
+  rank: null,
+  provisional: false,
+  ...overrides,
+})
+
+const renderResult = (match: Partial<Match>, bestOf: number, ratings?: { a: SideRating; b: SideRating }) =>
   render(
     <GameResult
       match={getMockMatch(match)}
       bestOf={bestOf}
       onReplay={() => {}}
       onHome={() => {}}
+      ratings={ratings}
       look={() => ({ team: null, url: null })}
     />,
   )
+
+const loserMove = (delta: number) =>
+  renderResult({}, 1, {
+    a: getMockSide(),
+    b: getMockSide({ key: 'Inès', name: 'Inès', delta, ratingAfter: 1500 + delta, won: false }),
+  })
+
+const colourOf = (el: Element) => getComputedStyle(el).color
 
 const rowText = (row: Element) => [...row.querySelectorAll('td')].map((td) => td.textContent).join(' ')
 
@@ -66,5 +89,17 @@ describe('GameResult for a match of sets', () => {
     const screen = await renderResult({ score_a: 11, score_b: 0 }, 1)
 
     await expect.element(screen.getByText('Balla di capot')).toBeVisible()
+  })
+})
+
+describe('GameResult Elo moves', () => {
+  it("colours the loser's move like the final table: red beyond −5, quiet within", async () => {
+    const big = (await loserMove(-8)).getByText('−8').element()
+    const bigColour = colourOf(big)
+    const small = (await loserMove(-3)).getByText('−3').element()
+
+    expect(bigColour).not.toBe('rgb(255, 255, 255)')
+    expect(colourOf(small)).not.toBe(bigColour)
+    expect(colourOf(small)).not.toBe('rgb(255, 255, 255)')
   })
 })

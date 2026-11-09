@@ -1422,8 +1422,8 @@ td.elo.neg { color: var(--coral); }
 .tk-pill-sep { width: 1px; height: 30px; background: rgba(255, 255, 255, 0.25); }
 .tk-stat-value { font-family: var(--font-display); font-weight: 900; font-size: 24px; color: #fff; }
 .tk-stat-value--up { color: #4ade9b; }
-.tk-pill--champion .tk-stat-value--down { color: #f19a9a; }
-.tk-pill--champion .tk-stat-value--flat { color: rgba(255, 255, 255, 0.55); }
+.tk-stat-value--down { color: #f19a9a; }
+.tk-stat-value--flat { color: rgba(255, 255, 255, 0.55); }
 .tk-stat-label {
   font-family: var(--font-display); font-weight: 700; font-size: 9px; letter-spacing: 0.12em;
   text-transform: uppercase; color: rgba(255, 255, 255, 0.65);
