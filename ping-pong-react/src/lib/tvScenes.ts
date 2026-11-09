@@ -192,32 +192,52 @@ export interface RivalryInput {
 const highest = <T>(items: T[], value: (item: T) => number): T | undefined =>
   [...items].sort((a, b) => value(b) - value(a))[0]
 
-/** The most played head-to-head and the all-time records; null below 5 games between two players. */
-export function rivalryScene({ matches, players, tournaments, events }: RivalryInput): RivalryScene | null {
-  const individuals = individualMatches(matches, tournaments)
-  const [rivalry] = computeRivalries(individuals, players, RIVALRY_MIN_GAMES).sort(
-    (a, b) => b.total - a.total || rivalryBalance(b) - rivalryBalance(a),
-  )
-  if (!rivalry) return null
-  const a = { name: rivalry.aName, wins: rivalry.aWins }
-  const b = { name: rivalry.bName, wins: rivalry.bWins }
-  const [left, right] = a.wins >= b.wins ? [a, b] : [b, a]
+const RIVALRY_VARIANTS = 6
+const RECORDS_SHOWN = 3
+
+const rotated = <T>(items: T[], by: number) => [...items.slice(by), ...items.slice(0, by)]
+
+function recordPool(individuals: Match[], players: Player[], events: RatingEvent[]): string[] {
   const stats = computePlayerStats(individuals, players)
   const streak = highest(stats, (s) => s.longestStreak)
   const jump = highest(events, (e) => e.delta)
   const played = highest(stats, (s) => s.played)
-  return {
-    kind: 'rivalry',
-    total: rivalry.total,
-    left,
-    right,
-    share: left.wins / rivalry.total,
-    records: [
-      ...(streak ? [`${streak.longestStreak} victoires de suite, ${streak.name}`] : []),
-      ...(jump ? [`${signed(jump.delta)} en un match, ${jump.name}`] : []),
-      ...(played ? [`${played.played} matchs joués, ${played.name}`] : []),
-    ],
-  }
+  const capots = highest(stats, (s) => s.capotsDealt)
+  const saved = highest(stats, (s) => s.matchBallsSaved)
+  return [
+    ...(streak ? [`${streak.longestStreak} victoires de suite, ${streak.name}`] : []),
+    ...(jump ? [`${signed(jump.delta)} en un match, ${jump.name}`] : []),
+    ...(played ? [`${played.played} matchs joués, ${played.name}`] : []),
+    ...(capots && capots.capotsDealt > 0 ? [`${capots.capotsDealt} capots infligés, ${capots.name}`] : []),
+    ...(saved && saved.matchBallsSaved > 0 ? [`${saved.matchBallsSaved} balles de match sauvées, ${saved.name}`] : []),
+  ]
+}
+
+/** The most played head-to-head, then the closest ones, each with its share of the records; empty below 5 games between two players. */
+export function rivalryScenes({ matches, players, tournaments, events }: RivalryInput): RivalryScene[] {
+  const individuals = individualMatches(matches, tournaments)
+  const rivalries = computeRivalries(individuals, players, RIVALRY_MIN_GAMES)
+  const [mostPlayed] = [...rivalries].sort(
+    (a, b) => b.total - a.total || rivalryBalance(b) - rivalryBalance(a),
+  )
+  if (!mostPlayed) return []
+  const closest = [...rivalries]
+    .filter((r) => r !== mostPlayed)
+    .sort((a, b) => rivalryBalance(b) - rivalryBalance(a) || b.total - a.total)
+  const pool = recordPool(individuals, players, events)
+  return [mostPlayed, ...closest].slice(0, RIVALRY_VARIANTS).map((rivalry, i) => {
+    const a = { name: rivalry.aName, wins: rivalry.aWins }
+    const b = { name: rivalry.bName, wins: rivalry.bWins }
+    const [left, right] = a.wins >= b.wins ? [a, b] : [b, a]
+    return {
+      kind: 'rivalry',
+      total: rivalry.total,
+      left,
+      right,
+      share: left.wins / rivalry.total,
+      records: rotated(pool, (i * RECORDS_SHOWN) % Math.max(pool.length, 1)).slice(0, RECORDS_SHOWN),
+    }
+  })
 }
 
 export type TvScene = RaceScene | FormScene | ResultsScene | RivalryScene
@@ -233,6 +253,6 @@ export function tvScenes(data: LadderData, now: Date): TvScene[][] {
     variants(season && raceScene({ rows: ranked, events, season, now })),
     variants(formScene({ rows: ranked, events, now })),
     variants(resultsScene({ ...data, now })),
-    variants(rivalryScene({ ...data, events: scopedEvents(data) })),
+    rivalryScenes({ ...data, events: scopedEvents(data) }),
   ]
 }
