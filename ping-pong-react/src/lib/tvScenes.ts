@@ -263,6 +263,16 @@ export function rivalryScenes({ matches, players, tournaments, events }: Rivalry
 
 export type TvScene = RaceScene | FormScene | ResultsScene | RivalryScene
 
+const pair = (a: string, b: string) => [a, b].sort().join(' · ')
+
+/** What a scene says, so the rotation can tell when it would say the same thing twice. */
+export function headlineOf(scene: TvScene): string {
+  if (scene.kind === 'race') return pair(scene.ahead, scene.behind)
+  if (scene.kind === 'form') return scene.name
+  if (scene.kind === 'results') return `${scene.headline.winner} ${scene.headline.score} ${scene.headline.loser}`
+  return pair(scene.left.name, scene.right.name)
+}
+
 const variants = <Scene>(scene: Scene | null): Scene[] => (scene ? [scene] : [])
 
 /** The four scenes in their fixed order, each as the variants it can show; an empty one has nothing to say. */
