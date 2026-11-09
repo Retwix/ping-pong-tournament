@@ -2,6 +2,7 @@ import type { Match } from "../types";
 import type { MatchRatings, SideRating } from "../hooks/useRatingDeltas";
 import { winnerLoserRatings } from "../lib/ratingSides";
 import type { LookUpPlayer } from "../lib/playerLookup";
+import { deltaTone } from "../lib/finalStandings";
 import { signed } from "../lib/format";
 import { setsByWinner } from "../lib/sets";
 import { isCapot, winnerLoser } from "../lib/stats";
@@ -20,10 +21,10 @@ interface Props {
 	look: LookUpPlayer;
 }
 
-function EloStat({ side, tone }: { side: SideRating; tone: "up" | "down" }) {
+function EloStat({ side }: { side: SideRating }) {
 	return (
 		<div className="tk-stat">
-			<div className={`tk-stat-value tk-stat-value--${tone}`}>{signed(side.delta)}</div>
+			<div className={`tk-stat-value tk-stat-value--${deltaTone(side.delta)}`}>{signed(side.delta)}</div>
 			<div className="tk-stat-label">
 				{side.name} · Élo {Math.round(side.ratingAfter)}
 			</div>
@@ -120,9 +121,9 @@ export default function GameResult({ match, bestOf, onReplay, onHome, ratings, l
 
 				{(rdWinner || rdLoser) && (
 					<div className="tk-pill">
-						{rdWinner && <EloStat side={rdWinner} tone="up" />}
+						{rdWinner && <EloStat side={rdWinner} />}
 						{rdWinner && rdLoser && <div className="tk-pill-sep" />}
-						{rdLoser && <EloStat side={rdLoser} tone="down" />}
+						{rdLoser && <EloStat side={rdLoser} />}
 					</div>
 				)}
 

@@ -78,7 +78,7 @@ export default function Champion({ tournament, matches, ratings, look, onClose, 
 						{champ.losses === 0 ? "invaincu" : "remporte le tournoi"} · {record}
 					</div>
 					{champ.elo !== null && (
-						<div className="tk-pill tk-pill--champion">
+						<div className="tk-pill">
 							<div className="tk-stat">
 								<div className="tk-stat-value">{Math.round(champ.elo)}</div>
 								<div className="tk-stat-label">Élo final</div>
