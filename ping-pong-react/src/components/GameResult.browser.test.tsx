@@ -66,6 +66,11 @@ const loserMove = (delta: number) =>
 
 const colourOf = (el: Element) => getComputedStyle(el).color
 
+const readsRed = (colour: string) => {
+  const [r, g, b] = (colour.match(/\d+/g) ?? []).map(Number)
+  return r > g && r > b
+}
+
 const rowText = (row: Element) => [...row.querySelectorAll('td')].map((td) => td.textContent).join(' ')
 
 describe('GameResult for a match of sets', () => {
@@ -98,8 +103,8 @@ describe('GameResult Elo moves', () => {
     const bigColour = colourOf(big)
     const small = (await loserMove(-3)).getByText('−3').element()
 
-    expect(bigColour).not.toBe('rgb(255, 255, 255)')
-    expect(colourOf(small)).not.toBe(bigColour)
+    expect(readsRed(bigColour)).toBe(true)
+    expect(readsRed(colourOf(small))).toBe(false)
     expect(colourOf(small)).not.toBe('rgb(255, 255, 255)')
   })
 })
