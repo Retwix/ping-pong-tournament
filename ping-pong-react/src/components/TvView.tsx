@@ -5,7 +5,7 @@ import { useReloadOnNewBuild } from '../hooks/useReloadOnNewBuild'
 import { useTournament } from '../hooks/useTournament'
 import { navigate } from '../lib/router'
 import { pickScene, SCENE_MS } from '../lib/tvRotation'
-import { tvScenes } from '../lib/tvScenes'
+import { headlineOf, tvScenes, type TvScene } from '../lib/tvScenes'
 import { tvMode, watchScores, type ScoreWatch } from '../lib/tvTakeover'
 import LiveView from './LiveView'
 import TvScreen from './TvScreen'
@@ -14,7 +14,16 @@ const CLOCK_MS = 1000
 const ACTIVE_GAME_POLL_MS = 30_000
 const SCENE_DATA_REFRESH_MS = 5 * 60_000
 
-/** The scene rotation, from its first scene, on data loaded only while it shows. */
+type Shown = {
+  turn: number
+  scene: TvScene | null
+  /** Each scene's headline the last time it was on screen. */
+  last: Partial<Record<TvScene['kind'], string>>
+}
+
+const NOTHING_SHOWN: Shown = { turn: -1, scene: null, last: {} }
+
+/** The scene rotation, from its first scene, on data loaded only while it shows; a turn keeps its scene through a reload. */
 function Screensaver({ now }: { now: number }) {
   const [startedAt] = useState(now)
   const { matches, players, tournaments, reload } = useRatings()
@@ -30,7 +39,15 @@ function Screensaver({ now }: { now: number }) {
     [matches, players, tournaments, turn],
   )
 
-  return <TvScreen key={turn} scene={pickScene(scenes, elapsed, startedAt)} now={new Date(now)} />
+  const [shown, setShown] = useState(NOTHING_SHOWN)
+  if (shown.turn !== turn || shown.scene === null) {
+    const scene = pickScene(scenes, elapsed, startedAt, (s) => shown.last[s.kind] === headlineOf(s))
+    if (shown.turn !== turn || scene !== null) {
+      setShown({ turn, scene, last: scene ? { ...shown.last, [scene.kind]: headlineOf(scene) } : shown.last })
+    }
+  }
+
+  return <TvScreen key={turn} scene={shown.scene} now={new Date(now)} />
 }
 
 /** Backs /tv: the scenes between games, the live view while one is on. */
