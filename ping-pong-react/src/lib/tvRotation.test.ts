@@ -22,6 +22,15 @@ test('a start opens on a scene drawn from its seed, so a reload need not open on
   expect(openers).toEqual(new Set(ORDER))
 })
 
+test.for([1, 2, 3, 4])(
+  'an opening scene with two headlines opens on either, among %i scenes',
+  (count) => {
+    const scenes = [['a', 'b'], ...Array.from({ length: count - 1 }, (_, i) => [`other ${i}`])]
+    const openers = Array.from({ length: 60 }, (_, seed) => pickScene(scenes, 0, seed))
+    expect(new Set(openers.filter((scene) => scene === 'a' || scene === 'b'))).toEqual(new Set(['a', 'b']))
+  },
+)
+
 test.for(Array.from({ length: 30 }, (_, seed) => seed))(
   'a scene with nothing to say gives its turn to the others, from seed %i',
   (seed) => {

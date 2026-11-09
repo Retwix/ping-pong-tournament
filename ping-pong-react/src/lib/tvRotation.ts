@@ -34,7 +34,7 @@ export function pickScene<Scene>(
 ): Scene | null {
   const speaking = scenes.filter((variants) => variants.length > 0)
   if (speaking.length === 0) return null
-  const turn = Math.floor(elapsedMs / SCENE_MS) + hash(seed)
+  const turn = Math.floor(elapsedMs / SCENE_MS) + hash(hash(seed))
   const variants = speaking[turn % speaking.length]
   const drawn = drawVariant(variants.length, Math.floor(turn / speaking.length), seed)
   const fresh = variants
