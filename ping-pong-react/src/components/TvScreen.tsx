@@ -112,6 +112,9 @@ function RaceRow({ line, index, aheadRank }: { line: RaceLine; index: number; ah
   )
 }
 
+const gapSize = (gap: number) =>
+  gap >= 100 ? ' tvs-race-gap-wide' : gap >= 10 ? ' tvs-race-gap-tens' : ''
+
 function Race({ scene, now }: { scene: RaceScene; now: Date }) {
   const { season, daysLeft, aheadRank, ahead, behind, gap, stake, ladder } = scene
   const plural = gap >= 2
@@ -125,7 +128,7 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
         </div>
         <div className="tvs-race-headline">
           <div className="tvs-in tvs-after-1">
-            <div className={`tvs-pulse tvs-race-gap${gap >= 100 ? ' tvs-race-gap-wide' : ''}`}>
+            <div className={`tvs-pulse tvs-race-gap${gapSize(gap)}`}>
               <span className="tvs-race-gap-number">{gap}</span>
               <span className="tvs-race-gap-unit">{plural ? 'points' : 'point'}</span>
             </div>
