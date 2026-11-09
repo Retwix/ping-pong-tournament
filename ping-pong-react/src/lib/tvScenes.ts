@@ -222,15 +222,17 @@ export function rivalryScene({ matches, players, tournaments, events }: RivalryI
 
 export type TvScene = RaceScene | FormScene | ResultsScene | RivalryScene
 
-/** The four scenes in their fixed order; a null one has nothing to say. */
-export function tvScenes(data: LadderData, now: Date): (TvScene | null)[] {
+const variants = <Scene>(scene: Scene | null): Scene[] => (scene ? [scene] : [])
+
+/** The four scenes in their fixed order, each as the variants it can show; an empty one has nothing to say. */
+export function tvScenes(data: LadderData, now: Date): TvScene[][] {
   const season = currentSeason(now)
   const { rows, events } = ladderReplay(defaultLadderScope(now), data)
   const { ranked } = ladderSections({ rows, players: data.players, season, now, archived: false })
   return [
-    season && raceScene({ rows: ranked, events, season, now }),
-    formScene({ rows: ranked, events, now }),
-    resultsScene({ ...data, now }),
-    rivalryScene({ ...data, events: scopedEvents(data) }),
+    variants(season && raceScene({ rows: ranked, events, season, now })),
+    variants(formScene({ rows: ranked, events, now })),
+    variants(resultsScene({ ...data, now })),
+    variants(rivalryScene({ ...data, events: scopedEvents(data) })),
   ]
 }
