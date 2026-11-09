@@ -9,7 +9,7 @@ import {
   type FinalStandingRow,
   type PlayerRating,
 } from '../lib/finalStandings'
-import { libelleFormat } from '../lib/format'
+import { libelleFormat, signed } from '../lib/format'
 import {
   formatDuration,
   isWon,
@@ -46,11 +46,6 @@ interface Props {
 
 // How long the "next up" card is shown before the board is revealed anyway.
 const REVEAL_SECONDS = 5
-
-/** Signed Elo with a real minus sign, e.g. +18 / −15. */
-function signed(n: number): string {
-  return n < 0 ? `−${Math.abs(n)}` : `+${n}`
-}
 
 /**
  * TV avatar: the player's photo when the ladder has one, otherwise the
