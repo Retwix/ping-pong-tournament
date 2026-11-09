@@ -22,10 +22,13 @@ test('a start opens on a scene drawn from its seed, so a reload need not open on
   expect(openers).toEqual(new Set(ORDER))
 })
 
-test('a scene with nothing to say gives its turn to the others', () => {
-  const lap = [0, 20_000].map((elapsedMs) => pickScene([['race'], [], ['results']], elapsedMs, SEED))
-  expect(new Set(lap)).toEqual(new Set(['race', 'results']))
-})
+test.for(Array.from({ length: 30 }, (_, seed) => seed))(
+  'a scene with nothing to say gives its turn to the others, from seed %i',
+  (seed) => {
+    const lap = [0, 20_000].map((elapsedMs) => pickScene([['race'], [], ['results']], elapsedMs, seed))
+    expect(new Set(lap)).toEqual(new Set(['race', 'results']))
+  },
+)
 
 test('nothing is on screen when no scene has anything to say', () => {
   expect(pickScene([[], []], 20_000, SEED)).toBeNull()

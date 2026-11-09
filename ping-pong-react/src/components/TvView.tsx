@@ -23,7 +23,7 @@ type Shown = {
 
 const NOTHING_SHOWN: Shown = { turn: -1, scene: null, last: {} }
 
-/** The scene rotation, from its first scene, on data loaded only while it shows; a turn keeps its scene through a reload. */
+/** The scene rotation, from a scene drawn at its start, on data loaded only while it shows; a turn keeps its scene through a reload. */
 function Screensaver({ now }: { now: number }) {
   const [startedAt] = useState(now)
   const { matches, players, tournaments, reload } = useRatings()
