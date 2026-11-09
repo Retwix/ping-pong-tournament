@@ -40,13 +40,13 @@ function Clock({ now }: { now: Date }) {
   )
 }
 
-function Table({ children }: { children: ReactNode }) {
+function Table({ children, rally }: { children: ReactNode; rally?: string }) {
   return (
     <div className="tvs-table-frame">
       <div className="tvs-table">
         <div className="tvs-table-line" aria-hidden="true" />
         <div className="tvs-table-net" aria-hidden="true" />
-        <div className="tvs-rally" aria-hidden="true">
+        <div className="tvs-rally" style={rally ? { animationName: rally } : undefined} aria-hidden="true">
           <div className="tvs-ball-shadow" />
           <div className="tvs-ball tvs-hop" />
         </div>
@@ -71,15 +71,32 @@ function Progress() {
   return <div className="tvs-progress" aria-hidden="true" />
 }
 
-const RACE_MARKS = ['tvs-mark-leader', 'tvs-mark-chaser']
 const RACE_NAMES_FIT = 30
+const RALLY_LEADER_Y = 275
+const RALLY_ROW_PITCH = 105
 
-function RaceRow({ line, index }: { line: RaceLine; index: number }) {
+const raceMark = (rank: number, aheadRank: number) =>
+  rank === aheadRank ? 'tvs-mark-leader' : rank === aheadRank + 1 ? 'tvs-mark-chaser' : ''
+
+/** The table rally, landing beside the player behind at 20% and the one ahead at 60%. */
+const duelRallyKeyframes = (aheadRank: number) => {
+  const aheadY = RALLY_LEADER_Y + RALLY_ROW_PITCH * (aheadRank - 1)
+  return `@keyframes tvs-rally-duel {
+    0% { transform: translate(-60px, 520px); }
+    20% { transform: translate(1780px, ${aheadY + RALLY_ROW_PITCH}px); }
+    40% { transform: translate(640px, 880px); }
+    60% { transform: translate(1780px, ${aheadY}px); }
+    80% { transform: translate(520px, 40px); }
+    100% { transform: translate(1900px, 620px); }
+  }`
+}
+
+function RaceRow({ line, index, aheadRank }: { line: RaceLine; index: number; aheadRank: number }) {
   const { rank, name, rating, trend } = line
   const tone = trend < 0 ? 'tvs-trend-down' : 'tvs-trend-up'
   return (
     <div className="tvs-in tvs-race-line" style={{ animationDelay: `${0.8 + 0.15 * index}s` }}>
-      <div className={`tvs-race-mark ${RACE_MARKS[index] ?? ''}`} aria-hidden="true" />
+      <div className={`tvs-race-mark ${raceMark(rank, aheadRank)}`} aria-hidden="true" />
       <div className="tvs-race-row">
         <span className="tvs-race-rank">{rank}</span>
         <span className="tvs-race-name">{name}</span>
@@ -93,11 +110,12 @@ function RaceRow({ line, index }: { line: RaceLine; index: number }) {
 }
 
 function Race({ scene, now }: { scene: RaceScene; now: Date }) {
-  const { season, daysLeft, leader, chaser, gap, ladder } = scene
+  const { season, daysLeft, aheadRank, ahead, behind, gap, stake, ladder } = scene
   const plural = gap >= 2
-  const longNames = chaser.length + leader.length > RACE_NAMES_FIT
+  const longNames = behind.length + ahead.length + (stake?.length ?? 0) > RACE_NAMES_FIT
   return (
-    <Table>
+    <Table rally="tvs-rally-duel">
+      <style>{duelRallyKeyframes(aheadRank)}</style>
       <div className="tvs-race-story">
         <div className="tvs-in tvs-race-kicker">
           {season} · J-{daysLeft}
@@ -110,7 +128,8 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
             </div>
           </div>
           <div className={`tvs-in tvs-after-2 tvs-race-names${longNames ? ' tvs-race-names-long' : ''}`}>
-            {plural ? 'séparent' : 'sépare'} {chaser} de {leader}.
+            {plural ? 'séparent' : 'sépare'} {behind} de {ahead}
+            {stake && ` ${stake}`}.
           </div>
         </div>
         <div className="tvs-race-logo">Ping-Pong Recovr</div>
@@ -121,7 +140,7 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
         </div>
         <div className="tvs-race-ladder">
           {ladder.map((line, index) => (
-            <RaceRow key={line.rank} line={line} index={index} />
+            <RaceRow key={line.rank} line={line} index={index} aheadRank={aheadRank} />
           ))}
         </div>
       </div>

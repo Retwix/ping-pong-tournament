@@ -27,9 +27,13 @@ export interface RaceScene {
   kind: 'race'
   season: string
   daysLeft: number
-  leader: string
-  chaser: string
+  /** The rank of the player ahead in this duel; the one behind sits just below. */
+  aheadRank: number
+  ahead: string
+  behind: string
   gap: number
+  /** What the duel is for, below the title race. */
+  stake: string | null
   ladder: RaceLine[]
 }
 
@@ -41,24 +45,41 @@ export interface RaceInput {
   now: Date
 }
 
-/** The title race; null until two players are out of their provisional games. */
-export function raceScene({ rows, events, season, now }: RaceInput): RaceScene | null {
-  const [leader, chaser, ...others] = rows.filter((row) => !row.provisional)
-  if (!chaser) return null
-  return {
-    kind: 'race',
-    season: season.label,
-    daysLeft: daysLeft(season, now),
-    leader: leader.name,
-    chaser: chaser.name,
-    gap: Math.round(leader.rating) - Math.round(chaser.rating),
-    ladder: [leader, chaser, ...others].slice(0, RACE_LINES).map((row, i) => ({
-      rank: i + 1,
-      name: row.name,
-      rating: Math.round(row.rating),
-      trend: Math.round(weeklyDelta(events, row.key, now)),
-    })),
+const CLOSE_DUEL = 30
+
+const stakeOf = (aheadRank: number) =>
+  aheadRank === 3 ? 'pour le podium' : `pour la ${aheadRank}e place`
+
+/** The title race, then every close duel lower in the top five; empty until two players are out of their provisional games. */
+export function raceScenes({ rows, events, season, now }: RaceInput): RaceScene[] {
+  const top = rows.filter((row) => !row.provisional).slice(0, RACE_LINES)
+  if (top.length < 2) return []
+  const ladder = top.map((row, i) => ({
+    rank: i + 1,
+    name: row.name,
+    rating: Math.round(row.rating),
+    trend: Math.round(weeklyDelta(events, row.key, now)),
+  }))
+  const duel = (aheadRank: number): RaceScene => {
+    const [ahead, behind] = ladder.slice(aheadRank - 1, aheadRank + 1)
+    return {
+      kind: 'race',
+      season: season.label,
+      daysLeft: daysLeft(season, now),
+      aheadRank,
+      ahead: ahead.name,
+      behind: behind.name,
+      gap: ahead.rating - behind.rating,
+      stake: aheadRank === 1 ? null : stakeOf(aheadRank),
+      ladder,
+    }
   }
+  const closeDuels = ladder
+    .slice(1, -1)
+    .map(({ rank }) => duel(rank))
+    .filter(({ gap }) => gap <= CLOSE_DUEL)
+    .sort((a, b) => a.gap - b.gap)
+  return [duel(1), ...closeDuels]
 }
 
 export interface FormRiser {
@@ -250,7 +271,7 @@ export function tvScenes(data: LadderData, now: Date): TvScene[][] {
   const { rows, events } = ladderReplay(defaultLadderScope(now), data)
   const { ranked } = ladderSections({ rows, players: data.players, season, now, archived: false })
   return [
-    variants(season && raceScene({ rows: ranked, events, season, now })),
+    season ? raceScenes({ rows: ranked, events, season, now }) : [],
     variants(formScene({ rows: ranked, events, now })),
     resultsScenes({ ...data, now }),
     rivalryScenes({ ...data, events: scopedEvents(data) }),
