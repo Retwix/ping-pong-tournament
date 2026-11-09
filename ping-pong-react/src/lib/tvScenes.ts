@@ -152,18 +152,18 @@ function resultLine(result: RecentResult, now: Date): ResultLine {
   }
 }
 
-/** The latest games, led by this week's latest capot; null before the first game. */
-export function resultsScene({ matches, players, tournaments, now }: ResultsInput): ResultsScene | null {
+const HEADLINE_VARIANTS = 12
+
+/** One variant per recent game, from the last tournament and the last 7 days; a capot gets its stamp. Empty before the first game. */
+export function resultsScenes({ matches, players, tournaments, now }: ResultsInput): ResultsScene[] {
   const results = recentResults(matches, players, tournaments, matches.length)
-  const weekCapot = results.find((r) => isCapotResult(r) && inLastWeek(r.endedAt, now))
-  const headline = weekCapot ?? results[0]
-  if (!headline) return null
-  return {
-    kind: 'results',
-    headline: resultLine(headline, now),
-    stamped: weekCapot !== undefined,
-    feed: results.slice(0, RESULT_LINES).map((r) => resultLine(r, now)),
-  }
+  const [latest] = results
+  if (!latest) return []
+  const feed = results.slice(0, RESULT_LINES).map((r) => resultLine(r, now))
+  return results
+    .filter((r) => r === latest || r.tournamentId === latest.tournamentId || inLastWeek(r.endedAt, now))
+    .slice(0, HEADLINE_VARIANTS)
+    .map((r) => ({ kind: 'results', headline: resultLine(r, now), stamped: isCapotResult(r), feed }))
 }
 
 export interface RivalSide {
@@ -252,7 +252,7 @@ export function tvScenes(data: LadderData, now: Date): TvScene[][] {
   return [
     variants(season && raceScene({ rows: ranked, events, season, now })),
     variants(formScene({ rows: ranked, events, now })),
-    variants(resultsScene({ ...data, now })),
+    resultsScenes({ ...data, now }),
     rivalryScenes({ ...data, events: scopedEvents(data) }),
   ]
 }
