@@ -25,7 +25,7 @@ export function drawVariant(count: number, draw: number, seed: number): number {
   return settled[draw % count]
 }
 
-/** The scene on screen `elapsedMs` into the rotation, one variant drawn per loop, stepping past those to `avoid` when another is left; an empty scene has nothing to say. */
+/** The scene on screen `elapsedMs` into the rotation, opening on a scene drawn from `seed`, one variant drawn per loop, stepping past those to `avoid` when another is left; an empty scene has nothing to say. */
 export function pickScene<Scene>(
   scenes: readonly (readonly Scene[])[],
   elapsedMs: number,
@@ -34,7 +34,7 @@ export function pickScene<Scene>(
 ): Scene | null {
   const speaking = scenes.filter((variants) => variants.length > 0)
   if (speaking.length === 0) return null
-  const turn = Math.floor(elapsedMs / SCENE_MS)
+  const turn = Math.floor(elapsedMs / SCENE_MS) + hash(seed)
   const variants = speaking[turn % speaking.length]
   const drawn = drawVariant(variants.length, Math.floor(turn / speaking.length), seed)
   const fresh = variants
