@@ -73,7 +73,7 @@ function Progress() {
 
 const RACE_NAMES_FIT = 30
 const RALLY_LEADER_Y = 275
-const RALLY_ROW_PITCH = 105
+const RALLY_ROW_PITCH = 94
 
 const raceMark = (rank: number, aheadRank: number) =>
   rank === aheadRank ? 'tvs-mark-leader' : rank === aheadRank + 1 ? 'tvs-mark-chaser' : ''
