@@ -1,7 +1,7 @@
 # Plan: W1 — Recovr becomes a company
 
 **Branch**: make-it-worldwide
-**Status**: Approved 2026-11-09; not started
+**Status**: Approved 2026-11-09. Steps 1–4 done 2026-11-10 (commits dbddf04..f7837e0); step 5 next. The seed's team_id is the placeholder `T_RECOVR_TEAM_ID` until step 7. Harness applies every migration twice.
 **Parent**: `plans/2026-11-09-make-it-worldwide.md` (decisions 1–17, story W1)
 
 ## Goal
