@@ -24,7 +24,9 @@ create function auth.uid() returns uuid language sql stable as $$
     auth.jwt() ->> 'sub'
   )::uuid $$;
 
-grant usage on schema auth to anon, authenticated;
+grant usage on schema auth to anon, authenticated, supabase_auth_admin;
+grant select on auth.identities to supabase_auth_admin;
+revoke all on schema public from public;
 grant usage on schema public to anon, authenticated;
 alter default privileges in schema public
   grant all on tables to anon, authenticated;

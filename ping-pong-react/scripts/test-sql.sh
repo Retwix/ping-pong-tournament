@@ -11,7 +11,7 @@ export PGOPTIONS="-c client_min_messages=error"
 
 migrations=(
   matchball predictions slack double-elim ratings chaos avatar
-  unranked doubles alumni auth sets bio
+  unranked doubles alumni auth sets bio orgs
 )
 
 for f in "$sql"/*-migration.sql; do
@@ -40,9 +40,11 @@ createdb "$db"
 trap 'dropdb --if-exists "$db"' EXIT
 
 psql_q -d "$db" -f "$sql/tests/supabase-stubs.sql"
-psql_q -d "$db" -f "$sql/schema.sql"
-for m in "${migrations[@]}"; do
-  psql_q -d "$db" -f "$sql/$m-migration.sql"
+for _ in 1 2; do
+  psql_q -d "$db" -f "$sql/schema.sql"
+  for m in "${migrations[@]}"; do
+    psql_q -d "$db" -f "$sql/$m-migration.sql"
+  done
 done
 
 failed=0
