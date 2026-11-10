@@ -59,3 +59,14 @@ begin
     raise exception 'FAIL: a signed-in tournament landed in %, not the token''s org', org;
   end if;
 end $$;
+
+-- Running the migration again leaves another company's rows where they are.
+reset role;
+\ir ../orgs-migration.sql
+
+do $$
+begin
+  if (select count(*) from public.tournaments where org_id = '20000000-0000-0000-0000-00000000000e') <> 1 then
+    raise exception 'FAIL: running the migration again moved Elsewhere''s tournament';
+  end if;
+end $$;
