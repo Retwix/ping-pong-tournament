@@ -114,6 +114,7 @@ Existing RLS behaviour (the open reads, the delete guard) is unchanged.
 
 **Acceptance criteria**, done with the human:
 1. Read Recovr's `team_id` from production with `select distinct identity_data->'custom_claims'->>'https://slack.com/team_id' from auth.identities`, and put it in the migration's seed.
+   Also count Slack identities without the key (`... where identity_data->'custom_claims'->>'https://slack.com/team_id' is null`). The hook reads it on every refresh, so any such identity would be refused, signed out, once the hook is on. Non-zero: stop and decide before step 4.
 2. Snapshot (the backups-repo dump) before applying.
 3. Apply `orgs-migration.sql` in the SQL editor, then re-check from the catalog that `org_id` is not null everywhere and that no row has a null org.
 4. Enable the hook in Auth → Hooks → Customize Access Token.
