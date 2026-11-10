@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useCurrentTournament } from '../hooks/useCurrentTournament'
 import { useRatings } from '../hooks/useRatings'
 import { useReloadOnNewBuild } from '../hooks/useReloadOnNewBuild'
+import { useSession } from '../hooks/useSession'
 import { useTournament } from '../hooks/useTournament'
 import { navigate } from '../lib/router'
 import { pickScene, SCENE_MS } from '../lib/tvRotation'
@@ -26,6 +27,7 @@ const NOTHING_SHOWN: Shown = { turn: -1, scene: null, last: {} }
 /** The scene rotation, from a scene drawn at its start, on data loaded only while it shows; a turn keeps its scene through a reload. */
 function Screensaver({ now }: { now: number }) {
   const [startedAt] = useState(now)
+  const { org } = useSession()
   const { matches, players, tournaments, reload } = useRatings()
   useEffect(() => {
     const refresh = setInterval(reload, SCENE_DATA_REFRESH_MS)
@@ -47,7 +49,7 @@ function Screensaver({ now }: { now: number }) {
     }
   }
 
-  return <TvScreen key={turn} scene={shown.scene} now={new Date(now)} />
+  return <TvScreen key={turn} scene={shown.scene} now={new Date(now)} org={org} />
 }
 
 /** Backs /tv: the scenes between games, the live view while one is on. */

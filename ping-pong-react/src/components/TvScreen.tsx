@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type {
   FormScene,
   RaceLine,
@@ -9,6 +9,8 @@ import type {
   RivalSide,
   TvScene,
 } from '../lib/tvScenes'
+import type { Org } from '../lib/org'
+import Brand from './Brand'
 import './tv.css'
 
 const STAGE_WIDTH = 1920
@@ -26,6 +28,10 @@ function useStageScale(): number {
   }, [])
   return scale
 }
+
+const TvOrg = createContext<Org | null>(null)
+
+const TvBrand = () => <Brand org={useContext(TvOrg)} />
 
 function Clock({ now }: { now: Date }) {
   const [hours, minutes] = now
@@ -59,7 +65,7 @@ function Table({ children, rally }: { children: ReactNode; rally?: string }) {
 function Ambient({ now }: { now: Date }) {
   return (
     <Table>
-      <div className="tvs-ambient-logo">Ping-Pong Recovr</div>
+      <div className="tvs-ambient-logo"><TvBrand /></div>
       <div className="tvs-ambient-clock">
         <Clock now={now} />
       </div>
@@ -138,7 +144,7 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
             {stake && ` ${stake}`}.
           </div>
         </div>
-        <div className="tvs-race-logo">Ping-Pong Recovr</div>
+        <div className="tvs-race-logo"><TvBrand /></div>
       </div>
       <div className="tvs-race-side">
         <div className="tvs-race-clock">
@@ -158,7 +164,7 @@ function Race({ scene, now }: { scene: RaceScene; now: Date }) {
 function Masthead({ now }: { now: Date }) {
   return (
     <div className="tvs-masthead">
-      <span className="tvs-masthead-logo">Ping-Pong Recovr</span>
+      <span className="tvs-masthead-logo"><TvBrand /></span>
       <Clock now={now} />
     </div>
   )
@@ -362,7 +368,7 @@ function Rivalry({ scene, now }: { scene: RivalryScene; now: Date }) {
   )
 }
 
-function Scene({ scene, now }: Props) {
+function Scene({ scene, now }: Omit<Props, 'org'>) {
   if (scene?.kind === 'race') return <Race scene={scene} now={now} />
   if (scene?.kind === 'form') return <Form scene={scene} now={now} />
   if (scene?.kind === 'results') return <Results scene={scene} now={now} />
@@ -373,15 +379,18 @@ function Scene({ scene, now }: Props) {
 interface Props {
   scene: TvScene | null
   now: Date
+  org: Org | null
 }
 
 /** The 1920×1080 stage, scaled to whatever screen it lands on. */
-export default function TvScreen({ scene, now }: Props) {
+export default function TvScreen({ scene, now, org }: Props) {
   const scale = useStageScale()
   return (
     <div className="tvs-root">
       <div className="tvs-stage" style={{ transform: `scale(${scale})` }}>
-        <Scene scene={scene} now={now} />
+        <TvOrg.Provider value={org}>
+          <Scene scene={scene} now={now} />
+        </TvOrg.Provider>
       </div>
     </div>
   )
