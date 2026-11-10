@@ -5,6 +5,7 @@ import CurrentView from './components/CurrentView'
 import Home from './components/Home'
 import LiveView from './components/LiveView'
 import TvView from './components/TvView'
+import WorkspaceRefusal from './components/WorkspaceRefusal'
 import Parties from './components/Parties'
 import Players from './components/Players'
 import Ratings from './components/Ratings'
@@ -183,5 +184,10 @@ export default function App() {
     return () => window.removeEventListener('popstate', onNavigate)
   }, [])
 
-  return renderRoute(route)
+  return (
+    <>
+      <WorkspaceRefusal />
+      {renderRoute(route)}
+    </>
+  )
 }
