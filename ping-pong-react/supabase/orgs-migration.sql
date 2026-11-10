@@ -32,7 +32,7 @@ on conflict (id) do nothing;
 -- ---------- the access-token hook ----------
 -- GoTrue calls this as supabase_auth_admin on every token issue, sign-in and
 -- refresh. The company is the workspace of the Slack identity signed in with
--- most recently.
+-- most recently; a workspace with no org gets no token and no membership.
 create or replace function public.custom_access_token_hook(event jsonb) returns jsonb as $$
 declare
   org public.orgs;
@@ -45,6 +45,11 @@ begin
       where i.user_id = (event->>'user_id')::uuid and i.provider = 'slack_oidc'
       order by i.last_sign_in_at desc nulls last
       limit 1);
+
+  if org.id is null then
+    return jsonb_build_object('error', jsonb_build_object(
+      'http_code', 403, 'message', 'workspace_not_on_ping_pong'));
+  end if;
 
   insert into public.memberships (user_id, org_id)
   values ((event->>'user_id')::uuid, org.id)
