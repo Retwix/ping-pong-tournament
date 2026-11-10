@@ -25,9 +25,32 @@ create table if not exists public.memberships (
 
 -- Recovr keeps a fixed id so the backfill and the signed-out fallback can name
 -- it. Its slack_team_id is read from production before this runs there.
+-- TRANSITIONAL: W3 makes every write signed in and deletes recovr_org_id().
+create or replace function public.recovr_org_id() returns uuid
+  language sql immutable as $$ select '7ec0c0de-0000-4000-8000-000000000001'::uuid $$;
+
 insert into public.orgs (id, slack_team_id, name)
-values ('7ec0c0de-0000-4000-8000-000000000001', 'T_RECOVR_TEAM_ID', 'Recovr')
+values (public.recovr_org_id(), 'T_RECOVR_TEAM_ID', 'Recovr')
 on conflict (id) do nothing;
+
+-- The org named in the caller's token; null when signed out.
+create or replace function public.current_org_id() returns uuid
+  language sql stable as $$ select (auth.jwt() ->> 'org_id')::uuid $$;
+
+-- ---------- every row belongs to an org ----------
+-- Adding the column with its default fills existing rows: the SQL editor has
+-- no token, so they all land in Recovr.
+do $$
+declare t text;
+begin
+  foreach t in array array['players', 'tournaments', 'matches', 'rating_events', 'predictions'] loop
+    execute format('alter table public.%I add column if not exists org_id uuid
+      references public.orgs(id)
+      default coalesce(public.current_org_id(), public.recovr_org_id())', t);
+    execute format('alter table public.%I alter column org_id set not null', t);
+    execute format('create index if not exists %I on public.%I (org_id)', t || '_org_id_idx', t);
+  end loop;
+end $$;
 
 -- ---------- the access-token hook ----------
 -- GoTrue calls this as supabase_auth_admin on every token issue, sign-in and
