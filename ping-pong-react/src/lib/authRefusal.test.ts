@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { isWorkspaceRefusal } from './authRefusal'
+import { isWorkspaceRefusal, withoutAuthError } from './authRefusal'
 
 const APP = 'https://pingpong.example'
 
@@ -16,4 +16,19 @@ test.for([
   { reason: 'a successful sign-in', url: `${APP}/#access_token=abc&refresh_token=def&token_type=bearer` },
 ])('sees no refusal in $reason', ({ url }) => {
   expect(isWorkspaceRefusal(url)).toBe(false)
+})
+
+test.for([
+  {
+    form: 'the hash',
+    url: `${APP}/classement#error=access_denied&error_code=403&error_description=workspace_not_on_ping_pong`,
+    clean: `${APP}/classement`,
+  },
+  {
+    form: 'the query, keeping the page’s own parameters',
+    url: `${APP}/stats?error=access_denied&period=season&error_code=403&error_description=workspace_not_on_ping_pong`,
+    clean: `${APP}/stats?period=season`,
+  },
+])('strips the refusal from $form', ({ url, clean }) => {
+  expect(withoutAuthError(url)).toBe(clean)
 })
