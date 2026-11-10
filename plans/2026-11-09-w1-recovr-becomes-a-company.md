@@ -1,7 +1,7 @@
 # Plan: W1 — Recovr becomes a company
 
 **Branch**: make-it-worldwide
-**Status**: Approved 2026-11-09. Steps 1–6 done 2026-11-10 (commits dbddf04..8d56d6e); step 7 (production, with the human) left. Live renders done: signed-in TV through the real `useSession` reads "Ping-Pong · Recovr"; the refusal banner at 390px in both themes, URL cleaned. The seed's team_id is the placeholder `T_RECOVR_TEAM_ID` until step 7. Harness applies every migration twice.
+**Status**: Approved 2026-11-09. Steps 1–6 done 2026-11-10 (the `feat(orgs)` commits on this branch); step 7 (production, with the human) left. Live renders done: signed-in TV through the real `useSession` reads "Ping-Pong · Recovr"; the refusal banner at 390px in both themes, URL cleaned. The seed's team_id is the placeholder `T_RECOVR_TEAM_ID` until step 7. Harness applies every migration twice.
 **Parent**: `plans/2026-11-09-make-it-worldwide.md` (decisions 1–17, story W1)
 
 ## Goal
