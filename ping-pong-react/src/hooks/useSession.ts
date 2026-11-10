@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { SLACK_PROVIDER } from '../lib/slackIdentity'
+import { orgOfToken } from '../lib/org'
 
 /**
  * The signed-in Slack account, or null. Supabase persists the session in
@@ -36,5 +37,12 @@ export function useSession() {
   )
   const signOut = useCallback(() => supabase.auth.signOut(), [])
 
-  return { session, userId: session?.user.id ?? null, loading, signIn, signOut }
+  return {
+    session,
+    userId: session?.user.id ?? null,
+    org: orgOfToken(session?.access_token),
+    loading,
+    signIn,
+    signOut,
+  }
 }
