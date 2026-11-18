@@ -28,6 +28,19 @@ export default function AuSuivant({
   const reign = reignOf(matches, king)
   const kingLook = look(king)
   const prochainLook = look(prochain)
+  const leaveButton = (name: string) => (
+    <button
+      className="ks-file-leave"
+      aria-label={`Retirer ${name}`}
+      onClick={() => {
+        const left = leaveTable(rotation, name)
+        onRotation(left)
+        if (left.length === 1) onEnd()
+      }}
+    >
+      ✕
+    </button>
+  )
 
   return (
     <div className="takeover takeover--purple">
@@ -42,7 +55,9 @@ export default function AuSuivant({
             className="tk-winner-av"
             fill="hero"
           />
-          <div className="tk-winner-name">{king} 👑</div>
+          <div className="tk-winner-name">
+            {king} 👑{leaveButton(king)}
+          </div>
           <div className="ks-reign">
             Règne · {reign} {reign > 1 ? 'victoires' : 'victoire'} d’affilée
           </div>
@@ -59,17 +74,7 @@ export default function AuSuivant({
           />
           <div className="tk-face-name">
             {prochain}
-            <button
-              className="ks-file-leave"
-              aria-label={`Retirer ${prochain}`}
-              onClick={() => {
-                const left = leaveTable(rotation, prochain)
-                onRotation(left)
-                if (left.length === 1) onEnd()
-              }}
-            >
-              ✕
-            </button>
+            {leaveButton(prochain)}
           </div>
         </section>
 

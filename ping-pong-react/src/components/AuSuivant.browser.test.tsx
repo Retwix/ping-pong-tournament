@@ -147,3 +147,21 @@ it('ends the session when the Prochain steps out and only the King is left', asy
   await screen.getByRole('button', { name: 'Retirer Zoé' }).click()
   expect(events).toEqual(['Inès', 'end'])
 })
+
+it('lets the King step out between games, the Prochain taking the table', async () => {
+  const events: string[] = []
+  const screen = render(
+    <AuSuivant
+      rotation={['Inès', 'Zoé', 'Sam', 'Léo']}
+      players={[]}
+      matches={[getMockGame()]}
+      look={() => ({ team: null, url: null })}
+      onNext={() => {}}
+      onEnd={() => events.push('end')}
+      onRotation={(rotation) => events.push(rotation.join(','))}
+    />,
+  )
+
+  await screen.getByRole('button', { name: 'Retirer Inès' }).click()
+  expect(events).toEqual(['Zoé,Sam,Léo'])
+})
