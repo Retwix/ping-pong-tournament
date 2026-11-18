@@ -1,5 +1,6 @@
-import { expect, it } from 'vitest'
+import { expect, it, onTestFinished } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { page, userEvent } from '@vitest/browser/context'
 import KingTable from './KingTable'
 import type { Rotation } from '../lib/king'
 import type { Match } from '../types'
@@ -138,6 +139,7 @@ it('once the session has ended, crowns the longest reign with its wins in a row 
 })
 
 it('mid-game, opens the File over the scorer so someone arriving joins without stopping the game', async () => {
+  await page.viewport(390, 700)
   const { screen, rotations } = renderKingTable({
     rotation: ['Inès', 'Léo', 'Sam'],
     matches: [getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Léo', score_a: 4, score_b: 3 })],
@@ -151,4 +153,26 @@ it('mid-game, opens the File over the scorer so someone arriving joins without s
   await sheet.getByRole('button', { name: 'Fermer' }).click()
   await expect.element(sheet).not.toBeInTheDocument()
   await expect.element(screen.getByRole('region', { name: 'scorer' })).toHaveTextContent('Inès v Léo')
+})
+
+it('keeps keys typed in the File sheet from reaching the scorer’s keyboard shortcuts', async () => {
+  await page.viewport(390, 700)
+  const keys: string[] = []
+  const record = (e: KeyboardEvent) => keys.push(e.key)
+  window.addEventListener('keydown', record)
+  onTestFinished(() => window.removeEventListener('keydown', record))
+  const { screen } = renderKingTable({
+    rotation: ['Inès', 'Léo', 'Sam'],
+    matches: [getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Léo', score_a: 4, score_b: 3 })],
+  })
+
+  await screen.getByRole('button', { name: 'File' }).click()
+  const sheet = screen.getByRole('dialog', { name: 'File' })
+  await sheet.getByRole('combobox', { name: 'Ajouter à la File' }).click()
+  await userEvent.keyboard('s{ArrowRight}{Enter}')
+  expect(keys).toEqual([])
+
+  await sheet.getByRole('button', { name: 'Fermer' }).click()
+  await userEvent.keyboard('{Enter}')
+  expect(keys).toEqual(['Enter'])
 })

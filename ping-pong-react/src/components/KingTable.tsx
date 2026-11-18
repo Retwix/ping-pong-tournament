@@ -49,7 +49,12 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
             File · {rotation.length - 2}
           </button>
           {editingFile && (
-            <div className="kt-sheet" role="dialog" aria-label="File">
+            <div
+              className="kt-sheet"
+              role="dialog"
+              aria-label="File"
+              onKeyDown={(e) => e.stopPropagation()}
+            >
               <div className="kt-sheet-panel">
                 <div className="ks-label">
                   {game.player_a} v {game.player_b}
