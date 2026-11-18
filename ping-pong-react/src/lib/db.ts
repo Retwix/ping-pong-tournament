@@ -274,6 +274,7 @@ async function closeOpenKingSessions(): Promise<void> {
     .eq('status', 'active')
   if (error) throw error
   const ids = (open ?? []).map((t) => t.id as string)
+  if (ids.length === 0) return
   const { data: games, error: gamesErr } = await supabase
     .from('matches')
     .select('*')

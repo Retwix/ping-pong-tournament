@@ -10,6 +10,7 @@ const written = vi.hoisted(() => ({
   mayDelete: false,
   refuse: false,
   failRead: false,
+  reads: new Array<string>(),
 }))
 
 vi.mock('./supabase', () => {
@@ -42,8 +43,10 @@ vi.mock('./supabase', () => {
         : done({ data: rows, error: null }),
   })
   const from = (table: string) => ({
-    select: () =>
-      selecting(table === 'players' ? registry : (written.rows.get(table) ?? []), table),
+    select: () => {
+      written.reads.push(table)
+      return selecting(table === 'players' ? registry : (written.rows.get(table) ?? []), table)
+    },
     update: (patch: unknown) => ({
       eq: async (key: string, value: unknown) => {
         written.updates.push({ where: { [key]: value }, patch })
@@ -188,6 +191,16 @@ it('starts the new partie even when the open sessions could not be read to close
 
   expect(written.inserts.get('tournaments')).toMatchObject({ kind: 'game', status: 'active' })
   written.failRead = false
+})
+
+it('with no session left open, starts the new partie without reading any games', async () => {
+  written.reads.splice(0)
+  written.rows.set('tournaments', [{ id: 't-ended', kind: 'king', status: 'done' }])
+
+  await createTournament('Partie rapide', ['Sam', 'Léo'], 11, 'game')
+
+  expect(written.reads).toEqual(['players', 'tournaments'])
+  written.rows.clear()
 })
 
 test.for([
