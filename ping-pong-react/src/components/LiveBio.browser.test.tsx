@@ -99,6 +99,7 @@ describe('SpectatorView live board', () => {
     await expect
       .element(screen.getByRole('group', { name: 'Inès' }).getByText('Service canon'))
       .toBeVisible()
+    expect(screen.getByRole('region', { name: 'le King' }).query()).toBeNull()
   })
 })
 

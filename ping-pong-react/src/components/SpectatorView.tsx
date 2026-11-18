@@ -24,6 +24,7 @@ import { bestOf } from '../lib/sets'
 import { playerInitials } from '../lib/avatar'
 import { ladderAvatar, matchStakes, showsLiveBoard } from '../lib/spectator'
 import type { Match, MatchSide, Player, Tournament } from '../types'
+import KingStrip from './KingStrip'
 import ThemeToggle from './ThemeToggle'
 
 interface Props {
@@ -441,6 +442,7 @@ export default function SpectatorView({
         <div className="tv-divider" />
         {renderPlayer('b')}
       </div>
+      {tournament.kind === 'king' && <KingStrip rotation={tournament.players} matches={matches} />}
     </div>
   )
 }
