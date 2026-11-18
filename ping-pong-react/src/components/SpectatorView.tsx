@@ -328,7 +328,11 @@ export default function SpectatorView({
               <div className="tv-next-label">En attente du prochain match…</div>
             )}
           </div>
-          {hasResults && podiumCard('Classement du tournoi')}
+          {tournament.kind === 'king' ? (
+            <KingStrip rotation={tournament.players} matches={matches} />
+          ) : (
+            hasResults && podiumCard('Classement du tournoi')
+          )}
         </div>
       </div>
     )

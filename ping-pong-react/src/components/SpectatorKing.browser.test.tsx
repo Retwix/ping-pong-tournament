@@ -111,3 +111,17 @@ it('on the first game of a session, shows the King with no règne yet and no Rec
   expect(king.element().textContent).toContain('0 victoire')
   expect(screen.getByRole('region', { name: 'Record' }).query()).toBeNull()
 })
+
+it('between games, the next game’s card shows the king strip where a tournament shows its podium', async () => {
+  const screen = renderSession({
+    rotation: ['Inès', 'Léo', 'Sam'],
+    matches: [
+      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 3, done: true }),
+      getMockGame({ idx: 1, player_a: 'Inès', player_b: 'Léo', started_at: null }),
+    ],
+  })
+
+  const king = screen.getByRole('region', { name: 'le King' })
+  await expect.element(king).toHaveTextContent('Inès')
+  expect(screen.getByText('Le podium').query()).toBeNull()
+})
