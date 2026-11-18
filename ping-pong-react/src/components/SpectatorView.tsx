@@ -24,6 +24,7 @@ import { bestOf } from '../lib/sets'
 import { playerInitials } from '../lib/avatar'
 import { ladderAvatar, matchStakes, showsLiveBoard } from '../lib/spectator'
 import type { Match, MatchSide, Player, Tournament } from '../types'
+import { longestReign } from '../lib/king'
 import KingStrip from './KingStrip'
 import ThemeToggle from './ThemeToggle'
 
@@ -249,6 +250,37 @@ export default function SpectatorView({
   )
 
   // ===== Tournament over: the podium and the full classement =====
+
+  if (over && tournament.kind === 'king') {
+    const champion = longestReign(matches)
+    const games = matches.filter((m) => m.done).length
+    return (
+      <div className="tv tv--panels">
+        {chrome}
+        {banner}
+        <div className="tv-panels">
+          <div className="tv-podium">
+            <div className="tv-podium-label">{tournament.name} — terminé</div>
+            {champion && (
+              <section className="tv-crown" aria-label="le champion">
+                <IconCrown className="tv-step-crown" size={30} stroke={1.6} />
+                <TvAvatar
+                  className="tv-step-avatar"
+                  name={champion.player}
+                  url={ladderAvatar(rows, null, champion.player)}
+                />
+                <div className="tv-podium-title">{champion.player}</div>
+                <div className="tv-step-elo">
+                  {champion.wins} {champion.wins > 1 ? 'victoires' : 'victoire'} d’affilée · {games}{' '}
+                  {games > 1 ? 'parties' : 'partie'}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (over) {
     return (

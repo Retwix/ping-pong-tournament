@@ -56,11 +56,15 @@ const getMockGame = (overrides?: Partial<Match>): Match => ({
   ...overrides,
 })
 
-const renderSession = (overrides: { rotation: ReadonlyArray<string>; matches: Match[] }) => {
-  const game = overrides.matches[overrides.matches.length - 1]
+const renderSession = (overrides: {
+  rotation: ReadonlyArray<string>
+  matches: Match[]
+  status?: Tournament['status']
+}) => {
+  const game = overrides.matches[overrides.matches.length - 1] ?? null
   return render(
     <SpectatorView
-      tournament={getMockSession({ players: [...overrides.rotation] })}
+      tournament={getMockSession({ players: [...overrides.rotation], status: overrides.status })}
       matches={overrides.matches}
       match={game}
       rows={[]}
@@ -124,4 +128,30 @@ it('between games, the next game’s card shows the king strip where a tournamen
   const king = screen.getByRole('region', { name: 'le King' })
   await expect.element(king).toHaveTextContent('Inès')
   expect(screen.getByText('Le podium').query()).toBeNull()
+})
+
+it('once the session is over, crowns the longest reign with the games validated, not a podium of the rotation', async () => {
+  const screen = renderSession({
+    status: 'done',
+    rotation: ['Sam', 'Inès', 'Léo'],
+    matches: [
+      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 3, done: true }),
+      getMockGame({ idx: 1, player_a: 'Inès', player_b: 'Léo', score_a: 7, score_b: 5, done: true }),
+      getMockGame({ idx: 2, player_a: 'Inès', player_b: 'Sam', score_a: 4, score_b: 7, done: true }),
+      getMockGame({ idx: 3, player_a: 'Sam', player_b: 'Léo', score_a: 2, score_b: 1 }),
+    ],
+  })
+
+  const champion = screen.getByRole('region', { name: 'le champion' })
+  await expect.element(champion).toHaveTextContent('Inès')
+  expect(champion.element().textContent).toContain('2 victoires')
+  expect(champion.element().textContent).toContain('3 parties')
+  expect(screen.getByText('Le podium').query()).toBeNull()
+})
+
+it('a session closed before any game was validated crowns nobody', async () => {
+  const screen = renderSession({ status: 'done', rotation: ['Inès', 'Sam'], matches: [] })
+
+  await expect.element(screen.getByRole('button', { name: 'Quitter le mode live' })).toBeVisible()
+  expect(screen.getByRole('region', { name: 'le champion' }).query()).toBeNull()
 })
