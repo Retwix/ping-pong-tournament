@@ -39,6 +39,7 @@ const renderKingTable = (overrides: { rotation: Rotation; matches: ReadonlyArray
   const started: string[] = []
   const ended: Array<string | null> = []
   const closed: string[] = []
+  const abandoned: Array<{ id: string; rotation: Rotation }> = []
   const screen = render(
     <KingTable
       ended={false}
@@ -50,6 +51,7 @@ const renderKingTable = (overrides: { rotation: Rotation; matches: ReadonlyArray
       onNext={() => started.push('next')}
       onEnd={(champion) => ended.push(champion)}
       onClose={() => closed.push('close')}
+      onAbandon={(id, rotation) => abandoned.push({ id, rotation })}
       scorer={(match, onPatch) => (
         <section aria-label="scorer">
           {match.player_a} v {match.player_b}
@@ -59,7 +61,7 @@ const renderKingTable = (overrides: { rotation: Rotation; matches: ReadonlyArray
       )}
     />,
   )
-  return { screen, patches, rotations, started, ended, closed }
+  return { screen, patches, rotations, started, ended, closed, abandoned }
 }
 
 it('scores the game at the table, and on validation the winner holds it while the loser joins the back of the File', async () => {
@@ -175,4 +177,25 @@ it('keeps keys typed in the File sheet from reaching the scorer’s keyboard sho
   await sheet.getByRole('button', { name: 'Fermer' }).click()
   await userEvent.keyboard('{Enter}')
   expect(keys).toEqual(['Enter'])
+})
+
+it('mid-game, someone at the table leaving abandons the game once confirmed, whoever stays holding the table', async () => {
+  await page.viewport(390, 700)
+  const { screen, abandoned } = renderKingTable({
+    rotation: ['Inès', 'Sam', 'Léo'],
+    matches: [getMockGame({ id: 'm-on', player_a: 'Inès', player_b: 'Sam', score_a: 4, score_b: 3 })],
+  })
+
+  await screen.getByRole('button', { name: 'File' }).click()
+  const sheet = screen.getByRole('dialog', { name: 'File' })
+  await sheet.getByRole('button', { name: 'Retirer Sam' }).click()
+  expect(abandoned).toEqual([])
+
+  await sheet.getByRole('button', { name: 'Abandonner la partie' }).click()
+  expect(abandoned).toEqual([{ id: 'm-on', rotation: ['Inès', 'Léo'] }])
+  await expect.element(sheet).not.toBeInTheDocument()
+
+  await screen.getByRole('button', { name: 'File' }).click()
+  await expect.element(sheet.getByRole('button', { name: 'Retirer Inès' })).toBeInTheDocument()
+  expect(sheet.getByRole('button', { name: 'Abandonner la partie' }).query()).toBeNull()
 })

@@ -52,7 +52,7 @@ export default function Board({
   onStats,
   onPlayers,
 }: Props) {
-  const { tournament, matches, loading, error, patchMatch, setRotation, endSession, reload } = useTournament(id)
+  const { tournament, matches, loading, error, patchMatch, setRotation, endSession, abandonGame, reload } = useTournament(id)
   const { players: registry } = usePlayers()
   const {
     forMatch: ratingsForMatch,
@@ -128,6 +128,7 @@ export default function Board({
         }}
         onEnd={endSession}
         onClose={onBack}
+        onAbandon={abandonGame}
         scorer={(match, onPatch) => (
           <LiveScorer
             match={match}

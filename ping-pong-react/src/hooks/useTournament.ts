@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  deleteMatch,
   getMatches,
   getTournament,
   recomputeRatings,
@@ -251,6 +252,27 @@ export function useTournament(id: string | null) {
     [writeTournament],
   )
 
+  /** King of the Ping: someone leaving the table abandons the game; its match goes and the rotation moves on. */
+  const abandonGame = useCallback(
+    async (gameId: string, rotation: Rotation) => {
+      const game = matchesRef.current.find((m) => m.id === gameId)
+      const before = tournamentRef.current
+      if (!game || !before) return
+      setMatches((prev) => prev.filter((m) => m.id !== gameId))
+      setTournament((prev) => (prev ? { ...prev, players: [...rotation] } : prev))
+      try {
+        await withRetry(() => deleteMatch(gameId))
+      } catch (e) {
+        setMatches((prev) => upsertSorted(prev, game))
+        setTournament((prev) => (prev ? { ...prev, players: before.players } : prev))
+        setError(e instanceof Error ? e.message : String(e))
+        return
+      }
+      await writeTournament({ players: [...rotation] }, () => ({ players: before.players }))
+    },
+    [writeTournament],
+  )
+
   // Double-elimination advancement. Whenever matches change, reconcile the
   // bracket: fill slots that just resolved, auto-complete walkovers, and crown
   // the grand-final winner. `reconcileBracket` only writes still-pending slots,
@@ -310,5 +332,5 @@ export function useTournament(id: string | null) {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [matches, tournament])
 
-  return { tournament, matches, loading, error, patchMatch, setRotation, endSession, reload }
+  return { tournament, matches, loading, error, patchMatch, setRotation, endSession, abandonGame, reload }
 }

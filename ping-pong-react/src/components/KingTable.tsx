@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Match } from '../types'
-import { afterGame, longestReign, type Rotation } from '../lib/king'
+import { afterGame, leaveTable, longestReign, type Rotation } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import { winnerLoser } from '../lib/stats'
 import AuSuivant from './AuSuivant'
@@ -21,12 +21,14 @@ interface Props {
   onNext: () => void
   onEnd: (champion: string | null) => void
   onClose: () => void
+  onAbandon: (gameId: string, rotation: Rotation) => void
   scorer: (match: Match, onPatch: Patch) => ReactNode
 }
 
 /** A King of the Ping session at the table: the game being played, « Au suivant » between games, the crown once it has ended. */
-export default function KingTable({ rotation, players, matches, ended, look, onPatch, onRotation, onNext, onEnd, onClose, scorer }: Props) {
+export default function KingTable({ rotation, players, matches, ended, look, onPatch, onRotation, onNext, onEnd, onClose, onAbandon, scorer }: Props) {
   const [editingFile, setEditingFile] = useState(false)
+  const [leaving, setLeaving] = useState<string | null>(null)
   const game = matches[matches.length - 1]
   if (!game) return null
   const champion = longestReign(matches)
@@ -56,9 +58,31 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
               onKeyDown={(e) => e.stopPropagation()}
             >
               <div className="kt-sheet-panel">
-                <div className="ks-label">
-                  {game.player_a} v {game.player_b}
+                <div className="ks-label kt-table">
+                  {[game.player_a, game.player_b].map((name) => (
+                    <span key={name}>
+                      {name}
+                      <button className="ks-file-leave" aria-label={`Retirer ${name}`} onClick={() => setLeaving(name)}>
+                        ✕
+                      </button>
+                    </span>
+                  ))}
                 </div>
+                {leaving && (
+                  <div className="kt-abandon">
+                    <p>{leaving} quitte la table : la partie s’arrête, rien n’est compté.</p>
+                    <button
+                      className="tk-btn"
+                      onClick={() => {
+                        setEditingFile(false)
+                        setLeaving(null)
+                        onAbandon(game.id, leaveTable(rotation, leaving))
+                      }}
+                    >
+                      Abandonner la partie
+                    </button>
+                  </div>
+                )}
                 <KingFile rotation={rotation} players={players} onRotation={onRotation} />
                 <button className="tk-btn tk-btn--ghost" onClick={() => setEditingFile(false)}>
                   Fermer
