@@ -280,11 +280,14 @@ async function closeOpenKingSessions(): Promise<void> {
     .in('tournament_id', ids)
   if (gamesErr) throw gamesErr
   await Promise.all(
-    closingCrowns(ids, (games ?? []) as Match[]).map(({ id, champion }) => {
-      const close = () => updateTournament(id, { status: 'done', champion })
-      return champion === null ? deleteTournament(id).catch(close) : close()
-    }),
+    closingCrowns(ids, (games ?? []) as Match[]).map(({ id, champion }) => endKingSession(id, champion)),
   )
+}
+
+/** Ends a King of the Ping session crowning `champion`; one that never had a game is deleted when the policy allows, else closed with no champion. */
+export async function endKingSession(id: string, champion: string | null): Promise<void> {
+  const close = () => updateTournament(id, { status: 'done', champion })
+  return champion === null ? deleteTournament(id).catch(close) : close()
 }
 
 /** Calls the next King of the Ping game to the table, numbered after the games already played. */

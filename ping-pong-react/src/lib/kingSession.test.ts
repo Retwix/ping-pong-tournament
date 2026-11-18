@@ -1,5 +1,5 @@
 import { expect, it, test, vi } from 'vitest'
-import { addKingGame, createTournament, deleteMatch } from './db'
+import { addKingGame, createTournament, deleteMatch, endKingSession } from './db'
 import type { Match } from '../types'
 
 const written = vi.hoisted(() => ({
@@ -161,17 +161,14 @@ it('closes a King of the Ping session left open, crowning it, when any new parti
 test.for([
   { who: 'anyone', mayDelete: false, deleted: [], closed: [{ where: { id: 't-empty' }, patch: { status: 'done', champion: null } }] },
   { who: 'a signed-in claimed player', mayDelete: true, deleted: [{ from: 'tournaments', id: 't-empty' }], closed: [] },
-])('a session closed before any game, by $who, is deleted when the policy lets them', async ({ mayDelete, deleted, closed }) => {
+])('a session ended before any game, by $who, is deleted when the policy lets them', async ({ mayDelete, deleted, closed }) => {
   written.updates.splice(0)
   written.deleted.splice(0)
   written.mayDelete = mayDelete
-  written.rows.set('tournaments', [{ id: 't-empty', kind: 'king', status: 'active' }])
-  written.rows.set('matches', [getMockGame({ tournament_id: 't-empty', done: false })])
 
-  await createTournament('Partie rapide', ['Sam', 'Léo'], 11, 'game')
+  await endKingSession('t-empty', null)
 
   expect({ deleted: written.deleted, closed: written.updates.filter((u) => 'id' in u.where) }).toEqual({ deleted, closed })
-  written.rows.clear()
   written.mayDelete = false
 })
 
