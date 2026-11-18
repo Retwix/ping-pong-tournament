@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   deleteMatch,
+  endKingSession,
   getMatches,
   getTournament,
   recomputeRatings,
@@ -242,13 +243,18 @@ export function useTournament(id: string | null) {
     [writeTournament],
   )
 
-  /** King of the Ping: « Terminer » closes the session optimistically, crowning `champion`. */
+  /** King of the Ping: « Terminer » closes the session optimistically, crowning `champion`; with no champion it never happened, so it goes. */
   const endSession = useCallback(
-    (champion: string | null) =>
-      writeTournament({ status: 'done', champion }, (before) => ({
+    (champion: string | null) => {
+      const cur = tournamentRef.current
+      if (champion === null && cur) {
+        return endKingSession(cur.id, null).catch((e) => console.error('endKingSession failed', e))
+      }
+      return writeTournament({ status: 'done', champion }, (before) => ({
         status: before.status,
         champion: before.champion,
-      })),
+      }))
+    },
     [writeTournament],
   )
 
