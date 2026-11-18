@@ -58,12 +58,20 @@ export function crownsWhenAllMatchesDone(t: Pick<Tournament, 'kind' | 'format'>)
 
 const count = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`
 
+/** How a session is crowned: its longest reign and the games validated, nobody before a first game. */
+export function sessionCrown(
+  matches: ReadonlyArray<Match>,
+): { readonly champion: Reign; readonly games: number } | null {
+  const champion = longestReign(matches)
+  return champion && { champion, games: matches.filter((m) => m.done).length }
+}
+
 /** A finished session in one line: its champion, their reign, and how many games were played. */
 export function kingRecap(matches: ReadonlyArray<Match>): string | null {
-  const crown = longestReign(matches)
+  const crown = sessionCrown(matches)
   if (crown === null) return null
-  const games = matches.filter((m) => m.done).length
-  return `${crown.player} 👑 ${count(crown.wins, "victoire d'affilée", "victoires d'affilée")} · ${count(games, 'partie', 'parties')}`
+  const { champion, games } = crown
+  return `${champion.player} 👑 ${count(champion.wins, "victoire d'affilée", "victoires d'affilée")} · ${count(games, 'partie', 'parties')}`
 }
 
 /** What a session's home card says under its name: the recap once it is over, nothing while it runs. */

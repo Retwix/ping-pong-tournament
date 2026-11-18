@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Match } from '../types'
-import { afterGame, leaveTable, longestReign, type Rotation } from '../lib/king'
+import { afterGame, leaveTable, sessionCrown, type Rotation } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import { winnerLoser } from '../lib/stats'
 import AuSuivant from './AuSuivant'
@@ -30,12 +30,12 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
   const [editingFile, setEditingFile] = useState(false)
   const [leaving, setLeaving] = useState<string | null>(null)
   const game = matches[matches.length - 1]
-  const champion = longestReign(matches)
+  const crown = sessionCrown(matches)
   const end = () => {
-    onEnd(champion?.player ?? null)
-    if (!champion) onClose()
+    onEnd(crown?.champion.player ?? null)
+    if (!crown) onClose()
   }
-  if (ended && champion) return <KingCrown champion={champion} games={matches.filter((m) => m.done).length} look={look} onClose={onClose} />
+  if (ended && crown) return <KingCrown {...crown} look={look} onClose={onClose} />
   if (rotation.length < 2) return null
   if (!game || game.done) return <AuSuivant rotation={rotation} players={players} matches={matches} look={look} onNext={onNext} onEnd={end} onRotation={onRotation} />
 
