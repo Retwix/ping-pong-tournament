@@ -39,7 +39,13 @@ slice in order S1→S6, each commit green.
 - **Done when:** every acceptance example of every slice passes as a test; Stryker clean
   on the rotation/reign module; `npm run build` and `npm test` green; components
   screenshotted offline (never the dev server: it writes to prod).
-- Progress (2026-11-18): Steps 1–6 done, Step 7 part a done (e01baad..f21cde4).
+- Progress (2026-11-18): Steps 1–7 done, 8a done (last 9a2eba3). Step 7b shipped as a narrow
+  `setRotation` (no generic patchTournament: its rollback needs a cast). libelleFormat now
+  labels king « King of the Ping ». Step 8 split: (a) « Terminer » on Au suivant → onEnd(champion)
+  done; (b) props-driven `KingCrown` shown by KingTable when the session is done; (c) hook
+  `endSession` sharing a private writeTournament(patch, rollback) with setRotation, Board wiring
+  (8a uses a plain updateTournament), harness check. Also owed: an S1 test that a king match is
+  rated like any ranked 1v1 (ratedMatches).
   `lib/king.ts`: `nextGame`, `afterGame`, `longestReign`, `reignOf`,
   `crownsWhenAllMatchesDone`. `lib/db.ts`: `addKingGame(tid, rotation, played)` appends
   the next game (idx = played.length); `createTournament('king')` calls it with `[]`.
