@@ -9,7 +9,7 @@ import {
   updateTournament,
 } from '../lib/db'
 import { supabase } from '../lib/supabase'
-import { uniqueChannelName } from '../lib/realtimeChannel'
+import { watchTournament } from '../lib/tournamentChannel'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
 import { finishedSets, postsToSlack } from '../lib/sets'
@@ -23,12 +23,6 @@ import {
   type PendingValue,
 } from '../lib/realtimeSync'
 import type { Match, Tournament } from '../types'
-
-interface MatchChangePayload {
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
-  new: Match | Record<string, never>
-  old: Partial<Match>
-}
 
 // How often to refetch as a safety net against a silently dropped realtime event.
 const POLL_MS = 15000
@@ -123,42 +117,22 @@ export function useTournament(id: string | null) {
       }
     })()
 
-    const channel = supabase
-      .channel(uniqueChannelName(`tournament-${id}`))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${id}` },
-        (payload) => {
-          const p = payload as unknown as MatchChangePayload
-          if (p.eventType === 'DELETE') {
-            const delId = p.old.id
-            if (delId) clearPending(delId)
-            setMatches((prev) => prev.filter((m) => m.id !== delId))
-            return
-          }
-
-          const row = p.new as Match
-          const decision = reconcileEcho(pendingRef.current.get(row.id), row)
-          // Stale intermediate echo of our own write — ignore to avoid flicker.
-          if (decision === 'ignore') return
-          // Our latest write echoed back — settle so genuine remote updates flow.
-          if (decision === 'settle') clearPending(row.id)
-          setMatches((prev) => upsertSorted(prev, row))
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${id}` },
-        (payload) => {
-          if (payload.eventType === 'DELETE') return
-          setTournament(payload.new as Tournament)
-        },
-      )
-      .subscribe((status) => {
-        // On (re)subscribe, refetch to catch anything that changed while the
-        // socket was down (mobile backgrounding, wifi roam, projector sleep).
-        if (status === 'SUBSCRIBED') void reload()
-      })
+    const channel = watchTournament(id, {
+      onMatch: (row) => {
+        const decision = reconcileEcho(pendingRef.current.get(row.id), row)
+        // Stale intermediate echo of our own write — ignore to avoid flicker.
+        if (decision === 'ignore') return
+        // Our latest write echoed back — settle so genuine remote updates flow.
+        if (decision === 'settle') clearPending(row.id)
+        setMatches((prev) => upsertSorted(prev, row))
+      },
+      onMatchGone: (delId) => {
+        clearPending(delId)
+        setMatches((prev) => prev.filter((m) => m.id !== delId))
+      },
+      onTournament: setTournament,
+      onSubscribed: () => void reload(),
+    })
 
     // Safety net: realtime can silently drop an event under load, and mobile tabs
     // stop receiving while backgrounded. Refetch when the tab regains focus and on
