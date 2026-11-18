@@ -81,13 +81,16 @@ it('scores the game at the table, and on validation the winner holds it while th
   expect(rotations).toEqual([['Léo', 'Sam', 'Inès']])
 })
 
-it('calls up « Au suivant » once the last game is done, one tap starting the next', async () => {
-  const { screen, started } = renderKingTable({
+it('calls up « Au suivant » once the last game is done, where the File is edited and one tap starts the next', async () => {
+  const { screen, started, rotations } = renderKingTable({
     rotation: ['Inès', 'Léo', 'Sam'],
     matches: [getMockGame({ idx: 0, score_a: 7, score_b: 4, done: true })],
   })
 
   await expect.element(screen.getByRole('region', { name: 'le King' })).toHaveTextContent('Inès')
+  await screen.getByRole('button', { name: 'Retirer Sam' }).click()
+  expect(rotations).toEqual([['Inès', 'Léo']])
+
   await screen.getByRole('button', { name: 'Lancer la partie' }).click()
   expect(started).toEqual(['next'])
 })

@@ -43,6 +43,7 @@ it('calls up the King, their règne, Prochain and the File, and starts the next 
       look={() => ({ team: null, url: null })}
       onNext={() => started.push('next')}
       onEnd={() => {}}
+      onRotation={() => {}}
     />,
   )
 
@@ -55,8 +56,25 @@ it('calls up the King, their règne, Prochain and the File, and starts the next 
       .getByRole('listitem')
       .elements()
       .map((li) => li.textContent),
-  ).toEqual(['Sam', 'Léo'])
+  ).toEqual([expect.stringContaining('Sam'), expect.stringContaining('Léo')])
 
   await screen.getByRole('button', { name: 'Lancer la partie' }).click()
   expect(started).toEqual(['next'])
+})
+
+it('lets someone waiting in the File step out, leaving the table as it is', async () => {
+  const rotations: string[][] = []
+  const screen = render(
+    <AuSuivant
+      rotation={['Inès', 'Zoé', 'Sam', 'Léo']}
+      matches={[getMockGame()]}
+      look={() => ({ team: null, url: null })}
+      onNext={() => {}}
+      onEnd={() => {}}
+      onRotation={(rotation) => rotations.push([...rotation])}
+    />,
+  )
+
+  await screen.getByRole('button', { name: 'Retirer Sam' }).click()
+  expect(rotations).toEqual([['Inès', 'Zoé', 'Léo']])
 })
