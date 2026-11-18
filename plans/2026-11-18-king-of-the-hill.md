@@ -32,7 +32,65 @@ where a full tournament would leave them waiting or sitting out.
 ## Next
 
 Grilling confirmed 2026-11-18; split into slices the same day (below). The human asked
-to run `until-pr`. Next: declare destination + done for S1, then TDD it to a PR.
+to run `until-pr` and chose **one PR for all six slices** (2026-11-18), committed slice by
+slice in order S1→S6, each commit green.
+
+- **Destination:** one PR `king-of-the-hill` → `main` covering S1–S6, visual review up.
+- **Done when:** every acceptance example of every slice passes as a test; Stryker clean
+  on the rotation/reign module; `npm run build` and `npm test` green; components
+  screenshotted offline (never the dev server: it writes to prod).
+- Next step: Step 1 below.
+
+## Build notes (design settled 2026-11-18, not yet coded)
+
+- **No migration.** A session is `kind: 'king'` (`kind` is free text). Its `players`
+  column holds the **rotation**: the current roster in order `[King, Prochain, ...File]`.
+  At the very first game `[0]` is side a and `[1]` the challenger. Leavers drop out of
+  `players`; their games stay in `matches`. This replaces the persisted-File migration
+  S3 anticipated, so the PR has no database step (tell the human; they had accepted one).
+- **Games are appended** one at a time: `player_a = rotation[0]`, `player_b = rotation[1]`,
+  `serve_start: 'b'` (challenger serves, 17), `idx`/`round` = next after the last.
+- **On validation** (the scorer device only): rotation becomes
+  `[winner, ...rotation.slice(2), loser]`. The « Au suivant » screen shows when the last
+  match is done: King `[0]`, Prochain `[1]`, File `slice(2)`. One tap inserts the next.
+- **Reigns come from done matches in `idx` order**: a run of consecutive wins by one
+  player. An abandoned game (S4) is deleted, so it neither extends nor breaks a run.
+  Champion = longest run, tie to the run that reached that length first.
+- **Abandon (S4):** delete the in-progress match; rotation becomes `[stayer, ...File]`;
+  one player left ends the session.
+- **Traps found reading the code:**
+  - `useTournament`'s auto-crown effect marks a non-double-elim tournament done as soon
+    as every match is done, which a king session hits after each game: skip `'king'`.
+  - `postsToSlack` (`lib/sets.ts`) only checks `best_of`, so it says yes for a king
+    session: make it say no for `'king'` (16).
+  - Readers of `t.players` that would misread a rotation: `TournamentCard`,
+    `lib/parties.ts`, `lib/tournamentBoard.ts`, `Predictions`, `LiveView`,
+    `SpectatorView`, `Champion`.
+  - `Board.tsx` renders `kind === 'game'` specially and treats everything else as a
+    tournament; king needs its own branch.
+- **Testing shape:** rules in a pure `lib/king.ts` (node tests, Stryker). UI through
+  props-driven components in `*.browser.test.tsx` (`vi.mock` is broken in browser
+  tests). Board/hook wiring checked by rendering offline with `lib/db` and
+  `lib/supabase` stubbed, never against prod.
+- **Creation UI:** `NewMenu` gets « 👑 King of the Ping » → route `/king` →
+  `NouvellePartie` variant `'king'` (2+ players, target 5/7/11 default 7, the existing
+  « L'enjeu » control gives S6, no doubles, no Chaos, no sets). `lib/nouvellePartie.ts`
+  `recapitulatif` owns the validity/hint rule.
+
+## Steps (one commit each, TDD)
+
+1. `lib/king.ts`: first game from a shuffled roster (a v b, b serves).
+2. Rotation after a validated game (winner stays, loser to the back; 2-player case).
+3. Reigns: current King's run, session Record, champion with first-reached tie-break.
+4. `postsToSlack` false for king; auto-crown skips king (extract the rule if needed).
+5. `createTournament` path for `'king'` (one first match, no Slack invite).
+6. « Au suivant » props-driven component (King, règne, Prochain, File, start button).
+7. Board king branch: scorer → validation writes rotation → « Au suivant » → next game.
+8. « Terminer » + crown screen. 9. Creation UI (`/king`, menu item, recap rule, enjeu).
+10–12. S2: Parties card, new partie closes an open session, zero-game delete/hide.
+13–14. S3: join at back / leave from File (rotation edits), realtime already covers it.
+15. S4: abandon mid-game + auto-end at 1. 16. S5: king strip on /live and /tv.
+17. S6 check: unranked session moves no Elo.
 
 ## Slices
 
