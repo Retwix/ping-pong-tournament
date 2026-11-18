@@ -113,7 +113,7 @@ it('lets someone arriving join at the back of the File, offering only players no
 })
 
 it('lets the Prochain step out between games, the front of the File stepping up', async () => {
-  const rotations: string[][] = []
+  const events: string[] = []
   const screen = render(
     <AuSuivant
       rotation={['Inès', 'Zoé', 'Sam', 'Léo']}
@@ -121,11 +121,29 @@ it('lets the Prochain step out between games, the front of the File stepping up'
       matches={[getMockGame()]}
       look={() => ({ team: null, url: null })}
       onNext={() => {}}
-      onEnd={() => {}}
-      onRotation={(rotation) => rotations.push([...rotation])}
+      onEnd={() => events.push('end')}
+      onRotation={(rotation) => events.push(rotation.join(','))}
     />,
   )
 
   await screen.getByRole('button', { name: 'Retirer Zoé' }).click()
-  expect(rotations).toEqual([['Inès', 'Sam', 'Léo']])
+  expect(events).toEqual(['Inès,Sam,Léo'])
+})
+
+it('ends the session when the Prochain steps out and only the King is left', async () => {
+  const events: string[] = []
+  const screen = render(
+    <AuSuivant
+      rotation={['Inès', 'Zoé']}
+      players={[]}
+      matches={[getMockGame()]}
+      look={() => ({ team: null, url: null })}
+      onNext={() => {}}
+      onEnd={() => events.push('end')}
+      onRotation={(rotation) => events.push(rotation.join(','))}
+    />,
+  )
+
+  await screen.getByRole('button', { name: 'Retirer Zoé' }).click()
+  expect(events).toEqual(['Inès', 'end'])
 })

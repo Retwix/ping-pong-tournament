@@ -62,7 +62,11 @@ export default function AuSuivant({
             <button
               className="ks-file-leave"
               aria-label={`Retirer ${prochain}`}
-              onClick={() => onRotation(leaveTable(rotation, prochain))}
+              onClick={() => {
+                const left = leaveTable(rotation, prochain)
+                onRotation(left)
+                if (left.length === 1) onEnd()
+              }}
             >
               ✕
             </button>
