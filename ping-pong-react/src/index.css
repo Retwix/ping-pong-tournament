@@ -1209,6 +1209,71 @@ td.elo.neg { color: var(--coral); }
 .tv-step--2 .tv-step-bar { height: 90px; font-size: 30px; background: linear-gradient(180deg, #c7cdd6, #aeb6c0); }
 .tv-step--3 .tv-step-bar { height: 66px; font-size: 26px; background: linear-gradient(180deg, #d9a878, #cb8e5e); }
 
+/* --- King of the Ping: who holds the table, the Record, the File --- */
+.tv-king {
+  display: flex; align-items: stretch; gap: calc(14 * var(--u));
+  padding: calc(10 * var(--u)) calc(44 * var(--u)) calc(26 * var(--u));
+}
+.tv-king-cell {
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  min-width: 0; margin: 0; border-radius: 18px; padding: calc(12 * var(--u)) calc(22 * var(--u));
+  background: var(--surface); border: 1px solid #e8e4f2;
+  box-shadow: 0 10px 26px rgba(32, 10, 66, 0.08);
+}
+[data-theme='dark'] .tv-king-cell {
+  background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.12); box-shadow: none;
+}
+.tv-king-cell:first-child { border-color: rgba(240, 200, 75, 0.7); box-shadow: 0 10px 26px rgba(240, 200, 75, 0.2); }
+.tv-king-label {
+  font-weight: 800; font-size: max(10px, calc(12 * var(--u)));
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--tv-label);
+}
+.tv-king-cell:first-child .tv-king-label { color: #b8860b; }
+[data-theme='dark'] .tv-king-cell:first-child .tv-king-label { color: #f0c84b; }
+.tv-king-name {
+  font-weight: 900; font-size: max(16px, calc(26 * var(--u))); color: var(--tv-ink);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.tv-king-sub {
+  font-family: var(--font-body); font-weight: 700;
+  font-size: max(11px, calc(14 * var(--u))); color: var(--tv-muted);
+}
+.tv-king-file { flex: 1; }
+.tv-king-file ol {
+  list-style: none; margin: 4px 0 0; padding: 0; counter-reset: file;
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.tv-king-file li {
+  counter-increment: file; display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 800; font-size: max(13px, calc(18 * var(--u))); color: var(--tv-ink);
+  border-radius: 999px; padding: 5px 14px 5px 6px; background: rgba(74, 42, 164, 0.08);
+}
+[data-theme='dark'] .tv-king-file li { background: rgba(255, 255, 255, 0.08); }
+.tv-king-file li::before {
+  content: counter(file); display: inline-flex; align-items: center; justify-content: center;
+  width: 1.5em; height: 1.5em; border-radius: 50%; font-size: 0.75em;
+  background: var(--purple); color: #fff;
+}
+.tv--live .tv-avatar { flex-shrink: 0; }
+.tv-panels > .tv-king {
+  flex-direction: column; width: min(440px, 100%); padding: 0;
+}
+.tv-panels > .tv-king .tv-king-cell { padding: 22px 24px; }
+.tv-panels > .tv-king .tv-king-file { flex: 1; justify-content: flex-start; }
+
+/* --- King of the Ping over: the longest reign --- */
+.tv-crown {
+  margin: auto 0; display: flex; flex-direction: column; align-items: center;
+  gap: 10px; text-align: center; padding-top: 26px;
+}
+.tv-crown .tv-step-crown { margin-bottom: -6px; }
+.tv-crown .tv-step-avatar {
+  width: 96px; height: 96px; font-size: 34px;
+  border: 3px solid #f0c84b; box-shadow: 0 0 34px rgba(240, 200, 75, 0.5);
+}
+.tv-crown .tv-podium-title { font-size: 40px; }
+.tv-crown .tv-step-elo { color: #f0c84b; font-size: 16px; }
+
 /* --- end of tournament: the full classement, beside the podium --- */
 .tv-final {
   flex: 1; max-width: 620px; min-width: 0; min-height: min(520px, 74vh);
