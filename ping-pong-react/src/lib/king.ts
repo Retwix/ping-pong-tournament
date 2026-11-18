@@ -53,3 +53,13 @@ export function reignOf(matches: ReadonlyArray<Match>, king: string): number {
 export function crownsWhenAllMatchesDone(t: Pick<Tournament, 'kind' | 'format'>): boolean {
   return t.format !== 'double_elim' && t.kind !== 'king'
 }
+
+const count = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`
+
+/** A finished session in one line: its champion, their reign, and how many games were played. */
+export function kingRecap(matches: ReadonlyArray<Match>): string | null {
+  const crown = longestReign(matches)
+  if (crown === null) return null
+  const games = matches.filter((m) => m.done).length
+  return `${crown.player} 👑 ${count(crown.wins, "victoire d'affilée", "victoires d'affilée")} · ${count(games, 'partie', 'parties')}`
+}

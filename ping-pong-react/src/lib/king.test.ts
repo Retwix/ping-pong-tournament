@@ -1,5 +1,12 @@
 import { describe, expect, it, test } from 'vitest'
-import { afterGame, crownsWhenAllMatchesDone, longestReign, nextGame, reignOf } from './king'
+import {
+  afterGame,
+  crownsWhenAllMatchesDone,
+  kingRecap,
+  longestReign,
+  nextGame,
+  reignOf,
+} from './king'
 import type { Match, TournamentFormat, TournamentKind } from '../types'
 
 describe('nextGame', () => {
@@ -101,5 +108,26 @@ describe('crownsWhenAllMatchesDone', () => {
     { kind: 'king', format: 'round_robin', crowns: false },
   ])('a $format $kind crowns itself once every match is done: $crowns', ({ kind, format, crowns }) => {
     expect(crownsWhenAllMatchesDone({ kind, format })).toBe(crowns)
+  })
+})
+
+describe('kingRecap', () => {
+  test.for([
+    {
+      when: 'Inès reigned 3 over 5 games',
+      games: [bWins(0, 'Sam', 'Inès'), aWins(1, 'Inès', 'Léo'), aWins(2, 'Inès', 'Sam'), bWins(3, 'Inès', 'Léo'), aWins(4, 'Léo', 'Sam')],
+      recap: "Inès 👑 3 victoires d'affilée · 5 parties",
+    },
+    {
+      when: 'one game played, another left unfinished',
+      games: [aWins(0, 'Sam', 'Inès'), { ...aWins(1, 'Sam', 'Léo'), done: false }],
+      recap: "Sam 👑 1 victoire d'affilée · 1 partie",
+    },
+  ])('$when', ({ games, recap }) => {
+    expect(kingRecap(games)).toBe(recap)
+  })
+
+  it('has nothing to say before a game is played', () => {
+    expect(kingRecap([])).toBeNull()
   })
 })
