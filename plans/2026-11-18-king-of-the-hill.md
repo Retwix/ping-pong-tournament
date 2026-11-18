@@ -31,9 +31,111 @@ where a full tournament would leave them waiting or sitting out.
 
 ## Next
 
-Grilling confirmed 2026-11-18; the human asked to run `until-pr`. Next: `story-splitting`
-into end-to-end slices, pick the first (likely: create a session and play winner-stays
-games with a fixed queue, ranked), declare destination + done, then TDD to a PR.
+Grilling confirmed 2026-11-18; split into slices the same day (below). The human asked
+to run `until-pr`. Next: declare destination + done for S1, then TDD it to a PR.
+
+## Slices
+
+Parent: people at the office who only have a few minutes can drop into a running
+winner-stays session at the table, play ranked games while they are there, and leave
+without wrecking anyone else's game.
+
+Each slice ships to production on its own. S1 is the primitive whole; the order after it
+puts the core promise (come and go) before the presentation work.
+
+### S1 — Play a fixed-roster session, winner stays (first)
+
+- **Value:** a group can run King of the Ping today with whoever is in the room; every
+  game counts on the ladder. Proves the new kind runs end to end on the real path.
+- **Includes:** « King of the Ping » in « + Nouveau »; pick 2+ present players and a
+  target (5 / 7 / 11, default 7); the app shuffles; the first two play one set, win by 2,
+  challenger serves first (17). When a game is validated, the « Au suivant » screen
+  shows le King 👑 and their règne, Prochain and the File; one tap starts the next game
+  with the loser at the back (1, 11). « Terminer » (anyone) ends it and shows the crown:
+  longest reign, tie to whoever got there first (8, 9). Games are ranked 1v1s (2).
+- **Defers:** joining, leaving, editing the File, abandoning a game, auto-end at 1,
+  /live and TV strip, Parties card, « Non classée », a new partie closing the session,
+  deleting a zero-game session.
+- **Acceptance examples:**
+  - Given Léo, Inès, Sam picked and the shuffle gives Inès, Sam, Léo; when the session
+    starts, then Inès plays Sam and the File reads Léo; Sam (challenger) serves first.
+  - Given Inès beats Sam 7-4; then « Au suivant » shows Inès 👑 règne 1, Prochain Léo,
+    File Sam; one tap opens Inès v Léo with Léo serving.
+  - Given Inès won 2 in a row, then Léo won 2 in a row; when someone taps « Terminer »,
+    then Inès is crowned (2, reached first).
+  - Given a 7-5 win in a session; then both players' ratings move as for any ranked 1v1.
+  - Given two players only; the loser plays the winner again, over and over.
+- **Release constraint:** shippable. Until S2, a finished session shows in Parties with
+  the generic card and an unfinished one stays « En cours » after a new partie starts.
+- **Shape hint (for planning, not a decision):** `kind` is free text (no check
+  constraint), so a new kind needs no migration; with a fixed roster the File is
+  derivable from the shuffled `players` order plus the finished games, so S1 may need
+  no schema change at all. Matches are appended one at a time instead of up front.
+  /live picks the first undone match, so it should follow the session as games append:
+  check, don't assume.
+
+### S2 — See a session afterwards
+
+- **Value:** a finished session reads as one thing in history; no ghost sessions.
+- **Includes:** one Parties card per session: « King of the Ping », champion, reign
+  length, game count (14). Starting any new partie closes an open session and computes
+  its crown (9). A session ended with zero games is deleted when the person ending it is
+  a signed-in claimed player, otherwise stays done with no champion; Parties and stats
+  hide it (18).
+- **Defers:** an all-time « plus long règne » record (out of v1 per 14).
+- **Acceptance examples:** a session where Inès reigned 3 shows « Inès 👑 3 victoires
+  d'affilée · 5 parties »; starting a quick game while a session runs closes it with its
+  champion; « Terminer » before any game, anonymous, leaves no card in Parties.
+
+### S3 — Join and leave the File
+
+- **Value:** the core promise: someone arriving mid-session plays without a restart;
+  someone who has to go leaves without stopping anyone.
+- **Includes:** from « Au suivant » or the session screen on any phone (10): add a
+  player at the back of the File; remove anyone from the File (4). Realtime keeps every
+  open device in step.
+- **Defers:** removing a player who is at the table (S4).
+- **Acceptance examples:** Léo joins while Inès v Sam is on; after the game the File
+  ends with Léo. Sam leaves from the File and is never called up. Two phones on the
+  session both see the change without a reload.
+- **Likely needs:** a persisted roster/File (a column or rows): the File stops being
+  derivable once people come and go. A migration, verified on local Postgres first.
+
+### S4 — Leave the table mid-game
+
+- **Value:** a player called away mid-game doesn't leave the table stuck.
+- **Includes:** removing a player who is at the table abandons the game: nothing
+  recorded, no rating moves; the one who stays holds the table as King, even as the
+  challenger; the front of the File steps up (5). The abandoned game neither extends nor
+  breaks a reign (8). The session ends by itself when one player is left (7).
+- **Acceptance examples:** Inès v Sam at 4-3, Sam leaves: no match row survives, no
+  Elo change, Inès is King with her reign unchanged, Léo steps up. With only Inès and
+  Sam, Sam leaves: the session ends and the crown is computed.
+
+### S5 — Watch it on /live and the TV
+
+- **Value:** spectators see who holds the table and who is next.
+- **Includes:** the game in progress plus a king strip: le King and their règne, the
+  session Record, the File in order (13).
+
+### S6 — « Non classée » sessions
+
+- **Value:** a warm-up or newcomers' session leaves the ladder alone.
+- **Includes:** the « Non classée » toggle on the King of the Ping creation screen (2);
+  its games move no Elo and stay out of « Le classement », like an unranked game.
+- Small and independent; can ride along with any slice after S1.
+
+### Parking lot
+
+- An all-time « plus long règne » record (excluded from v1 by 14).
+- Doubles and Chaos for King of the Ping (excluded from v1 by 15).
+
+### Warnings
+
+- S1 ships with the generic Parties card (see its release constraint); S2 right after
+  keeps that window short.
+- S3 is where the data model changes; keep S1 from inventing a persisted File it
+  will not need.
 
 ## Decisions
 
