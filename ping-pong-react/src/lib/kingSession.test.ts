@@ -1,12 +1,12 @@
 import { expect, it, test, vi } from 'vitest'
-import { addKingGame, createTournament } from './db'
+import { addKingGame, createTournament, deleteMatch } from './db'
 import type { Match } from '../types'
 
 const written = vi.hoisted(() => ({
   rows: new Map<string, ReadonlyArray<object>>(),
   inserts: new Map<string, unknown>(),
   updates: new Array<{ where: Record<string, unknown>; patch: unknown }>(),
-  deleted: new Array<unknown>(),
+  deleted: new Array<{ from: string; id: unknown }>(),
   mayDelete: false,
   refuse: false,
 }))
@@ -32,10 +32,14 @@ vi.mock('./supabase', () => {
       },
     }),
     delete: () => ({
-      eq: (_key: string, id: unknown) => ({
+      eq: (key: string, id: unknown) => ({
         select: async () => {
-          if (written.mayDelete) written.deleted.push(id)
+          if (written.mayDelete) written.deleted.push({ from: table, id })
           return { data: written.mayDelete ? [{ id }] : [], error: null }
+        },
+        then: (done: (result: { error: null }) => unknown) => {
+          if (key === 'id') written.deleted.push({ from: table, id })
+          return done({ error: null })
         },
       }),
     }),
@@ -155,7 +159,7 @@ it('closes a King of the Ping session left open, crowning it, when any new parti
 
 test.for([
   { who: 'anyone', mayDelete: false, deleted: [], closed: [{ where: { id: 't-empty' }, patch: { status: 'done', champion: null } }] },
-  { who: 'a signed-in claimed player', mayDelete: true, deleted: ['t-empty'], closed: [] },
+  { who: 'a signed-in claimed player', mayDelete: true, deleted: [{ from: 'tournaments', id: 't-empty' }], closed: [] },
 ])('a session closed before any game, by $who, is deleted when the policy lets them', async ({ mayDelete, deleted, closed }) => {
   written.updates.splice(0)
   written.deleted.splice(0)
@@ -168,4 +172,12 @@ test.for([
   expect({ deleted: written.deleted, closed: written.updates.filter((u) => 'id' in u.where) }).toEqual({ deleted, closed })
   written.rows.clear()
   written.mayDelete = false
+})
+
+it('abandoning a game deletes its match, so nothing of it is recorded', async () => {
+  written.deleted.splice(0)
+
+  await deleteMatch('m-abandoned')
+
+  expect(written.deleted).toEqual([{ from: 'matches', id: 'm-abandoned' }])
 })
