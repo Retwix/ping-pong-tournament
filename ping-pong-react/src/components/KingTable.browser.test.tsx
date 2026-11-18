@@ -122,7 +122,7 @@ it('« Terminer » ends the session, crowning the longest reign, a tie going to 
 it('once the session has ended, crowns the longest reign with its wins in a row and the games played, then leaves', async () => {
   const { screen, closed } = renderKingTable({
     ended: true,
-    rotation: ['Sam', 'Inès', 'Léo'],
+    rotation: ['Sam'],
     matches: [
       getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 4, done: true }),
       getMockGame({ idx: 1, player_a: 'Inès', player_b: 'Léo', score_a: 7, score_b: 5, done: true }),
@@ -233,4 +233,10 @@ it('« Terminer » before any game was validated ends the session with nobody cr
   await screen.getByRole('button', { name: 'Terminer' }).click()
   expect(ended).toEqual([null])
   expect(closed).toEqual(['close'])
+})
+
+it('with one player left and nobody to crown, shows nothing rather than calling up a game it cannot make', async () => {
+  const { screen } = renderKingTable({ rotation: ['Inès'], matches: [] })
+
+  expect(screen.container).toBeEmptyDOMElement()
 })

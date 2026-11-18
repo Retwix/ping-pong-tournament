@@ -36,6 +36,7 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
     if (!champion) onClose()
   }
   if (ended && champion) return <KingCrown champion={champion} games={matches.length} look={look} onClose={onClose} />
+  if (rotation.length < 2) return null
   if (!game || game.done) return <AuSuivant rotation={rotation} players={players} matches={matches} look={look} onNext={onNext} onEnd={end} onRotation={onRotation} />
 
   const patchGame: Patch = (patch) => {
