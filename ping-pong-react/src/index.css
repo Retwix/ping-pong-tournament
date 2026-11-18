@@ -1589,6 +1589,41 @@ td.elo.neg { color: var(--coral); }
   font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #fff;
   padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.ks-file-leave {
+  border: none; cursor: pointer; width: 22px; height: 22px; border-radius: 50%; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff; background: rgba(255, 255, 255, 0.18);
+}
+.ks-file-leave:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.3); }
+.ks-join {
+  appearance: none; -webkit-appearance: none; cursor: pointer; margin: 18px auto 0; display: block;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #fff;
+  padding: 9px 18px; border-radius: 999px; background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.45); text-align: center;
+}
+.ks-join option { color: #1d1240; }
+
+.kt-file-btn {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 16px; z-index: 51;
+  height: 40px; padding: 0 14px; border: none; border-radius: 12px; cursor: pointer;
+  font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 0.04em;
+  color: #fff; background: rgba(255, 255, 255, 0.14);
+}
+.kt-file-btn:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.22); }
+.kt-sheet {
+  position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(10, 4, 30, 0.55);
+}
+.kt-sheet-panel {
+  width: min(100%, 560px); text-align: center; border-radius: 24px 24px 0 0;
+  padding: 22px 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  background: linear-gradient(165deg, #4a2aa4 0%, #3a2183 60%, #200a42 100%);
+}
+.kt-sheet-panel .tk-btn { margin-top: 22px; width: 100%; }
+@media (min-width: 900px) and (min-height: 501px) {
+  .kt-file-btn { top: auto; right: auto; bottom: 30px; left: 26px; color: var(--ref-btn-icon); background: var(--ref-btn-bg-desk); }
 }
 
 .tk-skull { font-size: 70px; animation: rvshake 0.4s infinite; }
