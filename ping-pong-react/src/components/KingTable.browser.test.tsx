@@ -359,3 +359,24 @@ it('mid-game, « Terminer » once confirmed drops the game in progress and crown
   expect(abandoned).toEqual([{ id: 'm-on', rotation: ['Inès', 'Léo', 'Sam'] }])
   expect(ended).toEqual(['Inès'])
 })
+
+it('closing the File sheet cancels a confirm left pending, so reopening it asks again', async () => {
+  await page.viewport(390, 700)
+  const { screen } = renderKingTable({
+    rotation: ['Inès', 'Léo', 'Sam'],
+    matches: [getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Léo', score_a: 2, score_b: 5 })],
+  })
+  const sheet = screen.getByRole('dialog', { name: 'File' })
+
+  await screen.getByRole('button', { name: 'File' }).click()
+  await sheet.getByRole('button', { name: 'Terminer', exact: true }).click()
+  await sheet.getByRole('button', { name: 'Retirer Léo' }).click()
+  await expect.element(sheet.getByRole('button', { name: 'Terminer la session' })).toBeVisible()
+  await expect.element(sheet.getByRole('button', { name: 'Abandonner la partie' })).toBeVisible()
+  await sheet.getByRole('button', { name: 'Fermer' }).click()
+
+  await screen.getByRole('button', { name: 'File' }).click()
+  await expect.element(sheet.getByRole('button', { name: 'Retirer Inès' })).toBeVisible()
+  expect(sheet.getByRole('button', { name: 'Terminer la session' }).query()).toBeNull()
+  expect(sheet.getByRole('button', { name: 'Abandonner la partie' }).query()).toBeNull()
+})

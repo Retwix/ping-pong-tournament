@@ -43,6 +43,11 @@ export default function KingTable({
   const [editingFile, setEditingFile] = useState(false)
   const [leaving, setLeaving] = useState<string | null>(null)
   const [ending, setEnding] = useState(false)
+  const closeSheet = () => {
+    setEditingFile(false)
+    setLeaving(null)
+    setEnding(false)
+  }
   const game = matches[matches.length - 1]
   const crown = sessionCrown(matches)
   const end = () => {
@@ -104,8 +109,7 @@ export default function KingTable({
                     <button
                       className="tk-btn"
                       onClick={() => {
-                        setEditingFile(false)
-                        setLeaving(null)
+                        closeSheet()
                         const left = leaveTable(rotation, leaving)
                         onAbandon(game.id, left)
                         if (left.length === 1) end()
@@ -133,7 +137,7 @@ export default function KingTable({
                 <button className="tk-btn tk-btn--ghost" onClick={() => setEnding(true)}>
                   Terminer
                 </button>
-                <button className="tk-btn tk-btn--ghost" onClick={() => setEditingFile(false)}>
+                <button className="tk-btn tk-btn--ghost" onClick={closeSheet}>
                   Fermer
                 </button>
               </div>
