@@ -7,6 +7,7 @@ import {
   endedWithoutAGame,
   joinFile,
   kingRecap,
+  leaveFile,
   longestReign,
   nextGame,
   reignOf,
@@ -189,5 +190,15 @@ describe('endedWithoutAGame', () => {
 describe('joinFile', () => {
   it('puts a newcomer at the back of the File', () => {
     expect(joinFile(['Inès', 'Sam', 'Zoé'], 'Léo')).toEqual(['Inès', 'Sam', 'Zoé', 'Léo'])
+  })
+})
+
+describe('leaveFile', () => {
+  test.for([
+    { when: 'someone waiting in the File', leaver: 'Zoé', next: ['Inès', 'Sam', 'Léo'] },
+    { when: 'the King, who is at the table', leaver: 'Inès', next: ['Inès', 'Sam', 'Zoé', 'Léo'] },
+    { when: 'the challenger, who is at the table', leaver: 'Sam', next: ['Inès', 'Sam', 'Zoé', 'Léo'] },
+  ])('$when: rotation becomes $next', ({ leaver, next }) => {
+    expect(leaveFile(['Inès', 'Sam', 'Zoé', 'Léo'], leaver)).toEqual(next)
   })
 })

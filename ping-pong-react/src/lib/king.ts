@@ -96,3 +96,8 @@ export function endedWithoutAGame(
 export function joinFile(rotation: Rotation, player: string): Rotation {
   return [...rotation, player]
 }
+
+/** Someone waiting in the File steps out; the two at the table stay (leaving mid-game is an abandon). */
+export function leaveFile(rotation: Rotation, player: string): Rotation {
+  return rotation.filter((name, i) => i < 2 || name !== player)
+}
