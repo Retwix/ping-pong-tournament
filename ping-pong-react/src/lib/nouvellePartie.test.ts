@@ -140,6 +140,26 @@ describe('récapitulatif — tournoi élimination directe', () => {
   })
 })
 
+describe('récapitulatif — King of the Ping', () => {
+  it('asks for at least 2 players while one is picked', () => {
+    expect(recapitulatif(getState({ variant: 'king', selected: ['Léo'], target: 7 }))).toEqual({
+      autoName: 'King of the Ping',
+      hint: 'Sélectionne au moins 2 joueurs.',
+      valid: false,
+    })
+  })
+
+  it('opens a session from 2 players, the winner staying at the table', () => {
+    expect(
+      recapitulatif(getState({ variant: 'king', selected: ['Léo', 'Inès'], target: 7 })),
+    ).toEqual({
+      autoName: 'King of the Ping',
+      hint: '2 joueurs · le gagnant reste · jeu en 7',
+      valid: true,
+    })
+  })
+})
+
 describe('estDoublon', () => {
   const registry = [getJoueur({ name: 'Léo' }), getJoueur({ name: 'Thibault' })]
 

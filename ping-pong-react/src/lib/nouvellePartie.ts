@@ -6,7 +6,7 @@ import type { PlayerStatus, TournamentFormat } from '../types'
 
 /** Everything the recap rail needs to know about the form, independent of the UI. */
 export interface CreationState {
-  variant: 'game' | 'tournament'
+  variant: 'game' | 'tournament' | 'king'
   /** Tournament format; ignored for quick games (always a single match). */
   format: TournamentFormat
   /** Names of the picked players, in pick order. */
@@ -41,6 +41,17 @@ export function recapitulatif(state: CreationState): Recapitulatif {
     return {
       autoName: valid ? matchup : n === 1 ? `${selected[0]} vs …` : 'Partie rapide',
       hint: valid ? `${matchup} · ${formatJeu(target, bestOf)}` : 'Choisis 2 joueurs.',
+      valid,
+    }
+  }
+
+  if (variant === 'king') {
+    const valid = n >= 2
+    return {
+      autoName: 'King of the Ping',
+      hint: valid
+        ? `${n} joueurs · le gagnant reste · ${formatJeu(target, 1)}`
+        : 'Sélectionne au moins 2 joueurs.',
       valid,
     }
   }
