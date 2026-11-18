@@ -8,10 +8,11 @@ interface Props {
   matches: ReadonlyArray<Match>
   look: LookUpPlayer
   onNext: () => void
+  onEnd: () => void
 }
 
 /** Between two King of the Ping games: who holds the table, who challenges, who waits. */
-export default function AuSuivant({ rotation, matches, look, onNext }: Props) {
+export default function AuSuivant({ rotation, matches, look, onNext, onEnd }: Props) {
   const [king, prochain, ...file] = rotation
   const reign = reignOf(matches, king)
   const kingLook = look(king)
@@ -52,6 +53,9 @@ export default function AuSuivant({ rotation, matches, look, onNext }: Props) {
         <div className="tk-actions">
           <button className="tk-btn tk-btn--primary" onClick={onNext}>
             Lancer la partie
+          </button>
+          <button className="tk-btn tk-btn--ghost" onClick={onEnd}>
+            Terminer
           </button>
         </div>
       </div>

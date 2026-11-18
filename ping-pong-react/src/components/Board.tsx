@@ -9,7 +9,7 @@ import {
 import { usePlayers } from '../hooks/usePlayers'
 import { useRatingDeltas } from '../hooks/useRatingDeltas'
 import { useTournament } from '../hooks/useTournament'
-import { addKingGame, createTournament } from '../lib/db'
+import { addKingGame, createTournament, updateTournament } from '../lib/db'
 import { chaosSettingsFromTournament } from '../lib/chaos'
 import { libelleFormat } from '../lib/format'
 import { sideBios } from '../lib/playerBio'
@@ -122,6 +122,11 @@ export default function Board({
         onNext={() => {
           addKingGame(tournament.id, tournament.players, matches).catch((e) =>
             console.error('addKingGame failed', e),
+          )
+        }}
+        onEnd={(champion) => {
+          updateTournament(tournament.id, { status: 'done', champion }).catch((e) =>
+            console.error('ending the session failed', e),
           )
         }}
         scorer={(match, onPatch) => (

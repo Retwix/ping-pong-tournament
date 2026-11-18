@@ -42,6 +42,7 @@ it('calls up the King, their règne, Prochain and the File, and starts the next 
       ]}
       look={() => ({ team: null, url: null })}
       onNext={() => started.push('next')}
+      onEnd={() => {}}
     />,
   )
 
