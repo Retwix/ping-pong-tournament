@@ -9,6 +9,7 @@ const written = vi.hoisted(() => ({
   deleted: new Array<{ from: string; id: unknown }>(),
   mayDelete: false,
   refuse: false,
+  failRead: false,
 }))
 
 vi.mock('./supabase', () => {
@@ -19,15 +20,30 @@ vi.mock('./supabase', () => {
   ]
   const field = (row: object, key: string): unknown =>
     Object.entries(row).find(([k]) => k === key)?.[1]
-  const selecting = (rows: ReadonlyArray<object>) => ({
-    eq: (key: string, value: unknown) => selecting(rows.filter((r) => field(r, key) === value)),
+  const selecting = (rows: ReadonlyArray<object>, table: string) => ({
+    eq: (key: string, value: unknown) =>
+      selecting(
+        rows.filter((r) => field(r, key) === value),
+        table,
+      ),
     in: (key: string, values: ReadonlyArray<unknown>) =>
-      selecting(rows.filter((r) => values.includes(field(r, key)))),
-    then: (done: (result: { data: ReadonlyArray<object>; error: null }) => unknown) =>
-      done({ data: rows, error: null }),
+      selecting(
+        rows.filter((r) => values.includes(field(r, key))),
+        table,
+      ),
+    then: (
+      done: (result: {
+        data: ReadonlyArray<object> | null
+        error: { message: string } | null
+      }) => unknown,
+    ) =>
+      written.failRead && table === 'tournaments'
+        ? done({ data: null, error: { message: 'unreachable' } })
+        : done({ data: rows, error: null }),
   })
   const from = (table: string) => ({
-    select: () => selecting(table === 'players' ? registry : (written.rows.get(table) ?? [])),
+    select: () =>
+      selecting(table === 'players' ? registry : (written.rows.get(table) ?? []), table),
     update: (patch: unknown) => ({
       eq: async (key: string, value: unknown) => {
         written.updates.push({ where: { [key]: value }, patch })
@@ -161,6 +177,17 @@ it('closes a King of the Ping session left open, crowning it, when any new parti
     { where: { id: 't-open' }, patch: { status: 'done', champion: 'Inès' } },
   ])
   written.rows.clear()
+})
+
+it('starts the new partie even when the open sessions could not be read to close them', async () => {
+  written.inserts.clear()
+  written.failRead = true
+  vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+  await createTournament('Partie rapide', ['Sam', 'Léo'], 11, 'game')
+
+  expect(written.inserts.get('tournaments')).toMatchObject({ kind: 'game', status: 'active' })
+  written.failRead = false
 })
 
 test.for([

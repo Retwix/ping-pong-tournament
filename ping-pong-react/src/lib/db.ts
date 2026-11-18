@@ -176,7 +176,7 @@ export async function createTournament(
   const { data: reg } = await supabase.from('players').select('id, name')
   const idByName = new Map<string, string>((reg ?? []).map((p) => [p.name, p.id]))
 
-  await closeOpenKingSessions()
+  await closeOpenKingSessions().catch((e) => console.error('closeOpenKingSessions failed', e))
 
   // Hand the "current" pointer to the new tournament: clear it everywhere first so
   // the partial unique index (at most one active) is never violated on insert.
