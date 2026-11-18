@@ -9,10 +9,12 @@ export function nextGame(rotation: Rotation): Pick<Match, 'player_a' | 'player_b
   return { player_a: rotation[0], player_b: rotation[1], serve_start: 'b' }
 }
 
+const otherAtTable = (rotation: Rotation, player: string): string =>
+  rotation[0] === player ? rotation[1] : rotation[0]
+
 /** Once the game at the table is validated: the winner holds it, the loser joins the back of the File. */
 export function afterGame(rotation: Rotation, winner: string): Rotation {
-  const loser = rotation[0] === winner ? rotation[1] : rotation[0]
-  return [winner, ...rotation.slice(2), loser]
+  return [winner, ...rotation.slice(2), otherAtTable(rotation, winner)]
 }
 
 /** A run of consecutive validated wins by one player: their « règne ». */
@@ -100,4 +102,9 @@ export function joinFile(rotation: Rotation, player: string): Rotation {
 /** Someone waiting in the File steps out; the two at the table stay (leaving mid-game is an abandon). */
 export function leaveFile(rotation: Rotation, player: string): Rotation {
   return rotation.filter((name, i) => i < 2 || name !== player)
+}
+
+/** Someone at the table leaves mid-game: the game is abandoned, whoever stays holds the table, the File steps up. */
+export function leaveTable(rotation: Rotation, player: string): Rotation {
+  return [otherAtTable(rotation, player), ...rotation.slice(2)]
 }

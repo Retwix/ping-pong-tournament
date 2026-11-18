@@ -8,6 +8,7 @@ import {
   joinFile,
   kingRecap,
   leaveFile,
+  leaveTable,
   longestReign,
   nextGame,
   reignOf,
@@ -200,5 +201,14 @@ describe('leaveFile', () => {
     { when: 'the challenger, who is at the table', leaver: 'Sam', next: ['Inès', 'Sam', 'Zoé', 'Léo'] },
   ])('$when: rotation becomes $next', ({ leaver, next }) => {
     expect(leaveFile(['Inès', 'Sam', 'Zoé', 'Léo'], leaver)).toEqual(next)
+  })
+})
+
+describe('leaveTable', () => {
+  test.for([
+    { when: 'the challenger leaves', leaver: 'Sam', next: ['Inès', 'Léo', 'Zoé'] },
+    { when: 'the King leaves', leaver: 'Inès', next: ['Sam', 'Léo', 'Zoé'] },
+  ])('$when mid-game: whoever stays holds the table, the File steps up, rotation becomes $next', ({ leaver, next }) => {
+    expect(leaveTable(['Inès', 'Sam', 'Léo', 'Zoé'], leaver)).toEqual(next)
   })
 })
