@@ -199,3 +199,11 @@ it('mid-game, someone at the table leaving abandons the game once confirmed, who
   await expect.element(sheet.getByRole('button', { name: 'Retirer Inès' })).toBeInTheDocument()
   expect(sheet.getByRole('button', { name: 'Abandonner la partie' }).query()).toBeNull()
 })
+
+it('with no game left after the only one was abandoned, calls up whoever holds the table for the next', async () => {
+  const { screen, started } = renderKingTable({ rotation: ['Inès', 'Léo'], matches: [] })
+
+  await expect.element(screen.getByRole('region', { name: 'le King' })).toHaveTextContent('Inès')
+  await screen.getByRole('button', { name: 'Lancer la partie' }).click()
+  expect(started).toEqual(['next'])
+})
