@@ -39,12 +39,18 @@ slice in order S1→S6, each commit green.
 - **Done when:** every acceptance example of every slice passes as a test; Stryker clean
   on the rotation/reign module; `npm run build` and `npm test` green; components
   screenshotted offline (never the dev server: it writes to prod).
-- Progress (2026-11-18): Steps 1–4 done (e01baad..1eb791e). `lib/king.ts` has `nextGame`,
-  `afterGame`, `longestReign` (Record/champion), `reignOf` (0 for a challenger left holding
-  the table, so S4 needs nothing new there), `crownsWhenAllMatchesDone` (hook uses it).
-  `TournamentKind` now includes `'king'`; `postsToSlack` takes `kind`.
-- Next step: Step 5. `lib/db.ts` has no tests; keep the king branch a thin call to
-  `nextGame` and prove it offline (stubbed supabase), never against prod.
+- Progress (2026-11-18): Steps 1–6 done, Step 7 part a done (e01baad..f21cde4).
+  `lib/king.ts`: `nextGame`, `afterGame`, `longestReign`, `reignOf`,
+  `crownsWhenAllMatchesDone`. `lib/db.ts`: `addKingGame(tid, rotation, played)` appends
+  the next game (idx = played.length); `createTournament('king')` calls it with `[]`.
+  `components/AuSuivant.tsx` (props: rotation, matches, look, onNext) is built.
+- Step 7 split: (b) `useTournament` gains an optimistic `patchTournament` (hooks are
+  untested in this repo; mirror patchMatch, verify by offline render); (c) props-driven
+  `KingTable` picks LiveScorer for the undone last game vs « Au suivant » when the last
+  is done, and at validation calls onRotation(afterGame(rotation, winner)) — scorer via a
+  render-prop seam so it's browser-testable; (d) Board's king branch wires it.
+- Not done, note in PR: two devices tapping « Lancer la partie » together could insert
+  two games (no unique index; accepted for v1).
 
 ## Build notes (design settled 2026-11-18, not yet coded)
 
