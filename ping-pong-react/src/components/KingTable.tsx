@@ -4,26 +4,31 @@ import { afterGame, longestReign, type Rotation } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import { winnerLoser } from '../lib/stats'
 import AuSuivant from './AuSuivant'
+import KingCrown from './KingCrown'
 
 type Patch = (patch: Partial<Match>) => void
 
 interface Props {
   rotation: Rotation
   matches: ReadonlyArray<Match>
+  ended: boolean
   look: LookUpPlayer
   onPatch: (matchId: string, patch: Partial<Match>) => void
   onRotation: (rotation: Rotation) => void
   onNext: () => void
   onEnd: (champion: string | null) => void
+  onClose: () => void
   scorer: (match: Match, onPatch: Patch) => ReactNode
 }
 
-/** A King of the Ping session at the table: the game being played, or « Au suivant » between games. */
-export default function KingTable({ rotation, matches, look, onPatch, onRotation, onNext, onEnd, scorer }: Props) {
+/** A King of the Ping session at the table: the game being played, « Au suivant » between games, the crown once it has ended. */
+export default function KingTable({ rotation, matches, ended, look, onPatch, onRotation, onNext, onEnd, onClose, scorer }: Props) {
   const game = matches[matches.length - 1]
   if (!game) return null
+  const champion = longestReign(matches)
+  if (ended && champion) return <KingCrown champion={champion} games={matches.length} look={look} onClose={onClose} />
   if (game.done) {
-    const end = () => onEnd(longestReign(matches)?.player ?? null)
+    const end = () => onEnd(champion?.player ?? null)
     return <AuSuivant rotation={rotation} matches={matches} look={look} onNext={onNext} onEnd={end} />
   }
 

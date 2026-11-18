@@ -116,6 +116,7 @@ export default function Board({
       <KingTable
         rotation={tournament.players}
         matches={matches}
+        ended={tournament.status === 'done'}
         look={look}
         onPatch={patchMatch}
         onRotation={setRotation}
@@ -129,6 +130,7 @@ export default function Board({
             console.error('ending the session failed', e),
           )
         }}
+        onClose={onBack}
         scorer={(match, onPatch) => (
           <LiveScorer
             match={match}
