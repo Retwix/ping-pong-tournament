@@ -71,7 +71,7 @@ const renderSession = (overrides: { rotation: ReadonlyArray<string>; matches: Ma
   )
 }
 
-it('beside the game in progress, shows who holds the table and their règne', async () => {
+it('beside the game in progress, shows who holds the table and their règne, and the session Record', async () => {
   const screen = renderSession({
     rotation: ['Sam', 'Nora', 'Inès', 'Léo'],
     matches: [
@@ -87,4 +87,20 @@ it('beside the game in progress, shows who holds the table and their règne', as
   const king = screen.getByRole('region', { name: 'le King' })
   await expect.element(king).toHaveTextContent('Sam')
   expect(king.element().textContent).toContain('2 victoires')
+
+  const record = screen.getByRole('region', { name: 'Record' })
+  expect(record.element().textContent).toContain('Inès')
+  expect(record.element().textContent).toContain('3 victoires')
+})
+
+it('on the first game of a session, shows the King with no règne yet and no Record', async () => {
+  const screen = renderSession({
+    rotation: ['Inès', 'Sam', 'Léo'],
+    matches: [getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 1, score_b: 0 })],
+  })
+
+  const king = screen.getByRole('region', { name: 'le King' })
+  await expect.element(king).toHaveTextContent('Inès')
+  expect(king.element().textContent).toContain('0 victoire')
+  expect(screen.getByRole('region', { name: 'Record' }).query()).toBeNull()
 })
