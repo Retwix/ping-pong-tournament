@@ -3,6 +3,7 @@ import {
   afterGame,
   crownsWhenAllMatchesDone,
   cardRecap,
+  closingCrowns,
   kingRecap,
   longestReign,
   nextGame,
@@ -148,5 +149,22 @@ describe('cardRecap', () => {
     { when: 'a quick game', t: session({ kind: 'game' }) },
   ])('has none for $when', ({ t }) => {
     expect(cardRecap(t, games)).toBeNull()
+  })
+})
+
+describe('closingCrowns', () => {
+  it('crowns each open session from its own validated games, nobody when it has none', () => {
+    const games = [
+      aWins(0, 'Inès', 'Sam'),
+      { ...aWins(0, 'Léo', 'Sam'), tournament_id: 't2' },
+      { ...aWins(1, 'Léo', 'Inès'), tournament_id: 't2' },
+      { ...aWins(0, 'Zoé', 'Sam'), tournament_id: 't3', done: false },
+    ]
+
+    expect(closingCrowns(['t1', 't2', 't3'], games)).toEqual([
+      { id: 't1', champion: 'Inès' },
+      { id: 't2', champion: 'Léo' },
+      { id: 't3', champion: null },
+    ])
   })
 })

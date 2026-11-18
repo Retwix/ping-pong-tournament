@@ -72,3 +72,14 @@ export function cardRecap(
   if (t.kind !== 'king' || t.status !== 'done') return null
   return kingRecap(matches.filter((m) => m.tournament_id === t.id))
 }
+
+/** Starting a new partie closes every open session: each is crowned from its own games, nobody when none was validated. */
+export function closingCrowns(
+  sessionIds: ReadonlyArray<string>,
+  matches: ReadonlyArray<Match>,
+): ReadonlyArray<{ readonly id: string; readonly champion: string | null }> {
+  return sessionIds.map((id) => ({
+    id,
+    champion: longestReign(matches.filter((m) => m.tournament_id === id))?.player ?? null,
+  }))
+}
