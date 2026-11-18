@@ -4,7 +4,7 @@ import { buildDoubleElim } from './doubleElim'
 import { RATING, ratedMatches, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
 import { avatarStoragePath, withCacheBuster } from './avatar'
-import { nextGame } from './king'
+import { nextGame, type Rotation } from './king'
 import type { Match, Player, PlayerStatus, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -210,6 +210,11 @@ export async function createTournament(
     .single()
   if (error) throw error
 
+  if (kind === 'king') {
+    await addKingGame(t.id, ordered, [])
+    return t.id as string
+  }
+
   const base = blankMatch(t.id)
   const rows: Omit<Match, 'id'>[] = []
 
@@ -231,16 +236,6 @@ export async function createTournament(
         lose_slot: r.lose_slot,
       })
     }
-  } else if (kind === 'king') {
-    const first = nextGame(ordered)
-    rows.push({
-      ...base,
-      ...first,
-      round: 1,
-      idx: 0,
-      player_a_id: idByName.get(first.player_a) ?? null,
-      player_b_id: idByName.get(first.player_b) ?? null,
-    })
   } else {
     let idx = 0
     generateSchedule(ordered).forEach((rd, ri) => {
@@ -263,6 +258,27 @@ export async function createTournament(
     if (mErr) throw mErr
   }
   return t.id as string
+}
+
+/** Calls the next King of the Ping game to the table, numbered after the games already played. */
+export async function addKingGame(
+  tournamentId: string,
+  rotation: Rotation,
+  played: ReadonlyArray<Match>,
+): Promise<void> {
+  const { data: reg } = await supabase.from('players').select('id, name')
+  const idByName = new Map<string, string>((reg ?? []).map((p) => [p.name, p.id]))
+  const game = nextGame(rotation)
+  const idx = played.length
+  const { error } = await supabase.from('matches').insert({
+    ...blankMatch(tournamentId),
+    ...game,
+    round: idx + 1,
+    idx,
+    player_a_id: idByName.get(game.player_a) ?? null,
+    player_b_id: idByName.get(game.player_b) ?? null,
+  })
+  if (error) throw error
 }
 
 export async function listTournaments(): Promise<Tournament[]> {
