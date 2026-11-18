@@ -181,7 +181,7 @@ it('keeps keys typed in the File sheet from reaching the scorer’s keyboard sho
 
 it('mid-game, someone at the table leaving abandons the game once confirmed, whoever stays holding the table', async () => {
   await page.viewport(390, 700)
-  const { screen, abandoned } = renderKingTable({
+  const { screen, abandoned, ended } = renderKingTable({
     rotation: ['Inès', 'Sam', 'Léo'],
     matches: [getMockGame({ id: 'm-on', player_a: 'Inès', player_b: 'Sam', score_a: 4, score_b: 3 })],
   })
@@ -193,6 +193,7 @@ it('mid-game, someone at the table leaving abandons the game once confirmed, who
 
   await sheet.getByRole('button', { name: 'Abandonner la partie' }).click()
   expect(abandoned).toEqual([{ id: 'm-on', rotation: ['Inès', 'Léo'] }])
+  expect(ended).toEqual([])
   await expect.element(sheet).not.toBeInTheDocument()
 
   await screen.getByRole('button', { name: 'File' }).click()
@@ -206,4 +207,21 @@ it('with no game left after the only one was abandoned, calls up whoever holds t
   await expect.element(screen.getByRole('region', { name: 'le King' })).toHaveTextContent('Inès')
   await screen.getByRole('button', { name: 'Lancer la partie' }).click()
   expect(started).toEqual(['next'])
+})
+
+it('when only one player is left at the table, the abandon ends the session and crowns the games already played', async () => {
+  await page.viewport(390, 700)
+  const { screen, abandoned, ended } = renderKingTable({
+    rotation: ['Inès', 'Sam'],
+    matches: [
+      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 4, done: true }),
+      getMockGame({ idx: 1, id: 'm-on', player_a: 'Inès', player_b: 'Sam', score_a: 2, score_b: 5 }),
+    ],
+  })
+
+  await screen.getByRole('button', { name: 'File' }).click()
+  await screen.getByRole('button', { name: 'Retirer Inès' }).click()
+  await screen.getByRole('button', { name: 'Abandonner la partie' }).click()
+  expect(abandoned).toEqual([{ id: 'm-on', rotation: ['Sam'] }])
+  expect(ended).toEqual(['Inès'])
 })

@@ -31,11 +31,9 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
   const [leaving, setLeaving] = useState<string | null>(null)
   const game = matches[matches.length - 1]
   const champion = longestReign(matches)
+  const end = () => onEnd(champion?.player ?? null)
   if (ended && champion) return <KingCrown champion={champion} games={matches.length} look={look} onClose={onClose} />
-  if (!game || game.done) {
-    const end = () => onEnd(champion?.player ?? null)
-    return <AuSuivant rotation={rotation} players={players} matches={matches} look={look} onNext={onNext} onEnd={end} onRotation={onRotation} />
-  }
+  if (!game || game.done) return <AuSuivant rotation={rotation} players={players} matches={matches} look={look} onNext={onNext} onEnd={end} onRotation={onRotation} />
 
   const patchGame: Patch = (patch) => {
     onPatch(game.id, patch)
@@ -75,7 +73,9 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
                       onClick={() => {
                         setEditingFile(false)
                         setLeaving(null)
-                        onAbandon(game.id, leaveTable(rotation, leaving))
+                        const left = leaveTable(rotation, leaving)
+                        onAbandon(game.id, left)
+                        if (left.length === 1) end()
                       }}
                     >
                       Abandonner la partie
