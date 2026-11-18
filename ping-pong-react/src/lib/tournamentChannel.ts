@@ -25,10 +25,13 @@ export function watchTournament(id: string, events: TournamentEvents): RealtimeC
       { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${id}` },
       (payload) => {
         const p = payload as unknown as MatchChangePayload
-        if (p.eventType !== 'DELETE') return events.onMatch(p.new as Match)
-        if (p.old.id) events.onMatchGone(p.old.id)
+        if (p.eventType !== 'DELETE') events.onMatch(p.new as Match)
       },
     )
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'matches' }, (payload) => {
+      const p = payload as unknown as MatchChangePayload
+      if (p.old.id) events.onMatchGone(p.old.id)
+    })
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${id}` },
