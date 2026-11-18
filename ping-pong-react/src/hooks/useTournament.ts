@@ -11,7 +11,7 @@ import { uniqueChannelName } from '../lib/realtimeChannel'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
 import { finishedSets, postsToSlack } from '../lib/sets'
-import { crownsWhenAllMatchesDone } from '../lib/king'
+import { crownsWhenAllMatchesDone, type Rotation } from '../lib/king'
 import { reconcileBracket } from '../lib/doubleElim'
 import {
   mergeWithPending,
@@ -52,6 +52,8 @@ export function useTournament(id: string | null) {
   // Latest state read of `matches` (for computing optimistic merges synchronously).
   const matchesRef = useRef<Match[]>([])
   matchesRef.current = matches
+  const tournamentRef = useRef<Tournament | null>(null)
+  tournamentRef.current = tournament
 
   // matchId -> the latest value we optimistically wrote, awaiting its own echo.
   const pendingRef = useRef<Map<string, PendingValue>>(new Map())
@@ -217,6 +219,21 @@ export function useTournament(id: string | null) {
     [markPending, clearPending],
   )
 
+  /** King of the Ping: write the new rotation optimistically, with retry and rollback. */
+  const setRotation = useCallback(async (rotation: Rotation) => {
+    const cur = tournamentRef.current
+    if (!cur) return
+    const players = [...rotation]
+    setTournament((prev) => (prev ? { ...prev, players } : prev))
+    try {
+      await withRetry(() => updateTournament(cur.id, { players }))
+      setError(null)
+    } catch (e) {
+      setTournament((prev) => (prev ? { ...prev, players: cur.players } : prev))
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }, [])
+
   // Double-elimination advancement. Whenever matches change, reconcile the
   // bracket: fill slots that just resolved, auto-complete walkovers, and crown
   // the grand-final winner. `reconcileBracket` only writes still-pending slots,
@@ -276,5 +293,5 @@ export function useTournament(id: string | null) {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [matches, tournament])
 
-  return { tournament, matches, loading, error, patchMatch, reload }
+  return { tournament, matches, loading, error, patchMatch, setRotation, reload }
 }
