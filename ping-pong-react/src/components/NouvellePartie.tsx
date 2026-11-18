@@ -536,7 +536,7 @@ export default function NouvellePartie({
 
       <div className="np-grid np-in">
         <div className="np-form">
-          {!isGame && (
+          {variant === 'tournament' && (
             <>
               <section className="np-card">
                 <div className="np-label">Nom du tournoi</div>
@@ -884,16 +884,18 @@ export default function NouvellePartie({
                     {v}
                   </button>
                 ))}
-                <label className={`np-autre${autre !== '' ? ' active' : ''}`}>
-                  <span>autre</span>
-                  <input
-                    value={autre}
-                    inputMode="numeric"
-                    placeholder="—"
-                    onChange={(e) => setAutre(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
-                    aria-label="Autre score cible"
-                  />
-                </label>
+                {!isKing && (
+                  <label className={`np-autre${autre !== '' ? ' active' : ''}`}>
+                    <span>autre</span>
+                    <input
+                      value={autre}
+                      inputMode="numeric"
+                      placeholder="—"
+                      onChange={(e) => setAutre(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                      aria-label="Autre score cible"
+                    />
+                  </label>
+                )}
               </div>
             </div>
             {isGame && (
@@ -918,114 +920,119 @@ export default function NouvellePartie({
             )}
           </section>
 
-          <section className="np-card">
-            <div className="np-chaos-head">
-              <span className="np-icon-tile">
-                <IconSparkles size={18} stroke={2} />
-              </span>
-              <div className="np-chaos-text">
-                <h2 className="np-card-title">Mode chaos</h2>
-                <p className="np-card-desc">
-                  Des modificateurs tirés au sort pendant la partie — le fun avant la compétition.
-                </p>
-              </div>
-              {chaos.enabled && (
-                <button className="np-cfg" onClick={() => setChaosOpen((o) => !o)}>
-                  {chaosOpen ? 'Masquer' : 'Configurer'}
-                </button>
-              )}
-              <button
-                role="switch"
-                aria-checked={chaos.enabled}
-                aria-label="Activer le mode chaos"
-                className={`np-sw${chaos.enabled ? ' on' : ''}`}
-                onClick={() => {
-                  setChaosOpen(!chaos.enabled)
-                  setChaos((c) => ({ ...c, enabled: !c.enabled }))
-                }}
-              >
-                <span className="np-sw-knob" />
-              </button>
-            </div>
-
-            {chaos.enabled && chaosOpen && (
-              <div className="np-chaos-body">
-                <div className="np-chaos-row">
-                  <span className="np-chaos-lbl">Fréquence des tirages</span>
-                  <div className="np-chaos-chips">
-                    {(
-                      [
-                        [1, 'Chaque point'],
-                        [2, 'Tous les 2'],
-                        [3, 'Tous les 3'],
-                      ] as const
-                    ).map(([v, label]) => (
-                      <button
-                        key={v}
-                        className={`np-chip-sm${chaos.interval === v ? ' active' : ''}`}
-                        onClick={() => setChaos((c) => ({ ...c, interval: v }))}
-                      >
-                        {label}
-                      </button>
-                    ))}
+          {!isKing && (
+            <>
+              <section className="np-card">
+                <div className="np-chaos-head">
+                  <span className="np-icon-tile">
+                    <IconSparkles size={18} stroke={2} />
+                  </span>
+                  <div className="np-chaos-text">
+                    <h2 className="np-card-title">Mode chaos</h2>
+                    <p className="np-card-desc">
+                      Des modificateurs tirés au sort pendant la partie — le fun avant la
+                      compétition.
+                    </p>
                   </div>
+                  {chaos.enabled && (
+                    <button className="np-cfg" onClick={() => setChaosOpen((o) => !o)}>
+                      {chaosOpen ? 'Masquer' : 'Configurer'}
+                    </button>
+                  )}
+                  <button
+                    role="switch"
+                    aria-checked={chaos.enabled}
+                    aria-label="Activer le mode chaos"
+                    className={`np-sw${chaos.enabled ? ' on' : ''}`}
+                    onClick={() => {
+                      setChaosOpen(!chaos.enabled)
+                      setChaos((c) => ({ ...c, enabled: !c.enabled }))
+                    }}
+                  >
+                    <span className="np-sw-knob" />
+                  </button>
                 </div>
 
-                <div>
-                  <span className="np-chaos-lbl">Intensité</span>
-                  <div className="np-inten">
+                {chaos.enabled && chaosOpen && (
+                  <div className="np-chaos-body">
+                    <div className="np-chaos-row">
+                      <span className="np-chaos-lbl">Fréquence des tirages</span>
+                      <div className="np-chaos-chips">
+                        {(
+                          [
+                            [1, 'Chaque point'],
+                            [2, 'Tous les 2'],
+                            [3, 'Tous les 3'],
+                          ] as const
+                        ).map(([v, label]) => (
+                          <button
+                            key={v}
+                            className={`np-chip-sm${chaos.interval === v ? ' active' : ''}`}
+                            onClick={() => setChaos((c) => ({ ...c, interval: v }))}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="np-chaos-lbl">Intensité</span>
+                      <div className="np-inten">
+                        <button
+                          className={`np-inten-card${chaos.intensity === 'mild' ? ' active' : ''}`}
+                          onClick={() => setChaos((c) => ({ ...c, intensity: 'mild' }))}
+                        >
+                          <span className="np-inten-title">Modéré</span>
+                          <span className="np-inten-desc">
+                            Que des bonus. Rien de méchant, juste rigolo.
+                          </span>
+                        </button>
+                        <button
+                          className={`np-inten-card${chaos.intensity === 'full' ? ' active' : ''}`}
+                          onClick={() => setChaos((c) => ({ ...c, intensity: 'full' }))}
+                        >
+                          <span className="np-inten-title">Chaos total</span>
+                          <span className="np-inten-desc">Bonus et malus. Tout peut arriver.</span>
+                        </button>
+                      </div>
+                    </div>
+
                     <button
-                      className={`np-inten-card${chaos.intensity === 'mild' ? ' active' : ''}`}
-                      onClick={() => setChaos((c) => ({ ...c, intensity: 'mild' }))}
+                      className="np-legend"
+                      aria-pressed={chaos.legendary}
+                      onClick={() => setChaos((c) => ({ ...c, legendary: !c.legendary }))}
                     >
-                      <span className="np-inten-title">Modéré</span>
-                      <span className="np-inten-desc">
-                        Que des bonus. Rien de méchant, juste rigolo.
+                      <span className="np-legend-text">
+                        <span className="np-legend-title">Modificateurs légendaires</span>
+                        <span className="np-legend-desc">Rares, spectaculaires.</span>
+                      </span>
+                      <span className={`np-sw np-sw-sm${chaos.legendary ? ' on' : ''}`}>
+                        <span className="np-sw-knob" />
                       </span>
                     </button>
-                    <button
-                      className={`np-inten-card${chaos.intensity === 'full' ? ' active' : ''}`}
-                      onClick={() => setChaos((c) => ({ ...c, intensity: 'full' }))}
-                    >
-                      <span className="np-inten-title">Chaos total</span>
-                      <span className="np-inten-desc">Bonus et malus. Tout peut arriver.</span>
-                    </button>
                   </div>
+                )}
+              </section>
+
+              <section className="np-card np-heure">
+                <span className="np-icon-tile">
+                  <IconClock size={18} stroke={2} />
+                </span>
+                <div className="np-heure-text">
+                  <h2 className="np-card-title">
+                    Heure <span className="np-opt">optionnel · pour l’invitation</span>
+                  </h2>
+                  <p className="np-card-desc">
+                    L’invitation Slack part à la création ; l’heure s’affiche aussi sur l’affiche.
+                  </p>
                 </div>
-
-                <button
-                  className="np-legend"
-                  aria-pressed={chaos.legendary}
-                  onClick={() => setChaos((c) => ({ ...c, legendary: !c.legendary }))}
-                >
-                  <span className="np-legend-text">
-                    <span className="np-legend-title">Modificateurs légendaires</span>
-                    <span className="np-legend-desc">Rares, spectaculaires.</span>
-                  </span>
-                  <span className={`np-sw np-sw-sm${chaos.legendary ? ' on' : ''}`}>
-                    <span className="np-sw-knob" />
-                  </span>
-                </button>
-              </div>
-            )}
-          </section>
-
-          <section className="np-card np-heure">
-            <span className="np-icon-tile">
-              <IconClock size={18} stroke={2} />
-            </span>
-            <div className="np-heure-text">
-              <h2 className="np-card-title">
-                Heure <span className="np-opt">optionnel · pour l’invitation</span>
-              </h2>
-              <p className="np-card-desc">
-                L’invitation Slack part à la création ; l’heure s’affiche aussi sur l’affiche.
-              </p>
-            </div>
-            <label className="np-field np-time">
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-            </label>
-          </section>
+                <label className="np-field np-time">
+                  <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                </label>
+              </section>
+            </>
+          )}
         </div>
 
         <div className="np-rail">
@@ -1096,24 +1103,26 @@ export default function NouvellePartie({
               >
                 {ctaLabel}
               </button>
-              <button
-                className={`np-poster${posterBusy ? ' busy' : canPoster ? '' : ' off'}`}
-                title={
-                  canPoster
-                    ? undefined
-                    : isHasard
-                      ? 'Les équipes sont tirées au sort au lancement.'
-                      : 'Choisis d’abord les joueurs'
-                }
-                onClick={downloadPoster}
-              >
-                {!posterBusy && <IconDownload size={16} stroke={2.1} />}
-                {posterBusy
-                  ? 'Génération…'
-                  : isGame
-                    ? 'Télécharger le défi (PNG)'
-                    : 'Télécharger l’affiche (PNG)'}
-              </button>
+              {!isKing && (
+                <button
+                  className={`np-poster${posterBusy ? ' busy' : canPoster ? '' : ' off'}`}
+                  title={
+                    canPoster
+                      ? undefined
+                      : isHasard
+                        ? 'Les équipes sont tirées au sort au lancement.'
+                        : 'Choisis d’abord les joueurs'
+                  }
+                  onClick={downloadPoster}
+                >
+                  {!posterBusy && <IconDownload size={16} stroke={2.1} />}
+                  {posterBusy
+                    ? 'Génération…'
+                    : isGame
+                      ? 'Télécharger le défi (PNG)'
+                      : 'Télécharger l’affiche (PNG)'}
+                </button>
+              )}
             </div>
 
             <div className="np-rule">{ruleHint}</div>
