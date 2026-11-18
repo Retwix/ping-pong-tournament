@@ -219,20 +219,27 @@ export function useTournament(id: string | null) {
     [markPending, clearPending],
   )
 
+  const writeTournament = useCallback(
+    async (patch: Partial<Tournament>, rollback: (before: Tournament) => Partial<Tournament>) => {
+      const cur = tournamentRef.current
+      if (!cur) return
+      setTournament((prev) => (prev ? { ...prev, ...patch } : prev))
+      try {
+        await withRetry(() => updateTournament(cur.id, patch))
+        setError(null)
+      } catch (e) {
+        setTournament((prev) => (prev ? { ...prev, ...rollback(cur) } : prev))
+        setError(e instanceof Error ? e.message : String(e))
+      }
+    },
+    [],
+  )
+
   /** King of the Ping: write the new rotation optimistically, with retry and rollback. */
-  const setRotation = useCallback(async (rotation: Rotation) => {
-    const cur = tournamentRef.current
-    if (!cur) return
-    const players = [...rotation]
-    setTournament((prev) => (prev ? { ...prev, players } : prev))
-    try {
-      await withRetry(() => updateTournament(cur.id, { players }))
-      setError(null)
-    } catch (e) {
-      setTournament((prev) => (prev ? { ...prev, players: cur.players } : prev))
-      setError(e instanceof Error ? e.message : String(e))
-    }
-  }, [])
+  const setRotation = useCallback(
+    (rotation: Rotation) => writeTournament({ players: [...rotation] }, (before) => ({ players: before.players })),
+    [writeTournament],
+  )
 
   // Double-elimination advancement. Whenever matches change, reconcile the
   // bracket: fill slots that just resolved, auto-complete walkovers, and crown
