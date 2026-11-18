@@ -262,7 +262,10 @@ export async function createTournament(
   return t.id as string
 }
 
-/** A new partie ends any King of the Ping session still open, crowning it from its games. */
+/**
+ * A new partie ends any King of the Ping session still open, crowning it from its games.
+ * One without a validated game is deleted when the delete policy lets the closer, else ends uncrowned.
+ */
 async function closeOpenKingSessions(): Promise<void> {
   const { data: open, error } = await supabase
     .from('tournaments')
@@ -277,9 +280,10 @@ async function closeOpenKingSessions(): Promise<void> {
     .in('tournament_id', ids)
   if (gamesErr) throw gamesErr
   await Promise.all(
-    closingCrowns(ids, (games ?? []) as Match[]).map(({ id, champion }) =>
-      updateTournament(id, { status: 'done', champion }),
-    ),
+    closingCrowns(ids, (games ?? []) as Match[]).map(({ id, champion }) => {
+      const close = () => updateTournament(id, { status: 'done', champion })
+      return champion === null ? deleteTournament(id).catch(close) : close()
+    }),
   )
 }
 

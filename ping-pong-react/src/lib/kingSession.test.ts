@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest'
+import { expect, it, test, vi } from 'vitest'
 import { addKingGame, createTournament } from './db'
 import type { Match } from '../types'
 
@@ -6,6 +6,8 @@ const written = vi.hoisted(() => ({
   rows: new Map<string, ReadonlyArray<object>>(),
   inserts: new Map<string, unknown>(),
   updates: new Array<{ where: Record<string, unknown>; patch: unknown }>(),
+  deleted: new Array<unknown>(),
+  mayDelete: false,
   refuse: false,
 }))
 
@@ -28,6 +30,14 @@ vi.mock('./supabase', () => {
         written.updates.push({ where: { [key]: value }, patch })
         return { error: null }
       },
+    }),
+    delete: () => ({
+      eq: (_key: string, id: unknown) => ({
+        select: async () => {
+          if (written.mayDelete) written.deleted.push(id)
+          return { data: written.mayDelete ? [{ id }] : [], error: null }
+        },
+      }),
     }),
     insert: (row: unknown) => {
       written.inserts.set(table, row)
@@ -123,6 +133,7 @@ it('reports a next game the database refused, rather than leaving the table empt
 })
 
 it('closes a King of the Ping session left open, crowning it, when any new partie starts', async () => {
+  written.updates.splice(0)
   written.rows.set('tournaments', [
     { id: 't-open', kind: 'king', status: 'active' },
     { id: 't-ended', kind: 'king', status: 'done' },
@@ -140,4 +151,21 @@ it('closes a King of the Ping session left open, crowning it, when any new parti
     { where: { id: 't-open' }, patch: { status: 'done', champion: 'Inès' } },
   ])
   written.rows.clear()
+})
+
+test.for([
+  { who: 'anyone', mayDelete: false, deleted: [], closed: [{ where: { id: 't-empty' }, patch: { status: 'done', champion: null } }] },
+  { who: 'a signed-in claimed player', mayDelete: true, deleted: ['t-empty'], closed: [] },
+])('a session closed before any game, by $who, is deleted when the policy lets them', async ({ mayDelete, deleted, closed }) => {
+  written.updates.splice(0)
+  written.deleted.splice(0)
+  written.mayDelete = mayDelete
+  written.rows.set('tournaments', [{ id: 't-empty', kind: 'king', status: 'active' }])
+  written.rows.set('matches', [getMockGame({ tournament_id: 't-empty', done: false })])
+
+  await createTournament('Partie rapide', ['Sam', 'Léo'], 11, 'game')
+
+  expect({ deleted: written.deleted, closed: written.updates.filter((u) => 'id' in u.where) }).toEqual({ deleted, closed })
+  written.rows.clear()
+  written.mayDelete = false
 })
