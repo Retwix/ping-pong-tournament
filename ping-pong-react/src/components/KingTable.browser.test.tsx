@@ -119,7 +119,7 @@ it('« Terminer » ends the session, crowning the longest reign, a tie going to 
   expect(closed).toEqual([])
 })
 
-it('once the session has ended, crowns the longest reign with its wins in a row and the games played, then leaves', async () => {
+it('once the session has ended, crowns the longest reign with its wins in a row and the games validated, then leaves', async () => {
   const { screen, closed } = renderKingTable({
     ended: true,
     rotation: ['Sam'],
@@ -129,6 +129,7 @@ it('once the session has ended, crowns the longest reign with its wins in a row 
       getMockGame({ idx: 2, player_a: 'Inès', player_b: 'Léo', score_a: 3, score_b: 7, done: true }),
       getMockGame({ idx: 3, player_a: 'Léo', player_b: 'Sam', score_a: 7, score_b: 2, done: true }),
       getMockGame({ idx: 4, player_a: 'Léo', player_b: 'Sam', score_a: 1, score_b: 7, done: true }),
+      getMockGame({ idx: 5, player_a: 'Sam', player_b: 'Inès', score_a: 3, score_b: 2 }),
     ],
   })
 
