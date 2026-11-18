@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import Board from './components/Board'
+import Brand from './components/Brand'
 import CurrentView from './components/CurrentView'
 import Home from './components/Home'
 import LiveView from './components/LiveView'
 import TvView from './components/TvView'
+import WorkspaceRefusal from './components/WorkspaceRefusal'
 import Parties from './components/Parties'
 import Players from './components/Players'
 import Ratings from './components/Ratings'
@@ -55,7 +57,7 @@ function ConfigError() {
       <header>
         <div className="kicker">Configuration requise</div>
         <h1>
-          Ping-Pong <span className="em">Recovr</span>
+          <Brand org={null} />
         </h1>
       </header>
       <div className="error-banner">
@@ -182,5 +184,10 @@ export default function App() {
     return () => window.removeEventListener('popstate', onNavigate)
   }, [])
 
-  return renderRoute(route)
+  return (
+    <>
+      <WorkspaceRefusal />
+      {renderRoute(route)}
+    </>
+  )
 }

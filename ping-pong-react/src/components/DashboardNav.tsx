@@ -1,4 +1,6 @@
 import { IconPingPong } from '@tabler/icons-react'
+import { useSession } from '../hooks/useSession'
+import Brand from './Brand'
 import NewMenu from './NewMenu'
 import SlackSignIn from './SlackSignIn'
 import ThemeToggle from './ThemeToggle'
@@ -37,6 +39,7 @@ export default function DashboardNav({
   onNew,
   onNewGame,
 }: Props) {
+  const { org } = useSession()
   const tabs: Array<{ id: DashboardPage; onClick?: () => void }> = [
     { id: 'home', onClick: onHome },
     { id: 'classement', onClick: onClassement },
@@ -51,7 +54,7 @@ export default function DashboardNav({
           <IconPingPong size={20} stroke={2.2} color="#fff" />
         </span>
         <span className="rv-nav-word">
-          Tournoi <span className="em">ping-pong</span>
+          <Brand org={org} />
         </span>
       </div>
       <div className="rv-nav-links">
