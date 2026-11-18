@@ -1,7 +1,7 @@
 # Plan: W1 — Recovr becomes a company
 
 **Branch**: make-it-worldwide
-**Status**: Approved 2026-11-09. Steps 1–6 done 2026-11-10 (the `feat(orgs)` commits on this branch); step 7 (production, with the human) left. Live renders done: signed-in TV through the real `useSession` reads "Ping-Pong · Recovr"; the refusal banner at 390px in both themes, URL cleaned. The seed's team_id is the placeholder `T_RECOVR_TEAM_ID` until step 7. Harness applies every migration twice.
+**Status**: Approved 2026-11-09. Steps 1–6 done 2026-11-10 (the `feat(orgs)` commits on this branch); step 7 (production, with the human) left. Live renders done: signed-in TV through the real `useSession` reads "Ping-Pong · Recovr"; the refusal banner at 390px in both themes, URL cleaned. Step 7.1 done 2026-11-18: the seed carries Recovr's real team_id. Harness applies every migration twice.
 **Parent**: `plans/2026-11-09-make-it-worldwide.md` (decisions 1–17, story W1)
 
 ## Goal
@@ -115,6 +115,7 @@ Existing RLS behaviour (the open reads, the delete guard) is unchanged.
 **Acceptance criteria**, done with the human:
 1. Read Recovr's `team_id` from production with `select distinct identity_data->'custom_claims'->>'https://slack.com/team_id' from auth.identities`, and put it in the migration's seed.
    Also count Slack identities without the key (`... where identity_data->'custom_claims'->>'https://slack.com/team_id' is null`). The hook reads it on every refresh, so any such identity would be refused, signed out, once the hook is on. Non-zero: stop and decide before step 4.
+   **Done 2026-11-18**: the query, run by the human in the production SQL editor and grouped by team_id, returned one row, `T8AH00RHN`, with 6 Slack identities and none without the key. The seed now uses it, and the SQL harness passes with it.
 2. Snapshot (the backups-repo dump) before applying.
 3. Apply `orgs-migration.sql` in the SQL editor, then re-check from the catalog that `org_id` is not null everywhere and that no row has a null org.
 4. Enable the hook in Auth → Hooks → Customize Access Token.

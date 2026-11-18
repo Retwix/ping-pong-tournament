@@ -30,7 +30,7 @@ create or replace function public.recovr_org_id() returns uuid
   language sql immutable as $$ select '7ec0c0de-0000-4000-8000-000000000001'::uuid $$;
 
 insert into public.orgs (id, slack_team_id, name)
-values (public.recovr_org_id(), 'T_RECOVR_TEAM_ID', 'Recovr')
+values (public.recovr_org_id(), 'T8AH00RHN', 'Recovr')
 on conflict (id) do nothing;
 
 -- The org named in the caller's token; null when signed out.
