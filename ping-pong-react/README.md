@@ -33,6 +33,16 @@ npm install
    - **Project URL**
    - **anon public** key
 
+### Testing the SQL
+
+`scripts/test-sql.sh` proves policies, triggers and migrations against a plain
+Postgres before they reach Supabase. It creates a scratch database, stubs what
+Supabase provides (`supabase/tests/supabase-stubs.sql`), applies `schema.sql`
+and every migration in order, runs `supabase/tests/*.test.sql` (each in a
+rolled-back transaction) and drops the database. It connects with the usual
+`PG*` variables, so a local Homebrew Postgres needs none. A new migration goes
+into the script's `migrations` list. CI runs it in the `sql` job.
+
 ## 3. Add your keys
 
 ```bash
