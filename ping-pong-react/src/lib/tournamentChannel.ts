@@ -13,6 +13,7 @@ interface TournamentEvents {
   onMatch: (row: Match) => void
   onMatchGone: (id: string) => void
   onTournament: (row: Tournament) => void
+  onTournamentGone: () => void
   onSubscribed: () => void
 }
 
@@ -38,6 +39,13 @@ export function watchTournament(id: string, events: TournamentEvents): RealtimeC
       (payload) => {
         if (payload.eventType === 'DELETE') return
         events.onTournament(payload.new as Tournament)
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'tournaments' },
+      (payload) => {
+        if (payload.old.id === id) events.onTournamentGone()
       },
     )
     .subscribe((status) => {

@@ -49,10 +49,28 @@ it('a game deleted on another device, abandoned at the table, leaves this one to
     onMatch: () => undefined,
     onMatchGone: (id) => gone.push(id),
     onTournament: () => undefined,
+    onTournamentGone: () => undefined,
     onSubscribed: () => undefined,
   })
 
   emit({ table: 'matches', eventType: 'DELETE', new: {}, old: { id: 'm-on' } })
 
   expect(gone).toEqual(['m-on'])
+})
+
+it('the session deleted on another device is reported here, and no other tournament’s deletion is', () => {
+  const gone: string[] = []
+  watchTournament('t-king', {
+    onMatch: () => undefined,
+    onMatchGone: () => undefined,
+    onTournament: () => undefined,
+    onTournamentGone: () => gone.push('t-king'),
+    onSubscribed: () => undefined,
+  })
+
+  emit({ table: 'tournaments', eventType: 'DELETE', new: {}, old: { id: 't-other' } })
+  expect(gone).toEqual([])
+
+  emit({ table: 'tournaments', eventType: 'DELETE', new: {}, old: { id: 't-king' } })
+  expect(gone).toEqual(['t-king'])
 })

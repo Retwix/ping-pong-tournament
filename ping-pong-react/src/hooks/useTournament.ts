@@ -131,6 +131,7 @@ export function useTournament(id: string | null) {
         setMatches((prev) => prev.filter((m) => m.id !== delId))
       },
       onTournament: setTournament,
+      onTournamentGone: () => void reload(),
       onSubscribed: () => void reload(),
     })
 
