@@ -5,12 +5,13 @@ import type { Tournament } from '../types'
 
 interface Props {
   tournament: Tournament
+  recap?: string | null
   onOpen: (id: string) => void
   onDelete: (e: MouseEvent, id: string, name: string) => void
 }
 
 /** A single tournament/game card in the "Tes tournois & parties" row. Click to open, trash to delete. */
-export default function TournamentCard({ tournament: t, onOpen, onDelete }: Props) {
+export default function TournamentCard({ tournament: t, recap, onOpen, onDelete }: Props) {
   const winner = t.kind === 'game' && t.status === 'done' ? t.champion : null
   const split = winner ? splitOnWinner(t.name, winner) : null
   const isLive = t.status !== 'done'
@@ -43,10 +44,15 @@ export default function TournamentCard({ tournament: t, onOpen, onDelete }: Prop
         )}
       </div>
       <div className="rv-t-meta">
-        {t.kind === 'game' ? 'Partie' : `Tournoi · ${t.players.length} joueurs`} · jeu en {t.target}{' '}
+        {t.kind === 'game'
+          ? 'Partie'
+          : t.kind === 'king'
+            ? 'Session'
+            : `Tournoi · ${t.players.length} joueurs`} · jeu en {t.target}{' '}
         · {new Date(t.created_at).toLocaleDateString('fr-FR')}
       </div>
       {winner && !split && <div className="rv-t-winner-line">🏆 {winner}</div>}
+      {recap && <div className="rv-t-winner-line">{recap}</div>}
     </div>
   )
 }
