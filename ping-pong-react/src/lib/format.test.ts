@@ -92,6 +92,12 @@ describe('libelleFormat', () => {
       'Élimination directe',
     )
   })
+
+  it('labels a King of the Ping session as its mode, whatever its stored format', () => {
+    expect(libelleFormat({ kind: 'king', format: 'round_robin', doubles: false })).toBe(
+      'King of the Ping',
+    )
+  })
 })
 
 describe('departureLabel', () => {

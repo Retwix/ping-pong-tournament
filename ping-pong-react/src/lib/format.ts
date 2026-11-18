@@ -6,6 +6,7 @@ import type { Tournament } from '../types'
  */
 export function libelleFormat(t: Pick<Tournament, 'kind' | 'format' | 'doubles'>): string {
   if (t.kind === 'game') return t.doubles ? 'Partie rapide · Double' : 'Partie rapide'
+  if (t.kind === 'king') return 'King of the Ping'
   return t.format === 'double_elim' ? 'Élimination directe' : 'Round-robin'
 }
 
