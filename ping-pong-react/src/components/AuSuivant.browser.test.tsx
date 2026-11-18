@@ -1,0 +1,61 @@
+import { expect, it } from 'vitest'
+import { render } from 'vitest-browser-react'
+import AuSuivant from './AuSuivant'
+import type { Match } from '../types'
+import '../index.css'
+
+const getMockGame = (overrides?: Partial<Match>): Match => ({
+  id: `m${overrides?.idx ?? 0}`,
+  tournament_id: 't1',
+  round: 1,
+  idx: 0,
+  player_a: 'Inès',
+  player_b: 'Sam',
+  player_a_id: null,
+  player_b_id: null,
+  score_a: 7,
+  score_b: 4,
+  done: true,
+  serve_start: 'b',
+  started_at: null,
+  ended_at: null,
+  bracket: null,
+  match_key: null,
+  win_to: null,
+  win_slot: null,
+  lose_to: null,
+  lose_slot: null,
+  bye: false,
+  mb_saved_a: 0,
+  mb_saved_b: 0,
+  ...overrides,
+})
+
+it('calls up the King, their règne, Prochain and the File, and starts the next game on one tap', async () => {
+  const started: string[] = []
+  const screen = render(
+    <AuSuivant
+      rotation={['Inès', 'Zoé', 'Sam', 'Léo']}
+      matches={[
+        getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam' }),
+        getMockGame({ idx: 1, player_a: 'Inès', player_b: 'Léo' }),
+      ]}
+      look={() => ({ team: null, url: null })}
+      onNext={() => started.push('next')}
+    />,
+  )
+
+  await expect.element(screen.getByRole('region', { name: 'le King' })).toHaveTextContent('Inès')
+  expect(screen.getByRole('region', { name: 'le King' }).element().textContent).toContain('2 victoires')
+  expect(screen.getByRole('region', { name: 'Prochain' }).element().textContent).toContain('Zoé')
+  expect(
+    screen
+      .getByRole('list', { name: 'File' })
+      .getByRole('listitem')
+      .elements()
+      .map((li) => li.textContent),
+  ).toEqual(['Sam', 'Léo'])
+
+  await screen.getByRole('button', { name: 'Lancer la partie' }).click()
+  expect(started).toEqual(['next'])
+})

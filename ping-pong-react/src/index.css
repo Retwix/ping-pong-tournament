@@ -1572,6 +1572,24 @@ td.elo.neg { color: var(--coral); }
 .tk-sets tr + tr th, .tk-sets tr + tr td { opacity: 0.6; }
 .tk-actions { display: flex; gap: 12px; margin-top: 28px; width: 100%; max-width: 420px; justify-content: center; }
 .tk-actions .tk-btn { flex: 0 1 auto; padding: 14px 30px; font-size: 15px; border-radius: 14px; }
+.ks-king { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+.ks-reign {
+  font-family: var(--font-body); font-weight: 800; font-size: 15px; color: #f0c84b; margin-top: 8px;
+}
+.ks-label {
+  font-family: var(--font-display); font-weight: 800; font-size: 11px; letter-spacing: 0.24em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px;
+}
+.ks-prochain { margin-top: 26px; }
+.ks-file { margin-top: 22px; }
+.ks-file ol {
+  list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+}
+.ks-file li {
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #fff;
+  padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
 
 .tk-skull { font-size: 70px; animation: rvshake 0.4s infinite; }
 .tk-capot-title {
