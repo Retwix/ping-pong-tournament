@@ -63,3 +63,12 @@ export function kingRecap(matches: ReadonlyArray<Match>): string | null {
   const games = matches.filter((m) => m.done).length
   return `${crown.player} 👑 ${count(crown.wins, "victoire d'affilée", "victoires d'affilée")} · ${count(games, 'partie', 'parties')}`
 }
+
+/** What a session's home card says under its name: the recap once it is over, nothing while it runs. */
+export function cardRecap(
+  t: Pick<Tournament, 'id' | 'kind' | 'status'>,
+  matches: ReadonlyArray<Match>,
+): string | null {
+  if (t.kind !== 'king' || t.status !== 'done') return null
+  return kingRecap(matches.filter((m) => m.tournament_id === t.id))
+}

@@ -2,12 +2,15 @@ import { describe, expect, it, test } from 'vitest'
 import {
   afterGame,
   crownsWhenAllMatchesDone,
+  cardRecap,
   kingRecap,
   longestReign,
   nextGame,
   reignOf,
 } from './king'
-import type { Match, TournamentFormat, TournamentKind } from '../types'
+import type { Match, Tournament, TournamentFormat, TournamentKind } from '../types'
+
+type KingCard = Pick<Tournament, 'id' | 'kind' | 'status'>
 
 describe('nextGame', () => {
   it('puts the first two of the rotation at the table, the challenger serving', () => {
@@ -129,5 +132,21 @@ describe('kingRecap', () => {
 
   it('has nothing to say before a game is played', () => {
     expect(kingRecap([])).toBeNull()
+  })
+})
+
+describe('cardRecap', () => {
+  const session = (over?: Partial<KingCard>): KingCard => ({ id: 't1', kind: 'king', status: 'done', ...over })
+  const games = [aWins(0, 'Inès', 'Sam'), { ...aWins(1, 'Léo', 'Sam'), tournament_id: 't2' }]
+
+  it("recaps a finished session from its own games only", () => {
+    expect(cardRecap(session(), games)).toBe("Inès 👑 1 victoire d'affilée · 1 partie")
+  })
+
+  test.for([
+    { when: 'a session still running', t: session({ status: 'active' }) },
+    { when: 'a quick game', t: session({ kind: 'game' }) },
+  ])('has none for $when', ({ t }) => {
+    expect(cardRecap(t, games)).toBeNull()
   })
 })
