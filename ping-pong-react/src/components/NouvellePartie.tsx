@@ -1,7 +1,6 @@
 import {
   IconAlertCircle,
   IconArrowsShuffle,
-  IconBolt,
   IconCheck,
   IconCirclePlus,
   IconClock,
@@ -12,7 +11,6 @@ import {
   IconSearch,
   IconSparkles,
   IconTournament,
-  IconTrophy,
   IconX,
 } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -47,6 +45,7 @@ import { TEAMS, teamBadgeStyle, teamColor, teamLabel, type TeamKey } from '../li
 import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
 import type { TournamentFormat, TournamentKind } from '../types'
 import Avatar from './Avatar'
+import KindSwitch from './KindSwitch'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import { Loader } from './Loader'
@@ -502,22 +501,7 @@ export default function NouvellePartie({
                   : 'Choisis un format, ajoute les joueurs, le tableau se génère.'}
             </p>
           </div>
-          <div className="np-seg">
-            <button
-              className={`np-seg-btn${isGame ? ' active' : ''}`}
-              onClick={isGame ? undefined : onNewGame}
-            >
-              <IconBolt size={15} stroke={2} />
-              Partie rapide
-            </button>
-            <button
-              className={`np-seg-btn${isGame ? '' : ' active'}`}
-              onClick={isGame ? onNew : undefined}
-            >
-              <IconTrophy size={15} stroke={2} />
-              Tournoi
-            </button>
-          </div>
+          <KindSwitch variant={variant} onNew={onNew} onNewGame={onNewGame} />
         </div>
       </div>
 
