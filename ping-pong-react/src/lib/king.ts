@@ -91,3 +91,8 @@ export function endedWithoutAGame(
 ): boolean {
   return t.kind === 'king' && t.status === 'done' && !matches.some((m) => m.tournament_id === t.id && m.done)
 }
+
+/** Someone arriving joins at the back of the File. */
+export function joinFile(rotation: Rotation, player: string): Rotation {
+  return [...rotation, player]
+}

@@ -5,6 +5,7 @@ import {
   cardRecap,
   closingCrowns,
   endedWithoutAGame,
+  joinFile,
   kingRecap,
   longestReign,
   nextGame,
@@ -182,5 +183,11 @@ describe('endedWithoutAGame', () => {
     { when: 'a finished tournament', t: session({ kind: 'tournament' }), games: [], hidden: false },
   ])('$when: hidden $hidden', ({ t, games, hidden }) => {
     expect(endedWithoutAGame(t, games)).toBe(hidden)
+  })
+})
+
+describe('joinFile', () => {
+  it('puts a newcomer at the back of the File', () => {
+    expect(joinFile(['Inès', 'Sam', 'Zoé'], 'Léo')).toEqual(['Inès', 'Sam', 'Zoé', 'Léo'])
   })
 })
