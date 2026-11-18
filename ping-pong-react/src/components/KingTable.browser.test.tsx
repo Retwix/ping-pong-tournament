@@ -325,3 +325,37 @@ it('a session ended elsewhere with nobody crowned reads as over here, not as a g
   await screen.getByRole('button', { name: 'Accueil' }).click()
   expect(closed).toEqual(['close'])
 })
+
+it('mid-game, « Terminer » once confirmed drops the game in progress and crowns the games already validated', async () => {
+  await page.viewport(390, 700)
+  const { screen, abandoned, ended } = renderKingTable({
+    rotation: ['Inès', 'Léo', 'Sam'],
+    matches: [
+      getMockGame({
+        idx: 0,
+        player_a: 'Inès',
+        player_b: 'Sam',
+        score_a: 7,
+        score_b: 4,
+        done: true,
+      }),
+      getMockGame({
+        idx: 1,
+        id: 'm-on',
+        player_a: 'Inès',
+        player_b: 'Léo',
+        score_a: 2,
+        score_b: 5,
+      }),
+    ],
+  })
+
+  await screen.getByRole('button', { name: 'File' }).click()
+  expect(screen.getByRole('button', { name: 'Terminer la session' }).query()).toBeNull()
+  await screen.getByRole('button', { name: 'Terminer', exact: true }).click()
+  expect(abandoned).toEqual([])
+
+  await screen.getByRole('button', { name: 'Terminer la session' }).click()
+  expect(abandoned).toEqual([{ id: 'm-on', rotation: ['Inès', 'Léo', 'Sam'] }])
+  expect(ended).toEqual(['Inès'])
+})

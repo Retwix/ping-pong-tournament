@@ -42,6 +42,7 @@ export default function KingTable({
 }: Props) {
   const [editingFile, setEditingFile] = useState(false)
   const [leaving, setLeaving] = useState<string | null>(null)
+  const [ending, setEnding] = useState(false)
   const game = matches[matches.length - 1]
   const crown = sessionCrown(matches)
   const end = () => {
@@ -114,7 +115,24 @@ export default function KingTable({
                     </button>
                   </div>
                 )}
+                {ending && (
+                  <div className="kt-abandon">
+                    <p>La partie en cours s’arrête, rien n’en est compté.</p>
+                    <button
+                      className="tk-btn"
+                      onClick={() => {
+                        onAbandon(game.id, rotation)
+                        end()
+                      }}
+                    >
+                      Terminer la session
+                    </button>
+                  </div>
+                )}
                 <KingFile rotation={rotation} players={players} onRotation={onRotation} />
+                <button className="tk-btn tk-btn--ghost" onClick={() => setEnding(true)}>
+                  Terminer
+                </button>
                 <button className="tk-btn tk-btn--ghost" onClick={() => setEditingFile(false)}>
                   Fermer
                 </button>
