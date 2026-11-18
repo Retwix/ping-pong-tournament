@@ -39,7 +39,12 @@ slice in order S1→S6, each commit green.
 - **Done when:** every acceptance example of every slice passes as a test; Stryker clean
   on the rotation/reign module; `npm run build` and `npm test` green; components
   screenshotted offline (never the dev server: it writes to prod).
-- Next step: Step 1 below.
+- Progress (2026-11-18): Steps 1–4 done (e01baad..1eb791e). `lib/king.ts` has `nextGame`,
+  `afterGame`, `longestReign` (Record/champion), `reignOf` (0 for a challenger left holding
+  the table, so S4 needs nothing new there), `crownsWhenAllMatchesDone` (hook uses it).
+  `TournamentKind` now includes `'king'`; `postsToSlack` takes `kind`.
+- Next step: Step 5. `lib/db.ts` has no tests; keep the king branch a thin call to
+  `nextGame` and prove it offline (stubbed supabase), never against prod.
 
 ## Build notes (design settled 2026-11-18, not yet coded)
 
