@@ -1,6 +1,6 @@
 import { describe, expect, it, test } from 'vitest'
-import { afterGame, longestReign, nextGame, reignOf } from './king'
-import type { Match } from '../types'
+import { afterGame, crownsWhenAllMatchesDone, longestReign, nextGame, reignOf } from './king'
+import type { Match, TournamentFormat, TournamentKind } from '../types'
 
 describe('nextGame', () => {
   it('puts the first two of the rotation at the table, the challenger serving', () => {
@@ -91,5 +91,15 @@ describe('reignOf', () => {
     { when: 'a challenger left holding the table', games: [aWins(0, 'Inès', 'Sam')], king: 'Léo', wins: 0 },
   ])('$when: règne $wins', ({ games, king, wins }) => {
     expect(reignOf(games, king)).toBe(wins)
+  })
+})
+
+describe('crownsWhenAllMatchesDone', () => {
+  test.for<{ kind: TournamentKind; format: TournamentFormat; crowns: boolean }>([
+    { kind: 'tournament', format: 'round_robin', crowns: true },
+    { kind: 'tournament', format: 'double_elim', crowns: false },
+    { kind: 'king', format: 'round_robin', crowns: false },
+  ])('a $format $kind crowns itself once every match is done: $crowns', ({ kind, format, crowns }) => {
+    expect(crownsWhenAllMatchesDone({ kind, format })).toBe(crowns)
   })
 })

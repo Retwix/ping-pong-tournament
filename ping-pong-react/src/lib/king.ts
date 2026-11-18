@@ -1,4 +1,4 @@
-import type { Match } from '../types'
+import type { Match, Tournament } from '../types'
 import { winnerLoser } from './stats'
 
 /** King of the Ping: the rotation is the session's roster in order, `[King, Prochain, ...File]`. */
@@ -43,4 +43,13 @@ export function reignOf(matches: ReadonlyArray<Match>, king: string): number {
   const all = streaks(matches)
   const last = all[all.length - 1]
   return last?.player === king ? last.wins : 0
+}
+
+/**
+ * Whether a party is over as soon as every match in it is done. A double-elim
+ * bracket crowns its grand-final winner instead, and a King of the Ping session
+ * is between games each time its last match is done: it ends on « Terminer ».
+ */
+export function crownsWhenAllMatchesDone(t: Pick<Tournament, 'kind' | 'format'>): boolean {
+  return t.format !== 'double_elim' && t.kind !== 'king'
 }

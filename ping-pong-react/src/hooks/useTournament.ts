@@ -11,6 +11,7 @@ import { uniqueChannelName } from '../lib/realtimeChannel'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
 import { finishedSets, postsToSlack } from '../lib/sets'
+import { crownsWhenAllMatchesDone } from '../lib/king'
 import { reconcileBracket } from '../lib/doubleElim'
 import {
   mergeWithPending,
@@ -258,11 +259,11 @@ export function useTournament(id: string | null) {
     }
   }, [matches, tournament])
 
-  // Auto-crown the champion once every match is finished. Round-robin only —
-  // double elimination crowns its grand-final winner in the effect above.
+  // Auto-crown the champion once every match is finished (round-robin parties
+  // only: see crownsWhenAllMatchesDone).
   useEffect(() => {
     if (!tournament || tournament.status === 'done') return
-    if (tournament.format === 'double_elim') return
+    if (!crownsWhenAllMatchesDone(tournament)) return
     if (!matches.length || !matches.every((m) => m.done)) return
     const champ = computeStandings(tournament.players, matches)[0]?.name ?? null
     setTournament((prev) => (prev ? { ...prev, status: 'done', champion: champ } : prev))
