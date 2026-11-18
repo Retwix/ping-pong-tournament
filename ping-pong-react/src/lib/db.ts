@@ -4,6 +4,7 @@ import { buildDoubleElim } from './doubleElim'
 import { RATING, ratedMatches, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
 import { avatarStoragePath, withCacheBuster } from './avatar'
+import { nextGame } from './king'
 import type { Match, Player, PlayerStatus, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -150,7 +151,9 @@ function blankMatch(
 /**
  * Create a tournament (or a single game) + its matches. A `game` is a single
  * round-robin match. Tournaments are either round-robin (everyone plays everyone)
- * or a double-elimination bracket, per `format`. Returns the new id.
+ * or a double-elimination bracket, per `format`. A King of the Ping session stores
+ * its shuffled rotation as `players` and starts with its first game only.
+ * Returns the new id.
  */
 export async function createTournament(
   name: string,
@@ -228,6 +231,16 @@ export async function createTournament(
         lose_slot: r.lose_slot,
       })
     }
+  } else if (kind === 'king') {
+    const first = nextGame(ordered)
+    rows.push({
+      ...base,
+      ...first,
+      round: 1,
+      idx: 0,
+      player_a_id: idByName.get(first.player_a) ?? null,
+      player_b_id: idByName.get(first.player_b) ?? null,
+    })
   } else {
     let idx = 0
     generateSchedule(ordered).forEach((rd, ri) => {
