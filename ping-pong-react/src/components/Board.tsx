@@ -9,7 +9,7 @@ import {
 import { usePlayers } from '../hooks/usePlayers'
 import { useRatingDeltas } from '../hooks/useRatingDeltas'
 import { useTournament } from '../hooks/useTournament'
-import { addKingGame, createTournament } from '../lib/db'
+import { createTournament } from '../lib/db'
 import { chaosSettingsFromTournament } from '../lib/chaos'
 import { libelleFormat } from '../lib/format'
 import { sideBios } from '../lib/playerBio'
@@ -24,7 +24,7 @@ import Champion from './Champion'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import GameResult from './GameResult'
-import KingTable from './KingTable'
+import KingBoard from './KingBoard'
 import LiveScorer from './LiveScorer'
 import MatchList from './MatchList'
 import BoardStandings from './BoardStandings'
@@ -113,35 +113,14 @@ export default function Board({
 
   if (tournament.kind === 'king') {
     return (
-      <KingTable
-        rotation={tournament.players}
-        players={registry.map((p) => p.name)}
+      <KingBoard
+        tournament={tournament}
         matches={matches}
-        ended={tournament.status === 'done'}
-        look={look}
-        onPatch={patchMatch}
-        onRotation={setRotation}
-        onNext={() => {
-          addKingGame(tournament.id, tournament.players, matches).catch((e) =>
-            console.error('addKingGame failed', e),
-          )
-        }}
-        onEnd={endSession}
-        onClose={onBack}
-        onAbandon={abandonGame}
-        scorer={(match, onPatch) => (
-          <LiveScorer
-            match={match}
-            target={tournament.target}
-            onPatch={onPatch}
-            onClose={onBack}
-            tournamentName={tournament.name}
-            subtitle={libelleFormat(tournament)}
-            elos={elosFor(match)}
-            bios={sideBios(registry, match)}
-            onPresent={() => navigate(`/t/${id}/live`)}
-          />
-        )}
+        registry={registry}
+        elosFor={elosFor}
+        session={{ patchMatch, setRotation, endSession, abandonGame }}
+        onBack={onBack}
+        presentTo={`/t/${id}/live`}
       />
     )
   }
