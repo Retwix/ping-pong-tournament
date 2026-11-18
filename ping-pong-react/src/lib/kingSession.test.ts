@@ -2,7 +2,12 @@ import { expect, it, vi } from 'vitest'
 import { addKingGame, createTournament } from './db'
 import type { Match } from '../types'
 
-const written = vi.hoisted(() => ({ inserts: new Map<string, unknown>(), refuse: false }))
+const written = vi.hoisted(() => ({
+  rows: new Map<string, ReadonlyArray<object>>(),
+  inserts: new Map<string, unknown>(),
+  updates: new Array<{ where: Record<string, unknown>; patch: unknown }>(),
+  refuse: false,
+}))
 
 vi.mock('./supabase', () => {
   const registry = [
@@ -10,9 +15,20 @@ vi.mock('./supabase', () => {
     { id: 'p-sam', name: 'Sam' },
     { id: 'p-leo', name: 'Léo' },
   ]
+  const field = (row: object, key: string): unknown => Object.entries(row).find(([k]) => k === key)?.[1]
+  const selecting = (rows: ReadonlyArray<object>) => ({
+    eq: (key: string, value: unknown) => selecting(rows.filter((r) => field(r, key) === value)),
+    in: (key: string, values: ReadonlyArray<unknown>) => selecting(rows.filter((r) => values.includes(field(r, key)))),
+    then: (done: (result: { data: ReadonlyArray<object>; error: null }) => unknown) => done({ data: rows, error: null }),
+  })
   const from = (table: string) => ({
-    select: async () => ({ data: registry, error: null }),
-    update: () => ({ eq: async () => ({ error: null }) }),
+    select: () => selecting(table === 'players' ? registry : (written.rows.get(table) ?? [])),
+    update: (patch: unknown) => ({
+      eq: async (key: string, value: unknown) => {
+        written.updates.push({ where: { [key]: value }, patch })
+        return { error: null }
+      },
+    }),
     insert: (row: unknown) => {
       written.inserts.set(table, row)
       const error = written.refuse ? { message: 'refused' } : null
@@ -104,4 +120,24 @@ it('reports a next game the database refused, rather than leaving the table empt
     message: 'refused',
   })
   written.refuse = false
+})
+
+it('closes a King of the Ping session left open, crowning it, when any new partie starts', async () => {
+  written.rows.set('tournaments', [
+    { id: 't-open', kind: 'king', status: 'active' },
+    { id: 't-ended', kind: 'king', status: 'done' },
+    { id: 't-tournoi', kind: 'tournament', status: 'active' },
+  ])
+  written.rows.set('matches', [
+    getMockGame({ tournament_id: 't-open', idx: 0 }),
+    getMockGame({ tournament_id: 't-open', idx: 1, player_b: 'Léo' }),
+    getMockGame({ tournament_id: 't-ended', idx: 0, player_a: 'Sam', player_b: 'Léo' }),
+  ])
+
+  await createTournament('Partie rapide', ['Sam', 'Léo'], 11, 'game')
+
+  expect(written.updates.filter((u) => 'id' in u.where)).toEqual([
+    { where: { id: 't-open' }, patch: { status: 'done', champion: 'Inès' } },
+  ])
+  written.rows.clear()
 })

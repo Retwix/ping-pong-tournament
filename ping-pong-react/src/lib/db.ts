@@ -4,7 +4,7 @@ import { buildDoubleElim } from './doubleElim'
 import { RATING, ratedMatches, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
 import { avatarStoragePath, withCacheBuster } from './avatar'
-import { nextGame, type Rotation } from './king'
+import { closingCrowns, nextGame, type Rotation } from './king'
 import type { Match, Player, PlayerStatus, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -176,6 +176,8 @@ export async function createTournament(
   const { data: reg } = await supabase.from('players').select('id, name')
   const idByName = new Map<string, string>((reg ?? []).map((p) => [p.name, p.id]))
 
+  await closeOpenKingSessions()
+
   // Hand the "current" pointer to the new tournament: clear it everywhere first so
   // the partial unique index (at most one active) is never violated on insert.
   const { error: clearErr } = await supabase
@@ -258,6 +260,27 @@ export async function createTournament(
     if (mErr) throw mErr
   }
   return t.id as string
+}
+
+/** A new partie ends any King of the Ping session still open, crowning it from its games. */
+async function closeOpenKingSessions(): Promise<void> {
+  const { data: open, error } = await supabase
+    .from('tournaments')
+    .select('id')
+    .eq('kind', 'king')
+    .eq('status', 'active')
+  if (error) throw error
+  const ids = (open ?? []).map((t) => t.id as string)
+  const { data: games, error: gamesErr } = await supabase
+    .from('matches')
+    .select('*')
+    .in('tournament_id', ids)
+  if (gamesErr) throw gamesErr
+  await Promise.all(
+    closingCrowns(ids, (games ?? []) as Match[]).map(({ id, champion }) =>
+      updateTournament(id, { status: 'done', champion }),
+    ),
+  )
 }
 
 /** Calls the next King of the Ping game to the table, numbered after the games already played. */
