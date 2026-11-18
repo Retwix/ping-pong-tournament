@@ -31,7 +31,10 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
   const [leaving, setLeaving] = useState<string | null>(null)
   const game = matches[matches.length - 1]
   const champion = longestReign(matches)
-  const end = () => onEnd(champion?.player ?? null)
+  const end = () => {
+    onEnd(champion?.player ?? null)
+    if (!champion) onClose()
+  }
   if (ended && champion) return <KingCrown champion={champion} games={matches.length} look={look} onClose={onClose} />
   if (!game || game.done) return <AuSuivant rotation={rotation} players={players} matches={matches} look={look} onNext={onNext} onEnd={end} onRotation={onRotation} />
 

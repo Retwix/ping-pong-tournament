@@ -104,7 +104,7 @@ it('calls up « Au suivant » once the last game is done, where the File is edit
 })
 
 it('« Terminer » ends the session, crowning the longest reign, a tie going to whoever reached it first', async () => {
-  const { screen, ended } = renderKingTable({
+  const { screen, ended, closed } = renderKingTable({
     rotation: ['Léo', 'Inès', 'Sam'],
     matches: [
       getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 4, done: true }),
@@ -116,6 +116,7 @@ it('« Terminer » ends the session, crowning the longest reign, a tie going to 
 
   await screen.getByRole('button', { name: 'Terminer' }).click()
   expect(ended).toEqual(['Inès'])
+  expect(closed).toEqual([])
 })
 
 it('once the session has ended, crowns the longest reign with its wins in a row and the games played, then leaves', async () => {
@@ -224,4 +225,12 @@ it('when only one player is left at the table, the abandon ends the session and 
   await screen.getByRole('button', { name: 'Abandonner la partie' }).click()
   expect(abandoned).toEqual([{ id: 'm-on', rotation: ['Sam'] }])
   expect(ended).toEqual(['Inès'])
+})
+
+it('« Terminer » before any game was validated ends the session with nobody crowned and leaves', async () => {
+  const { screen, ended, closed } = renderKingTable({ rotation: ['Inès', 'Léo'], matches: [] })
+
+  await screen.getByRole('button', { name: 'Terminer' }).click()
+  expect(ended).toEqual([null])
+  expect(closed).toEqual(['close'])
 })
