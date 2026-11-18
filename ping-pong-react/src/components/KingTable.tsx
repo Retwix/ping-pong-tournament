@@ -26,7 +26,20 @@ interface Props {
 }
 
 /** A King of the Ping session at the table: the game being played, « Au suivant » between games, the crown once it has ended. */
-export default function KingTable({ rotation, players, matches, ended, look, onPatch, onRotation, onNext, onEnd, onClose, onAbandon, scorer }: Props) {
+export default function KingTable({
+  rotation,
+  players,
+  matches,
+  ended,
+  look,
+  onPatch,
+  onRotation,
+  onNext,
+  onEnd,
+  onClose,
+  onAbandon,
+  scorer,
+}: Props) {
   const [editingFile, setEditingFile] = useState(false)
   const [leaving, setLeaving] = useState<string | null>(null)
   const game = matches[matches.length - 1]
@@ -37,7 +50,18 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
   }
   if (ended && crown) return <KingCrown {...crown} look={look} onClose={onClose} />
   if (rotation.length < 2) return null
-  if (!game || game.done) return <AuSuivant rotation={rotation} players={players} matches={matches} look={look} onNext={onNext} onEnd={end} onRotation={onRotation} />
+  if (!game || game.done)
+    return (
+      <AuSuivant
+        rotation={rotation}
+        players={players}
+        matches={matches}
+        look={look}
+        onNext={onNext}
+        onEnd={end}
+        onRotation={onRotation}
+      />
+    )
 
   const patchGame: Patch = (patch) => {
     onPatch(game.id, patch)
@@ -63,7 +87,11 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
                   {[game.player_a, game.player_b].map((name) => (
                     <span key={name}>
                       {name}
-                      <button className="ks-file-leave" aria-label={`Retirer ${name}`} onClick={() => setLeaving(name)}>
+                      <button
+                        className="ks-file-leave"
+                        aria-label={`Retirer ${name}`}
+                        onClick={() => setLeaving(name)}
+                      >
                         ✕
                       </button>
                     </span>

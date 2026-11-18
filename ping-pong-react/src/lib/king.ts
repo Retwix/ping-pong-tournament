@@ -99,7 +99,11 @@ export function endedWithoutAGame(
   t: Pick<Tournament, 'id' | 'kind' | 'status'>,
   matches: ReadonlyArray<Match>,
 ): boolean {
-  return t.kind === 'king' && t.status === 'done' && !matches.some((m) => m.tournament_id === t.id && m.done)
+  return (
+    t.kind === 'king' &&
+    t.status === 'done' &&
+    !matches.some((m) => m.tournament_id === t.id && m.done)
+  )
 }
 
 /** Someone arriving joins at the back of the File. */

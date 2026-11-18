@@ -49,7 +49,9 @@ it('calls up the King, their règne, Prochain and the File, and starts the next 
   )
 
   await expect.element(screen.getByRole('region', { name: 'le King' })).toHaveTextContent('Inès')
-  expect(screen.getByRole('region', { name: 'le King' }).element().textContent).toContain('2 victoires')
+  expect(screen.getByRole('region', { name: 'le King' }).element().textContent).toContain(
+    '2 victoires',
+  )
   expect(screen.getByRole('region', { name: 'Prochain' }).element().textContent).toContain('Zoé')
   expect(
     screen

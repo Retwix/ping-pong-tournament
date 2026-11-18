@@ -33,7 +33,11 @@ const getMockGame = (overrides?: Partial<Match>): Match => ({
   ...overrides,
 })
 
-const renderKingTable = (overrides: { rotation: Rotation; matches: ReadonlyArray<Match>; ended?: boolean }) => {
+const renderKingTable = (overrides: {
+  rotation: Rotation
+  matches: ReadonlyArray<Match>
+  ended?: boolean
+}) => {
   const patches: Array<{ id: string; patch: Partial<Match> }> = []
   const rotations: Rotation[] = []
   const started: string[] = []
@@ -68,12 +72,21 @@ it('scores the game at the table, and on validation the winner holds it while th
   const { screen, patches, rotations } = renderKingTable({
     rotation: ['Inès', 'Léo', 'Sam'],
     matches: [
-      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 4, done: true }),
+      getMockGame({
+        idx: 0,
+        player_a: 'Inès',
+        player_b: 'Sam',
+        score_a: 7,
+        score_b: 4,
+        done: true,
+      }),
       getMockGame({ idx: 1, player_a: 'Inès', player_b: 'Léo', score_a: 4, score_b: 6 }),
     ],
   })
 
-  await expect.element(screen.getByRole('region', { name: 'scorer' })).toHaveTextContent('Inès v Léo')
+  await expect
+    .element(screen.getByRole('region', { name: 'scorer' }))
+    .toHaveTextContent('Inès v Léo')
   await screen.getByRole('button', { name: 'Point' }).click()
   expect(rotations).toEqual([])
 
@@ -107,9 +120,30 @@ it('« Terminer » ends the session, crowning the longest reign, a tie going to 
   const { screen, ended, closed } = renderKingTable({
     rotation: ['Léo', 'Inès', 'Sam'],
     matches: [
-      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 4, done: true }),
-      getMockGame({ idx: 1, player_a: 'Inès', player_b: 'Léo', score_a: 7, score_b: 5, done: true }),
-      getMockGame({ idx: 2, player_a: 'Inès', player_b: 'Léo', score_a: 3, score_b: 7, done: true }),
+      getMockGame({
+        idx: 0,
+        player_a: 'Inès',
+        player_b: 'Sam',
+        score_a: 7,
+        score_b: 4,
+        done: true,
+      }),
+      getMockGame({
+        idx: 1,
+        player_a: 'Inès',
+        player_b: 'Léo',
+        score_a: 7,
+        score_b: 5,
+        done: true,
+      }),
+      getMockGame({
+        idx: 2,
+        player_a: 'Inès',
+        player_b: 'Léo',
+        score_a: 3,
+        score_b: 7,
+        done: true,
+      }),
       getMockGame({ idx: 3, player_a: 'Léo', player_b: 'Sam', score_a: 7, score_b: 2, done: true }),
     ],
   })
@@ -124,9 +158,30 @@ it('once the session has ended, crowns the longest reign with its wins in a row 
     ended: true,
     rotation: ['Sam'],
     matches: [
-      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 4, done: true }),
-      getMockGame({ idx: 1, player_a: 'Inès', player_b: 'Léo', score_a: 7, score_b: 5, done: true }),
-      getMockGame({ idx: 2, player_a: 'Inès', player_b: 'Léo', score_a: 3, score_b: 7, done: true }),
+      getMockGame({
+        idx: 0,
+        player_a: 'Inès',
+        player_b: 'Sam',
+        score_a: 7,
+        score_b: 4,
+        done: true,
+      }),
+      getMockGame({
+        idx: 1,
+        player_a: 'Inès',
+        player_b: 'Léo',
+        score_a: 7,
+        score_b: 5,
+        done: true,
+      }),
+      getMockGame({
+        idx: 2,
+        player_a: 'Inès',
+        player_b: 'Léo',
+        score_a: 3,
+        score_b: 7,
+        done: true,
+      }),
       getMockGame({ idx: 3, player_a: 'Léo', player_b: 'Sam', score_a: 7, score_b: 2, done: true }),
       getMockGame({ idx: 4, player_a: 'Léo', player_b: 'Sam', score_a: 1, score_b: 7, done: true }),
       getMockGame({ idx: 5, player_a: 'Sam', player_b: 'Inès', score_a: 3, score_b: 2 }),
@@ -156,7 +211,9 @@ it('mid-game, opens the File over the scorer so someone arriving joins without s
 
   await sheet.getByRole('button', { name: 'Fermer' }).click()
   await expect.element(sheet).not.toBeInTheDocument()
-  await expect.element(screen.getByRole('region', { name: 'scorer' })).toHaveTextContent('Inès v Léo')
+  await expect
+    .element(screen.getByRole('region', { name: 'scorer' }))
+    .toHaveTextContent('Inès v Léo')
 })
 
 it('keeps keys typed in the File sheet from reaching the scorer’s keyboard shortcuts', async () => {
@@ -185,7 +242,9 @@ it('mid-game, someone at the table leaving abandons the game once confirmed, who
   await page.viewport(390, 700)
   const { screen, abandoned, ended } = renderKingTable({
     rotation: ['Inès', 'Sam', 'Léo'],
-    matches: [getMockGame({ id: 'm-on', player_a: 'Inès', player_b: 'Sam', score_a: 4, score_b: 3 })],
+    matches: [
+      getMockGame({ id: 'm-on', player_a: 'Inès', player_b: 'Sam', score_a: 4, score_b: 3 }),
+    ],
   })
 
   await screen.getByRole('button', { name: 'File' }).click()
@@ -216,8 +275,22 @@ it('when only one player is left at the table, the abandon ends the session and 
   const { screen, abandoned, ended } = renderKingTable({
     rotation: ['Inès', 'Sam'],
     matches: [
-      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 4, done: true }),
-      getMockGame({ idx: 1, id: 'm-on', player_a: 'Inès', player_b: 'Sam', score_a: 2, score_b: 5 }),
+      getMockGame({
+        idx: 0,
+        player_a: 'Inès',
+        player_b: 'Sam',
+        score_a: 7,
+        score_b: 4,
+        done: true,
+      }),
+      getMockGame({
+        idx: 1,
+        id: 'm-on',
+        player_a: 'Inès',
+        player_b: 'Sam',
+        score_a: 2,
+        score_b: 5,
+      }),
     ],
   })
 

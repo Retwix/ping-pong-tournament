@@ -15,7 +15,15 @@ interface Props {
 }
 
 /** Between two King of the Ping games: who holds the table, who challenges, who waits. */
-export default function AuSuivant({ rotation, players, matches, look, onNext, onEnd, onRotation }: Props) {
+export default function AuSuivant({
+  rotation,
+  players,
+  matches,
+  look,
+  onNext,
+  onEnd,
+  onRotation,
+}: Props) {
   const [king, prochain] = rotation
   const reign = reignOf(matches, king)
   const kingLook = look(king)
@@ -27,7 +35,13 @@ export default function AuSuivant({ rotation, players, matches, look, onNext, on
         <div className="tk-eyebrow">Au suivant</div>
 
         <section className="ks-king" aria-label="le King">
-          <Avatar name={king} team={kingLook.team} url={kingLook.url} className="tk-winner-av" fill="hero" />
+          <Avatar
+            name={king}
+            team={kingLook.team}
+            url={kingLook.url}
+            className="tk-winner-av"
+            fill="hero"
+          />
           <div className="tk-winner-name">{king} 👑</div>
           <div className="ks-reign">
             Règne · {reign} {reign > 1 ? 'victoires' : 'victoire'} d’affilée
@@ -36,7 +50,13 @@ export default function AuSuivant({ rotation, players, matches, look, onNext, on
 
         <section className="ks-prochain" aria-label="Prochain">
           <div className="ks-label">Prochain</div>
-          <Avatar name={prochain} team={prochainLook.team} url={prochainLook.url} className="tk-face" fill="solid" />
+          <Avatar
+            name={prochain}
+            team={prochainLook.team}
+            url={prochainLook.url}
+            className="tk-face"
+            fill="solid"
+          />
           <div className="tk-face-name">{prochain}</div>
         </section>
 

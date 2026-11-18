@@ -17,11 +17,14 @@ vi.mock('./supabase', () => {
     { id: 'p-sam', name: 'Sam' },
     { id: 'p-leo', name: 'Léo' },
   ]
-  const field = (row: object, key: string): unknown => Object.entries(row).find(([k]) => k === key)?.[1]
+  const field = (row: object, key: string): unknown =>
+    Object.entries(row).find(([k]) => k === key)?.[1]
   const selecting = (rows: ReadonlyArray<object>) => ({
     eq: (key: string, value: unknown) => selecting(rows.filter((r) => field(r, key) === value)),
-    in: (key: string, values: ReadonlyArray<unknown>) => selecting(rows.filter((r) => values.includes(field(r, key)))),
-    then: (done: (result: { data: ReadonlyArray<object>; error: null }) => unknown) => done({ data: rows, error: null }),
+    in: (key: string, values: ReadonlyArray<unknown>) =>
+      selecting(rows.filter((r) => values.includes(field(r, key)))),
+    then: (done: (result: { data: ReadonlyArray<object>; error: null }) => unknown) =>
+      done({ data: rows, error: null }),
   })
   const from = (table: string) => ({
     select: () => selecting(table === 'players' ? registry : (written.rows.get(table) ?? [])),
@@ -131,7 +134,9 @@ it('appends the next game after the last one played, the rotation calling the ne
 it('reports a next game the database refused, rather than leaving the table empty', async () => {
   written.refuse = true
 
-  await expect(addKingGame('t-king', ['Inès', 'Léo', 'Sam'], [getMockGame()])).rejects.toMatchObject({
+  await expect(
+    addKingGame('t-king', ['Inès', 'Léo', 'Sam'], [getMockGame()]),
+  ).rejects.toMatchObject({
     message: 'refused',
   })
   written.refuse = false
@@ -159,18 +164,34 @@ it('closes a King of the Ping session left open, crowning it, when any new parti
 })
 
 test.for([
-  { who: 'anyone', mayDelete: false, deleted: [], closed: [{ where: { id: 't-empty' }, patch: { status: 'done', champion: null } }] },
-  { who: 'a signed-in claimed player', mayDelete: true, deleted: [{ from: 'tournaments', id: 't-empty' }], closed: [] },
-])('a session ended before any game, by $who, is deleted when the policy lets them', async ({ mayDelete, deleted, closed }) => {
-  written.updates.splice(0)
-  written.deleted.splice(0)
-  written.mayDelete = mayDelete
+  {
+    who: 'anyone',
+    mayDelete: false,
+    deleted: [],
+    closed: [{ where: { id: 't-empty' }, patch: { status: 'done', champion: null } }],
+  },
+  {
+    who: 'a signed-in claimed player',
+    mayDelete: true,
+    deleted: [{ from: 'tournaments', id: 't-empty' }],
+    closed: [],
+  },
+])(
+  'a session ended before any game, by $who, is deleted when the policy lets them',
+  async ({ mayDelete, deleted, closed }) => {
+    written.updates.splice(0)
+    written.deleted.splice(0)
+    written.mayDelete = mayDelete
 
-  await endKingSession('t-empty', null)
+    await endKingSession('t-empty', null)
 
-  expect({ deleted: written.deleted, closed: written.updates.filter((u) => 'id' in u.where) }).toEqual({ deleted, closed })
-  written.mayDelete = false
-})
+    expect({
+      deleted: written.deleted,
+      closed: written.updates.filter((u) => 'id' in u.where),
+    }).toEqual({ deleted, closed })
+    written.mayDelete = false
+  },
+)
 
 it('abandoning a game deletes its match, so nothing of it is recorded', async () => {
   written.deleted.splice(0)

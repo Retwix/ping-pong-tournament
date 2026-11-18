@@ -10,7 +10,10 @@ import type { Match, Player, Tournament } from '../types'
 import KingTable from './KingTable'
 import LiveScorer from './LiveScorer'
 
-type Session = Pick<ReturnType<typeof useTournament>, 'patchMatch' | 'setRotation' | 'endSession' | 'abandonGame'>
+type Session = Pick<
+  ReturnType<typeof useTournament>,
+  'patchMatch' | 'setRotation' | 'endSession' | 'abandonGame'
+>
 
 interface Props {
   tournament: Tournament
@@ -23,7 +26,15 @@ interface Props {
 }
 
 /** A King of the Ping session run from this device: the table, wired to the session's writes. */
-export default function KingBoard({ tournament, matches, registry, elosFor, session, onBack, presentTo }: Props) {
+export default function KingBoard({
+  tournament,
+  matches,
+  registry,
+  elosFor,
+  session,
+  onBack,
+  presentTo,
+}: Props) {
   const look = useMemo(() => playerLookup(registry), [registry])
   return (
     <KingTable
