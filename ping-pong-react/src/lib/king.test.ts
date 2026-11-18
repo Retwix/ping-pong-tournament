@@ -4,6 +4,7 @@ import {
   crownsWhenAllMatchesDone,
   cardRecap,
   closingCrowns,
+  endedWithoutAGame,
   kingRecap,
   longestReign,
   nextGame,
@@ -166,5 +167,20 @@ describe('closingCrowns', () => {
       { id: 't2', champion: 'Léo' },
       { id: 't3', champion: null },
     ])
+  })
+})
+
+describe('endedWithoutAGame', () => {
+  const session = (over?: Partial<KingCard>): KingCard => ({ id: 't1', kind: 'king', status: 'done', ...over })
+
+  test.for([
+    { when: 'a session ended before any game', t: session(), games: [], hidden: true },
+    { when: 'a session whose only game was never validated', t: session(), games: [{ ...aWins(0, 'Inès', 'Sam'), done: false }], hidden: true },
+    { when: 'a session ended while another session had games', t: session(), games: [{ ...aWins(0, 'Inès', 'Sam'), tournament_id: 't2' }], hidden: true },
+    { when: 'a session with a validated game', t: session(), games: [aWins(0, 'Inès', 'Sam')], hidden: false },
+    { when: 'a session still waiting for its first game', t: session({ status: 'active' }), games: [], hidden: false },
+    { when: 'a finished tournament', t: session({ kind: 'tournament' }), games: [], hidden: false },
+  ])('$when: hidden $hidden', ({ t, games, hidden }) => {
+    expect(endedWithoutAGame(t, games)).toBe(hidden)
   })
 })
