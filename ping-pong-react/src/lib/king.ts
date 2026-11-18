@@ -37,3 +37,10 @@ export function longestReign(matches: ReadonlyArray<Match>): Reign | null {
     null,
   )
 }
+
+/** The King's règne: their wins in a row up to now, 0 until they win a game holding the table. */
+export function reignOf(matches: ReadonlyArray<Match>, king: string): number {
+  const all = streaks(matches)
+  const last = all[all.length - 1]
+  return last?.player === king ? last.wins : 0
+}

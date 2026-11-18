@@ -1,5 +1,5 @@
 import { describe, expect, it, test } from 'vitest'
-import { afterGame, longestReign, nextGame } from './king'
+import { afterGame, longestReign, nextGame, reignOf } from './king'
 import type { Match } from '../types'
 
 describe('nextGame', () => {
@@ -81,5 +81,15 @@ describe('longestReign', () => {
 
   it('has no reign before the first game is validated', () => {
     expect(longestReign([{ ...aWins(0, 'Inès', 'Sam'), done: false }])).toBeNull()
+  })
+})
+
+describe('reignOf', () => {
+  test.for([
+    { when: 'a King who won the last two', games: [aWins(0, 'Inès', 'Sam'), bWins(1, 'Inès', 'Sam'), aWins(2, 'Sam', 'Léo')], king: 'Sam', wins: 2 },
+    { when: 'the first King, before any game', games: [], king: 'Inès', wins: 0 },
+    { when: 'a challenger left holding the table', games: [aWins(0, 'Inès', 'Sam')], king: 'Léo', wins: 0 },
+  ])('$when: règne $wins', ({ games, king, wins }) => {
+    expect(reignOf(games, king)).toBe(wins)
   })
 })
