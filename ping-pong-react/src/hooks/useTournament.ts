@@ -241,6 +241,16 @@ export function useTournament(id: string | null) {
     [writeTournament],
   )
 
+  /** King of the Ping: « Terminer » closes the session optimistically, crowning `champion`. */
+  const endSession = useCallback(
+    (champion: string | null) =>
+      writeTournament({ status: 'done', champion }, (before) => ({
+        status: before.status,
+        champion: before.champion,
+      })),
+    [writeTournament],
+  )
+
   // Double-elimination advancement. Whenever matches change, reconcile the
   // bracket: fill slots that just resolved, auto-complete walkovers, and crown
   // the grand-final winner. `reconcileBracket` only writes still-pending slots,
@@ -300,5 +310,5 @@ export function useTournament(id: string | null) {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [matches, tournament])
 
-  return { tournament, matches, loading, error, patchMatch, setRotation, reload }
+  return { tournament, matches, loading, error, patchMatch, setRotation, endSession, reload }
 }

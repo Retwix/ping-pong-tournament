@@ -9,7 +9,7 @@ import {
 import { usePlayers } from '../hooks/usePlayers'
 import { useRatingDeltas } from '../hooks/useRatingDeltas'
 import { useTournament } from '../hooks/useTournament'
-import { addKingGame, createTournament, updateTournament } from '../lib/db'
+import { addKingGame, createTournament } from '../lib/db'
 import { chaosSettingsFromTournament } from '../lib/chaos'
 import { libelleFormat } from '../lib/format'
 import { sideBios } from '../lib/playerBio'
@@ -52,7 +52,7 @@ export default function Board({
   onStats,
   onPlayers,
 }: Props) {
-  const { tournament, matches, loading, error, patchMatch, setRotation, reload } = useTournament(id)
+  const { tournament, matches, loading, error, patchMatch, setRotation, endSession, reload } = useTournament(id)
   const { players: registry } = usePlayers()
   const {
     forMatch: ratingsForMatch,
@@ -125,11 +125,7 @@ export default function Board({
             console.error('addKingGame failed', e),
           )
         }}
-        onEnd={(champion) => {
-          updateTournament(tournament.id, { status: 'done', champion }).catch((e) =>
-            console.error('ending the session failed', e),
-          )
-        }}
+        onEnd={endSession}
         onClose={onBack}
         scorer={(match, onPatch) => (
           <LiveScorer
