@@ -163,6 +163,18 @@ it('between games, the next game’s card shows the king strip where a tournamen
   const king = screen.getByRole('region', { name: 'le King' })
   await expect.element(king).toHaveTextContent('Inès')
   expect(screen.getByText('Le podium').query()).toBeNull()
+  expect(screen.getByRole('region', { name: 'Prochain' }).query()).toBeNull()
+})
+
+it('with no game called yet, shows who is next', async () => {
+  const screen = renderSession({
+    rotation: ['Inès', 'Léo', 'Sam'],
+    matches: [
+      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 3, done: true }),
+    ],
+  })
+
+  await expect.element(screen.getByRole('region', { name: 'Prochain' })).toHaveTextContent('Léo')
 })
 
 it('once the session is over, crowns the longest reign with the games validated, not a podium of the rotation', async () => {

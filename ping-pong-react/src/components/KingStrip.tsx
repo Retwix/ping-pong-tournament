@@ -10,8 +10,9 @@ const wins = (n: number): string => `${n} ${n > 1 ? 'victoires' : 'victoire'} dâ
 
 /** For spectators of a King of the Ping session: who holds the table and for how long, and the session's best reign. */
 export default function KingStrip({ rotation, matches }: Props) {
-  const [king] = rotation
+  const [king, prochain] = rotation
   const record = longestReign(matches)
+  const called = matches.length > 0 && !matches[matches.length - 1].done
   return (
     <div className="tv-king">
       <section className="tv-king-cell" aria-label="le King">
@@ -24,6 +25,12 @@ export default function KingStrip({ rotation, matches }: Props) {
           <div className="tv-king-label">Record</div>
           <div className="tv-king-name">{record.player}</div>
           <div className="tv-king-sub">{wins(record.wins)}</div>
+        </section>
+      )}
+      {!called && (
+        <section className="tv-king-cell" aria-label="Prochain">
+          <div className="tv-king-label">Prochain</div>
+          <div className="tv-king-name">{prochain}</div>
         </section>
       )}
       <section className="tv-king-cell tv-king-file">
