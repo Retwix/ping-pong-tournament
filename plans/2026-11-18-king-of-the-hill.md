@@ -39,6 +39,7 @@ slice in order S1→S6, each commit green.
 - **Done when:** every acceptance example of every slice passes as a test; Stryker clean
   on the rotation/reign module; `npm run build` and `npm test` green; components
   screenshotted offline (never the dev server: it writes to prod).
+- Progress (2026-11-18, later): Step 9 a–c done: recap rule aea9a0e, no estimate for king 5ae87e1, /king route + variant 5f5c107, king hides name/format/chaos/heure/poster/autre 34ce3ae. S1 rating check: no test (ratedMatches never reads kind); PR note: Stats « type » filter shows king games only under « tout ». Left in 9: menu entry + segmented control (seg shows « Tournoi » active on /king).
 - Progress (2026-11-18): Steps 1–8 done (8b crown b7f0399, 8c endSession cb26e6c, harness-checked incl. rollback). Earlier: 8a 9a2eba3. Step 7b shipped as a narrow
   `setRotation` (no generic patchTournament: its rollback needs a cast). libelleFormat now
   labels king « King of the Ping ». Step 8 split: (a) « Terminer » on Au suivant → onEnd(champion)
