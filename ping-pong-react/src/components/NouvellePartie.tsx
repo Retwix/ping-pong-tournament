@@ -45,7 +45,7 @@ import { postsToSlack } from '../lib/sets'
 import { inviteToSlack } from '../lib/slack'
 import { TEAMS, teamBadgeStyle, teamColor, teamLabel, type TeamKey } from '../lib/teams'
 import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
-import type { TournamentFormat } from '../types'
+import type { TournamentFormat, TournamentKind } from '../types'
 import Avatar from './Avatar'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
@@ -63,6 +63,8 @@ function slugify(s: string, fallback: string): string {
 }
 
 const PRESETS = [11, 21, 15]
+const KING_PRESETS = [5, 7, 11]
+const KING_TARGET = 7
 /** Sets in a quick game: a single game, or a best-of-3 / best-of-5. */
 const SET_CHOICES = [1, 3, 5]
 const SELECTION_DOUBLE_VIDE: SelectionDouble = { a: [], b: [], camp: 'A' }
@@ -71,7 +73,7 @@ const rowsPour = (annuaire: JoueurRow[], ids: string[]): JoueurRow[] =>
   ids.map((id) => annuaire.find((r) => r.id === id)).filter((r): r is JoueurRow => r !== undefined)
 
 interface Props {
-  variant: 'game' | 'tournament'
+  variant: TournamentKind
   onCreated: (id: string) => void
   onHome: () => void
   onClassement: () => void
@@ -92,13 +94,14 @@ export default function NouvellePartie({
   onNewGame,
 }: Props) {
   const isGame = variant === 'game'
+  const isKing = variant === 'king'
   const { rows, events, matches, tournaments, players, loading, error, reload } = useRatings()
 
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
   const [selected, setSelected] = useState<string[]>([])
   const [query, setQuery] = useState('')
-  const [preset, setPreset] = useState(11)
+  const [preset, setPreset] = useState(isKing ? KING_TARGET : 11)
   const [autre, setAutre] = useState('')
   const [sets, setSets] = useState(1)
   const [time, setTime] = useState('')
@@ -320,7 +323,7 @@ export default function NouvellePartie({
         : [selDouble.a, selDouble.b]
       const paireA = nomPaire(rowsPour(annuaire, equipeA).map((r) => r.name))
       const paireB = nomPaire(rowsPour(annuaire, equipeB).map((r) => r.name))
-      const kind = isGame ? 'game' : 'tournament'
+      const kind = variant
       const id = await createTournament(
         isDouble ? `${paireA} vs ${paireB}` : recap.autoName,
         isDouble ? [paireA, paireB] : selRows.map((r) => r.name),
@@ -372,11 +375,13 @@ export default function NouvellePartie({
     }
   }
 
-  const kicker = isGame
-    ? 'Partie rapide'
-    : format === 'round_robin'
-      ? 'Round-robin · nouveau tournoi'
-      : 'Élimination directe · nouveau tournoi'
+  const kicker = isKing
+    ? 'Le gagnant reste'
+    : isGame
+      ? 'Partie rapide'
+      : format === 'round_robin'
+        ? 'Round-robin · nouveau tournoi'
+        : 'Élimination directe · nouveau tournoi'
   const countPill = isGame
     ? isDouble
       ? `${hasard ? selRows.length : nDouble} / 4`
@@ -384,11 +389,20 @@ export default function NouvellePartie({
     : selRows.length === 1
       ? '1 joueur'
       : `${selRows.length} joueurs`
-  const ruleHint = isGame
-    ? 'Premier à atteindre le score, avec 2 points d’écart.'
-    : format === 'round_robin'
-      ? 'Départage : victoires, puis différence de points.'
-      : 'Tableau à double élimination : il faut perdre 2 fois pour être éliminé.'
+  const ctaLabel = creating
+    ? 'Création…'
+    : isKing
+      ? 'Lancer la session'
+      : isGame
+        ? 'Lancer la partie'
+        : 'Générer le tournoi'
+  const ruleHint = isKing
+    ? 'Un jeu par partie, 2 points d’écart. Le perdant retourne au bout de la file.'
+    : isGame
+      ? 'Premier à atteindre le score, avec 2 points d’écart.'
+      : format === 'round_robin'
+        ? 'Départage : victoires, puis différence de points.'
+        : 'Tableau à double élimination : il faut perdre 2 fois pour être éliminé.'
 
   const carteEquipe = (camp: 'A' | 'B') => {
     const rows = camp === 'A' ? teamRows.a : teamRows.b
@@ -477,11 +491,15 @@ export default function NouvellePartie({
         <div className="np-head">
           <div className="np-head-text">
             <div className="np-kicker">{kicker}</div>
-            <h1 className="np-title">{isGame ? 'Nouvelle partie' : 'Nouveau tournoi'}</h1>
+            <h1 className="np-title">
+              {isKing ? 'King of the Ping' : isGame ? 'Nouvelle partie' : 'Nouveau tournoi'}
+            </h1>
             <p className="np-sub">
-              {isGame
-                ? 'Deux joueurs, un score, et le bureau est prévenu sur Slack.'
-                : 'Choisis un format, ajoute les joueurs, le tableau se génère.'}
+              {isKing
+                ? 'Choisis qui est là : le gagnant reste à la table, le suivant le défie.'
+                : isGame
+                  ? 'Deux joueurs, un score, et le bureau est prévenu sur Slack.'
+                  : 'Choisis un format, ajoute les joueurs, le tableau se génère.'}
             </p>
           </div>
           <div className="np-seg">
@@ -854,7 +872,7 @@ export default function NouvellePartie({
                 <p className="np-card-desc">Le score à atteindre pour gagner un jeu.</p>
               </div>
               <div className="np-pts-controls">
-                {PRESETS.map((v) => (
+                {(isKing ? KING_PRESETS : PRESETS).map((v) => (
                   <button
                     key={v}
                     className={`np-pts-chip${autre === '' && preset === v ? ' active' : ''}`}
@@ -1076,7 +1094,7 @@ export default function NouvellePartie({
                 title={recap.valid ? undefined : recap.hint}
                 onClick={create}
               >
-                {creating ? 'Création…' : isGame ? 'Lancer la partie' : 'Générer le tournoi'}
+                {ctaLabel}
               </button>
               <button
                 className={`np-poster${posterBusy ? ' busy' : canPoster ? '' : ' off'}`}
@@ -1110,7 +1128,7 @@ export default function NouvellePartie({
           title={recap.valid ? undefined : recap.hint}
           onClick={create}
         >
-          {creating ? 'Création…' : isGame ? 'Lancer la partie' : 'Générer le tournoi'}
+          {ctaLabel}
         </button>
       </div>
 
