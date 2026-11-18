@@ -1,7 +1,8 @@
 import type { Match } from '../types'
-import { joinFile, leaveFile, reignOf, type Rotation } from '../lib/king'
+import { reignOf, type Rotation } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import Avatar from './Avatar'
+import KingFile from './KingFile'
 
 interface Props {
   rotation: Rotation
@@ -15,11 +16,10 @@ interface Props {
 
 /** Between two King of the Ping games: who holds the table, who challenges, who waits. */
 export default function AuSuivant({ rotation, players, matches, look, onNext, onEnd, onRotation }: Props) {
-  const [king, prochain, ...file] = rotation
+  const [king, prochain] = rotation
   const reign = reignOf(matches, king)
   const kingLook = look(king)
   const prochainLook = look(prochain)
-  const arrivals = players.filter((name) => !rotation.includes(name))
 
   return (
     <div className="takeover takeover--purple">
@@ -40,39 +40,7 @@ export default function AuSuivant({ rotation, players, matches, look, onNext, on
           <div className="tk-face-name">{prochain}</div>
         </section>
 
-        {file.length > 0 && (
-          <div className="ks-file">
-            <div className="ks-label" id="ks-file-label">
-              File
-            </div>
-            <ol aria-labelledby="ks-file-label">
-              {file.map((name) => (
-                <li key={name}>
-                  {name}
-                  <button
-                    className="ks-file-leave"
-                    aria-label={`Retirer ${name}`}
-                    onClick={() => onRotation(leaveFile(rotation, name))}
-                  >
-                    ✕
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-
-        <select
-          className="ks-join"
-          aria-label="Ajouter à la File"
-          value=""
-          onChange={(e) => onRotation(joinFile(rotation, e.target.value))}
-        >
-          <option value="">+ Ajouter à la File</option>
-          {arrivals.map((name) => (
-            <option key={name}>{name}</option>
-          ))}
-        </select>
+        <KingFile rotation={rotation} players={players} onRotation={onRotation} />
 
         <div className="tk-actions">
           <button className="tk-btn tk-btn--primary" onClick={onNext}>
