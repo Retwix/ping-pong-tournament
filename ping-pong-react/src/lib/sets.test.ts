@@ -9,7 +9,7 @@ import {
   undoSetValidationPatch,
   validateSetPatch,
 } from './sets'
-import type { Match, MatchSide, SetScore } from '../types'
+import type { Match, MatchSide, SetScore, TournamentKind } from '../types'
 
 describe('bestOf', () => {
   it('reads a tournament created before sets existed as a single game', () => {
@@ -111,10 +111,11 @@ describe('setsByWinner', () => {
 })
 
 describe('postsToSlack', () => {
-  it.for([
-    { bestOf: 1, posts: true },
-    { bestOf: 3, posts: false },
-  ])('a party of $bestOf set(s) is announced on Slack: $posts', ({ bestOf, posts }) => {
-    expect(postsToSlack({ best_of: bestOf })).toBe(posts)
+  it.for<{ kind: TournamentKind; bestOf: number; posts: boolean }>([
+    { kind: 'game', bestOf: 1, posts: true },
+    { kind: 'game', bestOf: 3, posts: false },
+    { kind: 'king', bestOf: 1, posts: false },
+  ])('a $kind of $bestOf set(s) is announced on Slack: $posts', ({ kind, bestOf, posts }) => {
+    expect(postsToSlack({ kind, best_of: bestOf })).toBe(posts)
   })
 })

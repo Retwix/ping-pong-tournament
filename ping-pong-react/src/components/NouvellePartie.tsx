@@ -320,11 +320,12 @@ export default function NouvellePartie({
         : [selDouble.a, selDouble.b]
       const paireA = nomPaire(rowsPour(annuaire, equipeA).map((r) => r.name))
       const paireB = nomPaire(rowsPour(annuaire, equipeB).map((r) => r.name))
+      const kind = isGame ? 'game' : 'tournament'
       const id = await createTournament(
         isDouble ? `${paireA} vs ${paireB}` : recap.autoName,
         isDouble ? [paireA, paireB] : selRows.map((r) => r.name),
         target,
-        isGame ? 'game' : 'tournament',
+        kind,
         isGame ? 'round_robin' : format,
         chaos,
         unrankedEffectif,
@@ -332,7 +333,7 @@ export default function NouvellePartie({
         bestOfChoisi,
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
-      if (postsToSlack({ best_of: bestOfChoisi })) void inviteToSlack(id)
+      if (postsToSlack({ kind, best_of: bestOfChoisi })) void inviteToSlack(id)
       onCreated(id)
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : String(e))
