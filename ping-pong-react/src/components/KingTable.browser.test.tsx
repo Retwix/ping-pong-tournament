@@ -136,3 +136,19 @@ it('once the session has ended, crowns the longest reign with its wins in a row 
   await screen.getByRole('button', { name: 'Accueil' }).click()
   expect(closed).toEqual(['close'])
 })
+
+it('mid-game, opens the File over the scorer so someone arriving joins without stopping the game', async () => {
+  const { screen, rotations } = renderKingTable({
+    rotation: ['Inès', 'Léo', 'Sam'],
+    matches: [getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Léo', score_a: 4, score_b: 3 })],
+  })
+
+  await screen.getByRole('button', { name: 'File' }).click()
+  const sheet = screen.getByRole('dialog', { name: 'File' })
+  await sheet.getByRole('combobox', { name: 'Ajouter à la File' }).selectOptions('Nora')
+  expect(rotations).toEqual([['Inès', 'Léo', 'Sam', 'Nora']])
+
+  await sheet.getByRole('button', { name: 'Fermer' }).click()
+  await expect.element(sheet).not.toBeInTheDocument()
+  await expect.element(screen.getByRole('region', { name: 'scorer' })).toHaveTextContent('Inès v Léo')
+})

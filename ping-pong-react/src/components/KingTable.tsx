@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import type { Match } from '../types'
 import { afterGame, longestReign, type Rotation } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import { winnerLoser } from '../lib/stats'
 import AuSuivant from './AuSuivant'
 import KingCrown from './KingCrown'
+import KingFile from './KingFile'
 
 type Patch = (patch: Partial<Match>) => void
 
@@ -24,6 +26,7 @@ interface Props {
 
 /** A King of the Ping session at the table: the game being played, « Au suivant » between games, the crown once it has ended. */
 export default function KingTable({ rotation, players, matches, ended, look, onPatch, onRotation, onNext, onEnd, onClose, scorer }: Props) {
+  const [editingFile, setEditingFile] = useState(false)
   const game = matches[matches.length - 1]
   if (!game) return null
   const champion = longestReign(matches)
@@ -37,5 +40,30 @@ export default function KingTable({ rotation, players, matches, ended, look, onP
     onPatch(game.id, patch)
     if (patch.done) onRotation(afterGame(rotation, winnerLoser(game).winner))
   }
-  return scorer(game, patchGame)
+  return (
+    <>
+      {scorer(game, patchGame)}
+      {createPortal(
+        <>
+          <button className="kt-file-btn" aria-label="File" onClick={() => setEditingFile(true)}>
+            File · {rotation.length - 2}
+          </button>
+          {editingFile && (
+            <div className="kt-sheet" role="dialog" aria-label="File">
+              <div className="kt-sheet-panel">
+                <div className="ks-label">
+                  {game.player_a} v {game.player_b}
+                </div>
+                <KingFile rotation={rotation} players={players} onRotation={onRotation} />
+                <button className="tk-btn tk-btn--ghost" onClick={() => setEditingFile(false)}>
+                  Fermer
+                </button>
+              </div>
+            </div>
+          )}
+        </>,
+        document.body,
+      )}
+    </>
+  )
 }
