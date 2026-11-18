@@ -1,5 +1,5 @@
 import type { Match } from '../types'
-import { reignOf, type Rotation } from '../lib/king'
+import { leaveTable, reignOf, type Rotation } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import Avatar from './Avatar'
 import KingFile from './KingFile'
@@ -57,7 +57,16 @@ export default function AuSuivant({
             className="tk-face"
             fill="solid"
           />
-          <div className="tk-face-name">{prochain}</div>
+          <div className="tk-face-name">
+            {prochain}
+            <button
+              className="ks-file-leave"
+              aria-label={`Retirer ${prochain}`}
+              onClick={() => onRotation(leaveTable(rotation, prochain))}
+            >
+              ✕
+            </button>
+          </div>
         </section>
 
         <KingFile rotation={rotation} players={players} onRotation={onRotation} />

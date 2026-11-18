@@ -111,3 +111,21 @@ it('lets someone arriving join at the back of the File, offering only players no
   expect(rotations).toEqual([['Inès', 'Zoé', 'Nora']])
   await expect.element(add).toHaveValue('')
 })
+
+it('lets the Prochain step out between games, the front of the File stepping up', async () => {
+  const rotations: string[][] = []
+  const screen = render(
+    <AuSuivant
+      rotation={['Inès', 'Zoé', 'Sam', 'Léo']}
+      players={[]}
+      matches={[getMockGame()]}
+      look={() => ({ team: null, url: null })}
+      onNext={() => {}}
+      onEnd={() => {}}
+      onRotation={(rotation) => rotations.push([...rotation])}
+    />,
+  )
+
+  await screen.getByRole('button', { name: 'Retirer Zoé' }).click()
+  expect(rotations).toEqual([['Inès', 'Sam', 'Léo']])
+})
