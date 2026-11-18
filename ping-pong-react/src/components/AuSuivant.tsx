@@ -1,10 +1,11 @@
 import type { Match } from '../types'
-import { leaveFile, reignOf, type Rotation } from '../lib/king'
+import { joinFile, leaveFile, reignOf, type Rotation } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import Avatar from './Avatar'
 
 interface Props {
   rotation: Rotation
+  players: ReadonlyArray<string>
   matches: ReadonlyArray<Match>
   look: LookUpPlayer
   onNext: () => void
@@ -13,11 +14,12 @@ interface Props {
 }
 
 /** Between two King of the Ping games: who holds the table, who challenges, who waits. */
-export default function AuSuivant({ rotation, matches, look, onNext, onEnd, onRotation }: Props) {
+export default function AuSuivant({ rotation, players, matches, look, onNext, onEnd, onRotation }: Props) {
   const [king, prochain, ...file] = rotation
   const reign = reignOf(matches, king)
   const kingLook = look(king)
   const prochainLook = look(prochain)
+  const arrivals = players.filter((name) => !rotation.includes(name))
 
   return (
     <div className="takeover takeover--purple">
@@ -59,6 +61,18 @@ export default function AuSuivant({ rotation, matches, look, onNext, onEnd, onRo
             </ol>
           </div>
         )}
+
+        <select
+          className="ks-join"
+          aria-label="Ajouter à la File"
+          value=""
+          onChange={(e) => onRotation(joinFile(rotation, e.target.value))}
+        >
+          <option value="">+ Ajouter à la File</option>
+          {arrivals.map((name) => (
+            <option key={name}>{name}</option>
+          ))}
+        </select>
 
         <div className="tk-actions">
           <button className="tk-btn tk-btn--primary" onClick={onNext}>

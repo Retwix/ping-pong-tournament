@@ -36,6 +36,7 @@ it('calls up the King, their règne, Prochain and the File, and starts the next 
   const screen = render(
     <AuSuivant
       rotation={['Inès', 'Zoé', 'Sam', 'Léo']}
+      players={[]}
       matches={[
         getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam' }),
         getMockGame({ idx: 1, player_a: 'Inès', player_b: 'Léo' }),
@@ -67,6 +68,7 @@ it('lets someone waiting in the File step out, leaving the table as it is', asyn
   const screen = render(
     <AuSuivant
       rotation={['Inès', 'Zoé', 'Sam', 'Léo']}
+      players={[]}
       matches={[getMockGame()]}
       look={() => ({ team: null, url: null })}
       onNext={() => {}}
@@ -77,4 +79,33 @@ it('lets someone waiting in the File step out, leaving the table as it is', asyn
 
   await screen.getByRole('button', { name: 'Retirer Sam' }).click()
   expect(rotations).toEqual([['Inès', 'Zoé', 'Léo']])
+})
+
+it('lets someone arriving join at the back of the File, offering only players not already in the rotation', async () => {
+  const rotations: string[][] = []
+  const screen = render(
+    <AuSuivant
+      rotation={['Inès', 'Zoé']}
+      players={['Inès', 'Léo', 'Zoé', 'Nora']}
+      matches={[getMockGame()]}
+      look={() => ({ team: null, url: null })}
+      onNext={() => {}}
+      onEnd={() => {}}
+      onRotation={(rotation) => rotations.push([...rotation])}
+    />,
+  )
+
+  const add = screen.getByRole('combobox', { name: 'Ajouter à la File' })
+  await expect.element(add).toBeVisible()
+  expect(
+    add
+      .getByRole('option')
+      .elements()
+      .filter((option) => option instanceof HTMLOptionElement && option.value !== '')
+      .map((option) => option.textContent),
+  ).toEqual(['Léo', 'Nora'])
+
+  await add.selectOptions('Nora')
+  expect(rotations).toEqual([['Inès', 'Zoé', 'Nora']])
+  await expect.element(add).toHaveValue('')
 })

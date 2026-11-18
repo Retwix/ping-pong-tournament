@@ -41,6 +41,7 @@ const renderKingTable = (overrides: { rotation: Rotation; matches: ReadonlyArray
   const screen = render(
     <KingTable
       ended={false}
+      players={['Inès', 'Léo', 'Sam', 'Nora']}
       {...overrides}
       look={() => ({ team: null, url: null })}
       onPatch={(id, patch) => patches.push({ id, patch })}
@@ -89,7 +90,11 @@ it('calls up « Au suivant » once the last game is done, where the File is edit
 
   await expect.element(screen.getByRole('region', { name: 'le King' })).toHaveTextContent('Inès')
   await screen.getByRole('button', { name: 'Retirer Sam' }).click()
-  expect(rotations).toEqual([['Inès', 'Léo']])
+  await screen.getByRole('combobox', { name: 'Ajouter à la File' }).selectOptions('Nora')
+  expect(rotations).toEqual([
+    ['Inès', 'Léo'],
+    ['Inès', 'Léo', 'Sam', 'Nora'],
+  ])
 
   await screen.getByRole('button', { name: 'Lancer la partie' }).click()
   expect(started).toEqual(['next'])

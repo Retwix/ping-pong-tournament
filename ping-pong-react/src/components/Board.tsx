@@ -115,6 +115,7 @@ export default function Board({
     return (
       <KingTable
         rotation={tournament.players}
+        players={registry.map((p) => p.name)}
         matches={matches}
         ended={tournament.status === 'done'}
         look={look}
