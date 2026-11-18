@@ -71,7 +71,7 @@ const renderSession = (overrides: { rotation: ReadonlyArray<string>; matches: Ma
   )
 }
 
-it('beside the game in progress, shows who holds the table and their règne, and the session Record', async () => {
+it('beside the game in progress, shows who holds the table and their règne, the session Record and the File in order', async () => {
   const screen = renderSession({
     rotation: ['Sam', 'Nora', 'Inès', 'Léo'],
     matches: [
@@ -91,6 +91,13 @@ it('beside the game in progress, shows who holds the table and their règne, and
   const record = screen.getByRole('region', { name: 'Record' })
   expect(record.element().textContent).toContain('Inès')
   expect(record.element().textContent).toContain('3 victoires')
+  expect(
+    screen
+      .getByRole('list', { name: 'File' })
+      .getByRole('listitem')
+      .elements()
+      .map((li) => li.textContent),
+  ).toEqual(['Inès', 'Léo'])
 })
 
 it('on the first game of a session, shows the King with no règne yet and no Record', async () => {

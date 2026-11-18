@@ -26,6 +26,14 @@ export default function KingStrip({ rotation, matches }: Props) {
           <div className="tv-king-sub">{wins(record.wins)}</div>
         </section>
       )}
+      <section className="tv-king-cell tv-king-file">
+        <div className="tv-king-label">File</div>
+        <ol aria-label="File">
+          {rotation.slice(2).map((name) => (
+            <li key={name}>{name}</li>
+          ))}
+        </ol>
+      </section>
     </div>
   )
 }
