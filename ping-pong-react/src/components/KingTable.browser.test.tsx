@@ -314,3 +314,14 @@ it('with one player left and nobody to crown, shows nothing rather than calling 
 
   expect(screen.container).toBeEmptyDOMElement()
 })
+
+it('a session ended elsewhere with nobody crowned reads as over here, not as a game to keep scoring', async () => {
+  const { screen, closed } = renderKingTable({
+    ended: true,
+    rotation: ['Inès', 'Sam', 'Léo'],
+    matches: [getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 3, score_b: 2 })],
+  })
+
+  await screen.getByRole('button', { name: 'Accueil' }).click()
+  expect(closed).toEqual(['close'])
+})

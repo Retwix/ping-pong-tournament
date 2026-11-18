@@ -48,7 +48,7 @@ export default function KingTable({
     onEnd(crown?.champion.player ?? null)
     if (!crown) onClose()
   }
-  if (ended && crown) return <KingCrown {...crown} look={look} onClose={onClose} />
+  if (ended) return <KingCrown crown={crown} look={look} onClose={onClose} />
   if (rotation.length < 2) return null
   if (!game || game.done)
     return (
