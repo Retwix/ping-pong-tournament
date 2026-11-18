@@ -7,3 +7,9 @@ export type Rotation = ReadonlyArray<string>
 export function nextGame(rotation: Rotation): Pick<Match, 'player_a' | 'player_b' | 'serve_start'> {
   return { player_a: rotation[0], player_b: rotation[1], serve_start: 'b' }
 }
+
+/** Once the game at the table is validated: the winner holds it, the loser joins the back of the File. */
+export function afterGame(rotation: Rotation, winner: string): Rotation {
+  const loser = rotation[0] === winner ? rotation[1] : rotation[0]
+  return [winner, ...rotation.slice(2), loser]
+}
