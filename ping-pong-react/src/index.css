@@ -1687,6 +1687,19 @@ td.elo.neg { color: var(--coral); }
   background: linear-gradient(165deg, #4a2aa4 0%, #3a2183 60%, #200a42 100%);
 }
 .kt-sheet-panel .tk-btn { margin-top: 22px; width: 100%; }
+.kt-table { display: flex; justify-content: center; gap: 8px; margin-bottom: 0; }
+.kt-table span {
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: normal;
+  text-transform: none; color: #fff; padding: 6px 14px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.kt-abandon { margin-top: 18px; }
+.kt-abandon p {
+  margin: 0; font-family: var(--font-body); font-weight: 600; font-size: 14px; line-height: 1.45;
+  color: rgba(255, 255, 255, 0.85);
+}
+.kt-abandon .tk-btn { margin-top: 14px; font-weight: 800; color: #fff; background: #d74251; border: none; }
 @media (min-width: 900px) and (min-height: 501px) {
   .kt-file-btn { top: auto; right: auto; bottom: 30px; left: 26px; color: var(--ref-btn-icon); background: var(--ref-btn-bg-desk); }
 }
