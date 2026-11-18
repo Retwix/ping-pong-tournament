@@ -11,6 +11,7 @@ import { isLive } from '../lib/liveHero'
 import { sideBios } from '../lib/playerBio'
 import { bestOf, setsFromWinner } from '../lib/sets'
 import type { Match } from '../types'
+import KingBoard from './KingBoard'
 import LiveScorer from './LiveScorer'
 import { RatingMoveRow } from './RatingDelta'
 import SpectatorView from './SpectatorView'
@@ -44,7 +45,8 @@ const HOLD_MS = 6000
 export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) {
   // Referee mode is interactive; spectator mode auto-advances on a timer.
   const isRef = !readOnly
-  const { tournament, matches, loading, error, patchMatch } = useTournament(id)
+  const { tournament, matches, loading, error, patchMatch, setRotation, endSession, abandonGame } =
+    useTournament(id)
   // Global-ladder rating moves: per finished match, and per whole tournament.
   const {
     forMatch: ratingsFor,
@@ -156,6 +158,20 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
         onBack={onBack}
         onRef={onRef}
         error={error}
+      />
+    )
+  }
+
+  if (tournament.kind === 'king') {
+    return (
+      <KingBoard
+        tournament={tournament}
+        matches={matches}
+        registry={players}
+        elosFor={elosFor}
+        session={{ patchMatch, setRotation, endSession, abandonGame }}
+        onBack={onBack}
+        presentTo="/live"
       />
     )
   }
