@@ -1666,6 +1666,7 @@ td.elo.neg { color: var(--coral); }
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 11px; color: #fff; background: rgba(255, 255, 255, 0.18);
 }
+.ks-king .ks-file-leave, .ks-prochain .ks-file-leave { margin-left: 10px; vertical-align: middle; }
 .ks-file-leave:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.3); }
 .ks-join {
   appearance: none; -webkit-appearance: none; cursor: pointer; margin: 18px auto 0; display: block;
