@@ -37,7 +37,8 @@ vi.mock('./supabase', () => {
           if (written.mayDelete) written.deleted.push({ from: table, id })
           return { data: written.mayDelete ? [{ id }] : [], error: null }
         },
-        then: (done: (result: { error: null }) => unknown) => {
+        then: (done: (result: { error: { message: string } | null }) => unknown) => {
+          if (written.refuse) return done({ error: { message: 'refused' } })
           if (key === 'id') written.deleted.push({ from: table, id })
           return done({ error: null })
         },
@@ -180,4 +181,11 @@ it('abandoning a game deletes its match, so nothing of it is recorded', async ()
   await deleteMatch('m-abandoned')
 
   expect(written.deleted).toEqual([{ from: 'matches', id: 'm-abandoned' }])
+})
+
+it('reports an abandon the database refused, so the game is not dropped on this phone alone', async () => {
+  written.refuse = true
+
+  await expect(deleteMatch('m-abandoned')).rejects.toMatchObject({ message: 'refused' })
+  written.refuse = false
 })

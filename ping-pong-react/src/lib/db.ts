@@ -366,7 +366,8 @@ export async function updateMatch(id: string, patch: Partial<Match>): Promise<vo
 
 /** No row deleted is no error: another phone may have abandoned the same game first. */
 export async function deleteMatch(id: string): Promise<void> {
-  await supabase.from('matches').delete().eq('id', id)
+  const { error } = await supabase.from('matches').delete().eq('id', id)
+  if (error) throw error
 }
 
 export async function updateTournament(id: string, patch: Partial<Tournament>): Promise<void> {
