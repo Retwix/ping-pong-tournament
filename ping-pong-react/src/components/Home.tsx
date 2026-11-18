@@ -4,7 +4,7 @@ import { useRatings } from '../hooks/useRatings'
 import { useSession } from '../hooks/useSession'
 import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
-import { cardRecap } from '../lib/king'
+import { cardRecap, endedWithoutAGame } from '../lib/king'
 import { buildLabel } from '../lib/buildInfo'
 import { recentTournaments } from '../lib/recentTournaments'
 import { deleteAttempt } from '../lib/slackIdentity'
@@ -113,7 +113,10 @@ export default function Home({
               <div className="empty">Aucun tournoi pour l'instant. Crée le premier !</div>
             ) : (
               <div className="rv-t-grid">
-                {recentTournaments(tournaments, DASHBOARD_COLUMNS * DASHBOARD_ROWS).map((t) => (
+                {recentTournaments(
+                  tournaments.filter((t) => !endedWithoutAGame(t, matches)),
+                  DASHBOARD_COLUMNS * DASHBOARD_ROWS,
+                ).map((t) => (
                   <TournamentCard
                     key={t.id}
                     tournament={t}
