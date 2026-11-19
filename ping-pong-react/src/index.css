@@ -3782,6 +3782,9 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 [data-theme='dark'] .np-seg-btn { color: #a99fc4; }
 [data-theme='dark'] .np-seg-btn:hover { color: #c9b8ff; }
 [data-theme='dark'] .np-seg-btn.active { color: #fff; background: #5b39c4; }
+@media (max-width: 400px) {
+  .np-seg-btn svg { display: none; }
+}
 
 /* ===== error banner ===== */
 .np-error {
@@ -4392,6 +4395,8 @@ header h1 .badge-nc { margin-left: 10px; }
 /* ===== responsive ===== */
 @media (max-width: 820px) {
   .np-head { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .np-seg { align-self: stretch; }
+  .np-seg-btn { flex: 1 1 auto; justify-content: center; white-space: nowrap; padding: 9px 10px; }
   .np-grid { grid-template-columns: 1fr; padding-bottom: 84px; }
   .np-card, .np-format-card { border-radius: 15px; }
   .np-rail { position: static; }
