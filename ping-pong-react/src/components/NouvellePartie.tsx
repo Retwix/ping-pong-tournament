@@ -80,6 +80,7 @@ interface Props {
   onPlayers: () => void
   onNew: () => void
   onNewGame: () => void
+  onNewKing: () => void
 }
 
 export default function NouvellePartie({
@@ -91,6 +92,7 @@ export default function NouvellePartie({
   onPlayers,
   onNew,
   onNewGame,
+  onNewKing,
 }: Props) {
   const isGame = variant === 'game'
   const isKing = variant === 'king'
@@ -501,7 +503,7 @@ export default function NouvellePartie({
                   : 'Choisis un format, ajoute les joueurs, le tableau se génère.'}
             </p>
           </div>
-          <KindSwitch variant={variant} onNew={onNew} onNewGame={onNewGame} />
+          <KindSwitch variant={variant} onNew={onNew} onNewGame={onNewGame} onNewKing={onNewKing} />
         </div>
       </div>
 
