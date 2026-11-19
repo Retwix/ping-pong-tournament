@@ -1,7 +1,6 @@
 import {
   IconAlertCircle,
   IconArrowsShuffle,
-  IconBolt,
   IconCheck,
   IconCirclePlus,
   IconClock,
@@ -12,7 +11,6 @@ import {
   IconSearch,
   IconSparkles,
   IconTournament,
-  IconTrophy,
   IconX,
 } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -45,8 +43,9 @@ import { postsToSlack } from '../lib/sets'
 import { inviteToSlack } from '../lib/slack'
 import { TEAMS, teamBadgeStyle, teamColor, teamLabel, type TeamKey } from '../lib/teams'
 import { buildChallengePosterSvg, buildTournamentPosterSvg } from '../lib/tournamentPoster'
-import type { TournamentFormat } from '../types'
+import type { TournamentFormat, TournamentKind } from '../types'
 import Avatar from './Avatar'
+import KindSwitch from './KindSwitch'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import { Loader } from './Loader'
@@ -63,6 +62,8 @@ function slugify(s: string, fallback: string): string {
 }
 
 const PRESETS = [11, 21, 15]
+const KING_PRESETS = [5, 7, 11]
+const KING_TARGET = 7
 /** Sets in a quick game: a single game, or a best-of-3 / best-of-5. */
 const SET_CHOICES = [1, 3, 5]
 const SELECTION_DOUBLE_VIDE: SelectionDouble = { a: [], b: [], camp: 'A' }
@@ -71,7 +72,7 @@ const rowsPour = (annuaire: JoueurRow[], ids: string[]): JoueurRow[] =>
   ids.map((id) => annuaire.find((r) => r.id === id)).filter((r): r is JoueurRow => r !== undefined)
 
 interface Props {
-  variant: 'game' | 'tournament'
+  variant: TournamentKind
   onCreated: (id: string) => void
   onHome: () => void
   onClassement: () => void
@@ -79,6 +80,7 @@ interface Props {
   onPlayers: () => void
   onNew: () => void
   onNewGame: () => void
+  onNewKing: () => void
 }
 
 export default function NouvellePartie({
@@ -90,15 +92,17 @@ export default function NouvellePartie({
   onPlayers,
   onNew,
   onNewGame,
+  onNewKing,
 }: Props) {
   const isGame = variant === 'game'
+  const isKing = variant === 'king'
   const { rows, events, matches, tournaments, players, loading, error, reload } = useRatings()
 
   const [name, setName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
   const [selected, setSelected] = useState<string[]>([])
   const [query, setQuery] = useState('')
-  const [preset, setPreset] = useState(11)
+  const [preset, setPreset] = useState(isKing ? KING_TARGET : 11)
   const [autre, setAutre] = useState('')
   const [sets, setSets] = useState(1)
   const [time, setTime] = useState('')
@@ -320,11 +324,12 @@ export default function NouvellePartie({
         : [selDouble.a, selDouble.b]
       const paireA = nomPaire(rowsPour(annuaire, equipeA).map((r) => r.name))
       const paireB = nomPaire(rowsPour(annuaire, equipeB).map((r) => r.name))
+      const kind = variant
       const id = await createTournament(
         isDouble ? `${paireA} vs ${paireB}` : recap.autoName,
         isDouble ? [paireA, paireB] : selRows.map((r) => r.name),
         target,
-        isGame ? 'game' : 'tournament',
+        kind,
         isGame ? 'round_robin' : format,
         chaos,
         unrankedEffectif,
@@ -332,7 +337,7 @@ export default function NouvellePartie({
         bestOfChoisi,
       )
       // Fire the Slack invitation (no-op unless configured); never blocks navigation.
-      if (postsToSlack({ best_of: bestOfChoisi })) void inviteToSlack(id)
+      if (postsToSlack({ kind, best_of: bestOfChoisi })) void inviteToSlack(id)
       onCreated(id)
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : String(e))
@@ -371,11 +376,13 @@ export default function NouvellePartie({
     }
   }
 
-  const kicker = isGame
-    ? 'Partie rapide'
-    : format === 'round_robin'
-      ? 'Round-robin · nouveau tournoi'
-      : 'Élimination directe · nouveau tournoi'
+  const kicker = isKing
+    ? 'Le gagnant reste'
+    : isGame
+      ? 'Partie rapide'
+      : format === 'round_robin'
+        ? 'Round-robin · nouveau tournoi'
+        : 'Élimination directe · nouveau tournoi'
   const countPill = isGame
     ? isDouble
       ? `${hasard ? selRows.length : nDouble} / 4`
@@ -383,11 +390,20 @@ export default function NouvellePartie({
     : selRows.length === 1
       ? '1 joueur'
       : `${selRows.length} joueurs`
-  const ruleHint = isGame
-    ? 'Premier à atteindre le score, avec 2 points d’écart.'
-    : format === 'round_robin'
-      ? 'Départage : victoires, puis différence de points.'
-      : 'Tableau à double élimination : il faut perdre 2 fois pour être éliminé.'
+  const ctaLabel = creating
+    ? 'Création…'
+    : isKing
+      ? 'Lancer la session'
+      : isGame
+        ? 'Lancer la partie'
+        : 'Générer le tournoi'
+  const ruleHint = isKing
+    ? 'Un jeu par partie, 2 points d’écart. Le perdant retourne au bout de la file.'
+    : isGame
+      ? 'Premier à atteindre le score, avec 2 points d’écart.'
+      : format === 'round_robin'
+        ? 'Départage : victoires, puis différence de points.'
+        : 'Tableau à double élimination : il faut perdre 2 fois pour être éliminé.'
 
   const carteEquipe = (camp: 'A' | 'B') => {
     const rows = camp === 'A' ? teamRows.a : teamRows.b
@@ -476,29 +492,18 @@ export default function NouvellePartie({
         <div className="np-head">
           <div className="np-head-text">
             <div className="np-kicker">{kicker}</div>
-            <h1 className="np-title">{isGame ? 'Nouvelle partie' : 'Nouveau tournoi'}</h1>
+            <h1 className="np-title">
+              {isKing ? 'King of the Ping' : isGame ? 'Nouvelle partie' : 'Nouveau tournoi'}
+            </h1>
             <p className="np-sub">
-              {isGame
-                ? 'Deux joueurs, un score, et le bureau est prévenu sur Slack.'
-                : 'Choisis un format, ajoute les joueurs, le tableau se génère.'}
+              {isKing
+                ? 'Choisis qui est là : le gagnant reste à la table, le suivant le défie.'
+                : isGame
+                  ? 'Deux joueurs, un score, et le bureau est prévenu sur Slack.'
+                  : 'Choisis un format, ajoute les joueurs, le tableau se génère.'}
             </p>
           </div>
-          <div className="np-seg">
-            <button
-              className={`np-seg-btn${isGame ? ' active' : ''}`}
-              onClick={isGame ? undefined : onNewGame}
-            >
-              <IconBolt size={15} stroke={2} />
-              Partie rapide
-            </button>
-            <button
-              className={`np-seg-btn${isGame ? '' : ' active'}`}
-              onClick={isGame ? onNew : undefined}
-            >
-              <IconTrophy size={15} stroke={2} />
-              Tournoi
-            </button>
-          </div>
+          <KindSwitch variant={variant} onNew={onNew} onNewGame={onNewGame} onNewKing={onNewKing} />
         </div>
       </div>
 
@@ -517,7 +522,7 @@ export default function NouvellePartie({
 
       <div className="np-grid np-in">
         <div className="np-form">
-          {!isGame && (
+          {variant === 'tournament' && (
             <>
               <section className="np-card">
                 <div className="np-label">Nom du tournoi</div>
@@ -853,7 +858,7 @@ export default function NouvellePartie({
                 <p className="np-card-desc">Le score à atteindre pour gagner un jeu.</p>
               </div>
               <div className="np-pts-controls">
-                {PRESETS.map((v) => (
+                {(isKing ? KING_PRESETS : PRESETS).map((v) => (
                   <button
                     key={v}
                     className={`np-pts-chip${autre === '' && preset === v ? ' active' : ''}`}
@@ -865,16 +870,18 @@ export default function NouvellePartie({
                     {v}
                   </button>
                 ))}
-                <label className={`np-autre${autre !== '' ? ' active' : ''}`}>
-                  <span>autre</span>
-                  <input
-                    value={autre}
-                    inputMode="numeric"
-                    placeholder="—"
-                    onChange={(e) => setAutre(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
-                    aria-label="Autre score cible"
-                  />
-                </label>
+                {!isKing && (
+                  <label className={`np-autre${autre !== '' ? ' active' : ''}`}>
+                    <span>autre</span>
+                    <input
+                      value={autre}
+                      inputMode="numeric"
+                      placeholder="—"
+                      onChange={(e) => setAutre(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+                      aria-label="Autre score cible"
+                    />
+                  </label>
+                )}
               </div>
             </div>
             {isGame && (
@@ -899,114 +906,119 @@ export default function NouvellePartie({
             )}
           </section>
 
-          <section className="np-card">
-            <div className="np-chaos-head">
-              <span className="np-icon-tile">
-                <IconSparkles size={18} stroke={2} />
-              </span>
-              <div className="np-chaos-text">
-                <h2 className="np-card-title">Mode chaos</h2>
-                <p className="np-card-desc">
-                  Des modificateurs tirés au sort pendant la partie — le fun avant la compétition.
-                </p>
-              </div>
-              {chaos.enabled && (
-                <button className="np-cfg" onClick={() => setChaosOpen((o) => !o)}>
-                  {chaosOpen ? 'Masquer' : 'Configurer'}
-                </button>
-              )}
-              <button
-                role="switch"
-                aria-checked={chaos.enabled}
-                aria-label="Activer le mode chaos"
-                className={`np-sw${chaos.enabled ? ' on' : ''}`}
-                onClick={() => {
-                  setChaosOpen(!chaos.enabled)
-                  setChaos((c) => ({ ...c, enabled: !c.enabled }))
-                }}
-              >
-                <span className="np-sw-knob" />
-              </button>
-            </div>
-
-            {chaos.enabled && chaosOpen && (
-              <div className="np-chaos-body">
-                <div className="np-chaos-row">
-                  <span className="np-chaos-lbl">Fréquence des tirages</span>
-                  <div className="np-chaos-chips">
-                    {(
-                      [
-                        [1, 'Chaque point'],
-                        [2, 'Tous les 2'],
-                        [3, 'Tous les 3'],
-                      ] as const
-                    ).map(([v, label]) => (
-                      <button
-                        key={v}
-                        className={`np-chip-sm${chaos.interval === v ? ' active' : ''}`}
-                        onClick={() => setChaos((c) => ({ ...c, interval: v }))}
-                      >
-                        {label}
-                      </button>
-                    ))}
+          {!isKing && (
+            <>
+              <section className="np-card">
+                <div className="np-chaos-head">
+                  <span className="np-icon-tile">
+                    <IconSparkles size={18} stroke={2} />
+                  </span>
+                  <div className="np-chaos-text">
+                    <h2 className="np-card-title">Mode chaos</h2>
+                    <p className="np-card-desc">
+                      Des modificateurs tirés au sort pendant la partie — le fun avant la
+                      compétition.
+                    </p>
                   </div>
+                  {chaos.enabled && (
+                    <button className="np-cfg" onClick={() => setChaosOpen((o) => !o)}>
+                      {chaosOpen ? 'Masquer' : 'Configurer'}
+                    </button>
+                  )}
+                  <button
+                    role="switch"
+                    aria-checked={chaos.enabled}
+                    aria-label="Activer le mode chaos"
+                    className={`np-sw${chaos.enabled ? ' on' : ''}`}
+                    onClick={() => {
+                      setChaosOpen(!chaos.enabled)
+                      setChaos((c) => ({ ...c, enabled: !c.enabled }))
+                    }}
+                  >
+                    <span className="np-sw-knob" />
+                  </button>
                 </div>
 
-                <div>
-                  <span className="np-chaos-lbl">Intensité</span>
-                  <div className="np-inten">
+                {chaos.enabled && chaosOpen && (
+                  <div className="np-chaos-body">
+                    <div className="np-chaos-row">
+                      <span className="np-chaos-lbl">Fréquence des tirages</span>
+                      <div className="np-chaos-chips">
+                        {(
+                          [
+                            [1, 'Chaque point'],
+                            [2, 'Tous les 2'],
+                            [3, 'Tous les 3'],
+                          ] as const
+                        ).map(([v, label]) => (
+                          <button
+                            key={v}
+                            className={`np-chip-sm${chaos.interval === v ? ' active' : ''}`}
+                            onClick={() => setChaos((c) => ({ ...c, interval: v }))}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="np-chaos-lbl">Intensité</span>
+                      <div className="np-inten">
+                        <button
+                          className={`np-inten-card${chaos.intensity === 'mild' ? ' active' : ''}`}
+                          onClick={() => setChaos((c) => ({ ...c, intensity: 'mild' }))}
+                        >
+                          <span className="np-inten-title">Modéré</span>
+                          <span className="np-inten-desc">
+                            Que des bonus. Rien de méchant, juste rigolo.
+                          </span>
+                        </button>
+                        <button
+                          className={`np-inten-card${chaos.intensity === 'full' ? ' active' : ''}`}
+                          onClick={() => setChaos((c) => ({ ...c, intensity: 'full' }))}
+                        >
+                          <span className="np-inten-title">Chaos total</span>
+                          <span className="np-inten-desc">Bonus et malus. Tout peut arriver.</span>
+                        </button>
+                      </div>
+                    </div>
+
                     <button
-                      className={`np-inten-card${chaos.intensity === 'mild' ? ' active' : ''}`}
-                      onClick={() => setChaos((c) => ({ ...c, intensity: 'mild' }))}
+                      className="np-legend"
+                      aria-pressed={chaos.legendary}
+                      onClick={() => setChaos((c) => ({ ...c, legendary: !c.legendary }))}
                     >
-                      <span className="np-inten-title">Modéré</span>
-                      <span className="np-inten-desc">
-                        Que des bonus. Rien de méchant, juste rigolo.
+                      <span className="np-legend-text">
+                        <span className="np-legend-title">Modificateurs légendaires</span>
+                        <span className="np-legend-desc">Rares, spectaculaires.</span>
+                      </span>
+                      <span className={`np-sw np-sw-sm${chaos.legendary ? ' on' : ''}`}>
+                        <span className="np-sw-knob" />
                       </span>
                     </button>
-                    <button
-                      className={`np-inten-card${chaos.intensity === 'full' ? ' active' : ''}`}
-                      onClick={() => setChaos((c) => ({ ...c, intensity: 'full' }))}
-                    >
-                      <span className="np-inten-title">Chaos total</span>
-                      <span className="np-inten-desc">Bonus et malus. Tout peut arriver.</span>
-                    </button>
                   </div>
+                )}
+              </section>
+
+              <section className="np-card np-heure">
+                <span className="np-icon-tile">
+                  <IconClock size={18} stroke={2} />
+                </span>
+                <div className="np-heure-text">
+                  <h2 className="np-card-title">
+                    Heure <span className="np-opt">optionnel · pour l’invitation</span>
+                  </h2>
+                  <p className="np-card-desc">
+                    L’invitation Slack part à la création ; l’heure s’affiche aussi sur l’affiche.
+                  </p>
                 </div>
-
-                <button
-                  className="np-legend"
-                  aria-pressed={chaos.legendary}
-                  onClick={() => setChaos((c) => ({ ...c, legendary: !c.legendary }))}
-                >
-                  <span className="np-legend-text">
-                    <span className="np-legend-title">Modificateurs légendaires</span>
-                    <span className="np-legend-desc">Rares, spectaculaires.</span>
-                  </span>
-                  <span className={`np-sw np-sw-sm${chaos.legendary ? ' on' : ''}`}>
-                    <span className="np-sw-knob" />
-                  </span>
-                </button>
-              </div>
-            )}
-          </section>
-
-          <section className="np-card np-heure">
-            <span className="np-icon-tile">
-              <IconClock size={18} stroke={2} />
-            </span>
-            <div className="np-heure-text">
-              <h2 className="np-card-title">
-                Heure <span className="np-opt">optionnel · pour l’invitation</span>
-              </h2>
-              <p className="np-card-desc">
-                L’invitation Slack part à la création ; l’heure s’affiche aussi sur l’affiche.
-              </p>
-            </div>
-            <label className="np-field np-time">
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-            </label>
-          </section>
+                <label className="np-field np-time">
+                  <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                </label>
+              </section>
+            </>
+          )}
         </div>
 
         <div className="np-rail">
@@ -1075,26 +1087,28 @@ export default function NouvellePartie({
                 title={recap.valid ? undefined : recap.hint}
                 onClick={create}
               >
-                {creating ? 'Création…' : isGame ? 'Lancer la partie' : 'Générer le tournoi'}
+                {ctaLabel}
               </button>
-              <button
-                className={`np-poster${posterBusy ? ' busy' : canPoster ? '' : ' off'}`}
-                title={
-                  canPoster
-                    ? undefined
-                    : isHasard
-                      ? 'Les équipes sont tirées au sort au lancement.'
-                      : 'Choisis d’abord les joueurs'
-                }
-                onClick={downloadPoster}
-              >
-                {!posterBusy && <IconDownload size={16} stroke={2.1} />}
-                {posterBusy
-                  ? 'Génération…'
-                  : isGame
-                    ? 'Télécharger le défi (PNG)'
-                    : 'Télécharger l’affiche (PNG)'}
-              </button>
+              {!isKing && (
+                <button
+                  className={`np-poster${posterBusy ? ' busy' : canPoster ? '' : ' off'}`}
+                  title={
+                    canPoster
+                      ? undefined
+                      : isHasard
+                        ? 'Les équipes sont tirées au sort au lancement.'
+                        : 'Choisis d’abord les joueurs'
+                  }
+                  onClick={downloadPoster}
+                >
+                  {!posterBusy && <IconDownload size={16} stroke={2.1} />}
+                  {posterBusy
+                    ? 'Génération…'
+                    : isGame
+                      ? 'Télécharger le défi (PNG)'
+                      : 'Télécharger l’affiche (PNG)'}
+                </button>
+              )}
             </div>
 
             <div className="np-rule">{ruleHint}</div>
@@ -1109,7 +1123,7 @@ export default function NouvellePartie({
           title={recap.valid ? undefined : recap.hint}
           onClick={create}
         >
-          {creating ? 'Création…' : isGame ? 'Lancer la partie' : 'Générer le tournoi'}
+          {ctaLabel}
         </button>
       </div>
 

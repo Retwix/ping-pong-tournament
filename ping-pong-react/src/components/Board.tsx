@@ -24,6 +24,7 @@ import Champion from './Champion'
 import DashboardNav from './DashboardNav'
 import DashboardTabBar from './DashboardTabBar'
 import GameResult from './GameResult'
+import KingBoard from './KingBoard'
 import LiveScorer from './LiveScorer'
 import MatchList from './MatchList'
 import BoardStandings from './BoardStandings'
@@ -51,7 +52,7 @@ export default function Board({
   onStats,
   onPlayers,
 }: Props) {
-  const { tournament, matches, loading, error, patchMatch, reload } = useTournament(id)
+  const { tournament, matches, loading, error, patchMatch, setRotation, endSession, abandonGame, reload } = useTournament(id)
   const { players: registry } = usePlayers()
   const {
     forMatch: ratingsForMatch,
@@ -107,6 +108,20 @@ export default function Board({
           Tous les tournois
         </button>
       </div>,
+    )
+  }
+
+  if (tournament.kind === 'king') {
+    return (
+      <KingBoard
+        tournament={tournament}
+        matches={matches}
+        registry={registry}
+        elosFor={elosFor}
+        session={{ patchMatch, setRotation, endSession, abandonGame }}
+        onBack={onBack}
+        presentTo={`/t/${id}/live`}
+      />
     )
   }
 

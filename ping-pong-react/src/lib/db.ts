@@ -4,6 +4,7 @@ import { buildDoubleElim } from './doubleElim'
 import { RATING, ratedMatches, replayRatings } from './rating'
 import { chaosColumns, DEFAULT_CHAOS_SETTINGS, type ChaosSettings } from './chaos'
 import { avatarStoragePath, withCacheBuster } from './avatar'
+import { closingCrowns, nextGame, type Rotation } from './king'
 import type { Match, Player, PlayerStatus, Tournament, TournamentKind, TournamentFormat } from '../types'
 
 // ---------- players registry ----------
@@ -150,7 +151,9 @@ function blankMatch(
 /**
  * Create a tournament (or a single game) + its matches. A `game` is a single
  * round-robin match. Tournaments are either round-robin (everyone plays everyone)
- * or a double-elimination bracket, per `format`. Returns the new id.
+ * or a double-elimination bracket, per `format`. A King of the Ping session stores
+ * its shuffled rotation as `players` and starts with its first game only.
+ * Returns the new id.
  */
 export async function createTournament(
   name: string,
@@ -172,6 +175,8 @@ export async function createTournament(
   // stats). Unknown names (e.g. since-removed players) keep a null id.
   const { data: reg } = await supabase.from('players').select('id, name')
   const idByName = new Map<string, string>((reg ?? []).map((p) => [p.name, p.id]))
+
+  await closeOpenKingSessions().catch((e) => console.error('closeOpenKingSessions failed', e))
 
   // Hand the "current" pointer to the new tournament: clear it everywhere first so
   // the partial unique index (at most one active) is never violated on insert.
@@ -206,6 +211,11 @@ export async function createTournament(
     .select()
     .single()
   if (error) throw error
+
+  if (kind === 'king') {
+    await addKingGame(t.id, ordered, [])
+    return t.id as string
+  }
 
   const base = blankMatch(t.id)
   const rows: Omit<Match, 'id'>[] = []
@@ -250,6 +260,56 @@ export async function createTournament(
     if (mErr) throw mErr
   }
   return t.id as string
+}
+
+/**
+ * A new partie ends any King of the Ping session still open, crowning it from its games.
+ * One without a validated game is deleted when the delete policy lets the closer, else ends uncrowned.
+ */
+async function closeOpenKingSessions(): Promise<void> {
+  const { data: open, error } = await supabase
+    .from('tournaments')
+    .select('id')
+    .eq('kind', 'king')
+    .eq('status', 'active')
+  if (error) throw error
+  const ids = (open ?? []).map((t) => t.id as string)
+  if (ids.length === 0) return
+  const { data: games, error: gamesErr } = await supabase
+    .from('matches')
+    .select('*')
+    .in('tournament_id', ids)
+  if (gamesErr) throw gamesErr
+  await Promise.all(
+    closingCrowns(ids, (games ?? []) as Match[]).map(({ id, champion }) => endKingSession(id, champion)),
+  )
+}
+
+/** Ends a King of the Ping session crowning `champion`; one that never had a game is deleted when the policy allows, else closed with no champion. */
+export async function endKingSession(id: string, champion: string | null): Promise<void> {
+  const close = () => updateTournament(id, { status: 'done', champion })
+  return champion === null ? deleteTournament(id).catch(close) : close()
+}
+
+/** Calls the next King of the Ping game to the table, numbered after the games already played. */
+export async function addKingGame(
+  tournamentId: string,
+  rotation: Rotation,
+  played: ReadonlyArray<Match>,
+): Promise<void> {
+  const { data: reg } = await supabase.from('players').select('id, name')
+  const idByName = new Map<string, string>((reg ?? []).map((p) => [p.name, p.id]))
+  const game = nextGame(rotation)
+  const idx = played.length
+  const { error } = await supabase.from('matches').insert({
+    ...blankMatch(tournamentId),
+    ...game,
+    round: idx + 1,
+    idx,
+    player_a_id: idByName.get(game.player_a) ?? null,
+    player_b_id: idByName.get(game.player_b) ?? null,
+  })
+  if (error) throw error
 }
 
 export async function listTournaments(): Promise<Tournament[]> {
@@ -305,6 +365,12 @@ export async function getMatches(tournamentId: string): Promise<Match[]> {
 
 export async function updateMatch(id: string, patch: Partial<Match>): Promise<void> {
   const { error } = await supabase.from('matches').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+/** No row deleted is no error: another phone may have abandoned the same game first. */
+export async function deleteMatch(id: string): Promise<void> {
+  const { error } = await supabase.from('matches').delete().eq('id', id)
   if (error) throw error
 }
 

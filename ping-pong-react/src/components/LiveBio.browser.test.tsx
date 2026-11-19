@@ -99,6 +99,26 @@ describe('SpectatorView live board', () => {
     await expect
       .element(screen.getByRole('group', { name: 'Inès' }).getByText('Service canon'))
       .toBeVisible()
+    expect(screen.getByRole('region', { name: 'le King' }).query()).toBeNull()
+  })
+})
+
+describe('SpectatorView between matches', () => {
+  it('shows the tournament podium beside the next match once a result is in', async () => {
+    const next = getMockMatch({ id: 'm2', idx: 1, score_a: 0, score_b: 0, started_at: null })
+    const screen = await render(
+      <SpectatorView
+        tournament={getMockTournament()}
+        matches={[getMockMatch({ score_a: 11, score_b: 3, done: true }), next]}
+        match={next}
+        rows={[]}
+        players={[]}
+        ratingsFor={() => ({ a: null, b: null })}
+        onBack={() => {}}
+      />,
+    )
+
+    await expect.element(screen.getByText('Le podium')).toBeVisible()
   })
 })
 

@@ -21,6 +21,7 @@ type Route =
   | { name: 'home' }
   | { name: 'new' }
   | { name: 'game' }
+  | { name: 'king' }
   | { name: 'parties'; filter: PartiesFilter }
   | { name: 'players' }
   | { name: 'stats'; filters: StatsFilters }
@@ -35,6 +36,7 @@ function parseRoute(): Route {
   const p = currentPath()
   if (p === '/new') return { name: 'new' }
   if (p === '/game') return { name: 'game' }
+  if (p === '/king') return { name: 'king' }
   if (p === '/parties') return { name: 'parties', filter: parseFilter(window.location.search) }
   if (p === '/players') return { name: 'players' }
   if (p === '/stats') return { name: 'stats', filters: parseStatsFilters(window.location.search) }
@@ -74,9 +76,11 @@ function renderRoute(route: Route) {
   switch (route.name) {
     case 'new':
     case 'game':
+    case 'king':
       return (
         <NouvellePartie
-          variant={route.name === 'game' ? 'game' : 'tournament'}
+          key={route.name === 'king' ? 'king' : 'partie'}
+          variant={route.name === 'new' ? 'tournament' : route.name}
           onCreated={(id) => navigate(`/t/${id}`)}
           onHome={() => navigate('/')}
           onClassement={() => navigate('/classement')}
@@ -84,6 +88,7 @@ function renderRoute(route: Route) {
           onPlayers={() => navigate('/players')}
           onNew={() => navigate('/new')}
           onNewGame={() => navigate('/game')}
+          onNewKing={() => navigate('/king')}
         />
       )
     case 'parties':

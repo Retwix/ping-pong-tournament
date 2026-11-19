@@ -24,7 +24,7 @@ import { doubleElimMatchCount, MIN_DE_PLAYERS } from './doubleElim'
 import { matchDuration } from './pingpong'
 import type { RatingEvent } from './rating'
 import { matchCount } from './roundRobin'
-import type { Match, Tournament, TournamentFormat } from '../types'
+import type { Match, Tournament, TournamentFormat, TournamentKind } from '../types'
 
 // ---------- tunables (one place) ----------
 
@@ -318,7 +318,7 @@ export function calibrerDuree(
 
 export interface EntreeEstimation {
   /** A quick game is a single match; a tournament expands to its schedule. */
-  variant: 'game' | 'tournament'
+  variant: TournamentKind
   format: TournamentFormat
   /** Elo of each selected player, in pick order. Unrated players sit at R0. */
   elos: number[]
@@ -378,7 +378,7 @@ function paires(elos: number[]): [number, number][] {
  */
 export function estimerDuree(entree: EntreeEstimation): EstimationDuree | null {
   const { variant, format, elos, target, modele } = entree
-  if (target < 1) return null
+  if (target < 1 || variant === 'king') return null
 
   const toutes = paires(elos)
   const n = elos.length

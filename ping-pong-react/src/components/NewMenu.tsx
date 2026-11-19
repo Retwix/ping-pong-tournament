@@ -1,5 +1,6 @@
 import { IconChevronDown, IconPlus } from '@tabler/icons-react'
 import { useEffect, useRef, useState } from 'react'
+import { navigate } from '../lib/router'
 
 interface Props {
   onNew: () => void
@@ -12,7 +13,7 @@ interface Props {
   compact?: boolean
 }
 
-/** "Nouveau" split button: a dropdown to start a quick game or a full tournament. */
+/** "Nouveau" split button: a dropdown to start a quick game, a full tournament or a King of the Ping session. */
 export default function NewMenu({ onNew, onNewGame, compact = false }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -112,6 +113,15 @@ export default function NewMenu({ onNew, onNewGame, compact = false }: Props) {
             onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
           >
             🏆 Nouveau tournoi
+          </button>
+          <button
+            role="menuitem"
+            style={item}
+            onClick={pick(() => navigate('/king'))}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--ghost-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+          >
+            👑 King of the Ping
           </button>
         </div>
       )}

@@ -2,7 +2,7 @@ import type { ChaosIntensity } from './lib/chaos'
 
 export type MatchSide = 'a' | 'b'
 export type TournamentStatus = 'active' | 'done'
-export type TournamentKind = 'tournament' | 'game'
+export type TournamentKind = 'tournament' | 'game' | 'king'
 /** How matchups are produced: classic round-robin, or a double-elimination bracket. */
 export type TournamentFormat = 'round_robin' | 'double_elim'
 /** Which bracket a double-elim match belongs to. null for round-robin matches. */

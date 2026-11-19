@@ -1214,6 +1214,71 @@ td.elo.neg { color: var(--coral); }
 .tv-step--2 .tv-step-bar { height: 90px; font-size: 30px; background: linear-gradient(180deg, #c7cdd6, #aeb6c0); }
 .tv-step--3 .tv-step-bar { height: 66px; font-size: 26px; background: linear-gradient(180deg, #d9a878, #cb8e5e); }
 
+/* --- King of the Ping: who holds the table, the Record, the File --- */
+.tv-king {
+  display: flex; align-items: stretch; gap: calc(14 * var(--u));
+  padding: calc(10 * var(--u)) calc(44 * var(--u)) calc(26 * var(--u));
+}
+.tv-king-cell {
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  min-width: 0; margin: 0; border-radius: 18px; padding: calc(12 * var(--u)) calc(22 * var(--u));
+  background: var(--surface); border: 1px solid #e8e4f2;
+  box-shadow: 0 10px 26px rgba(32, 10, 66, 0.08);
+}
+[data-theme='dark'] .tv-king-cell {
+  background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.12); box-shadow: none;
+}
+.tv-king-cell:first-child { border-color: rgba(240, 200, 75, 0.7); box-shadow: 0 10px 26px rgba(240, 200, 75, 0.2); }
+.tv-king-label {
+  font-weight: 800; font-size: max(10px, calc(12 * var(--u)));
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--tv-label);
+}
+.tv-king-cell:first-child .tv-king-label { color: #b8860b; }
+[data-theme='dark'] .tv-king-cell:first-child .tv-king-label { color: #f0c84b; }
+.tv-king-name {
+  font-weight: 900; font-size: max(16px, calc(26 * var(--u))); color: var(--tv-ink);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.tv-king-sub {
+  font-family: var(--font-body); font-weight: 700;
+  font-size: max(11px, calc(14 * var(--u))); color: var(--tv-muted);
+}
+.tv-king-file { flex: 1; }
+.tv-king-file ol {
+  list-style: none; margin: 4px 0 0; padding: 0; counter-reset: file;
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.tv-king-file li {
+  counter-increment: file; display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 800; font-size: max(13px, calc(18 * var(--u))); color: var(--tv-ink);
+  border-radius: 999px; padding: 5px 14px 5px 6px; background: rgba(74, 42, 164, 0.08);
+}
+[data-theme='dark'] .tv-king-file li { background: rgba(255, 255, 255, 0.08); }
+.tv-king-file li::before {
+  content: counter(file); display: inline-flex; align-items: center; justify-content: center;
+  width: 1.5em; height: 1.5em; border-radius: 50%; font-size: 0.75em;
+  background: var(--purple); color: #fff;
+}
+.tv--live .tv-avatar { flex-shrink: 0; }
+.tv-panels > .tv-king {
+  flex-direction: column; width: min(440px, 100%); padding: 0;
+}
+.tv-panels > .tv-king .tv-king-cell { padding: 22px 24px; }
+.tv-panels > .tv-king .tv-king-file { flex: 1; justify-content: flex-start; }
+
+/* --- King of the Ping over: the longest reign --- */
+.tv-crown {
+  margin: auto 0; display: flex; flex-direction: column; align-items: center;
+  gap: 10px; text-align: center; padding-top: 26px;
+}
+.tv-crown .tv-step-crown { margin-bottom: -6px; }
+.tv-crown .tv-step-avatar {
+  width: 96px; height: 96px; font-size: 34px;
+  border: 3px solid #f0c84b; box-shadow: 0 0 34px rgba(240, 200, 75, 0.5);
+}
+.tv-crown .tv-podium-title { font-size: 40px; }
+.tv-crown .tv-step-elo { color: #f0c84b; font-size: 16px; }
+
 /* --- end of tournament: the full classement, beside the podium --- */
 .tv-final {
   flex: 1; max-width: 620px; min-width: 0; min-height: min(520px, 74vh);
@@ -1577,6 +1642,73 @@ td.elo.neg { color: var(--coral); }
 .tk-sets tr + tr th, .tk-sets tr + tr td { opacity: 0.6; }
 .tk-actions { display: flex; gap: 12px; margin-top: 28px; width: 100%; max-width: 420px; justify-content: center; }
 .tk-actions .tk-btn { flex: 0 1 auto; padding: 14px 30px; font-size: 15px; border-radius: 14px; }
+.ks-king { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+.ks-reign {
+  font-family: var(--font-body); font-weight: 800; font-size: 15px; color: #f0c84b; margin-top: 8px;
+}
+.ks-label {
+  font-family: var(--font-display); font-weight: 800; font-size: 11px; letter-spacing: 0.24em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px;
+}
+.ks-prochain { margin-top: 26px; }
+.ks-file { margin-top: 22px; }
+.ks-file ol {
+  list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+}
+.ks-file li {
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #fff;
+  padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.ks-file-leave {
+  border: none; cursor: pointer; width: 22px; height: 22px; border-radius: 50%; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff; background: rgba(255, 255, 255, 0.18);
+}
+.ks-king .ks-file-leave, .ks-prochain .ks-file-leave { margin-left: 10px; vertical-align: middle; }
+.ks-file-leave:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.3); }
+.ks-join {
+  appearance: none; -webkit-appearance: none; cursor: pointer; margin: 18px auto 0; display: block;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #fff;
+  padding: 9px 18px; border-radius: 999px; background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.45); text-align: center;
+}
+.ks-join option { color: #1d1240; }
+
+.kt-file-btn {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 16px; z-index: 51;
+  height: 40px; padding: 0 14px; border: none; border-radius: 12px; cursor: pointer;
+  font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 0.04em;
+  color: #fff; background: rgba(255, 255, 255, 0.14);
+}
+.kt-file-btn:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.22); }
+.kt-sheet {
+  position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(10, 4, 30, 0.55);
+}
+.kt-sheet-panel {
+  width: min(100%, 560px); text-align: center; border-radius: 24px 24px 0 0;
+  padding: 22px 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  background: linear-gradient(165deg, #4a2aa4 0%, #3a2183 60%, #200a42 100%);
+}
+.kt-sheet-panel .tk-btn { margin-top: 22px; width: 100%; }
+.kt-table { display: flex; justify-content: center; gap: 8px; margin-bottom: 0; }
+.kt-table span {
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: normal;
+  text-transform: none; color: #fff; padding: 6px 14px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.kt-abandon { margin-top: 18px; }
+.kt-abandon p {
+  margin: 0; font-family: var(--font-body); font-weight: 600; font-size: 14px; line-height: 1.45;
+  color: rgba(255, 255, 255, 0.85);
+}
+.kt-abandon .tk-btn { margin-top: 14px; font-weight: 800; color: #fff; background: #d74251; border: none; }
+@media (min-width: 900px) and (min-height: 501px) {
+  .kt-file-btn { top: auto; right: auto; bottom: 30px; left: 26px; color: var(--ref-btn-icon); background: var(--ref-btn-bg-desk); }
+}
 
 .tk-skull { font-size: 70px; animation: rvshake 0.4s infinite; }
 .tk-capot-title {
@@ -3650,6 +3782,9 @@ button.rv-top-link { background: none; border: 0; padding: 0; cursor: pointer; }
 [data-theme='dark'] .np-seg-btn { color: #a99fc4; }
 [data-theme='dark'] .np-seg-btn:hover { color: #c9b8ff; }
 [data-theme='dark'] .np-seg-btn.active { color: #fff; background: #5b39c4; }
+@media (max-width: 400px) {
+  .np-seg-btn svg { display: none; }
+}
 
 /* ===== error banner ===== */
 .np-error {
@@ -4260,6 +4395,8 @@ header h1 .badge-nc { margin-left: 10px; }
 /* ===== responsive ===== */
 @media (max-width: 820px) {
   .np-head { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .np-seg { align-self: stretch; }
+  .np-seg-btn { flex: 1 1 auto; justify-content: center; white-space: nowrap; padding: 9px 10px; }
   .np-grid { grid-template-columns: 1fr; padding-bottom: 84px; }
   .np-card, .np-format-card { border-radius: 15px; }
   .np-rail { position: static; }

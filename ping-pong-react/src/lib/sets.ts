@@ -116,7 +116,8 @@ export function setsFromWinner(m: LiveScore): SetScore[] {
 /**
  * Set parties stay off Slack until their messages can show the sets (S4):
  * a deciding-set score posted as the result would mislead, and stay posted.
+ * King of the Ping sessions never post (plans/2026-11-18-king-of-the-hill.md, 16).
  */
-export function postsToSlack(t: Pick<Tournament, 'best_of'>): boolean {
-  return bestOf(t) === 1
+export function postsToSlack(t: Pick<Tournament, 'kind' | 'best_of'>): boolean {
+  return t.kind !== 'king' && bestOf(t) === 1
 }

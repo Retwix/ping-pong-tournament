@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  deleteMatch,
+  endKingSession,
   getMatches,
   getTournament,
   recomputeRatings,
@@ -7,10 +9,11 @@ import {
   updateTournament,
 } from '../lib/db'
 import { supabase } from '../lib/supabase'
-import { uniqueChannelName } from '../lib/realtimeChannel'
+import { watchTournament } from '../lib/tournamentChannel'
 import { postSlackResult } from '../lib/slack'
 import { computeStandings } from '../lib/pingpong'
 import { finishedSets, postsToSlack } from '../lib/sets'
+import { crownsWhenAllMatchesDone, type Rotation } from '../lib/king'
 import { reconcileBracket } from '../lib/doubleElim'
 import {
   mergeWithPending,
@@ -20,12 +23,6 @@ import {
   type PendingValue,
 } from '../lib/realtimeSync'
 import type { Match, Tournament } from '../types'
-
-interface MatchChangePayload {
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
-  new: Match | Record<string, never>
-  old: Partial<Match>
-}
 
 // How often to refetch as a safety net against a silently dropped realtime event.
 const POLL_MS = 15000
@@ -51,6 +48,8 @@ export function useTournament(id: string | null) {
   // Latest state read of `matches` (for computing optimistic merges synchronously).
   const matchesRef = useRef<Match[]>([])
   matchesRef.current = matches
+  const tournamentRef = useRef<Tournament | null>(null)
+  tournamentRef.current = tournament
 
   // matchId -> the latest value we optimistically wrote, awaiting its own echo.
   const pendingRef = useRef<Map<string, PendingValue>>(new Map())
@@ -118,42 +117,23 @@ export function useTournament(id: string | null) {
       }
     })()
 
-    const channel = supabase
-      .channel(uniqueChannelName(`tournament-${id}`))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${id}` },
-        (payload) => {
-          const p = payload as unknown as MatchChangePayload
-          if (p.eventType === 'DELETE') {
-            const delId = p.old.id
-            if (delId) clearPending(delId)
-            setMatches((prev) => prev.filter((m) => m.id !== delId))
-            return
-          }
-
-          const row = p.new as Match
-          const decision = reconcileEcho(pendingRef.current.get(row.id), row)
-          // Stale intermediate echo of our own write — ignore to avoid flicker.
-          if (decision === 'ignore') return
-          // Our latest write echoed back — settle so genuine remote updates flow.
-          if (decision === 'settle') clearPending(row.id)
-          setMatches((prev) => upsertSorted(prev, row))
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${id}` },
-        (payload) => {
-          if (payload.eventType === 'DELETE') return
-          setTournament(payload.new as Tournament)
-        },
-      )
-      .subscribe((status) => {
-        // On (re)subscribe, refetch to catch anything that changed while the
-        // socket was down (mobile backgrounding, wifi roam, projector sleep).
-        if (status === 'SUBSCRIBED') void reload()
-      })
+    const channel = watchTournament(id, {
+      onMatch: (row) => {
+        const decision = reconcileEcho(pendingRef.current.get(row.id), row)
+        // Stale intermediate echo of our own write — ignore to avoid flicker.
+        if (decision === 'ignore') return
+        // Our latest write echoed back — settle so genuine remote updates flow.
+        if (decision === 'settle') clearPending(row.id)
+        setMatches((prev) => upsertSorted(prev, row))
+      },
+      onMatchGone: (delId) => {
+        clearPending(delId)
+        setMatches((prev) => prev.filter((m) => m.id !== delId))
+      },
+      onTournament: setTournament,
+      onTournamentGone: () => void reload(),
+      onSubscribed: () => void reload(),
+    })
 
     // Safety net: realtime can silently drop an event under load, and mobile tabs
     // stop receiving while backgrounded. Refetch when the tab regains focus and on
@@ -216,6 +196,64 @@ export function useTournament(id: string | null) {
     [markPending, clearPending],
   )
 
+  const writeTournament = useCallback(
+    async (patch: Partial<Tournament>, rollback: (before: Tournament) => Partial<Tournament>) => {
+      const cur = tournamentRef.current
+      if (!cur) return
+      setTournament((prev) => (prev ? { ...prev, ...patch } : prev))
+      try {
+        await withRetry(() => updateTournament(cur.id, patch))
+        setError(null)
+      } catch (e) {
+        setTournament((prev) => (prev ? { ...prev, ...rollback(cur) } : prev))
+        setError(e instanceof Error ? e.message : String(e))
+      }
+    },
+    [],
+  )
+
+  /** King of the Ping: write the new rotation optimistically, with retry and rollback. */
+  const setRotation = useCallback(
+    (rotation: Rotation) => writeTournament({ players: [...rotation] }, (before) => ({ players: before.players })),
+    [writeTournament],
+  )
+
+  /** King of the Ping: « Terminer » closes the session optimistically, crowning `champion`; with no champion it never happened, so it goes. */
+  const endSession = useCallback(
+    (champion: string | null) => {
+      const cur = tournamentRef.current
+      if (champion === null && cur) {
+        return endKingSession(cur.id, null).catch((e) => console.error('endKingSession failed', e))
+      }
+      return writeTournament({ status: 'done', champion }, (before) => ({
+        status: before.status,
+        champion: before.champion,
+      }))
+    },
+    [writeTournament],
+  )
+
+  /** King of the Ping: someone leaving the table abandons the game; its match goes and the rotation moves on. */
+  const abandonGame = useCallback(
+    async (gameId: string, rotation: Rotation) => {
+      const game = matchesRef.current.find((m) => m.id === gameId)
+      const before = tournamentRef.current
+      if (!game || !before) return
+      setMatches((prev) => prev.filter((m) => m.id !== gameId))
+      setTournament((prev) => (prev ? { ...prev, players: [...rotation] } : prev))
+      try {
+        await withRetry(() => deleteMatch(gameId))
+      } catch (e) {
+        setMatches((prev) => upsertSorted(prev, game))
+        setTournament((prev) => (prev ? { ...prev, players: before.players } : prev))
+        setError(e instanceof Error ? e.message : String(e))
+        return
+      }
+      await writeTournament({ players: [...rotation] }, () => ({ players: before.players }))
+    },
+    [writeTournament],
+  )
+
   // Double-elimination advancement. Whenever matches change, reconcile the
   // bracket: fill slots that just resolved, auto-complete walkovers, and crown
   // the grand-final winner. `reconcileBracket` only writes still-pending slots,
@@ -258,11 +296,11 @@ export function useTournament(id: string | null) {
     }
   }, [matches, tournament])
 
-  // Auto-crown the champion once every match is finished. Round-robin only —
-  // double elimination crowns its grand-final winner in the effect above.
+  // Auto-crown the champion once every match is finished (round-robin parties
+  // only: see crownsWhenAllMatchesDone).
   useEffect(() => {
     if (!tournament || tournament.status === 'done') return
-    if (tournament.format === 'double_elim') return
+    if (!crownsWhenAllMatchesDone(tournament)) return
     if (!matches.length || !matches.every((m) => m.done)) return
     const champ = computeStandings(tournament.players, matches)[0]?.name ?? null
     setTournament((prev) => (prev ? { ...prev, status: 'done', champion: champ } : prev))
@@ -275,5 +313,5 @@ export function useTournament(id: string | null) {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [matches, tournament])
 
-  return { tournament, matches, loading, error, patchMatch, reload }
+  return { tournament, matches, loading, error, patchMatch, setRotation, endSession, abandonGame, reload }
 }

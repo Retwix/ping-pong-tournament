@@ -455,6 +455,18 @@ describe('estimerDuree', () => {
     expect(est?.totalMs).toBeCloseTo(6 * parMatch + 5 * 120_000, 5)
   })
 
+  it('gives no estimate for a King of the Ping session, which runs until someone ends it', () => {
+    const est = estimerDuree({
+      variant: 'king',
+      format: 'round_robin',
+      elos: egaux(4),
+      target: 7,
+      modele: modele(),
+    })
+
+    expect(est).toBeNull()
+  })
+
   it('prices a quick game as a single match with no dead time', () => {
     const est = estimerDuree({
       variant: 'game',

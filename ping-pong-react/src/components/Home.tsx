@@ -1,8 +1,10 @@
 import { useState, type MouseEvent } from 'react'
 import { usePlayers } from '../hooks/usePlayers'
+import { useRatings } from '../hooks/useRatings'
 import { useSession } from '../hooks/useSession'
 import { useTournaments } from '../hooks/useTournaments'
 import { deleteTournament } from '../lib/db'
+import { cardRecap, endedWithoutAGame } from '../lib/king'
 import { buildLabel } from '../lib/buildInfo'
 import { recentTournaments } from '../lib/recentTournaments'
 import { deleteAttempt } from '../lib/slackIdentity'
@@ -51,6 +53,7 @@ export default function Home({
   const { tournaments, loading, error } = useTournaments()
   const { userId, signIn } = useSession()
   const { players } = usePlayers()
+  const { matches } = useRatings()
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const onDelete = async (e: MouseEvent, id: string, name: string) => {
@@ -110,8 +113,17 @@ export default function Home({
               <div className="empty">Aucun tournoi pour l'instant. Crée le premier !</div>
             ) : (
               <div className="rv-t-grid">
-                {recentTournaments(tournaments, DASHBOARD_COLUMNS * DASHBOARD_ROWS).map((t) => (
-                  <TournamentCard key={t.id} tournament={t} onOpen={onOpen} onDelete={onDelete} />
+                {recentTournaments(
+                  tournaments.filter((t) => !endedWithoutAGame(t, matches)),
+                  DASHBOARD_COLUMNS * DASHBOARD_ROWS,
+                ).map((t) => (
+                  <TournamentCard
+                    key={t.id}
+                    tournament={t}
+                    recap={cardRecap(t, matches)}
+                    onOpen={onOpen}
+                    onDelete={onDelete}
+                  />
                 ))}
               </div>
             )}
