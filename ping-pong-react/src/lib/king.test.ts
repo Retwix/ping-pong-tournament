@@ -367,7 +367,16 @@ describe('sessionResults order', () => {
       order: ['Inès', 'Léo', 'Sam'],
     },
     { when: 'an unranked session', ratings: [], order: ['Inès', 'Léo', 'Sam'] },
-  ])('$when lists the biggest Élo gain first, the most wins when nothing moved', ({ ratings, order }) => {
-    expect(sessionResults({ matches, ratings }).map((r) => r.name)).toEqual(order)
-  })
+    {
+      when: 'an unranked session where the winless lost different counts',
+      played: [aWins(0, 'Inès', 'Sam'), aWins(1, 'Inès', 'Sam'), aWins(2, 'Inès', 'Léo')],
+      ratings: [],
+      order: ['Inès', 'Léo', 'Sam'],
+    },
+  ])(
+    '$when lists the biggest Élo gain first, the most wins then fewest losses when nothing moved',
+    ({ played = matches, ratings, order }) => {
+      expect(sessionResults({ matches: played, ratings }).map((r) => r.name)).toEqual(order)
+    },
+  )
 })
