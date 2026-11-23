@@ -24,7 +24,7 @@ import { bestOf } from '../lib/sets'
 import { playerInitials } from '../lib/avatar'
 import { ladderAvatar, matchStakes, showsLiveBoard } from '../lib/spectator'
 import type { Match, MatchSide, Player, Tournament } from '../types'
-import { sessionCrown } from '../lib/king'
+import { sessionCrown, sessionResults, type SessionResult } from '../lib/king'
 import KingStrip from './KingStrip'
 import ThemeToggle from './ThemeToggle'
 
@@ -133,6 +133,35 @@ function TvFinalStandings({
         ))}
       </div>
     </div>
+  )
+}
+
+function TvSessionResults({ results }: { results: ReadonlyArray<SessionResult> }) {
+  return (
+    <table className="tv-king-results" aria-label="Résultats de la session">
+      <thead>
+        <tr>
+          <th scope="col">Joueur</th>
+          <th scope="col">V–D</th>
+          <th scope="col">Élo</th>
+          <th scope="col">Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {results.map((r) => (
+          <tr key={r.name}>
+            <th scope="row">{r.name}</th>
+            <td>
+              {r.wins}–{r.losses}
+            </td>
+            <td>{r.elo === null ? '—' : Math.round(r.elo)}</td>
+            <td className={`tv-final-delta--${deltaTone(r.eloDelta)}`}>
+              {r.eloDelta === null ? '—' : signed(r.eloDelta)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
@@ -276,6 +305,7 @@ export default function SpectatorView({
               </section>
             )}
           </div>
+          <TvSessionResults results={sessionResults({ matches, ratings: tournamentRatings ?? [] })} />
         </div>
       </div>
     )

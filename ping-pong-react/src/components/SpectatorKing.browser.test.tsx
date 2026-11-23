@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import SpectatorView from './SpectatorView'
+import type { PlayerRating } from '../lib/finalStandings'
 import type { Match, Tournament } from '../types'
 import '../index.css'
 
@@ -60,6 +61,7 @@ const renderSession = (overrides: {
   rotation: ReadonlyArray<string>
   matches: Match[]
   status?: Tournament['status']
+  ratings?: PlayerRating[]
 }) => {
   const game = overrides.matches[overrides.matches.length - 1] ?? null
   return render(
@@ -70,6 +72,7 @@ const renderSession = (overrides: {
       rows={[]}
       players={[]}
       ratingsFor={() => ({ a: null, b: null })}
+      tournamentRatings={overrides.ratings}
       onBack={() => {}}
     />,
   )
@@ -177,10 +180,15 @@ it('with no game called yet, shows who is next', async () => {
   await expect.element(screen.getByRole('region', { name: 'Prochain' })).toHaveTextContent('Léo')
 })
 
-it('once the session is over, crowns the longest reign with the games validated, not a podium of the rotation', async () => {
+it('once the session is over, crowns the longest reign and shows what the session did to each Élo, not a podium of the rotation', async () => {
   const screen = renderSession({
     status: 'done',
     rotation: ['Sam', 'Inès', 'Léo'],
+    ratings: [
+      { name: 'Inès', endRating: 1231.6, netDelta: 18.4, provisional: false },
+      { name: 'Sam', endRating: 987.2, netDelta: -9.1, provisional: false },
+      { name: 'Léo', endRating: 1004, netDelta: 2.2, provisional: false },
+    ],
     matches: [
       getMockGame({
         idx: 0,
@@ -215,6 +223,13 @@ it('once the session is over, crowns the longest reign with the games validated,
   expect(champion.element().textContent).toContain('2 victoires')
   expect(champion.element().textContent).toContain('3 parties')
   expect(screen.getByText('Le podium').query()).toBeNull()
+
+  const results = screen.getByRole('table', { name: 'Résultats de la session' })
+  await expect.element(results.getByRole('columnheader', { name: 'Δ' })).toBeVisible()
+  const ines = results.getByRole('row', { name: /Inès/ })
+  await expect.element(ines).toHaveTextContent('2–1')
+  await expect.element(ines).toHaveTextContent('1232')
+  await expect.element(ines).toHaveTextContent('+18')
 })
 
 it('a session closed before any game was validated crowns nobody', async () => {
