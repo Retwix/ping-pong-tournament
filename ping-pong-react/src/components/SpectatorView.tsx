@@ -10,13 +10,7 @@ import {
   type PlayerRating,
 } from '../lib/finalStandings'
 import { libelleFormat, signed } from '../lib/format'
-import {
-  formatDuration,
-  isWon,
-  matchDuration,
-  matchPointKind,
-  serverIsA,
-} from '../lib/pingpong'
+import { formatDuration, isWon, matchDuration, matchPointKind, serverIsA } from '../lib/pingpong'
 import type { RatingRow } from '../lib/rating'
 import { sideBios } from '../lib/playerBio'
 import { sideElos } from '../lib/scorerElo'
@@ -24,8 +18,9 @@ import { bestOf } from '../lib/sets'
 import { playerInitials } from '../lib/avatar'
 import { ladderAvatar, matchStakes, showsLiveBoard } from '../lib/spectator'
 import type { Match, MatchSide, Player, Tournament } from '../types'
-import { sessionCrown, sessionResults, type SessionResult } from '../lib/king'
+import { sessionCrown, sessionResults } from '../lib/king'
 import KingStrip from './KingStrip'
+import SessionResults from './SessionResults'
 import ThemeToggle from './ThemeToggle'
 
 interface Props {
@@ -133,35 +128,6 @@ function TvFinalStandings({
         ))}
       </div>
     </div>
-  )
-}
-
-function TvSessionResults({ results }: { results: ReadonlyArray<SessionResult> }) {
-  return (
-    <table className="tv-king-results" aria-label="Résultats de la session">
-      <thead>
-        <tr>
-          <th scope="col">Joueur</th>
-          <th scope="col">V–D</th>
-          <th scope="col">Élo</th>
-          <th scope="col">Δ</th>
-        </tr>
-      </thead>
-      <tbody>
-        {results.map((r) => (
-          <tr key={r.name}>
-            <th scope="row">{r.name}</th>
-            <td>
-              {r.wins}–{r.losses}
-            </td>
-            <td>{r.elo === null ? '—' : Math.round(r.elo)}</td>
-            <td className={`tv-final-delta--${deltaTone(r.eloDelta)}`}>
-              {r.eloDelta === null ? '—' : signed(r.eloDelta)}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   )
 }
 
@@ -299,13 +265,17 @@ export default function SpectatorView({
                 />
                 <div className="tv-podium-title">{crown.champion.player}</div>
                 <div className="tv-step-elo">
-                  {crown.champion.wins} {crown.champion.wins > 1 ? 'victoires' : 'victoire'} d’affilée ·{' '}
-                  {crown.games} {crown.games > 1 ? 'parties' : 'partie'}
+                  {crown.champion.wins} {crown.champion.wins > 1 ? 'victoires' : 'victoire'}{' '}
+                  d’affilée · {crown.games} {crown.games > 1 ? 'parties' : 'partie'}
                 </div>
               </section>
             )}
           </div>
-          <TvSessionResults results={sessionResults({ matches, ratings: tournamentRatings ?? [] })} />
+          <SessionResults
+            className="tv-king-results"
+            results={sessionResults({ matches, ratings: tournamentRatings ?? [] })}
+            unranked={false}
+          />
         </div>
       </div>
     )

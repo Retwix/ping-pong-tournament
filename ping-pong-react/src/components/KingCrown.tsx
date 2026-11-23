@@ -1,9 +1,8 @@
-import { deltaTone } from '../lib/finalStandings'
-import { signed } from '../lib/format'
 import type { SessionResult, sessionCrown } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import Avatar from './Avatar'
 import Confetti from './Confetti'
+import SessionResults from './SessionResults'
 
 interface Props {
   crown: ReturnType<typeof sessionCrown>
@@ -21,7 +20,9 @@ export default function KingCrown({ crown, results, unranked, look, onClose }: P
       <div className="tk-inner tk-inner--solo">
         <div className="tk-eyebrow">King of the Ping · terminé</div>
         {crown && <Champion {...crown} look={look} />}
-        {results.length > 0 && <SessionResults results={results} unranked={unranked} />}
+        {results.length > 0 && (
+          <SessionResults className="kc-elo" results={results} unranked={unranked} />
+        )}
         <div className="tk-actions">
           <button className="tk-btn tk-btn--ghost" onClick={onClose}>
             Accueil
@@ -44,49 +45,5 @@ function Champion({ champion, games, look }: NonNullable<Props['crown']> & { loo
         {games > 1 ? 'parties' : 'partie'}
       </div>
     </section>
-  )
-}
-
-function SessionResults({
-  results,
-  unranked,
-}: {
-  results: ReadonlyArray<SessionResult>
-  unranked: boolean
-}) {
-  return (
-    <table className="kc-elo" aria-label="Résultats de la session">
-      {unranked && <caption>Non classée : aucun Élo n’a bougé.</caption>}
-      <thead>
-        <tr>
-          <th scope="col">Joueur</th>
-          <th scope="col">V–D</th>
-          {!unranked && (
-            <>
-              <th scope="col">Élo</th>
-              <th scope="col">Δ</th>
-            </>
-          )}
-        </tr>
-      </thead>
-      <tbody>
-        {results.map((r) => (
-          <tr key={r.name}>
-            <th scope="row">{r.name}</th>
-            <td>
-              {r.wins}–{r.losses}
-            </td>
-            {!unranked && (
-              <>
-                <td>{r.elo === null ? '—' : Math.round(r.elo)}</td>
-                <td className={`kc-delta kc-delta--${deltaTone(r.eloDelta)}`}>
-                  {r.eloDelta === null ? '—' : signed(r.eloDelta)}
-                </td>
-              </>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
   )
 }
