@@ -264,4 +264,5 @@ it('a session closed before any game was validated crowns nobody and lists nobod
   await expect.element(screen.getByRole('button', { name: 'Quitter le mode live' })).toBeVisible()
   expect(screen.getByRole('region', { name: 'le champion' }).query()).toBeNull()
   expect(screen.getByRole('table', { name: 'Résultats de la session' }).query()).toBeNull()
+  expect(screen.getByText('Résultats', { exact: true }).query()).toBeNull()
 })

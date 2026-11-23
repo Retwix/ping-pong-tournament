@@ -248,6 +248,7 @@ export default function SpectatorView({
 
   if (over && tournament.kind === 'king') {
     const crown = sessionCrown(matches)
+    const results = sessionResults({ matches, ratings: tournamentRatings ?? [] })
     return (
       <div className="tv tv--panels">
         {chrome}
@@ -271,11 +272,17 @@ export default function SpectatorView({
               </section>
             )}
           </div>
-          <SessionResults
-            className="tv-king-results"
-            results={sessionResults({ matches, ratings: tournamentRatings ?? [] })}
-            unranked={tournament.unranked}
-          />
+          {results.length > 0 && (
+            <div className="tv-final">
+              <div className="tv-final-label">{tournament.name}</div>
+              <div className="tv-final-title">Résultats</div>
+              <SessionResults
+                className="tv-king-results"
+                results={results}
+                unranked={tournament.unranked}
+              />
+            </div>
+          )}
         </div>
       </div>
     )
