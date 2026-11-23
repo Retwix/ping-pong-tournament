@@ -339,3 +339,35 @@ describe('sessionResults ratings', () => {
     )
   })
 })
+
+describe('sessionResults order', () => {
+  const matches = [
+    aWins(0, 'Inès', 'Sam'),
+    aWins(1, 'Inès', 'Léo'),
+    aWins(2, 'Inès', 'Sam'),
+    bWins(3, 'Inès', 'Léo'),
+  ]
+  test.for([
+    {
+      when: 'a ranked session where fewer wins gained more',
+      ratings: [
+        { name: 'Sam', endRating: 980, netDelta: -14, provisional: false },
+        { name: 'Inès', endRating: 1105, netDelta: 3, provisional: false },
+        { name: 'Léo', endRating: 1060, netDelta: 11, provisional: false },
+      ],
+      order: ['Léo', 'Inès', 'Sam'],
+    },
+    {
+      when: 'a ranked session won on Élo by its most winning player',
+      ratings: [
+        { name: 'Sam', endRating: 980, netDelta: -14, provisional: false },
+        { name: 'Inès', endRating: 1105, netDelta: 12, provisional: false },
+        { name: 'Léo', endRating: 1060, netDelta: 4, provisional: false },
+      ],
+      order: ['Inès', 'Léo', 'Sam'],
+    },
+    { when: 'an unranked session', ratings: [], order: ['Inès', 'Léo', 'Sam'] },
+  ])('$when lists the biggest Élo gain first, the most wins when nothing moved', ({ ratings, order }) => {
+    expect(sessionResults({ matches, ratings }).map((r) => r.name)).toEqual(order)
+  })
+})

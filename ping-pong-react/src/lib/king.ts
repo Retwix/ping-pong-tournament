@@ -159,5 +159,7 @@ export function sessionResults({
       tally(winner, true)
       tally(loser, false)
     })
-  return [...record.values()]
+  return [...record.values()].sort(
+    (a, b) => (b.eloDelta ?? 0) - (a.eloDelta ?? 0) || b.wins - a.wins,
+  )
 }
