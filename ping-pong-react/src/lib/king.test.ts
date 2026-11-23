@@ -307,6 +307,7 @@ describe('sessionResults', () => {
         bWins(2, 'Inès', 'Zoé'),
         game({ idx: 3, player_a: 'Zoé', player_b: 'Nora', done: false }),
       ],
+      ratings: [],
     })
     expect(results.map(({ name, wins, losses }) => ({ name, wins, losses }))).toEqual(
       expect.arrayContaining([
@@ -317,5 +318,24 @@ describe('sessionResults', () => {
       ]),
     )
     expect(results).toHaveLength(4)
+  })
+})
+
+describe('sessionResults ratings', () => {
+  it('gives each player the Élo the session left them on and how far it moved them, nothing for a player it did not rate', () => {
+    const results = sessionResults({
+      matches: [aWins(0, 'Inès', 'Sam'), aWins(1, 'Inès', 'Léo')],
+      ratings: [
+        { name: 'Inès', endRating: 1231.6, netDelta: 18.4, provisional: false },
+        { name: 'Sam', endRating: 987.2, netDelta: -9.1, provisional: false },
+      ],
+    })
+    expect(results.map(({ name, elo, eloDelta }) => ({ name, elo, eloDelta }))).toEqual(
+      expect.arrayContaining([
+        { name: 'Inès', elo: 1231.6, eloDelta: 18.4 },
+        { name: 'Sam', elo: 987.2, eloDelta: -9.1 },
+        { name: 'Léo', elo: null, eloDelta: null },
+      ]),
+    )
   })
 })
