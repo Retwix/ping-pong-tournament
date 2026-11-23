@@ -169,6 +169,7 @@ export default function LiveView({ id, onBack, readOnly = true, onRef }: Props) 
         matches={matches}
         registry={players}
         elosFor={elosFor}
+        ratings={ratingsForTournament(matches)}
         session={{ patchMatch, setRotation, endSession, abandonGame }}
         onBack={onBack}
         presentTo="/live"

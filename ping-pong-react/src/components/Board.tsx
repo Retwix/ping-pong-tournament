@@ -118,6 +118,7 @@ export default function Board({
         matches={matches}
         registry={registry}
         elosFor={elosFor}
+        ratings={ratingsForTournament(matches)}
         session={{ patchMatch, setRotation, endSession, abandonGame }}
         onBack={onBack}
         presentTo={`/t/${id}/live`}

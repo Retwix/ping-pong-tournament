@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Match } from '../types'
-import { afterGame, leaveTable, sessionCrown, type Rotation } from '../lib/king'
+import type { PlayerRating } from '../lib/finalStandings'
+import { afterGame, leaveTable, sessionCrown, sessionResults, type Rotation } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import { winnerLoser } from '../lib/stats'
 import AuSuivant from './AuSuivant'
@@ -14,6 +15,7 @@ interface Props {
   rotation: Rotation
   players: ReadonlyArray<string>
   matches: ReadonlyArray<Match>
+  ratings: ReadonlyArray<PlayerRating>
   ended: boolean
   look: LookUpPlayer
   onPatch: (matchId: string, patch: Partial<Match>) => void
@@ -30,6 +32,7 @@ export default function KingTable({
   rotation,
   players,
   matches,
+  ratings,
   ended,
   look,
   onPatch,
@@ -54,7 +57,15 @@ export default function KingTable({
     onEnd(crown?.champion.player ?? null)
     if (!crown) onClose()
   }
-  if (ended) return <KingCrown crown={crown} look={look} onClose={onClose} />
+  if (ended)
+    return (
+      <KingCrown
+        crown={crown}
+        results={sessionResults({ matches, ratings })}
+        look={look}
+        onClose={onClose}
+      />
+    )
   if (rotation.length < 2) return null
   if (!game || game.done)
     return (

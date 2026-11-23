@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { useTournament } from '../hooks/useTournament'
 import { addKingGame } from '../lib/db'
+import type { PlayerRating } from '../lib/finalStandings'
 import { libelleFormat } from '../lib/format'
 import { sideBios } from '../lib/playerBio'
 import { playerLookup } from '../lib/playerLookup'
@@ -20,6 +21,7 @@ interface Props {
   matches: Match[]
   registry: Player[]
   elosFor: (match: Match) => SideElos
+  ratings: ReadonlyArray<PlayerRating>
   session: Session
   onBack: () => void
   presentTo: string
@@ -31,6 +33,7 @@ export default function KingBoard({
   matches,
   registry,
   elosFor,
+  ratings,
   session,
   onBack,
   presentTo,
@@ -41,6 +44,7 @@ export default function KingBoard({
       rotation={tournament.players}
       players={registry.map((p) => p.name)}
       matches={matches}
+      ratings={ratings}
       ended={tournament.status === 'done'}
       look={look}
       onPatch={session.patchMatch}

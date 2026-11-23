@@ -2,6 +2,7 @@ import { expect, it, onTestFinished } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { page, userEvent } from '@vitest/browser/context'
 import KingTable from './KingTable'
+import type { PlayerRating } from '../lib/finalStandings'
 import type { Rotation } from '../lib/king'
 import type { Match } from '../types'
 import '../index.css'
@@ -37,6 +38,7 @@ const renderKingTable = (overrides: {
   rotation: Rotation
   matches: ReadonlyArray<Match>
   ended?: boolean
+  ratings?: ReadonlyArray<PlayerRating>
 }) => {
   const patches: Array<{ id: string; patch: Partial<Match> }> = []
   const rotations: Rotation[] = []
@@ -47,6 +49,7 @@ const renderKingTable = (overrides: {
   const screen = render(
     <KingTable
       ended={false}
+      ratings={[]}
       players={['Inès', 'Léo', 'Sam', 'Nora']}
       {...overrides}
       look={() => ({ team: null, url: null })}
@@ -153,10 +156,15 @@ it('« Terminer » ends the session, crowning the longest reign, a tie going to 
   expect(closed).toEqual([])
 })
 
-it('once the session has ended, crowns the longest reign with its wins in a row and the games validated, then leaves', async () => {
+it('once the session has ended, crowns the longest reign, shows what it did to each Élo, then leaves', async () => {
   const { screen, closed } = renderKingTable({
     ended: true,
     rotation: ['Sam'],
+    ratings: [
+      { name: 'Inès', endRating: 1231.6, netDelta: 18.4, provisional: false },
+      { name: 'Léo', endRating: 1004, netDelta: 2.2, provisional: false },
+      { name: 'Sam', endRating: 987.2, netDelta: -9.1, provisional: false },
+    ],
     matches: [
       getMockGame({
         idx: 0,
@@ -192,6 +200,12 @@ it('once the session has ended, crowns the longest reign with its wins in a row 
   await expect.element(crown).toHaveTextContent('Inès')
   expect(crown.element().textContent).toContain('2 victoires')
   expect(crown.element().textContent).toContain('5 parties')
+
+  const elo = screen.getByRole('table', { name: 'Élo de la session' })
+  const ines = elo.getByRole('row', { name: /Inès/ })
+  await expect.element(ines).toHaveTextContent('2–1')
+  await expect.element(ines).toHaveTextContent('1232')
+  await expect.element(ines).toHaveTextContent('+18')
 
   await screen.getByRole('button', { name: 'Accueil' }).click()
   expect(closed).toEqual(['close'])
@@ -322,6 +336,8 @@ it('a session ended elsewhere with nobody crowned reads as over here, not as a g
     matches: [getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 3, score_b: 2 })],
   })
 
+  await expect.element(screen.getByRole('button', { name: 'Accueil' })).toBeVisible()
+  expect(screen.getByRole('table', { name: 'Élo de la session' }).query()).toBeNull()
   await screen.getByRole('button', { name: 'Accueil' }).click()
   expect(closed).toEqual(['close'])
 })
