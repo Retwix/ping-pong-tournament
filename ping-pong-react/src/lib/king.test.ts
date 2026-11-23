@@ -12,6 +12,7 @@ import {
   longestReign,
   nextGame,
   reignOf,
+  sessionResults,
 } from './king'
 import type { Match, Tournament, TournamentFormat, TournamentKind } from '../types'
 
@@ -295,4 +296,26 @@ describe('leaveTable', () => {
       expect(leaveTable(['Inès', 'Sam', 'Léo', 'Zoé'], leaver)).toEqual(next)
     },
   )
+})
+
+describe('sessionResults', () => {
+  it('counts the validated wins and losses of everyone who played, leavers included, not the game in progress', () => {
+    const results = sessionResults({
+      matches: [
+        aWins(0, 'Inès', 'Sam'),
+        aWins(1, 'Inès', 'Léo'),
+        bWins(2, 'Inès', 'Zoé'),
+        game({ idx: 3, player_a: 'Zoé', player_b: 'Nora', done: false }),
+      ],
+    })
+    expect(results.map(({ name, wins, losses }) => ({ name, wins, losses }))).toEqual(
+      expect.arrayContaining([
+        { name: 'Inès', wins: 2, losses: 1 },
+        { name: 'Sam', wins: 0, losses: 1 },
+        { name: 'Léo', wins: 0, losses: 1 },
+        { name: 'Zoé', wins: 1, losses: 0 },
+      ]),
+    )
+    expect(results).toHaveLength(4)
+  })
 })
