@@ -12,6 +12,7 @@ export default function SessionResults({
   results: ReadonlyArray<SessionResult>
   unranked: boolean
 }) {
+  if (results.length === 0) return null
   return (
     <table className={className} aria-label="Résultats de la session">
       {unranked && <caption>Non classée : aucun Élo n’a bougé.</caption>}

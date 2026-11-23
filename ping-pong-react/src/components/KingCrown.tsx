@@ -20,9 +20,7 @@ export default function KingCrown({ crown, results, unranked, look, onClose }: P
       <div className="tk-inner tk-inner--solo">
         <div className="tk-eyebrow">King of the Ping · terminé</div>
         {crown && <Champion {...crown} look={look} />}
-        {results.length > 0 && (
-          <SessionResults className="kc-elo" results={results} unranked={unranked} />
-        )}
+        <SessionResults className="kc-elo" results={results} unranked={unranked} />
         <div className="tk-actions">
           <button className="tk-btn tk-btn--ghost" onClick={onClose}>
             Accueil

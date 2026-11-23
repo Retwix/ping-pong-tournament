@@ -258,9 +258,10 @@ it('an unranked session ends on its players’ records alone', async () => {
   expect(ines.getByRole('cell').elements()).toHaveLength(1)
 })
 
-it('a session closed before any game was validated crowns nobody', async () => {
+it('a session closed before any game was validated crowns nobody and lists nobody', async () => {
   const screen = renderSession({ status: 'done', rotation: ['Inès', 'Sam'], matches: [] })
 
   await expect.element(screen.getByRole('button', { name: 'Quitter le mode live' })).toBeVisible()
   expect(screen.getByRole('region', { name: 'le champion' }).query()).toBeNull()
+  expect(screen.getByRole('table', { name: 'Résultats de la session' }).query()).toBeNull()
 })
