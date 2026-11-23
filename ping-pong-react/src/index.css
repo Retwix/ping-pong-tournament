@@ -1642,6 +1642,34 @@ td.elo.neg { color: var(--coral); }
 .tk-sets tr + tr th, .tk-sets tr + tr td { opacity: 0.6; }
 .tk-actions { display: flex; gap: 12px; margin-top: 28px; width: 100%; max-width: 420px; justify-content: center; }
 .tk-actions .tk-btn { flex: 0 1 auto; padding: 14px 30px; font-size: 15px; border-radius: 14px; }
+/* --- King of the Ping over: what the session did to each Élo --- */
+.kc-elo {
+  width: 100%; max-width: 420px; margin-top: 26px; color: #fff;
+  border-collapse: separate; border-spacing: 0; padding: 4px 14px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px; font-variant-numeric: tabular-nums;
+}
+.kc-elo caption {
+  padding-bottom: 10px; font-family: var(--font-body); font-weight: 700; font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+.kc-elo thead th {
+  padding: 10px 6px 8px; font-size: 10px; text-align: right;
+  color: rgba(255, 255, 255, 0.6); border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+.kc-elo tbody th, .kc-elo tbody td {
+  padding: 10px 6px; text-align: right; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.kc-elo thead th:first-child, .kc-elo tbody th { text-align: left; }
+.kc-elo tbody tr:last-child th, .kc-elo tbody tr:last-child td { border-bottom: none; }
+.kc-elo tbody th { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.kc-elo tbody td {
+  font-family: var(--font-body); font-weight: 700; font-size: 15px; color: rgba(255, 255, 255, 0.8);
+}
+.kc-elo .kc-delta { font-family: var(--font-display); font-weight: 900; }
+.kc-elo .kc-delta--up { color: #4ade9b; }
+.kc-elo .kc-delta--down { color: #f19a9a; }
+.kc-elo .kc-delta--flat { color: rgba(255, 255, 255, 0.55); }
 .ks-king { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
 .ks-reign {
   font-family: var(--font-body); font-weight: 800; font-size: 15px; color: #f0c84b; margin-top: 8px;
