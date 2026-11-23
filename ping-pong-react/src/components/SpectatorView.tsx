@@ -274,7 +274,7 @@ export default function SpectatorView({
           <SessionResults
             className="tv-king-results"
             results={sessionResults({ matches, ratings: tournamentRatings ?? [] })}
-            unranked={false}
+            unranked={tournament.unranked}
           />
         </div>
       </div>

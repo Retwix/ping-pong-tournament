@@ -62,11 +62,16 @@ const renderSession = (overrides: {
   matches: Match[]
   status?: Tournament['status']
   ratings?: PlayerRating[]
+  unranked?: boolean
 }) => {
   const game = overrides.matches[overrides.matches.length - 1] ?? null
   return render(
     <SpectatorView
-      tournament={getMockSession({ players: [...overrides.rotation], status: overrides.status })}
+      tournament={getMockSession({
+        players: [...overrides.rotation],
+        status: overrides.status,
+        unranked: overrides.unranked,
+      })}
       matches={overrides.matches}
       match={game}
       rows={[]}
@@ -173,7 +178,14 @@ it('with no game called yet, shows who is next', async () => {
   const screen = renderSession({
     rotation: ['Inès', 'Léo', 'Sam'],
     matches: [
-      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 3, done: true }),
+      getMockGame({
+        idx: 0,
+        player_a: 'Inès',
+        player_b: 'Sam',
+        score_a: 7,
+        score_b: 3,
+        done: true,
+      }),
     ],
   })
 
@@ -230,6 +242,20 @@ it('once the session is over, crowns the longest reign and shows what the sessio
   await expect.element(ines).toHaveTextContent('2–1')
   await expect.element(ines).toHaveTextContent('1232')
   await expect.element(ines).toHaveTextContent('+18')
+})
+
+it('an unranked session ends on its players’ records alone', async () => {
+  const screen = renderSession({
+    status: 'done',
+    unranked: true,
+    rotation: ['Inès', 'Sam'],
+    matches: [getMockGame({ idx: 0, score_a: 7, score_b: 4, done: true })],
+  })
+
+  const results = screen.getByRole('table', { name: 'Résultats de la session' })
+  const ines = results.getByRole('row', { name: /Inès/ })
+  await expect.element(ines).toHaveTextContent('1–0')
+  expect(ines.getByRole('cell').elements()).toHaveLength(1)
 })
 
 it('a session closed before any game was validated crowns nobody', async () => {
