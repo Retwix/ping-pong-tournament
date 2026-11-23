@@ -12,6 +12,7 @@ import {
   longestReign,
   nextGame,
   reignOf,
+  sessionResults,
 } from './king'
 import type { Match, Tournament, TournamentFormat, TournamentKind } from '../types'
 
@@ -293,6 +294,89 @@ describe('leaveTable', () => {
     '$when mid-game: whoever stays holds the table, the File steps up, rotation becomes $next',
     ({ leaver, next }) => {
       expect(leaveTable(['Inès', 'Sam', 'Léo', 'Zoé'], leaver)).toEqual(next)
+    },
+  )
+})
+
+describe('sessionResults', () => {
+  it('counts the validated wins and losses of everyone who played, leavers included, not the game in progress', () => {
+    const results = sessionResults({
+      matches: [
+        aWins(0, 'Inès', 'Sam'),
+        aWins(1, 'Inès', 'Léo'),
+        bWins(2, 'Inès', 'Zoé'),
+        game({ idx: 3, player_a: 'Zoé', player_b: 'Nora', done: false }),
+      ],
+      ratings: [],
+    })
+    expect(results.map(({ name, wins, losses }) => ({ name, wins, losses }))).toEqual(
+      expect.arrayContaining([
+        { name: 'Inès', wins: 2, losses: 1 },
+        { name: 'Sam', wins: 0, losses: 1 },
+        { name: 'Léo', wins: 0, losses: 1 },
+        { name: 'Zoé', wins: 1, losses: 0 },
+      ]),
+    )
+    expect(results).toHaveLength(4)
+  })
+})
+
+describe('sessionResults ratings', () => {
+  it('gives each player the Élo the session left them on and how far it moved them, nothing for a player it did not rate', () => {
+    const results = sessionResults({
+      matches: [aWins(0, 'Inès', 'Sam'), aWins(1, 'Inès', 'Léo')],
+      ratings: [
+        { name: 'Inès', endRating: 1231.6, netDelta: 18.4, provisional: false },
+        { name: 'Sam', endRating: 987.2, netDelta: -9.1, provisional: false },
+      ],
+    })
+    expect(results.map(({ name, elo, eloDelta }) => ({ name, elo, eloDelta }))).toEqual(
+      expect.arrayContaining([
+        { name: 'Inès', elo: 1231.6, eloDelta: 18.4 },
+        { name: 'Sam', elo: 987.2, eloDelta: -9.1 },
+        { name: 'Léo', elo: null, eloDelta: null },
+      ]),
+    )
+  })
+})
+
+describe('sessionResults order', () => {
+  const matches = [
+    aWins(0, 'Inès', 'Sam'),
+    aWins(1, 'Inès', 'Léo'),
+    aWins(2, 'Inès', 'Sam'),
+    bWins(3, 'Inès', 'Léo'),
+  ]
+  test.for([
+    {
+      when: 'a ranked session where fewer wins gained more',
+      ratings: [
+        { name: 'Sam', endRating: 980, netDelta: -14, provisional: false },
+        { name: 'Inès', endRating: 1105, netDelta: 3, provisional: false },
+        { name: 'Léo', endRating: 1060, netDelta: 11, provisional: false },
+      ],
+      order: ['Léo', 'Inès', 'Sam'],
+    },
+    {
+      when: 'a ranked session won on Élo by its most winning player',
+      ratings: [
+        { name: 'Sam', endRating: 980, netDelta: -14, provisional: false },
+        { name: 'Inès', endRating: 1105, netDelta: 12, provisional: false },
+        { name: 'Léo', endRating: 1060, netDelta: 4, provisional: false },
+      ],
+      order: ['Inès', 'Léo', 'Sam'],
+    },
+    { when: 'an unranked session', ratings: [], order: ['Inès', 'Léo', 'Sam'] },
+    {
+      when: 'an unranked session where the winless lost different counts',
+      played: [aWins(0, 'Inès', 'Sam'), aWins(1, 'Inès', 'Sam'), aWins(2, 'Inès', 'Léo')],
+      ratings: [],
+      order: ['Inès', 'Léo', 'Sam'],
+    },
+  ])(
+    '$when lists the biggest Élo gain first, the most wins then fewest losses when nothing moved',
+    ({ played = matches, ratings, order }) => {
+      expect(sessionResults({ matches: played, ratings }).map((r) => r.name)).toEqual(order)
     },
   )
 })

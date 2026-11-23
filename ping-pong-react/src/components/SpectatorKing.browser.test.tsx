@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import SpectatorView from './SpectatorView'
+import type { PlayerRating } from '../lib/finalStandings'
 import type { Match, Tournament } from '../types'
 import '../index.css'
 
@@ -60,16 +61,23 @@ const renderSession = (overrides: {
   rotation: ReadonlyArray<string>
   matches: Match[]
   status?: Tournament['status']
+  ratings?: PlayerRating[]
+  unranked?: boolean
 }) => {
   const game = overrides.matches[overrides.matches.length - 1] ?? null
   return render(
     <SpectatorView
-      tournament={getMockSession({ players: [...overrides.rotation], status: overrides.status })}
+      tournament={getMockSession({
+        players: [...overrides.rotation],
+        status: overrides.status,
+        unranked: overrides.unranked,
+      })}
       matches={overrides.matches}
       match={game}
       rows={[]}
       players={[]}
       ratingsFor={() => ({ a: null, b: null })}
+      tournamentRatings={overrides.ratings}
       onBack={() => {}}
     />,
   )
@@ -170,17 +178,29 @@ it('with no game called yet, shows who is next', async () => {
   const screen = renderSession({
     rotation: ['Inès', 'Léo', 'Sam'],
     matches: [
-      getMockGame({ idx: 0, player_a: 'Inès', player_b: 'Sam', score_a: 7, score_b: 3, done: true }),
+      getMockGame({
+        idx: 0,
+        player_a: 'Inès',
+        player_b: 'Sam',
+        score_a: 7,
+        score_b: 3,
+        done: true,
+      }),
     ],
   })
 
   await expect.element(screen.getByRole('region', { name: 'Prochain' })).toHaveTextContent('Léo')
 })
 
-it('once the session is over, crowns the longest reign with the games validated, not a podium of the rotation', async () => {
+it('once the session is over, crowns the longest reign and shows what the session did to each Élo, not a podium of the rotation', async () => {
   const screen = renderSession({
     status: 'done',
     rotation: ['Sam', 'Inès', 'Léo'],
+    ratings: [
+      { name: 'Inès', endRating: 1231.6, netDelta: 18.4, provisional: false },
+      { name: 'Sam', endRating: 987.2, netDelta: -9.1, provisional: false },
+      { name: 'Léo', endRating: 1004, netDelta: 2.2, provisional: false },
+    ],
     matches: [
       getMockGame({
         idx: 0,
@@ -215,11 +235,34 @@ it('once the session is over, crowns the longest reign with the games validated,
   expect(champion.element().textContent).toContain('2 victoires')
   expect(champion.element().textContent).toContain('3 parties')
   expect(screen.getByText('Le podium').query()).toBeNull()
+
+  const results = screen.getByRole('table', { name: 'Résultats de la session' })
+  await expect.element(results.getByRole('columnheader', { name: 'Δ' })).toBeVisible()
+  const ines = results.getByRole('row', { name: /Inès/ })
+  await expect.element(ines).toHaveTextContent('2–1')
+  await expect.element(ines).toHaveTextContent('1232')
+  await expect.element(ines).toHaveTextContent('+18')
 })
 
-it('a session closed before any game was validated crowns nobody', async () => {
+it('an unranked session ends on its players’ records alone', async () => {
+  const screen = renderSession({
+    status: 'done',
+    unranked: true,
+    rotation: ['Inès', 'Sam'],
+    matches: [getMockGame({ idx: 0, score_a: 7, score_b: 4, done: true })],
+  })
+
+  const results = screen.getByRole('table', { name: 'Résultats de la session' })
+  const ines = results.getByRole('row', { name: /Inès/ })
+  await expect.element(ines).toHaveTextContent('1–0')
+  expect(ines.getByRole('cell').elements()).toHaveLength(1)
+})
+
+it('a session closed before any game was validated crowns nobody and lists nobody', async () => {
   const screen = renderSession({ status: 'done', rotation: ['Inès', 'Sam'], matches: [] })
 
   await expect.element(screen.getByRole('button', { name: 'Quitter le mode live' })).toBeVisible()
   expect(screen.getByRole('region', { name: 'le champion' }).query()).toBeNull()
+  expect(screen.getByRole('table', { name: 'Résultats de la session' }).query()).toBeNull()
+  expect(screen.getByText('Résultats', { exact: true }).query()).toBeNull()
 })

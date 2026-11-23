@@ -10,13 +10,7 @@ import {
   type PlayerRating,
 } from '../lib/finalStandings'
 import { libelleFormat, signed } from '../lib/format'
-import {
-  formatDuration,
-  isWon,
-  matchDuration,
-  matchPointKind,
-  serverIsA,
-} from '../lib/pingpong'
+import { formatDuration, isWon, matchDuration, matchPointKind, serverIsA } from '../lib/pingpong'
 import type { RatingRow } from '../lib/rating'
 import { sideBios } from '../lib/playerBio'
 import { sideElos } from '../lib/scorerElo'
@@ -24,8 +18,9 @@ import { bestOf } from '../lib/sets'
 import { playerInitials } from '../lib/avatar'
 import { ladderAvatar, matchStakes, showsLiveBoard } from '../lib/spectator'
 import type { Match, MatchSide, Player, Tournament } from '../types'
-import { sessionCrown } from '../lib/king'
+import { sessionCrown, sessionResults } from '../lib/king'
 import KingStrip from './KingStrip'
+import SessionResults from './SessionResults'
 import ThemeToggle from './ThemeToggle'
 
 interface Props {
@@ -253,6 +248,7 @@ export default function SpectatorView({
 
   if (over && tournament.kind === 'king') {
     const crown = sessionCrown(matches)
+    const results = sessionResults({ matches, ratings: tournamentRatings ?? [] })
     return (
       <div className="tv tv--panels">
         {chrome}
@@ -270,12 +266,23 @@ export default function SpectatorView({
                 />
                 <div className="tv-podium-title">{crown.champion.player}</div>
                 <div className="tv-step-elo">
-                  {crown.champion.wins} {crown.champion.wins > 1 ? 'victoires' : 'victoire'} d’affilée ·{' '}
-                  {crown.games} {crown.games > 1 ? 'parties' : 'partie'}
+                  {crown.champion.wins} {crown.champion.wins > 1 ? 'victoires' : 'victoire'}{' '}
+                  d’affilée · {crown.games} {crown.games > 1 ? 'parties' : 'partie'}
                 </div>
               </section>
             )}
           </div>
+          {results.length > 0 && (
+            <div className="tv-final">
+              <div className="tv-final-label">{tournament.name}</div>
+              <div className="tv-final-title">Résultats</div>
+              <SessionResults
+                className="tv-king-results"
+                results={results}
+                unranked={tournament.unranked}
+              />
+            </div>
+          )}
         </div>
       </div>
     )

@@ -1,22 +1,26 @@
-import type { sessionCrown } from '../lib/king'
+import type { SessionResult, sessionCrown } from '../lib/king'
 import type { LookUpPlayer } from '../lib/playerLookup'
 import Avatar from './Avatar'
 import Confetti from './Confetti'
+import SessionResults from './SessionResults'
 
 interface Props {
   crown: ReturnType<typeof sessionCrown>
+  results: ReadonlyArray<SessionResult>
+  unranked: boolean
   look: LookUpPlayer
   onClose: () => void
 }
 
 /** The end of a King of the Ping session: the longest reign, crowned, or nobody when no game was validated. */
-export default function KingCrown({ crown, look, onClose }: Props) {
+export default function KingCrown({ crown, results, unranked, look, onClose }: Props) {
   return (
     <div className="takeover takeover--purple">
       {crown && <Confetti />}
       <div className="tk-inner tk-inner--solo">
         <div className="tk-eyebrow">King of the Ping · terminé</div>
         {crown && <Champion {...crown} look={look} />}
+        <SessionResults className="kc-elo" results={results} unranked={unranked} />
         <div className="tk-actions">
           <button className="tk-btn tk-btn--ghost" onClick={onClose}>
             Accueil

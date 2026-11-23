@@ -1,4 +1,5 @@
 import type { Match, Tournament } from '../types'
+import type { PlayerRating } from './finalStandings'
 import { winnerLoser } from './stats'
 
 /** King of the Ping: the rotation is the session's roster in order, `[King, Prochain, ...File]`. */
@@ -119,4 +120,46 @@ export function leaveFile(rotation: Rotation, player: string): Rotation {
 /** Someone at the table leaves mid-game: the game is abandoned, whoever stays holds the table, the File steps up. */
 export function leaveTable(rotation: Rotation, player: string): Rotation {
   return [otherAtTable(rotation, player), ...rotation.slice(2)]
+}
+
+/** One player's line on the result screen: their record over the session's validated games. */
+export type SessionResult = {
+  readonly name: string
+  readonly wins: number
+  readonly losses: number
+  readonly elo: number | null
+  readonly eloDelta: number | null
+}
+
+/** Everyone who played a validated game in the session, leavers included, with their record and the Élo it moved. */
+export function sessionResults({
+  matches,
+  ratings,
+}: {
+  matches: ReadonlyArray<Match>
+  ratings: ReadonlyArray<PlayerRating>
+}): ReadonlyArray<SessionResult> {
+  const rated = new Map(ratings.map((r) => [r.name, r]))
+  const record = new Map<string, SessionResult>()
+  const tally = (name: string, won: boolean) => {
+    const rating = rated.get(name)
+    const was = record.get(name) ?? {
+      name,
+      wins: 0,
+      losses: 0,
+      elo: rating?.endRating ?? null,
+      eloDelta: rating?.netDelta ?? null,
+    }
+    record.set(name, won ? { ...was, wins: was.wins + 1 } : { ...was, losses: was.losses + 1 })
+  }
+  matches
+    .filter((m) => m.done)
+    .forEach((m) => {
+      const { winner, loser } = winnerLoser(m)
+      tally(winner, true)
+      tally(loser, false)
+    })
+  return [...record.values()].sort(
+    (a, b) => (b.eloDelta ?? 0) - (a.eloDelta ?? 0) || b.wins - a.wins || a.losses - b.losses,
+  )
 }
