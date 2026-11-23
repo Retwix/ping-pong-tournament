@@ -38,6 +38,7 @@ const renderKingTable = (overrides: {
   rotation: Rotation
   matches: ReadonlyArray<Match>
   ended?: boolean
+  unranked?: boolean
   ratings?: ReadonlyArray<PlayerRating>
 }) => {
   const patches: Array<{ id: string; patch: Partial<Match> }> = []
@@ -49,6 +50,7 @@ const renderKingTable = (overrides: {
   const screen = render(
     <KingTable
       ended={false}
+      unranked={false}
       ratings={[]}
       players={['Inès', 'Léo', 'Sam', 'Nora']}
       {...overrides}
@@ -201,7 +203,8 @@ it('once the session has ended, crowns the longest reign, shows what it did to e
   expect(crown.element().textContent).toContain('2 victoires')
   expect(crown.element().textContent).toContain('5 parties')
 
-  const elo = screen.getByRole('table', { name: 'Élo de la session' })
+  const elo = screen.getByRole('table', { name: 'Résultats de la session' })
+  await expect.element(elo.getByRole('columnheader', { name: 'Δ' })).toBeVisible()
   const ines = elo.getByRole('row', { name: /Inès/ })
   await expect.element(ines).toHaveTextContent('2–1')
   await expect.element(ines).toHaveTextContent('1232')
@@ -329,6 +332,22 @@ it('with one player left and nobody to crown, shows nothing rather than calling 
   expect(screen.container).toBeEmptyDOMElement()
 })
 
+it('an unranked session ends on its players’ records alone, saying no Élo moved', async () => {
+  const { screen } = renderKingTable({
+    ended: true,
+    unranked: true,
+    rotation: ['Inès', 'Sam'],
+    matches: [getMockGame({ idx: 0, score_a: 7, score_b: 4, done: true })],
+  })
+
+  const elo = screen.getByRole('table', { name: 'Résultats de la session' })
+  const ines = elo.getByRole('row', { name: /Inès/ })
+  await expect.element(ines).toHaveTextContent('1–0')
+  expect(ines.getByRole('cell').elements()).toHaveLength(1)
+  expect(elo.getByRole('columnheader', { name: 'Δ' }).query()).toBeNull()
+  await expect.element(screen.getByText(/Non classée/)).toBeVisible()
+})
+
 it('a session ended elsewhere with nobody crowned reads as over here, not as a game to keep scoring', async () => {
   const { screen, closed } = renderKingTable({
     ended: true,
@@ -337,7 +356,7 @@ it('a session ended elsewhere with nobody crowned reads as over here, not as a g
   })
 
   await expect.element(screen.getByRole('button', { name: 'Accueil' })).toBeVisible()
-  expect(screen.getByRole('table', { name: 'Élo de la session' }).query()).toBeNull()
+  expect(screen.getByRole('table', { name: 'Résultats de la session' }).query()).toBeNull()
   await screen.getByRole('button', { name: 'Accueil' }).click()
   expect(closed).toEqual(['close'])
 })

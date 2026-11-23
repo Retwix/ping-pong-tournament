@@ -45,6 +45,7 @@ export default function KingBoard({
       players={registry.map((p) => p.name)}
       matches={matches}
       ratings={ratings}
+      unranked={tournament.unranked}
       ended={tournament.status === 'done'}
       look={look}
       onPatch={session.patchMatch}

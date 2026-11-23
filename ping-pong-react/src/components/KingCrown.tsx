@@ -8,19 +8,20 @@ import Confetti from './Confetti'
 interface Props {
   crown: ReturnType<typeof sessionCrown>
   results: ReadonlyArray<SessionResult>
+  unranked: boolean
   look: LookUpPlayer
   onClose: () => void
 }
 
 /** The end of a King of the Ping session: the longest reign, crowned, or nobody when no game was validated. */
-export default function KingCrown({ crown, results, look, onClose }: Props) {
+export default function KingCrown({ crown, results, unranked, look, onClose }: Props) {
   return (
     <div className="takeover takeover--purple">
       {crown && <Confetti />}
       <div className="tk-inner tk-inner--solo">
         <div className="tk-eyebrow">King of the Ping · terminé</div>
         {crown && <Champion {...crown} look={look} />}
-        {results.length > 0 && <SessionElo results={results} />}
+        {results.length > 0 && <SessionResults results={results} unranked={unranked} />}
         <div className="tk-actions">
           <button className="tk-btn tk-btn--ghost" onClick={onClose}>
             Accueil
@@ -46,15 +47,26 @@ function Champion({ champion, games, look }: NonNullable<Props['crown']> & { loo
   )
 }
 
-function SessionElo({ results }: { results: ReadonlyArray<SessionResult> }) {
+function SessionResults({
+  results,
+  unranked,
+}: {
+  results: ReadonlyArray<SessionResult>
+  unranked: boolean
+}) {
   return (
-    <table className="kc-elo" aria-label="Élo de la session">
+    <table className="kc-elo" aria-label="Résultats de la session">
+      {unranked && <caption>Non classée : aucun Élo n’a bougé.</caption>}
       <thead>
         <tr>
           <th scope="col">Joueur</th>
           <th scope="col">V–D</th>
-          <th scope="col">Élo</th>
-          <th scope="col">Δ</th>
+          {!unranked && (
+            <>
+              <th scope="col">Élo</th>
+              <th scope="col">Δ</th>
+            </>
+          )}
         </tr>
       </thead>
       <tbody>
@@ -64,10 +76,14 @@ function SessionElo({ results }: { results: ReadonlyArray<SessionResult> }) {
             <td>
               {r.wins}–{r.losses}
             </td>
-            <td>{r.elo === null ? '—' : Math.round(r.elo)}</td>
-            <td className={`kc-delta kc-delta--${deltaTone(r.eloDelta)}`}>
-              {r.eloDelta === null ? '—' : signed(r.eloDelta)}
-            </td>
+            {!unranked && (
+              <>
+                <td>{r.elo === null ? '—' : Math.round(r.elo)}</td>
+                <td className={`kc-delta kc-delta--${deltaTone(r.eloDelta)}`}>
+                  {r.eloDelta === null ? '—' : signed(r.eloDelta)}
+                </td>
+              </>
+            )}
           </tr>
         ))}
       </tbody>

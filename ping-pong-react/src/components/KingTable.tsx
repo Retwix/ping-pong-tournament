@@ -16,6 +16,7 @@ interface Props {
   players: ReadonlyArray<string>
   matches: ReadonlyArray<Match>
   ratings: ReadonlyArray<PlayerRating>
+  unranked: boolean
   ended: boolean
   look: LookUpPlayer
   onPatch: (matchId: string, patch: Partial<Match>) => void
@@ -33,6 +34,7 @@ export default function KingTable({
   players,
   matches,
   ratings,
+  unranked,
   ended,
   look,
   onPatch,
@@ -62,6 +64,7 @@ export default function KingTable({
       <KingCrown
         crown={crown}
         results={sessionResults({ matches, ratings })}
+        unranked={unranked}
         look={look}
         onClose={onClose}
       />
